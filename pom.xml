@@ -74,5 +74,6 @@
     <module>porthos</module>
     <module>ui</module>
     <module>svcomp</module>
+    <module>maseli</module>
   </modules>
 </project>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<artifactId>dat3m</artifactId>
+		<groupId>com.dat3m</groupId>
+		<version>2.0.6</version>
+	</parent>
+	<groupId>com.dat3m.maseli</groupId>
+	<artifactId>porthos</artifactId>
+	<packaging>jar</packaging>
+	<name>maseli</name>
+	<url>https://github.com/xeren/Dat3M</url>
+	<version>0</version>
+	<dependencies>
+		<dependency>
+			<groupId>com.dat3m.dartagnan</groupId>
+			<artifactId>dartagnan</artifactId>
+			<version>2.0.6</version>
+		</dependency>
+	</dependencies>
+</project>
