@@ -1,6 +1,5 @@
 package com.dat3m.rmaseli;
 import com.microsoft.z3.*;
-import java.util.function.IntFunction;
 import static java.lang.Integer.parseInt;
 
 /**
@@ -10,23 +9,26 @@ import static java.lang.Integer.parseInt;
 public interface Integer
 {
 
-	IntExpr express(Context c, IntFunction<IntExpr> binding);
+	IntExpr express(Context context, FuncDecl[] register, Expr state);
 
-	int interpret(Model m, IntFunction<IntExpr> binding);
+	int interpret(Model model, FuncDecl[] register, Expr state);
 
 	void register(boolean[] set);
 
+	/**
+	 * Some register's value.
+	 */
 	static Integer get(int index)
 	{
 		return new Integer()
 		{
-			@Override public IntExpr express(Context c, IntFunction<IntExpr> binding)
+			@Override public IntExpr express(Context c, FuncDecl[] r, Expr s)
 			{
-				return binding.apply(index);
+				return (IntExpr)r[index].apply(s);
 			}
-			@Override public int interpret(Model m, IntFunction<IntExpr> binding)
+			@Override public int interpret(Model m, FuncDecl[] r, Expr s)
 			{
-				return parseInt(m.getConstInterp(binding.apply(index)).toString());
+				return parseInt(m.evaluate(r[index].apply(s), false).toString());
 			}
 			@Override public void register(boolean[] set)
 			{
@@ -43,11 +45,11 @@ public interface Integer
 	{
 		return new Integer()
 		{
-			@Override public IntExpr express(Context c, IntFunction<IntExpr> b)
+			@Override public IntExpr express(Context c, FuncDecl[] t, Expr s)
 			{
 				return c.mkInt(value);
 			}
-			@Override public int interpret(Model m, IntFunction<IntExpr> b)
+			@Override public int interpret(Model m, FuncDecl[] t, Expr s)
 			{
 				return value;
 			}
@@ -57,6 +59,29 @@ public interface Integer
 			@Override public String toString()
 			{
 				return String.valueOf(value);
+			}
+		};
+	}
+
+	static Integer havoc(Object id)
+	{
+		return new Integer()
+		{
+			@Override public IntExpr express(Context c, FuncDecl[] t, Expr s)
+			{
+				return (IntExpr)c.mkFuncDecl("havoc-int-" + id, c.mkEventSort(), c.mkBoolSort()).apply(s);
+			}
+			@Override public int interpret(Model m, FuncDecl[] t, Expr s)
+			{
+				//TODO
+				return 0;
+			}
+			@Override public void register(boolean[] set)
+			{
+			}
+			@Override public String toString()
+			{
+				return "(havoc)";
 			}
 		};
 	}
@@ -90,13 +115,13 @@ public interface Integer
 	{
 		return new Integer()
 		{
-			@Override public IntExpr express(Context c, IntFunction<IntExpr> b)
+			@Override public IntExpr express(Context c, FuncDecl[] r, Expr s)
 			{
-				return (IntExpr)c.mkITE(condition.express(c, b), iftrue.express(c, b), iffalse.express(c, b));
+				return (IntExpr)c.mkITE(condition.express(c, r, s), iftrue.express(c, r, s), iffalse.express(c, r, s));
 			}
-			@Override public int interpret(Model m, IntFunction<IntExpr> b)
+			@Override public int interpret(Model m, FuncDecl[] r, Expr s)
 			{
-				return condition.interpret(m, b) ? iftrue.interpret(m, b) : iffalse.interpret(m, b);
+				return condition.interpret(m, r, s) ? iftrue.interpret(m, r, s) : iffalse.interpret(m, r, s);
 			}
 			@Override public void register(boolean[] set)
 			{
@@ -120,13 +145,13 @@ public interface Integer
 	{
 		return new Integer()
 		{
-			@Override public IntExpr express(Context c, IntFunction<IntExpr> b)
+			@Override public IntExpr express(Context c, FuncDecl[] r, Expr s)
 			{
-				return x.apply(c, first.express(c, b), second.express(c, b));
+				return x.apply(c, first.express(c, r, s), second.express(c, r, s));
 			}
-			@Override public int interpret(Model m, IntFunction<IntExpr> b)
+			@Override public int interpret(Model m, FuncDecl[] r, Expr s)
 			{
-				return o.applyAsInt(first.interpret(m, b), second.interpret(m, b));
+				return o.applyAsInt(first.interpret(m, r, s), second.interpret(m, r, s));
 			}
 			@Override public void register(boolean[] set)
 			{
@@ -148,13 +173,13 @@ public interface Integer
 	{
 		return new Integer()
 		{
-			@Override public IntExpr express(Context c, IntFunction<IntExpr> b)
+			@Override public IntExpr express(Context c, FuncDecl[] r, Expr s)
 			{
-				return x.apply(c, java.util.Arrays.stream(operand).map(x->x.express(c, b)).toArray(IntExpr[]::new));
+				return x.apply(c, java.util.Arrays.stream(operand).map(x->x.express(c, r, s)).toArray(IntExpr[]::new));
 			}
-			@Override public int interpret(Model m, IntFunction<IntExpr> b)
+			@Override public int interpret(Model m, FuncDecl[] r, Expr s)
 			{
-				return o.applyAsInt(java.util.Arrays.stream(operand).mapToInt(x->x.interpret(m, b)));
+				return o.applyAsInt(java.util.Arrays.stream(operand).mapToInt(x->x.interpret(m, r, s)));
 			}
 			@Override public void register(boolean[] set)
 			{

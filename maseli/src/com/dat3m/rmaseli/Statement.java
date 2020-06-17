@@ -1,6 +1,5 @@
 package com.dat3m.rmaseli;
-
-import java.util.ArrayList;
+import com.microsoft.z3.*;
 
 /**
  * Control statements defined by arbitrary programs.
@@ -12,22 +11,20 @@ public interface Statement
 	 * Instantiates new events based on this statement.
 	 * Called during unrolling of a program.
 	 */
-	void unroll(Thread thread);
+	void express(Context context, FuncDecl[] register);
 
-	/**
-	 * Maximal count of read events produced by this statement.
-	 */
-	default int countRead()
+	static Statement end()
 	{
-		return 0;
-	}
-
-	/**
-	 * Maximal count of write events produced by this statement.
-	 */
-	default int countWrite()
-	{
-		return 0;
+		return new Statement()
+		{
+			@Override public void express(Context x, FuncDecl[] r)
+			{
+			}
+			@Override public String toString()
+			{
+				return "(end)";
+			}
+		};
 	}
 
 	/**
@@ -38,17 +35,30 @@ public interface Statement
 	 * @return
 	 * Factory producing one read event per iteration.
 	 */
-	static Statement readRelaxed(int key, int value)
+	static Statement readRelaxed(int registercount, Integer key, int value, Statement then)
 	{
+		boolean[] dependency = new boolean[registercount];
+		key.register(dependency);
 		return new Statement()
 		{
-			@Override public void unroll(Thread thread)
+			@Override public void express(Context c, FuncDecl[] r)
 			{
-				thread.read(key, value);
-			}
-			@Override public int countRead()
-			{
-				return 1;
+				FuncDecl p = c.predicate(this);
+				FuncDecl q = c.predicate(then);
+				Context.Rule rule = c.new Rule();
+				Expr state = rule.newEvent();
+				Expr next = rule.newEvent();
+				rule.imply(
+					c.mkEq(next, c.next(state)),
+					(BoolExpr)p.apply(state),
+					c.mkAnd(
+						(BoolExpr)c.eventSet("is-write").apply(state),
+						(BoolExpr)q.apply(next),
+						c.mkEq(c.mkFuncDecl("key", c.mkEventSort(), c.mkIntSort()).apply(state), key.express(c, r, state)),
+						c.mkEq(c.mkFuncDecl("value", c.mkEventSort(), c.mkIntSort()).apply(state), r[value].apply(next)),
+						c.mkAnd(streamExcept(r, value).map(R->c.mkEq(R.apply(state), R.apply(next))).toArray(BoolExpr[]::new))
+					)
+				);
 			}
 			@Override public String toString()
 			{
@@ -65,17 +75,28 @@ public interface Statement
 	 * @return
 	 * Factory producing one write event per iteration.
 	 */
-	static Statement writeRelaxed(int key, int value)
+	static Statement writeRelaxed(int registercount, Integer key, Integer value, Statement next)
 	{
+		boolean[] dependencyKey = new boolean[registercount];
+		key.register(dependencyKey);
+		boolean[] dependencyValue = new boolean[registercount];
+		value.register(dependencyValue);
 		return new Statement()
 		{
-			@Override public void unroll(Thread thread)
+			@Override public void express(Context c, FuncDecl[] r)
 			{
-				thread.write(key, value);
-			}
-			@Override public int countWrite()
-			{
-				return 1;
+				Context.Rule rule = c.new Rule();
+				Expr state = rule.newEvent();
+				Expr next = rule.newEvent();
+				rule.imply(
+					c.mkEq(next, c.next(state)),
+					(BoolExpr)c.predicate(this, c.mkEventSort()).apply(state),
+					c.mkAnd(
+						(BoolExpr)c.eventSet("is-write").apply(state),
+						(BoolExpr)c.predicate(next, c.mkEventSort()).apply(next),
+						c.mkAnd(java.util.Arrays.stream(r).map(R->c.mkEq(R.apply(state), R.apply(next))).toArray(BoolExpr[]::new))
+					)
+				);
 			}
 			@Override public String toString()
 			{
@@ -84,15 +105,27 @@ public interface Statement
 		};
 	}
 
-	static Statement local(int registercount, int destination, Integer expression)
+	static Statement local(int registercount, int destination, Integer expression, Statement next)
 	{
 		boolean[] dependency = new boolean[registercount];
 		expression.register(dependency);
 		return new Statement()
 		{
-			@Override public void unroll(Thread thread)
+			@Override public void express(Context c, FuncDecl[] r)
 			{
-				thread.local(destination, expression, dependency);
+				Context.Rule rule = c.new Rule();
+				Expr state = rule.newEvent();
+				Expr next = rule.newEvent();
+				rule.imply(
+					c.mkEq(next, c.next(state)),
+					(BoolExpr)c.predicate(this, c.mkEventSort()).apply(state),
+					c.mkAnd(
+						(BoolExpr)c.eventSet("is-local").apply(state),
+						(BoolExpr)c.predicate(next, c.mkEventSort()).apply(next),
+						c.mkEq(r[destination].apply(next), expression.express(c, r, state)),
+						c.mkAnd(streamExcept(r, destination).map(R->c.mkEq(R.apply(state), R.apply(next))).toArray(BoolExpr[]::new))
+					)
+				);
 			}
 			@Override public String toString()
 			{
@@ -101,53 +134,39 @@ public interface Statement
 		};
 	}
 
-	/**
-	 * List of simple statements.
-	 */
-	class Sequence
+	static Statement branch(int registercount, Proposition condition, Statement then, Statement otherwise)
 	{
-		// dynamic statements sequentially performed by the thread
-		private final Statement[] statement;
-		// maximal number of read events per iteration
-		public final int countRead;
-		// maximal number of write events per iteration
-		public final int countWrite;
-
-		public Sequence(Statement[] statement)
+		boolean[] dependency = new boolean[registercount];
+		condition.register(dependency);
+		return new Statement()
 		{
-			this.statement = statement;
-			this.countRead = java.util.Arrays.stream(statement).mapToInt(Statement::countRead).sum();
-			this.countWrite = java.util.Arrays.stream(statement).mapToInt(Statement::countWrite).sum();
-		}
-
-		public String toString()
-		{
-			StringBuilder s = new StringBuilder("(sequence ").append(hashCode());
-			for(Statement t: statement)
-				s.append(' ').append(t);
-			return s.append(')').toString();
-		}
-
+			@Override public void express(Context c, FuncDecl[] r)
+			{
+				Context.Rule rule = c.new Rule();
+				Expr state = rule.newEvent();
+				Expr next = rule.newEvent();
+				rule.imply(
+					c.mkEq(next, c.next(state)),
+					(BoolExpr)c.predicate(this, c.mkEventSort()).apply(state),
+					c.mkAnd(
+						(BoolExpr)c.eventSet("is-branch").apply(state),
+						(BoolExpr)c.mkITE(
+							condition.express(c, r, state),
+							c.predicate(then, c.mkEventSort()).apply(next),
+							c.predicate(otherwise, c.mkEventSort()).apply(next)
+						),
+						c.mkAnd(java.util.Arrays.stream(r).map(R->c.mkEq(R.apply(state), R.apply(next))).toArray(BoolExpr[]::new))
+					)
+				);
+			}
+		};
 	}
 
-	/**
-	 * List of simple statements ending with a conditional.
-	 */
-	class SequenceConditional extends Sequence
+	private static <T> java.util.stream.Stream<T> streamExcept(T[] a, int i)
 	{
-		private final boolean[] dependency;
-		private final Proposition condition;
-		private final Sequence branchTrue;
-		private final Sequence branchFalse;
-
-		public SequenceConditional(Statement[] statement, int registercount, Proposition condition, Sequence branchTrue, Sequence branchFalse)
-		{
-			super(statement);
-			this.dependency = new boolean[registercount];
-			condition.register(dependency);
-			this.condition = condition;
-			this.branchTrue = branchTrue;
-			this.branchFalse = branchFalse;
-		}
+		return java.util.stream.Stream.concat(
+			java.util.Arrays.stream(a, 0, i),
+			java.util.Arrays.stream(a, i + 1, a.length)
+		);
 	}
 }

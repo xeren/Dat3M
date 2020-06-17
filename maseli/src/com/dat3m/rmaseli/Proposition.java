@@ -1,6 +1,5 @@
 package com.dat3m.rmaseli;
 import com.microsoft.z3.*;
-import java.util.function.IntFunction;
 import java.util.stream.Stream;
 
 /**
@@ -12,25 +11,30 @@ public interface Proposition
 
 	/**
 	 * Constructs a representation in the solver's format.
-	 * @param c
+	 * @param context
 	 * Factory for expressions.
-	 * @param binding
-	 * State of the program.
+	 * @param register
+	 * Access to the declared registers of the issuing thread.
+	 * @param state
+	 * Placeholder for states of the thread where this proposition is tested.
+	 * Usually created by {@link com.microsoft.z3.Context#mkBound}.
 	 * @return
-	 * SMT-Expression.
+	 * SMT-Expression of boolean sort.
 	 */
-	BoolExpr express(Context c, IntFunction<IntExpr> binding);
+	BoolExpr express(Context context, FuncDecl[] register, Expr state);
 
 	/**
 	 * Assigns values to all variables using a model.
-	 * @param m
+	 * @param model
 	 * Assignment of values to free variables.
-	 * @param binding
+	 * @param register
+	 * Access to the declared registers of the issuing thread.
+	 * @param state
 	 * State to be queried.
 	 * @return
 	 * This proposition is satisfied by {@code m}.
 	 */
-	boolean interpret(Model m, IntFunction<IntExpr> binding);
+	boolean interpret(Model model, FuncDecl[] register, Expr state);
 
 	/**
 	 * Those registers used in the proposition.
@@ -38,6 +42,35 @@ public interface Proposition
 	 * Bitset for registers.  Entry is set for each used register.
 	 */
 	void register(boolean[] set);
+
+	/**
+	 * Forms a non-deterministic formula allowing both results to happen in executions.
+	 * @param id
+	 * Identify nondeterministic results in a program.
+	 * Does not identify a result in an execution unless with the event requesting it.
+	 */
+	static Proposition havoc(Object id)
+	{
+		return new Proposition()
+		{
+			@Override public BoolExpr express(Context c, FuncDecl[] r, Expr s)
+			{
+				return (BoolExpr)c.mkFuncDecl("havoc-bool-" + id, c.mkEventSort(), c.mkBoolSort()).apply(s);
+			}
+			@Override public boolean interpret(Model m, FuncDecl[] r, Expr s)
+			{
+				//TODO
+				return false;
+			}
+			@Override public void register(boolean[] set)
+			{
+			}
+			@Override public String toString()
+			{
+				return "(havoc)";
+			}
+		};
+	}
 
 	/**
 	 * Forms the conjunction of propositions.
@@ -117,13 +150,13 @@ public interface Proposition
 	{
 		return new Proposition()
 		{
-			@Override public BoolExpr express(Context c, IntFunction<IntExpr> b)
+			@Override public BoolExpr express(Context c, FuncDecl[] r, Expr s)
 			{
-				return c.mkNot(operand.express(c, b));
+				return c.mkNot(operand.express(c, r, s));
 			}
-			@Override public boolean interpret(Model m, IntFunction<IntExpr> b)
+			@Override public boolean interpret(Model m, FuncDecl[] r, Expr s)
 			{
-				return !operand.interpret(m, b);
+				return !operand.interpret(m, r, s);
 			}
 			@Override public void register(boolean[] set)
 			{
@@ -147,7 +180,7 @@ public interface Proposition
 	}
 
 	private static Proposition binary(
-		TernaryFunction<Context,BoolExpr,BoolExpr,BoolExpr> x,
+		TernaryFunction<Context,BoolExpr,BoolExpr,BoolExpr> j,
 		BinaryJunctor o,
 		String string,
 		Proposition first,
@@ -155,13 +188,13 @@ public interface Proposition
 	{
 		return new Proposition()
 		{
-			@Override public BoolExpr express(Context c, IntFunction<IntExpr> b)
+			@Override public BoolExpr express(Context c, FuncDecl[] r, Expr s)
 			{
-				return x.apply(c, first.express(c, b), second.express(c, b));
+				return j.apply(c, first.express(c, r, s), second.express(c, r, s));
 			}
-			@Override public boolean interpret(Model m, IntFunction<IntExpr> b)
+			@Override public boolean interpret(Model m, FuncDecl[] r, Expr s)
 			{
-				return o.apply(first.interpret(m, b), second.interpret(m, b));
+				return o.apply(first.interpret(m, r, s), second.interpret(m, r, s));
 			}
 			@Override public void register(boolean[] set)
 			{
@@ -176,20 +209,20 @@ public interface Proposition
 	}
 
 	private static Proposition variadic(
-		java.util.function.BiFunction<Context,BoolExpr[],BoolExpr> x,
+		java.util.function.BiFunction<Context,BoolExpr[],BoolExpr> j,
 		java.util.function.BiPredicate<Stream<Proposition>,java.util.function.Predicate<Proposition>> o,
 		String string,
 		Proposition[] operand)
 	{
 		return new Proposition()
 		{
-			@Override public BoolExpr express(Context c, IntFunction<IntExpr> b)
+			@Override public BoolExpr express(Context c, FuncDecl[] r, Expr s)
 			{
-				return x.apply(c, java.util.Arrays.stream(operand).map(x->x.express(c, b)).toArray(BoolExpr[]::new));
+				return j.apply(c, java.util.Arrays.stream(operand).map(a->a.express(c, r, s)).toArray(BoolExpr[]::new));
 			}
-			@Override public boolean interpret(Model m, IntFunction<IntExpr> e)
+			@Override public boolean interpret(Model m, FuncDecl[] r, Expr s)
 			{
-				return o.test(java.util.Arrays.stream(operand), x->x.interpret(m, e));
+				return o.test(java.util.Arrays.stream(operand), a->a.interpret(m, r, s));
 			}
 			@Override public void register(boolean[] set)
 			{
