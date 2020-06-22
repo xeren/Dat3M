@@ -13,7 +13,7 @@ public interface Statement
 	 */
 	void express(Context context, FuncDecl[] register);
 
-	static Statement end()
+	static Statement hold()
 	{
 		return new Statement()
 		{
@@ -22,7 +22,7 @@ public interface Statement
 			}
 			@Override public String toString()
 			{
-				return "(end)";
+				return "(hold)";
 			}
 		};
 	}
@@ -154,6 +154,31 @@ public interface Statement
 							condition.express(c, r, state),
 							c.predicate(then, c.mkEventSort()).apply(next),
 							c.predicate(otherwise, c.mkEventSort()).apply(next)
+						),
+						c.mkAnd(java.util.Arrays.stream(r).map(R->c.mkEq(R.apply(state), R.apply(next))).toArray(BoolExpr[]::new))
+					)
+				);
+			}
+		};
+	}
+
+	static Statement choice(Statement then, Statement otherwise)
+	{
+		return new Statement()
+		{
+			@Override public void express(Context c, FuncDecl[] r)
+			{
+				Context.Rule rule = c.new Rule();
+				Expr state = rule.newEvent();
+				Expr next = rule.newEvent();
+				rule.imply(
+					c.mkEq(next, c.next(state)),
+					(BoolExpr)c.predicate(this, c.mkEventSort()).apply(state),
+					c.mkAnd(
+						(BoolExpr)c.eventSet("is-branch").apply(state),
+						c.mkOr(
+							(BoolExpr)c.predicate(then, c.mkEventSort()).apply(next),
+							(BoolExpr)c.predicate(otherwise, c.mkEventSort()).apply(next)
 						),
 						c.mkAnd(java.util.Arrays.stream(r).map(R->c.mkEq(R.apply(state), R.apply(next))).toArray(BoolExpr[]::new))
 					)

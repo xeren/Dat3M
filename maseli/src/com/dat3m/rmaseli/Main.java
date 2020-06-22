@@ -42,21 +42,23 @@ public class Main
 		let(context, "ghb-tso", or(or(of("po-tso"), of("com-tso")), of("implied")));
 		acyclic(context, of("ghb-tso"));
 
-		// havoc expressions may have different types and may co-occur
-		Statement s6 = end();
+		context.threads(1);
+
+		Statement s6 = hold();
 		Statement s5 = local(4, 1, Integer.of(1), s6);
 		Statement s4 = local(4, 0, Integer.of(1), s6);
-		Statement s3 = branch(4, Proposition.havoc(0), s4, s5);
+		Statement s3 = choice(s4, s5);
 		Statement s2 = local(4, 3, Integer.of(1), s3);
 		Statement s1 = local(4, 2, Integer.of(1), s3);
-		Statement s0 = branch(4, Proposition.havoc(1), s1, s2);
+		Statement s0 = choice(s1, s2);
 
 		FuncDecl[] register = java.util.Arrays.stream(new String[]{"a", "b", "c", "d"})
 			.map(s->context.mkFuncDecl(s, context.mkEventSort(), context.mkIntSort()))
 			.toArray(FuncDecl[]::new);
 		java.util.stream.Stream.of(s6, s5, s4, s3, s2, s1, s0).forEach(s->s.express(context, register));
 
-		//c.defineThreadCount();
+		System.out.println(context);
+		//context.defineThreadCount();
 		//fixedpoint.add(context.mkEq(context.mkIntConst("threadcount"), context.mkInt(threads)));
 
 	}

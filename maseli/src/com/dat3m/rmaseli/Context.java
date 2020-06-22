@@ -42,6 +42,21 @@ public class Context extends com.microsoft.z3.Context
 		return f;
 	}
 
+	public void threads(int count)
+	{
+		engine.add(mkEq(mkIntConst("threadcount"), mkInt(count)));
+	}
+
+	public String toString()
+	{
+		StringBuilder r = new StringBuilder("(context");
+		for(BoolExpr x: engine.getAssertions())
+			r.append(' ').append(x);
+		for(BoolExpr x: engine.getRules())
+			r.append(' ').append(x);
+		return r.append(')').toString();
+	}
+
 	public class Rule
 	{
 
@@ -49,7 +64,7 @@ public class Context extends com.microsoft.z3.Context
 
 		public Expr newEvent()
 		{
-			Expr r = mkBound(bound.size(), sortEvent);
+			Expr r = mkConst("bound"+bound.size(), sortEvent);
 			bound.add(r);
 			return r;
 		}
