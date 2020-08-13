@@ -13,8 +13,6 @@ import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 import java.util.*;
 
-import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
-
 public class RelRf extends Relation {
 
     public RelRf(){
@@ -65,7 +63,7 @@ public class RelRf extends Relation {
         for(Tuple tuple : maxTupleSet){
             MemEvent w = (MemEvent) tuple.getFirst();
             MemEvent r = (MemEvent) tuple.getSecond();
-            BoolExpr edge = edge(term, w, r, ctx);
+            BoolExpr edge = edge(w, r);
             BoolExpr sameAddress = ctx.mkEq(w.getMemAddressExpr(), r.getMemAddressExpr());
             BoolExpr sameValue = ctx.mkEq(w.getMemValueExpr(), r.getMemValueExpr());
 

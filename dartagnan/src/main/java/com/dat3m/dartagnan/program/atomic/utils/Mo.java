@@ -9,7 +9,7 @@ public class Mo {
     public static final String ACQ_REL  = "memory_order_acq_rel";
     public static final String SC       = "memory_order_seq_cst";
     
-    public static String intToMo(int i) {
+    public static String intToMo(int  i) {
     	switch(i) {
     	case 0: return RELAXED;
     	case 1: return CONSUME;

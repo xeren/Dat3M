@@ -79,8 +79,7 @@ public class RelFencerel extends Relation {
                 }
             }
 
-            BoolExpr rel = edge(this.getName(), e1, e2, ctx);
-            enc = ctx.mkAnd(enc, ctx.mkEq(rel, ctx.mkAnd(e1.exec(), e2.exec(), orClause)));
+            enc = ctx.mkAnd(enc, ctx.mkEq(edge(e1, e2), ctx.mkAnd(e1.exec(), e2.exec(), orClause)));
         }
 
         return enc;

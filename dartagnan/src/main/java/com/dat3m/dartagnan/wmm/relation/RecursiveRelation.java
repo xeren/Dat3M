@@ -4,7 +4,6 @@ import com.dat3m.dartagnan.utils.Settings;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.Program;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
@@ -131,10 +130,7 @@ public class RecursiveRelation extends Relation {
     public BoolExpr encodeFinalIteration(int iteration){
         BoolExpr enc = ctx.mkTrue();
         for(Tuple tuple : encodeTupleSet){
-            enc = ctx.mkAnd(enc, ctx.mkEq(
-                    Utils.edge(getName(), tuple.getFirst(), tuple.getSecond(), ctx),
-                    Utils.edge(getName() + "_" + iteration, tuple.getFirst(), tuple.getSecond(), ctx)
-            ));
+            enc = ctx.mkAnd(enc, ctx.mkEq(edge(tuple), edge(iteration, tuple)));
         }
         return enc;
     }

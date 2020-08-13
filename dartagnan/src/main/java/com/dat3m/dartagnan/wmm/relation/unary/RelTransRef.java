@@ -7,7 +7,6 @@ import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -109,7 +108,7 @@ public class RelTransRef extends RelTrans {
             encodeTupleSet = temp;
 
             for(Tuple tuple : identityEncodeTupleSet){
-                enc = ctx.mkAnd(enc, Utils.edge(this.getName(), tuple.getFirst(), tuple.getFirst(), ctx));
+                enc = ctx.mkAnd(enc, edge(tuple.getFirst(), tuple.getFirst()));
             }
             return enc;
         } catch (Throwable e){

@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.wmm.relation;
 
+import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.microsoft.z3.BoolExpr;
@@ -7,11 +8,12 @@ import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import com.dat3m.dartagnan.wmm.utils.Utils;
+import com.microsoft.z3.IntExpr;
 
 import java.util.HashSet;
 import java.util.Set;
 
-import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 
 /**
  *
@@ -159,16 +161,48 @@ public abstract class Relation {
         return enc;
     }
 
+    /**
+     * Assume that all tuples in encodeTupleSet that do not belong to maxTupleSet are not contained by this relation.
+     * Also remove those tuples from encodeTupleSet.
+     */
     private BoolExpr encodeNegations(){
         BoolExpr enc = ctx.mkTrue();
         if(!encodeTupleSet.isEmpty()){
             Set<Tuple> negations = new HashSet<>(encodeTupleSet);
             negations.removeAll(maxTupleSet);
             for(Tuple tuple : negations){
-                enc = ctx.mkAnd(enc, ctx.mkNot(edge(this.getName(), tuple.getFirst(), tuple.getSecond(), ctx)));
+                enc = ctx.mkAnd(enc, ctx.mkNot(edge(tuple)));
             }
             encodeTupleSet.removeAll(negations);
         }
         return enc;
+    }
+
+    public BoolExpr edge(Event first, Event second) {
+        return Utils.edge(getName(), first, second, ctx);
+    }
+
+    public BoolExpr edge(Tuple t) {
+        return edge(t.getFirst(), t.getSecond());
+    }
+
+    public BoolExpr edge(int iteration, Event first, Event second) {
+        return Utils.edge(getName() + "_" + iteration, first, second, ctx);
+    }
+
+    public BoolExpr edge(int iteration, Tuple t) {
+        return edge(iteration, t.getFirst(), t.getSecond());
+    }
+
+    public IntExpr intVar(Event e) {
+        return Utils.intVar(getName(), e, ctx);
+    }
+
+    public IntExpr intCount(Event first, Event second) {
+        return Utils.intCount(getName(), first, second, ctx);
+    }
+
+    public IntExpr intCount(Tuple t) {
+        return intCount(t.getFirst(), t.getSecond());
     }
 }
