@@ -3,7 +3,6 @@ package com.dat3m.dartagnan.wmm.axiom;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -59,8 +58,8 @@ public class Acyclic extends Axiom {
         for(Tuple tuple : rel.getEncodeTupleSet()){
             Event e1 = tuple.getFirst();
             Event e2 = tuple.getSecond();
-            enc = ctx.mkAnd(enc, ctx.mkImplies(e1.exec(), ctx.mkGt(Utils.intVar(rel.getName(), e1, ctx), ctx.mkInt(0))));
-            enc = ctx.mkAnd(enc, ctx.mkImplies(Utils.edge(rel.getName(), e1, e2, ctx), ctx.mkLt(Utils.intVar(rel.getName(), e1, ctx), Utils.intVar(rel.getName(), e2, ctx))));
+            enc = ctx.mkAnd(enc, ctx.mkImplies(e1.exec(), ctx.mkGt(rel.intVar(e1), ctx.mkInt(0))));
+            enc = ctx.mkAnd(enc, ctx.mkImplies(rel.edge(e1, e2), ctx.mkLt(rel.intVar(e1), rel.intVar(e2))));
         }
         return enc;
     }

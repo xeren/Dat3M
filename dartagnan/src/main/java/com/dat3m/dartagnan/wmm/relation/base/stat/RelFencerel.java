@@ -3,6 +3,7 @@ package com.dat3m.dartagnan.wmm.relation.base.stat;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
+import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.relation.Relation;
@@ -79,10 +80,23 @@ public class RelFencerel extends Relation {
                 }
             }
 
-            BoolExpr rel = edge(this.getName(), e1, e2, ctx);
-            enc = ctx.mkAnd(enc, ctx.mkEq(rel, ctx.mkAnd(e1.exec(), e2.exec(), orClause)));
+            enc = ctx.mkAnd(enc, ctx.mkEq(edge(e1, e2), ctx.mkAnd(e1.exec(), e2.exec(), orClause)));
         }
 
         return enc;
+    }
+
+    @Override
+    protected BoolExpr encodeFirstOrder() {
+        List<Event> fences = program.getCache().getEvents(FilterBasic.get(fenceName));
+        return forall(0,
+                (a,b)->ctx.mkEq(edge(a, b), or(fences.stream().map(f->ctx.mkAnd(f.exec(),
+                    ctx.mkLt((ArithExpr)a, (ArithExpr)ctx.mkNumeral(f.getCId(), eventSort)),
+                    ctx.mkLt((ArithExpr)ctx.mkNumeral(f.getCId(), eventSort), (ArithExpr)b)
+                )))),
+                fences.stream().map(f->(BinaryPattern)(a,b)->ctx.mkPattern(f.exec(),
+                    ctx.mkLt((ArithExpr)a, (ArithExpr)ctx.mkNumeral(f.getCId(), eventSort)),
+                    ctx.mkLt((ArithExpr)ctx.mkNumeral(f.getCId(), eventSort), (ArithExpr)b)
+                )).toArray(BinaryPattern[]::new));
     }
 }

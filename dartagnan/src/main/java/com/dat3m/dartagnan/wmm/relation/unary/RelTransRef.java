@@ -7,7 +7,6 @@ import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -109,12 +108,27 @@ public class RelTransRef extends RelTrans {
             encodeTupleSet = temp;
 
             for(Tuple tuple : identityEncodeTupleSet){
-                enc = ctx.mkAnd(enc, Utils.edge(this.getName(), tuple.getFirst(), tuple.getFirst(), ctx));
+                enc = ctx.mkAnd(enc, edge(tuple.getFirst(), tuple.getFirst()));
             }
             return enc;
         } catch (Throwable e){
             e.printStackTrace();
             throw new RuntimeException("Failed to encode relation " + this.getName());
         }
+    }
+
+    @Override
+    protected BoolExpr encodeFirstOrder() {
+        return ctx.mkAnd(
+            forall(0, (a,c)->ctx.mkOr(ctx.mkNot(edge(a, c)), ctx.mkEq(a, c), r1.edge(a, c),
+                exists(2, b->ctx.mkAnd(edge(a, b), edge(b, c)),
+                    b->ctx.mkPattern(edge(a, b), edge(b, c)))),
+                    (a,c)->ctx.mkPattern(edge(a, c))),
+            forall(0, a->edge(a, a), ctx::mkPattern),
+            forall(0, (a,c)->ctx.mkImplies(r1.edge(a, c), edge(a, c)),
+                (a,c)->ctx.mkPattern(r1.edge(a, c))),
+            forall(0, (a,b,c)->ctx.mkImplies(ctx.mkAnd(edge(a, b), edge(b, c)), edge(a, c)),
+                (a,b,c)->ctx.mkPattern(edge(a, b), edge(b, c)))
+        );
     }
 }

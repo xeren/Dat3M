@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan.wmm.relation.unary;
 
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -58,10 +57,22 @@ public class RelRangeIdentity extends UnaryRelation {
             Event e = tuple1.getFirst();
             BoolExpr opt = ctx.mkFalse();
             for(Tuple tuple2 : r1.getMaxTupleSet().getBySecond(e)){
-                opt = ctx.mkOr(Utils.edge(r1.getName(), tuple2.getFirst(), e, ctx));
+                //FIXME do not discard
+                opt = ctx.mkOr(r1.edge(tuple2.getFirst(), e));
             }
-            enc = ctx.mkAnd(enc, ctx.mkEq(Utils.edge(this.getName(), e, e, ctx), opt));
+            enc = ctx.mkAnd(enc, ctx.mkEq(edge(e, e), opt));
         }
         return enc;
+    }
+
+    @Override
+    protected BoolExpr encodeFirstOrder() {
+        return ctx.mkAnd(
+            forall(0, (a,b)->ctx.mkEq(edge(a, b), ctx.mkAnd(
+                    ctx.mkEq(a, b),
+                    exists(2, c->r1.edge(c, b), c->ctx.mkPattern(r1.edge(c, b))))),
+                (a,b)->ctx.mkPattern(edge(a, b))),
+            forall(0, (a,b)->ctx.mkImplies(r1.edge(a, b), edge(b, b)),
+                (a,b)->ctx.mkPattern(r1.edge(a, b))));
     }
 }

@@ -8,16 +8,12 @@ import com.microsoft.z3.IntExpr;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.program.memory.Address;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
-import static com.dat3m.dartagnan.wmm.utils.Utils.intVar;
 
 public class RelCo extends Relation {
 
@@ -66,12 +62,12 @@ public class RelCo extends Relation {
         ));
 
         for(Event e : eventsInit) {
-            enc = ctx.mkAnd(enc, ctx.mkEq(intVar("co", e, ctx), ctx.mkInt(0)));
+            enc = ctx.mkAnd(enc, ctx.mkEq(intVar(e), ctx.mkInt(0)));
         }
 
         List<IntExpr> intVars = new ArrayList<>();
         for(Event w : eventsStore) {
-            IntExpr coVar = intVar("co", w, ctx);
+            IntExpr coVar = intVar(w);
             enc = ctx.mkAnd(enc, ctx.mkGt(coVar, ctx.mkInt(0)));
             intVars.add(coVar);
         }
@@ -83,12 +79,12 @@ public class RelCo extends Relation {
 
             for(Tuple t : maxTupleSet.getByFirst(w1)){
                 MemEvent w2 = (MemEvent)t.getSecond();
-                BoolExpr relation = edge("co", w1, w2, ctx);
-                lastCo = ctx.mkAnd(lastCo, ctx.mkNot(edge("co", w1, w2, ctx)));
+                BoolExpr relation = edge(w1, w2);
+                lastCo = ctx.mkAnd(lastCo, ctx.mkNot(edge(w1, w2)));
 
                 enc = ctx.mkAnd(enc, ctx.mkEq(relation, ctx.mkAnd(
                         ctx.mkAnd(ctx.mkAnd(w1.exec(), w2.exec()), ctx.mkEq(w1.getMemAddressExpr(), w2.getMemAddressExpr())),
-                        ctx.mkLt(Utils.intVar("co", w1, ctx), Utils.intVar("co", w2, ctx))
+                        ctx.mkLt(intVar(w1), intVar(w2))
                 )));
             }
 
@@ -103,5 +99,39 @@ public class RelCo extends Relation {
             }
         }
         return enc;
+    }
+
+    @Override
+    protected BoolExpr encodeFirstOrder() {
+        List<Event> eventsInit = program.getCache().getEvents(FilterBasic.get(EType.INIT));
+        List<Event> eventsWrite = program.getCache().getEvents(FilterBasic.get(EType.WRITE));
+        List<Event> eventsStore = program.getCache().getEvents(
+                FilterMinus.get(FilterBasic.get(EType.WRITE), FilterBasic.get(EType.INIT)));
+
+        BoolExpr typed = forall(0, (a,b)->ctx.mkEq(edge(a, b),
+                ctx.mkAnd(
+                    ctx.mkNot(edge(b, a)),
+                    or(eventsWrite.stream().map(MemEvent.class::cast).map(v->ctx.mkAnd(
+                        v.exec(),
+                        ctx.mkEq(a, ctx.mkNumeral(v.getCId(), eventSort)),
+                        or(eventsStore.stream()
+                            // already implied by asymmetric, but shortens the formula
+                            .filter(w->v.getCId() != w.getCId())
+                            .map(MemEvent.class::cast)
+                            .map(w->ctx.mkAnd(
+                                w.exec(),
+                                ctx.mkEq(b, ctx.mkNumeral(w.getCId(), eventSort)),
+                                // pair has same address
+                                ctx.mkEq(v.getMemAddressExpr(), w.getMemAddressExpr()))))))))),
+            (a,b)->ctx.mkPattern(edge(a, b)));
+
+        BoolExpr transitive = forall(0, (a,b,c)->ctx.mkImplies(edge(a, b), ctx.mkImplies(edge(b, c), edge(a, c))),
+                (a,b,c)->ctx.mkPattern(edge(a, b), edge(b, c)));
+
+        BoolExpr initial = and(eventsInit.stream().map(MemEvent.class::cast)
+                .flatMap(v->eventsStore.stream().map(MemEvent.class::cast)
+                    .map(w->ctx.mkNot(edge(ctx.mkNumeral(v.getCId(), eventSort), ctx.mkNumeral(w.getCId(), eventSort))))));
+
+        return ctx.mkAnd(typed, transitive, initial);
     }
 }

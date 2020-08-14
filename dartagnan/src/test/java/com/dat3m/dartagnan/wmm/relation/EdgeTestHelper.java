@@ -2,7 +2,6 @@ package com.dat3m.dartagnan.wmm.relation;
 
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.google.common.collect.HashMultimap;
@@ -35,7 +34,7 @@ public class EdgeTestHelper {
         BoolExpr enc = ctx.mkFalse();
 
         for(Tuple tuple : all){
-            BoolExpr edge = Utils.edge(relation.getName(), tuple.getFirst(), tuple.getSecond(), ctx);
+            BoolExpr edge = relation.edge(tuple);
             if(expected.contains(tuple)){
                 enc = ctx.mkOr(enc, ctx.mkNot(edge));
             } else if(max.contains(tuple)){

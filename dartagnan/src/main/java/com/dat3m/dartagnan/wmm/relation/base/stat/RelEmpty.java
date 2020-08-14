@@ -23,4 +23,10 @@ public class RelEmpty extends Relation {
     protected BoolExpr encodeApprox() {
         return ctx.mkTrue();
     }
+
+    @Override
+    protected BoolExpr encodeFirstOrder() {
+        return forall(0, (a,b)->ctx.mkNot(edge(a,b)),
+                (a,b)->ctx.mkPattern(edge(a,b)));
+    }
 }

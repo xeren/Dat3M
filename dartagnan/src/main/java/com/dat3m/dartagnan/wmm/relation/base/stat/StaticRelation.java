@@ -1,10 +1,9 @@
 package com.dat3m.dartagnan.wmm.relation.base.stat;
 
+import com.dat3m.dartagnan.program.event.Event;
 import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
-
-import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 
 public abstract class StaticRelation extends Relation {
 
@@ -16,13 +15,25 @@ public abstract class StaticRelation extends Relation {
         super(name);
     }
 
+    @FunctionalInterface
+    protected interface Atom {
+        BoolExpr of(Event first, Event second);
+        default BoolExpr of(Tuple tuple) {
+            return of(tuple.getFirst(), tuple.getSecond());
+        }
+    }
+
+    protected BoolExpr encodeApprox(Atom atom) {
+        return and(encodeTupleSet.stream().map(tuple->ctx.mkEq(atom.of(tuple), ctx.mkAnd(tuple.getFirst().exec(), tuple.getSecond().exec()))));
+    }
+
     @Override
     protected BoolExpr encodeApprox() {
-        BoolExpr enc = ctx.mkTrue();
-        for(Tuple tuple : encodeTupleSet) {
-            BoolExpr rel = edge(this.getName(), tuple.getFirst(), tuple.getSecond(), ctx);
-            enc = ctx.mkAnd(enc, ctx.mkEq(rel, ctx.mkAnd(tuple.getFirst().exec(), tuple.getSecond().exec())));
-        }
-        return enc;
+        return encodeApprox(this::edge);
+    }
+
+    @Override
+    protected BoolExpr encodeFirstOrder() {
+        return encodeApprox((a,b)->edge(ctx.mkNumeral(a.getCId(), eventSort), ctx.mkNumeral(b.getCId(), eventSort)));
     }
 }

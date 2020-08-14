@@ -26,8 +26,8 @@ public class RelAddrDirect extends BasicRegRelation {
     }
 
     @Override
-    protected BoolExpr encodeApprox() {
-        return doEncodeApprox(program.getCache().getEvents(FilterBasic.get(EType.MEMORY)));
+    protected BoolExpr encodeApprox(Atom atom) {
+        return doEncodeApprox(atom, program.getCache().getEvents(FilterBasic.get(EType.MEMORY)));
     }
 
     @Override
