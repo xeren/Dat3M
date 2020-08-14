@@ -102,11 +102,11 @@ public class RelRMW extends StaticRelation {
     }
 
     @Override
-    protected BoolExpr encodeApprox() {
+    protected BoolExpr encodeApprox(Atom atom) {
         // Encode base (not exclusive pairs) RMW
         TupleSet origEncodeTupleSet = encodeTupleSet;
         encodeTupleSet = baseMaxTupleSet;
-        BoolExpr enc = super.encodeApprox();
+        BoolExpr enc = super.encodeApprox(atom);
         encodeTupleSet = origEncodeTupleSet;
 
         // Encode RMW for exclusive pairs
@@ -127,7 +127,7 @@ public class RelRMW extends StaticRelation {
                         unpredictable = ctx.mkOr(unpredictable, ctx.mkAnd(isExecPair, ctx.mkNot(sameAddress)));
 
                         // Relation between exclusive load and store
-                        enc = ctx.mkAnd(enc, ctx.mkEq(edge(load, store), ctx.mkAnd(isExecPair, sameAddress)));
+                        enc = ctx.mkAnd(enc, ctx.mkEq(atom.of(load, store), ctx.mkAnd(isExecPair, sameAddress)));
 
                         // Can be executed if addresses mismatch, but behaviour is "constrained unpredictable"
                         // The implementation does not include all possible unpredictable cases: in case of address

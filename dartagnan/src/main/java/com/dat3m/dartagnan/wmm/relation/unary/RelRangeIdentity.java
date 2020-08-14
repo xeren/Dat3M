@@ -64,4 +64,15 @@ public class RelRangeIdentity extends UnaryRelation {
         }
         return enc;
     }
+
+    @Override
+    protected BoolExpr encodeFirstOrder() {
+        return ctx.mkAnd(
+            forall(0, (a,b)->ctx.mkEq(edge(a, b), ctx.mkAnd(
+                    ctx.mkEq(a, b),
+                    exists(2, c->r1.edge(c, b), c->ctx.mkPattern(r1.edge(c, b))))),
+                (a,b)->ctx.mkPattern(edge(a, b))),
+            forall(0, (a,b)->ctx.mkImplies(r1.edge(a, b), edge(b, b)),
+                (a,b)->ctx.mkPattern(r1.edge(a, b))));
+    }
 }

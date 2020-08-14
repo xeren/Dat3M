@@ -257,4 +257,11 @@ public class RelComposition extends BinaryRelation {
 
         return enc;
     }
+
+    @Override
+    protected BoolExpr encodeFirstOrder() {
+        return forall(0, (a,c)->ctx.mkEq(edge(a, c), exists(2, b->ctx.mkAnd(r1.edge(a, b), r2.edge(b, c)),
+                    b->ctx.mkPattern(r1.edge(a, b), r2.edge(b, c)))),
+                (a,c)->ctx.mkPattern(edge(a, c)));
+    }
 }

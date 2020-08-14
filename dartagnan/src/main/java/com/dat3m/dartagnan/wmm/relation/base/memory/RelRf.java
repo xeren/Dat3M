@@ -127,4 +127,21 @@ public class RelRf extends Relation {
     private BoolExpr mkSeqVar(int readId, int i) {
         return (BoolExpr) ctx.mkConst("s(" + term + ",E" + readId + "," + i + ")", ctx.mkBoolSort());
     }
+
+    @Override
+    protected BoolExpr encodeFirstOrder() {
+        BoolExpr max = forall(0, (a,b)->ctx.mkImplies(edge(a,b), or(maxTupleSet.stream().map(t->ctx.mkAnd(
+                t.getFirst().exec(),
+                t.getSecond().exec(),
+                ctx.mkEq(a, ctx.mkNumeral(t.getFirst().getCId(), eventSort)),
+                ctx.mkEq(b, ctx.mkNumeral(t.getSecond().getCId(), eventSort)),
+                ctx.mkEq(((MemEvent)t.getFirst()).getMemAddressExpr(), ((MemEvent)t.getSecond()).getMemAddressExpr()),
+                ctx.mkEq(((MemEvent)t.getFirst()).getMemValueExpr(), ((MemEvent)t.getSecond()).getMemValueExpr()))))),
+                (a,b)->ctx.mkPattern(edge(a,b)));
+        BoolExpr satisfaction = and(program.getCache().getEvents(FilterBasic.get(EType.READ)).stream()
+                .map(r->exists(0, w->edge(w, ctx.mkNumeral(r.getCId(), eventSort)))));
+        BoolExpr determinism = forall(0, (a,b,c)->ctx.mkImplies(ctx.mkAnd(edge(a,c), edge(b,c)), ctx.mkEq(a, b)),
+                (a,b,c)->ctx.mkPattern(edge(a, c), edge(b, c)));
+        return ctx.mkAnd(max, satisfaction, determinism);
+    }
 }

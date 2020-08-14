@@ -123,4 +123,12 @@ public class RelUnion extends BinaryRelation {
 
         return enc;
     }
+
+    @Override
+    protected BoolExpr encodeFirstOrder() {
+        return forall(0, (a,b)->ctx.mkEq(edge(a, b), ctx.mkOr(r1.edge(a, b), r2.edge(a, b))),
+                (a,b)->ctx.mkPattern(edge(a, b)),
+                (a,b)->ctx.mkPattern(r1.edge(a, b)),
+                (a,b)->ctx.mkPattern(r2.edge(a, b)));
+    }
 }

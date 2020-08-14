@@ -134,4 +134,9 @@ public class RecursiveRelation extends Relation {
         }
         return enc;
     }
+
+    @Override
+    protected BoolExpr encodeFirstOrder() {
+        return r1.encodeFirstOrder();
+    }
 }

@@ -32,7 +32,7 @@ abstract class BasicRegRelation extends StaticRelation {
         }
     }
 
-    BoolExpr doEncodeApprox(Collection<Event> regReaders) {
+    BoolExpr doEncodeApprox(Atom atom, Collection<Event> regReaders) {
         BoolExpr enc = ctx.mkTrue();
         ImmutableMap<Register, ImmutableList<Event>> regWriterMap = program.getCache().getRegWriterMap();
 

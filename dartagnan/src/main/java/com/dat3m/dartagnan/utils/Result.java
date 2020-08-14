@@ -14,6 +14,7 @@ public enum Result {
 
 	public static Result getResult(Solver s, Program p, Context ctx) {
 		Result res;
+		System.out.println(s);
 		if(s.check() == Status.SATISFIABLE) {
 			s.add(p.encodeNoBoundEventExec(ctx));
 			res = s.check() == Status.SATISFIABLE ? FAIL : BFAIL;	

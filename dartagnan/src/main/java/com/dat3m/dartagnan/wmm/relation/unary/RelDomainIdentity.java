@@ -64,4 +64,15 @@ public class RelDomainIdentity extends UnaryRelation {
         }
         return enc;
     }
+
+    @Override
+    protected BoolExpr encodeFirstOrder() {
+        return ctx.mkAnd(
+            forall(0, (a,b)->ctx.mkEq(edge(a, b), ctx.mkAnd(
+                    ctx.mkEq(a, b),
+                    exists(2, c->r1.edge(a, c), c->ctx.mkPattern(r1.edge(a, c))))),
+                (a,b)->ctx.mkPattern(edge(a, b))),
+            forall(0, (a,b)->ctx.mkImplies(r1.edge(a, b), edge(a, a)),
+                (a,b)->ctx.mkPattern(r1.edge(a, b))));
+    }
 }
