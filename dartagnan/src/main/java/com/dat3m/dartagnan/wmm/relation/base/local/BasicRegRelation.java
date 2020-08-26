@@ -52,7 +52,7 @@ abstract class BasicRegRelation extends StaticRelation {
 
                         // RegReader uses the value of RegWriter if it is executed ..
                         BoolExpr clause = ctx.mkAnd(regWriter.exec(), regReader.exec());
-                        BoolExpr edge = edge(regWriter, regReader);
+                        BoolExpr edge = atom.of(regWriter, regReader);
 
                         // .. and no other write to the same register is executed in between
                         ListIterator<Event> otherIt = writers.listIterator(writerIt.nextIndex());
