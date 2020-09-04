@@ -8,7 +8,12 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.rmw.RMWStore;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 
-public class RMWStoreCond extends RMWStore implements RegReaderData {
+/**
+ * Optional store event in an atomic RMW command.
+ * Is not executed unless the attached condition is satisfied.
+ * Unconditionally appears in the execution's control flow.
+ */
+public class RMWStoreCond extends RMWStore {
 
     public RMWStoreCond(RMWReadCond loadEvent, IExpr address, ExprInterface value, String mo) {
         super(loadEvent, address, value, mo);
