@@ -117,19 +117,20 @@ public class RelRf extends Relation {
     }
 
     @Override
-    protected BoolExpr encodeFirstOrder(EncodeContext context) {
-        BoolExpr max = forall(0, (a,b)->ctx.mkImplies(edge(a,b), or(maxTupleSet.stream().map(t->ctx.mkAnd(
+    protected BoolExpr encodeFirstOrder(EncodeContext e) {
+        EncodeContext.RelationPredicate edge = e.of(this);
+        BoolExpr max = e.forall(0, (a,b)->e.implies(edge.of(a,b), e.or(maxTupleSet.stream().map(t->e.and(
                 t.getFirst().exec(),
                 t.getSecond().exec(),
-                ctx.mkEq(a, context.event(t.getFirst())),
-                ctx.mkEq(b, context.event(t.getSecond())),
-                ctx.mkEq(((MemEvent)t.getFirst()).getMemAddressExpr(), ((MemEvent)t.getSecond()).getMemAddressExpr()),
-                ctx.mkEq(((MemEvent)t.getFirst()).getMemValueExpr(), ((MemEvent)t.getSecond()).getMemValueExpr()))))),
-                (a,b)->ctx.mkPattern(edge(a,b)));
-        BoolExpr satisfaction = and(program.getCache().getEvents(FilterBasic.get(EType.READ)).stream()
-                .map(r->exists(0, w->edge(w, context.event(r)))));
-        BoolExpr determinism = forall(0, (a,b,c)->ctx.mkImplies(ctx.mkAnd(edge(a,c), edge(b,c)), ctx.mkEq(a, b)),
-                (a,b,c)->ctx.mkPattern(edge(a, c), edge(b, c)));
-        return ctx.mkAnd(max, satisfaction, determinism);
+                e.eq(a, e.event(t.getFirst())),
+                e.eq(b, e.event(t.getSecond())),
+                e.eq(((MemEvent)t.getFirst()).getMemAddressExpr(), ((MemEvent)t.getSecond()).getMemAddressExpr()),
+                e.eq(((MemEvent)t.getFirst()).getMemValueExpr(), ((MemEvent)t.getSecond()).getMemValueExpr()))))),
+                (a,b)->e.pattern(edge.of(a,b)));
+        BoolExpr satisfaction = e.and(program.getCache().getEvents(FilterBasic.get(EType.READ)).stream()
+                .map(r->e.exists(0, w->edge.of(w, e.event(r)))));
+        BoolExpr determinism = e.forall(0, (a,b,c)->e.implies(e.and(edge.of(a, c), edge.of(b, c)), e.eq(a, b)),
+                (a,b,c)->e.pattern(edge.of(a, c), edge.of(b, c)));
+        return e.and(max, satisfaction, determinism);
     }
 }

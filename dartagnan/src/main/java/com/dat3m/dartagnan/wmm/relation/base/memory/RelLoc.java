@@ -48,14 +48,15 @@ public class RelLoc extends Relation {
     }
 
     @Override
-    protected BoolExpr encodeFirstOrder(EncodeContext context) {
+    protected BoolExpr encodeFirstOrder(EncodeContext e) {
         //TODO restrict to M*M
+        EncodeContext.RelationPredicate edge = e.of(this);
         List<Event> events = program.getCache().getEvents(FilterBasic.get(EType.MEMORY));
-        return ctx.mkAnd(and(events.stream().map(MemEvent.class::cast).flatMap(a->events.stream().map(MemEvent.class::cast)
+        return e.and(events.stream().map(MemEvent.class::cast).flatMap(a->events.stream().map(MemEvent.class::cast)
                 .filter(b->a.getCId() != b.getCId())
                 .filter(b->MemEvent.canAddressTheSameLocation(a, b))
-                .map(b->ctx.mkEq(
-                    edge(context.event(a), context.event(b)),
-                    ctx.mkAnd(a.exec(), b.exec(), ctx.mkEq(a.getMemAddressExpr(), b.getMemAddressExpr())))))));
+                .map(b->e.eq(
+                    edge.of(e.event(a), e.event(b)),
+                    e.and(a.exec(), b.exec(), e.eq(a.getMemAddressExpr(), b.getMemAddressExpr()))))));
     }
 }

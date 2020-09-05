@@ -8,10 +8,8 @@ import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.dat3m.dartagnan.wmm.utils.Utils;
 
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Stream;
 
 
 /**
@@ -299,72 +297,4 @@ public abstract class Relation {
         return intCount(t.getFirst(), t.getSecond());
     }
 
-    @FunctionalInterface
-    protected interface UnaryBody {
-        BoolExpr of(Expr event);
-    }
-
-    @FunctionalInterface
-    protected interface UnaryPattern {
-        Pattern of(Expr event);
-    }
-
-    protected final BoolExpr exists(int depth, UnaryBody body, UnaryPattern... pattern) {
-        Expr a = ctx.mkConst("x" + depth, eventSort);
-        return ctx.mkExists(new Expr[]{a}, body.of(a), 0,
-                Arrays.stream(pattern).map(p->p.of(a)).toArray(Pattern[]::new),
-                null, null, null);
-    }
-
-    protected final BoolExpr forall(int depth, UnaryBody body, UnaryPattern... pattern) {
-        Expr a = ctx.mkConst("x" + depth, eventSort);
-        return ctx.mkForall(new Expr[]{a}, body.of(a), 0,
-                Arrays.stream(pattern).map(p->p.of(a)).toArray(Pattern[]::new),
-                null, null, null);
-    }
-
-    @FunctionalInterface
-    protected interface BinaryBody {
-        BoolExpr of(Expr first, Expr second);
-    }
-
-    @FunctionalInterface
-    protected interface BinaryPattern {
-        Pattern of(Expr first, Expr second);
-    }
-
-    protected final BoolExpr forall(int depth, BinaryBody body, BinaryPattern... pattern) {
-        Expr a = ctx.mkConst("x" + depth, eventSort);
-        Expr b = ctx.mkConst("x" + (depth + 1), eventSort);
-        return ctx.mkForall(new Expr[]{a, b}, body.of(a, b), 0,
-                Arrays.stream(pattern).map(p->p.of(a, b)).toArray(Pattern[]::new),
-                null, null, null);
-    }
-
-    @FunctionalInterface
-    protected interface TernaryBody {
-        BoolExpr of(Expr first, Expr second, Expr third);
-    }
-
-    @FunctionalInterface
-    protected interface TernaryPattern {
-        Pattern of(Expr first, Expr second, Expr third);
-    }
-
-    protected final BoolExpr forall(int depth, TernaryBody body, TernaryPattern... pattern) {
-        Expr a = ctx.mkConst("x" + depth, eventSort);
-        Expr b = ctx.mkConst("x" + (depth + 1), eventSort);
-        Expr c = ctx.mkConst("x" + (depth + 2), eventSort);
-        return ctx.mkForall(new Expr[]{a, b, c}, body.of(a, b, c), 0,
-                Arrays.stream(pattern).map(p->p.of(a, b, c)).toArray(Pattern[]::new),
-                null, null, null);
-    }
-
-    protected final BoolExpr and(Stream<?extends BoolExpr> operands) {
-        return ctx.mkAnd(operands.toArray(BoolExpr[]::new));
-    }
-
-    protected final BoolExpr or(Stream<?extends BoolExpr> operands) {
-        return ctx.mkOr(operands.toArray(BoolExpr[]::new));
-    }
 }

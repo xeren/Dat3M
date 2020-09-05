@@ -244,15 +244,17 @@ public class RelTrans extends UnaryRelation {
         return result;
     }
 
-    protected BoolExpr encodeFirstOrder(EncodeContext context) {
-        return ctx.mkAnd(
-            forall(0, (a,c)->ctx.mkOr(ctx.mkNot(edge(a, c)), r1.edge(a, c),
-                    exists(2, b->ctx.mkAnd(edge(a, b), edge(b, c)),
-                        b->ctx.mkPattern(edge(a, b), edge(b, c)))),
-                (a,c)->ctx.mkPattern(edge(a, c))),
-            forall(0, (a,c)->ctx.mkImplies(r1.edge(a, c), edge(a, c)),
-                (a,c)->ctx.mkPattern(r1.edge(a, c))),
-            forall(0, (a,b,c)->ctx.mkImplies(ctx.mkAnd(edge(a, b), edge(b, c)), edge(a, c)),
-                (a,b,c)->ctx.mkPattern(edge(a, b), edge(a, c))));
+    protected BoolExpr encodeFirstOrder(EncodeContext e) {
+        EncodeContext.RelationPredicate edge = e.of(this);
+        EncodeContext.RelationPredicate edge1 = e.of(r1);
+        return e.and(
+            e.forall(0, (a,c)->e.or(e.not(edge.of(a, c)), edge1.of(a, c),
+                    e.exists(2, b->e.and(edge.of(a, b), edge.of(b, c)),
+                        b->e.pattern(edge.of(a, b), edge.of(b, c)))),
+                (a,c)->e.pattern(edge.of(a, c))),
+            e.forall(0, (a,c)->e.implies(edge1.of(a, c), edge.of(a, c)),
+                (a,c)->e.pattern(edge1.of(a, c))),
+            e.forall(0, (a,b,c)->e.implies(e.and(edge.of(a, b), edge.of(b, c)), edge.of(a, c)),
+                (a,b,c)->e.pattern(edge.of(a, b), edge.of(a, c))));
     }
 }

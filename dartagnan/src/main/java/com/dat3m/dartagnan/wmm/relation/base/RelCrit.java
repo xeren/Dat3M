@@ -4,6 +4,7 @@ import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.arch.linux.utils.EType;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.relation.base.stat.StaticRelation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -35,7 +36,7 @@ public class RelCrit extends StaticRelation {
     // TODO: Not the most efficient implementation
     // Let's see if we need to keep a reference to a thread in events for anything else, and then optimize this method
     @Override
-    protected BoolExpr encodeApprox(Atom atom) {
+    protected BoolExpr encodeApprox(EncodeContext context, Atom atom) {
         BoolExpr enc = ctx.mkTrue();
         for(Thread thread : program.getThreads()){
             for(Event lock : thread.getCache().getEvents(FilterBasic.get(EType.RCU_LOCK))){

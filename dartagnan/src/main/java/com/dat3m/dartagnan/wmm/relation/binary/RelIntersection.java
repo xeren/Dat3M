@@ -123,9 +123,12 @@ public class RelIntersection extends BinaryRelation {
     }
 
     @Override
-    protected BoolExpr encodeFirstOrder(EncodeContext context) {
-        return forall(0, (a,b)->ctx.mkEq(edge(a, b), ctx.mkAnd(r1.edge(a, b), r2.edge(a, b))),
-                (a,b)->ctx.mkPattern(edge(a, b)),
-                (a,b)->ctx.mkPattern(r1.edge(a, b), r2.edge(a, b)));
+    protected BoolExpr encodeFirstOrder(EncodeContext e) {
+        EncodeContext.RelationPredicate edge = e.of(this);
+        EncodeContext.RelationPredicate edge1 = e.of(r1);
+        EncodeContext.RelationPredicate edge2 = e.of(r2);
+        return e.forall(0, (a,b)->e.eq(edge.of(a, b), e.and(edge1.of(a, b), edge2.of(a, b))),
+                (a,b)->e.pattern(edge.of(a, b)),
+                (a,b)->e.pattern(edge1.of(a, b), edge2.of(a, b)));
     }
 }

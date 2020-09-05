@@ -103,36 +103,37 @@ public class RelCo extends Relation {
     }
 
     @Override
-    protected BoolExpr encodeFirstOrder(EncodeContext context) {
+    protected BoolExpr encodeFirstOrder(EncodeContext c) {
         List<Event> eventsInit = program.getCache().getEvents(FilterBasic.get(EType.INIT));
         List<Event> eventsWrite = program.getCache().getEvents(FilterBasic.get(EType.WRITE));
         List<Event> eventsStore = program.getCache().getEvents(
                 FilterMinus.get(FilterBasic.get(EType.WRITE), FilterBasic.get(EType.INIT)));
+        EncodeContext.RelationPredicate edge = c.of(this);
 
-        BoolExpr typed = forall(0, (a,b)->ctx.mkEq(edge(a, b),
-                ctx.mkAnd(
-                    ctx.mkNot(edge(b, a)),
-                    or(eventsWrite.stream().map(MemEvent.class::cast).map(v->ctx.mkAnd(
+        BoolExpr typed = c.forall(0, (a,b)->c.eq(edge.of(a, b),
+                c.and(
+                    c.not(edge.of(b, a)),
+                    c.or(eventsWrite.stream().map(MemEvent.class::cast).map(v->c.and(
                         v.exec(),
-                        ctx.mkEq(a, context.event(v)),
-                        or(eventsStore.stream()
+                        c.eq(a, c.event(v)),
+                        c.or(eventsStore.stream()
                             // already implied by asymmetric, but shortens the formula
                             .filter(w->v.getCId() != w.getCId())
                             .map(MemEvent.class::cast)
-                            .map(w->ctx.mkAnd(
+                            .map(w->c.and(
                                 w.exec(),
-                                ctx.mkEq(b, context.event(w)),
+                                c.eq(b, c.event(w)),
                                 // pair has same address
-                                ctx.mkEq(v.getMemAddressExpr(), w.getMemAddressExpr()))))))))),
-            (a,b)->ctx.mkPattern(edge(a, b)));
+                                c.eq(v.getMemAddressExpr(), w.getMemAddressExpr()))))))))),
+            (a,b)->c.pattern(edge.of(a, b)));
 
-        BoolExpr transitive = forall(0, (a,b,c)->ctx.mkImplies(edge(a, b), ctx.mkImplies(edge(b, c), edge(a, c))),
-                (a,b,c)->ctx.mkPattern(edge(a, b), edge(b, c)));
+        BoolExpr transitive = c.forall(0, (a,b,d)->c.implies(edge.of(a, b), c.implies(edge.of(b, d), edge.of(a, d))),
+                (a,b,d)->c.pattern(edge.of(a, b), edge.of(b, d)));
 
-        BoolExpr initial = and(eventsInit.stream().map(MemEvent.class::cast)
+        BoolExpr initial = c.and(eventsInit.stream().map(MemEvent.class::cast)
                 .flatMap(v->eventsStore.stream().map(MemEvent.class::cast)
-                    .map(w->ctx.mkNot(edge(context.event(v), context.event(w))))));
+                    .map(w->c.not(edge.of(c.event(v), c.event(w))))));
 
-        return ctx.mkAnd(typed, transitive, initial);
+        return c.and(typed, transitive, initial);
     }
 }

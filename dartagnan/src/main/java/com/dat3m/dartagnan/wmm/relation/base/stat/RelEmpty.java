@@ -26,8 +26,9 @@ public class RelEmpty extends Relation {
     }
 
     @Override
-    protected BoolExpr encodeFirstOrder(EncodeContext context) {
-        return forall(0, (a,b)->ctx.mkNot(edge(a,b)),
-                (a,b)->ctx.mkPattern(edge(a,b)));
+    protected BoolExpr encodeFirstOrder(EncodeContext e) {
+        EncodeContext.RelationPredicate edge = e.of(this);
+        return e.forall(0, (a,b)->e.not(edge.of(a,b)),
+                (a,b)->e.pattern(edge.of(a,b)));
     }
 }

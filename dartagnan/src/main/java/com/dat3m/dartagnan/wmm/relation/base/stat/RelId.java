@@ -26,9 +26,10 @@ public class RelId extends StaticRelation {
     }
 
     @Override
-    protected BoolExpr encodeFirstOrder(EncodeContext context) {
-        return ctx.mkAnd(
-            forall(0, (a,b)->ctx.mkImplies(edge(a, b), ctx.mkEq(a, b)), (a,b)->ctx.mkPattern(edge(a, b))),
-            forall(0, a->edge(a, a), ctx::mkPattern));
+    protected BoolExpr encodeFirstOrder(EncodeContext e) {
+        EncodeContext.RelationPredicate edge = e.of(this);
+        return e.and(
+            e.forall(0, (a,b)->e.implies(edge.of(a, b), e.eq(a, b)), (a,b)->e.pattern(edge.of(a, b))),
+            e.forall(0, a->edge.of(a, a), e::pattern));
     }
 }

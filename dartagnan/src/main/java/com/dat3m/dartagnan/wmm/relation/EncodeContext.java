@@ -7,7 +7,7 @@ import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.microsoft.z3.*;
 import java.util.*;
-import java.util.stream.*;
+import java.util.stream.Stream;
 
 public class EncodeContext {
 
@@ -91,8 +91,8 @@ public class EncodeContext {
 		return and(operand.toArray(new BoolExpr[0]));
 	}
 
-	public Collector<BoolExpr,?,BoolExpr> collectorAnd() {
-		return Collectors.collectingAndThen(Collectors.toList(), this::and);
+	public BoolExpr and(Stream<BoolExpr> stream) {
+		return and(stream.toArray(BoolExpr[]::new));
 	}
 
 	public BoolExpr or(BoolExpr... operand) {
@@ -103,16 +103,20 @@ public class EncodeContext {
 		return or(operand.toArray(new BoolExpr[0]));
 	}
 
-	public Collector<BoolExpr,?,BoolExpr> collectorOr() {
-		return Collectors.collectingAndThen(Collectors.toList(), this::or);
-	}
-
-	public BoolExpr eq(BoolExpr left, BoolExpr right) {
-		return context.mkEq(left, right);
+	public BoolExpr or(Stream<BoolExpr> stream) {
+		return or(stream.toArray(BoolExpr[]::new));
 	}
 
 	public BoolExpr implies(BoolExpr premise, BoolExpr conclusion) {
 		return context.mkImplies(premise, conclusion);
+	}
+
+	public BoolExpr eq(Expr left, Expr right) {
+		return context.mkEq(left, right);
+	}
+
+	public BoolExpr lt(ArithExpr lower, ArithExpr greater) {
+		return context.mkLt(lower, greater);
 	}
 
 	@FunctionalInterface
@@ -174,5 +178,9 @@ public class EncodeContext {
 		return context.mkForall(new Expr[]{a, b, c}, body.of(a, b, c), 0,
 			Arrays.stream(pattern).map(p->p.of(a, b, c)).toArray(Pattern[]::new),
 			null, null, null);
+	}
+
+	public Pattern pattern(Expr... part) {
+		return context.mkPattern(part);
 	}
 }

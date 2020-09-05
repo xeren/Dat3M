@@ -5,6 +5,7 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.BoolExpr;
 
@@ -26,7 +27,7 @@ public class RelIdd extends BasicRegRelation {
     }
 
     @Override
-    protected BoolExpr encodeApprox(Atom atom) {
+    protected BoolExpr encodeApprox(EncodeContext context, Atom atom) {
         return doEncodeApprox(atom, program.getCache().getEvents(FilterBasic.get(EType.REG_READER)));
     }
 

@@ -67,10 +67,12 @@ public class RelInverse extends UnaryRelation {
     }
 
     @Override
-    protected BoolExpr encodeFirstOrder(EncodeContext context) {
-        return forall(0, (a,b)->ctx.mkEq(edge(a, b), r1.edge(b, a)),
-                (a,b)->ctx.mkPattern(edge(a, b)),
-                (a,b)->ctx.mkPattern(r1.edge(b, a)));
+    protected BoolExpr encodeFirstOrder(EncodeContext e) {
+        EncodeContext.RelationPredicate edge = e.of(this);
+        EncodeContext.RelationPredicate edge1 = e.of(r1);
+        return e.forall(0, (a,b)->e.eq(edge.of(a, b), edge1.of(b, a)),
+                (a,b)->e.pattern(edge.of(a, b)),
+                (a,b)->e.pattern(edge1.of(b, a)));
     }
 }
     

@@ -24,17 +24,17 @@ public abstract class StaticRelation extends Relation {
         }
     }
 
-    protected BoolExpr encodeApprox(Atom atom) {
-        return and(encodeTupleSet.stream().map(tuple->ctx.mkEq(atom.of(tuple), ctx.mkAnd(tuple.getFirst().exec(), tuple.getSecond().exec()))));
+    protected BoolExpr encodeApprox(EncodeContext context, Atom atom) {
+        return context.and(encodeTupleSet.stream().map(tuple->ctx.mkEq(atom.of(tuple), ctx.mkAnd(tuple.getFirst().exec(), tuple.getSecond().exec()))));
     }
 
     @Override
     protected BoolExpr encodeApprox(EncodeContext context) {
-        return encodeApprox(this::edge);
+        return encodeApprox(context, this::edge);
     }
 
     @Override
     protected BoolExpr encodeFirstOrder(EncodeContext context) {
-        return encodeApprox((a,b)->edge(context.event(a), context.event(b)));
+        return encodeApprox(context, (a,b)->edge(context.event(a), context.event(b)));
     }
 }

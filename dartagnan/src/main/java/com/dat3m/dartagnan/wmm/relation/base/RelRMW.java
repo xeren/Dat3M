@@ -12,6 +12,7 @@ import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.filter.FilterIntersection;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.relation.base.stat.StaticRelation;
 import com.dat3m.dartagnan.wmm.utils.Flag;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
@@ -102,11 +103,11 @@ public class RelRMW extends StaticRelation {
     }
 
     @Override
-    protected BoolExpr encodeApprox(Atom atom) {
+    protected BoolExpr encodeApprox(EncodeContext context, Atom atom) {
         // Encode base (not exclusive pairs) RMW
         TupleSet origEncodeTupleSet = encodeTupleSet;
         encodeTupleSet = baseMaxTupleSet;
-        BoolExpr enc = super.encodeApprox(atom);
+        BoolExpr enc = super.encodeApprox(context, atom);
         encodeTupleSet = origEncodeTupleSet;
 
         // Encode RMW for exclusive pairs

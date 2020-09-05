@@ -86,16 +86,17 @@ public class RelFencerel extends Relation {
     }
 
     @Override
-    protected BoolExpr encodeFirstOrder(EncodeContext context) {
+    protected BoolExpr encodeFirstOrder(EncodeContext e) {
+        EncodeContext.RelationPredicate edge = e.of(this);
         List<Event> fences = program.getCache().getEvents(FilterBasic.get(fenceName));
-        return forall(0,
-                (a,b)->ctx.mkEq(edge(a, b), or(fences.stream().map(f->ctx.mkAnd(f.exec(),
-                    ctx.mkLt((ArithExpr)a, (ArithExpr)context.event(f)),
-                    ctx.mkLt((ArithExpr)context.event(f), (ArithExpr)b)
+        return e.forall(0,
+                (a,b)->e.eq(edge.of(a, b), e.or(fences.stream().map(f->e.and(f.exec(),
+                    e.lt((ArithExpr)a, (ArithExpr)e.event(f)),
+                    e.lt((ArithExpr)e.event(f), (ArithExpr)b)
                 )))),
-                fences.stream().map(f->(BinaryPattern)(a,b)->ctx.mkPattern(f.exec(),
-                    ctx.mkLt((ArithExpr)a, (ArithExpr)context.event(f)),
-                    ctx.mkLt((ArithExpr)context.event(f), (ArithExpr)b)
-                )).toArray(BinaryPattern[]::new));
+                fences.stream().map(f->(EncodeContext.BinaryPattern)(a,b)->e.pattern(f.exec(),
+                    e.lt((ArithExpr)a, (ArithExpr)e.event(f)),
+                    e.lt((ArithExpr)e.event(f), (ArithExpr)b)
+                )).toArray(EncodeContext.BinaryPattern[]::new));
     }
 }
