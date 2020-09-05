@@ -34,7 +34,8 @@ public abstract class StaticRelation extends Relation {
     }
 
     @Override
-    protected BoolExpr encodeFirstOrder(EncodeContext context) {
-        return encodeApprox(context, (a,b)->edge(context.event(a), context.event(b)));
+    protected BoolExpr encodeFirstOrder(EncodeContext e) {
+        EncodeContext.RelationPredicate edge = e.of(this);
+        return encodeApprox(e, (a,b)->edge.of(e.event(a), e.event(b)));
     }
 }

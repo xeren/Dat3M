@@ -11,7 +11,7 @@ import java.util.stream.Stream;
 
 public class EncodeContext {
 
-	private final Context context;
+	public final Context context;
 	public final Program program;
 	public final Settings settings;
 	private final Sort sortEvent;
@@ -31,6 +31,16 @@ public class EncodeContext {
 
 	@FunctionalInterface
 	public interface RelationPredicate {
+		/**
+		 * Creates an atomic formula for a relationship.
+		 * Used by the First-Order/Free variant for recursion evaluation.
+		 * @param first
+		 * Event in this domain set.
+		 * @param second
+		 * Event in this range set.
+		 * @return
+		 * Proposition that the pair is contained by this relation.
+		 */
 		BoolExpr of(Expr first, Expr second);
 	}
 
@@ -51,8 +61,12 @@ public class EncodeContext {
 		return context.mkNumeral(event.getCId(), sortEvent);
 	}
 
+	public BoolExpr edge(String name, Event first, Event second) {
+		return Utils.edge(name, first, second, context);
+	}
+
 	public BoolExpr edge(Relation relation, Event first, Event second) {
-		return Utils.edge(relation.getName(), first, second, context);
+		return edge(relation.getName(), first, second);
 	}
 
 	public BoolExpr edge(Relation relation, Tuple tuple) {
@@ -67,12 +81,39 @@ public class EncodeContext {
 		return edge(relation, iteration, tuple.getFirst(), tuple.getSecond());
 	}
 
-	public IntExpr intVar(Relation relation, Event event) {
-		return Utils.intVar(relation.getName(), event, context);
+	/**
+	 * Used to describe a total order induced by this relation.
+	 * Yields a monotone mapping into the integer order.
+	 * @param name
+	 * Context of the mapping.
+	 * Usually only variables of similar name are put in relation.
+	 * @param event
+	 * Some event.
+	 * @return
+	 * Integer equally ordered with respect to other events.
+	 */
+	public IntExpr intVar(String name, Event event) {
+		return Utils.intVar(name, event, context);
 	}
 
+	public IntExpr intCount(String name, Event first, Event second) {
+		return Utils.intCount(name, first, second, context);
+	}
+
+	/**
+	 * Associates an integer with a pair of events in a relation.
+	 * Used by Integer Difference Logic (IDL) encoding for recursion evaluation.
+	 * @param relation
+	 * Context for this integer value.
+	 * @param first
+	 * Event in the domain set of {@code relation}.
+	 * @param second
+	 * Event in the range set of {@code relation}.
+	 * @return
+	 * Integer.
+	 */
 	public IntExpr intCount(Relation relation, Event first, Event second) {
-		return Utils.intCount(relation.getName(), first, second, context);
+		return intCount(relation.getName(), first, second);
 	}
 
 	public IntExpr intCount(Relation relation, Tuple tuple) {
@@ -115,8 +156,16 @@ public class EncodeContext {
 		return context.mkEq(left, right);
 	}
 
+	public BoolExpr distinct(Collection<?extends Expr> element) {
+		return context.mkDistinct(element.toArray(new Expr[0]));
+	}
+
 	public BoolExpr lt(ArithExpr lower, ArithExpr greater) {
 		return context.mkLt(lower, greater);
+	}
+
+	public IntExpr zero() {
+		return context.mkInt(0);
 	}
 
 	@FunctionalInterface

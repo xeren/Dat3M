@@ -253,48 +253,4 @@ public abstract class Relation {
         return edge(iteration, t.getFirst(), t.getSecond());
     }
 
-    /**
-     * Creates an atomic formula for a relationship.
-     * Used by the First-Order/Free variant for recursion evaluation.
-     * @param first
-     * Event in this domain set.
-     * @param second
-     * Event in this range set.
-     * @return
-     * Proposition that the pair is contained by this relation.
-     */
-    public BoolExpr edge(Expr first, Expr second) {
-        return(BoolExpr)ctx.mkFuncDecl(getName(), new Sort[]{eventSort, eventSort}, ctx.mkBoolSort()).apply(first, second);
-    }
-
-    /**
-     * Used to describe a total order induced by this relation.
-     * Yields a monotone mapping into the integer order.
-     * @param e
-     * Some event.
-     * @return
-     * Integer equally ordered with respect to other events.
-     */
-    public IntExpr intVar(Event e) {
-        return Utils.intVar(getName(), e, ctx);
-    }
-
-    /**
-     * Associates an integer with a pair of events.
-     * Used by Integer Difference Logic (IDL) encoding for recursion evaluation.
-     * @param first
-     * Event in this domain set.
-     * @param second
-     * Event in this range set.
-     * @return
-     * Integer.
-     */
-    public IntExpr intCount(Event first, Event second) {
-        return Utils.intCount(getName(), first, second, ctx);
-    }
-
-    public IntExpr intCount(Tuple t) {
-        return intCount(t.getFirst(), t.getSecond());
-    }
-
 }

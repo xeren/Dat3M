@@ -7,10 +7,7 @@ import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  *
@@ -138,12 +135,9 @@ public class RelComposition extends BinaryRelation {
     }
 
     @Override
-    protected BoolExpr encodeIDL(EncodeContext context) {
-        if(recursiveGroupId == 0){
-            return encodeApprox(context);
-        }
-
-        BoolExpr enc = ctx.mkTrue();
+    protected BoolExpr encodeIDL(EncodeContext e) {
+        if(recursiveGroupId == 0)
+            return encodeApprox(e);
 
         boolean recurseInR1 = (r1.getRecursiveGroupId() & recursiveGroupId) > 0;
         boolean recurseInR2 = (r2.getRecursiveGroupId() & recursiveGroupId) > 0;
@@ -156,11 +150,11 @@ public class RelComposition extends BinaryRelation {
         r2Set.addAll(r2.getEncodeTupleSet());
         r2Set.retainAll(r2.getMaxTupleSet());
 
-        Map<Integer, BoolExpr> orClauseMap = new HashMap<>();
-        Map<Integer, BoolExpr> idlClauseMap = new HashMap<>();
+        Map<Tuple,LinkedList<BoolExpr>> orClauseMap = new HashMap<>();
+        Map<Tuple,LinkedList<BoolExpr>> idlClauseMap = new HashMap<>();
         for(Tuple tuple : encodeTupleSet){
-            orClauseMap.put(tuple.hashCode(), ctx.mkFalse());
-            idlClauseMap.put(tuple.hashCode(), ctx.mkFalse());
+            orClauseMap.put(tuple, new LinkedList<>());
+            idlClauseMap.put(tuple, new LinkedList<>());
         }
 
         for(Tuple tuple1 : r1Set){
@@ -168,29 +162,22 @@ public class RelComposition extends BinaryRelation {
             Event e3 = tuple1.getSecond();
             for(Tuple tuple2 : r2Set.getByFirst(e3)){
                 Event e2 = tuple2.getSecond();
-                int id = Tuple.toHashCode(e1.getCId(), e2.getCId());
+                Tuple id = new Tuple(e1, e2);
                 if(orClauseMap.containsKey(id)){
-                    BoolExpr opt1 = r1.edge(e1, e3);
-                    BoolExpr opt2 = r2.edge(e3, e2);
-                    orClauseMap.put(id, ctx.mkOr(orClauseMap.get(id), ctx.mkAnd(opt1, opt2)));
+                    BoolExpr opt1 = e.edge(r1, e1, e3);
+                    BoolExpr opt2 = e.edge(r2, e3, e2);
+                    orClauseMap.get(id).add(e.and(opt1, opt2));
 
-                    if(recurseInR1){
-                        opt1 = ctx.mkAnd(opt1, ctx.mkGt(intCount(e1, e2), r1.intCount(e1, e3)));
-                    }
-                    if(recurseInR2){
-                        opt2 = ctx.mkAnd(opt2, ctx.mkGt(intCount(e1, e2), r1.intCount(e3, e2)));
-                    }
-                    idlClauseMap.put(id, ctx.mkOr(idlClauseMap.get(id), ctx.mkAnd(opt1, opt2)));
+                    if(recurseInR1)
+                        opt1 = e.and(opt1, e.lt(e.intCount(r1, e1, e2), e.intCount(this, e1, e3)));
+                    if(recurseInR2)
+                        opt2 = e.and(opt2, e.lt(e.intCount(r1, e1, e2), e.intCount(this, e3, e2)));
+                    idlClauseMap.get(id).add(e.and(opt1, opt2));
                 }
             }
         }
 
-        for(Tuple tuple : encodeTupleSet){
-            enc = ctx.mkAnd(enc, ctx.mkEq(edge(tuple), orClauseMap.get(tuple.hashCode())));
-            enc = ctx.mkAnd(enc, ctx.mkEq(edge(tuple), idlClauseMap.get(tuple.hashCode())));
-        }
-
-        return enc;
+        return e.and(encodeTupleSet.stream().map(tuple->e.and(e.eq(e.edge(this, tuple), e.or(orClauseMap.get(tuple))), e.eq(e.edge(this, tuple), e.or(idlClauseMap.get(tuple))))));
     }
 
     @Override

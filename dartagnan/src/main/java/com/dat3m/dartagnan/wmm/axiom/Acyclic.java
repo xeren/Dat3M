@@ -6,12 +6,14 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import com.microsoft.z3.IntExpr;
 
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
 import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
+import static com.dat3m.dartagnan.wmm.utils.Utils.intVar;
 
 /**
  *
@@ -55,11 +57,14 @@ public class Acyclic extends Axiom {
     @Override
     protected BoolExpr _consistent(Context ctx) {
         BoolExpr enc = ctx.mkTrue();
+        String name = rel.getName();
         for(Tuple tuple : rel.getEncodeTupleSet()){
             Event e1 = tuple.getFirst();
             Event e2 = tuple.getSecond();
-            enc = ctx.mkAnd(enc, ctx.mkImplies(e1.exec(), ctx.mkGt(rel.intVar(e1), ctx.mkInt(0))));
-            enc = ctx.mkAnd(enc, ctx.mkImplies(rel.edge(e1, e2), ctx.mkLt(rel.intVar(e1), rel.intVar(e2))));
+            IntExpr i1 = intVar(name, e1, ctx);
+            IntExpr i2 = intVar(name, e2, ctx);
+            enc = ctx.mkAnd(enc, ctx.mkImplies(e1.exec(), ctx.mkGt(i1, ctx.mkInt(0))));
+            enc = ctx.mkAnd(enc, ctx.mkImplies(edge(name, e1, e2, ctx), ctx.mkLt(i1, i2)));
         }
         return enc;
     }

@@ -6,6 +6,8 @@ import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
+import java.util.LinkedList;
+
 /**
  *
  * @author Florian Furbach
@@ -60,30 +62,26 @@ public class RelUnion extends BinaryRelation {
     }
 
     @Override
-    protected BoolExpr encodeIDL(EncodeContext context) {
-        if(recursiveGroupId == 0){
-            return encodeApprox(context);
-        }
+    protected BoolExpr encodeIDL(EncodeContext e) {
+        if(recursiveGroupId == 0)
+            return encodeApprox(e);
 
-        BoolExpr enc = ctx.mkTrue();
-
+        LinkedList<BoolExpr> enc = new LinkedList<>();
         boolean recurseInR1 = (r1.getRecursiveGroupId() & recursiveGroupId) > 0;
         boolean recurseInR2 = (r2.getRecursiveGroupId() & recursiveGroupId) > 0;
 
         for(Tuple tuple : encodeTupleSet){
-            BoolExpr opt1 = r1.edge(tuple);
-            BoolExpr opt2 = r2.edge(tuple);
-            enc = ctx.mkAnd(enc, ctx.mkEq(edge(tuple), ctx.mkOr(opt1, opt2)));
+            BoolExpr opt1 = e.edge(r1, tuple);
+            BoolExpr opt2 = e.edge(r2, tuple);
+            enc.add(e.eq(e.edge(this, tuple), e.or(opt1, opt2)));
 
-            if(recurseInR1){
-                opt1 = ctx.mkAnd(opt1, ctx.mkGt(intCount(tuple), r1.intCount(tuple)));
-            }
-            if(recurseInR2){
-                opt2 = ctx.mkAnd(opt2, ctx.mkGt(intCount(tuple), r2.intCount(tuple)));
-            }
-            enc = ctx.mkAnd(enc, ctx.mkEq(edge(tuple), ctx.mkOr(opt1, opt2)));
+            if(recurseInR1)
+                opt1 = e.and(opt1, e.lt(e.intCount(r1, tuple), e.intCount(this, tuple)));
+            if(recurseInR2)
+                opt2 = e.and(opt2, e.lt(e.intCount(r2, tuple), e.intCount(this, tuple)));
+            enc.add(e.eq(e.edge(this, tuple), e.or(opt1, opt2)));
         }
-        return enc;
+        return e.and(enc);
     }
 
     @Override

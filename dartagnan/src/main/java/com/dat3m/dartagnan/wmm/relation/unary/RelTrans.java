@@ -7,15 +7,11 @@ import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.IntExpr;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  *
@@ -77,75 +73,63 @@ public class RelTrans extends UnaryRelation {
     }
 
     @Override
-    protected BoolExpr encodeApprox(EncodeContext context) {
-        BoolExpr enc = ctx.mkTrue();
+    protected BoolExpr encodeApprox(EncodeContext e) {
+        LinkedList<BoolExpr> enc = new LinkedList<>();
 
         for(Tuple tuple : fullEncodeTupleSet){
-            BoolExpr orClause = ctx.mkFalse();
+            LinkedList<BoolExpr> orClause = new LinkedList<>();
 
             Event e1 = tuple.getFirst();
             Event e2 = tuple.getSecond();
 
-            if(r1.getMaxTupleSet().contains(tuple)){
-                orClause = ctx.mkOr(orClause, r1.edge(e1, e2));
-            }
+            if(r1.getMaxTupleSet().contains(tuple))
+                orClause.add(e.edge(r1, e1, e2));
 
-            for(Event e3 : transitiveReachabilityMap.get(e1)){
-                if(e3.getCId() != e1.getCId() && e3.getCId() != e2.getCId() && transitiveReachabilityMap.get(e3).contains(e2)){
-                    orClause = ctx.mkOr(orClause, ctx.mkAnd(edge(e1, e3), edge(e3, e2)));
-                }
-            }
+            for(Event e3 : transitiveReachabilityMap.get(e1))
+                if(e3.getCId() != e1.getCId() && e3.getCId() != e2.getCId() && transitiveReachabilityMap.get(e3).contains(e2))
+                    orClause.add(e.and(e.edge(this, e1, e3), e.edge(this, e3, e2)));
 
-            if(Relation.PostFixApprox) {
-                enc = ctx.mkAnd(enc, ctx.mkImplies(orClause, edge(e1, e2)));
-            } else {
-                enc = ctx.mkAnd(enc, ctx.mkEq(edge(e1, e2), orClause));
-            }
+            enc.add(Relation.PostFixApprox
+                ? ctx.mkImplies(e.or(orClause), e.edge(this, e1, e2))
+                : ctx.mkEq(e.edge(this, e1, e2), e.or(orClause)));
         }
 
-        return enc;
+        return e.and(enc);
     }
 
     @Override
-    protected BoolExpr encodeIDL(EncodeContext context) {
-        BoolExpr enc = ctx.mkTrue();
+    protected BoolExpr encodeIDL(EncodeContext e) {
+        LinkedList<BoolExpr> enc = new LinkedList<>();
         String nameConcat = "(" + getName() + ";" + getName() + ")";
 
         for(Tuple tuple : fullEncodeTupleSet){
             Event e1 = tuple.getFirst();
             Event e2 = tuple.getSecond();
-            BoolExpr edgeConcat = Utils.edge(nameConcat, e1, e2, ctx);
-            IntExpr intCountConcat = Utils.intCount(nameConcat, e1, e2, ctx);
+            BoolExpr edgeConcat = e.edge(nameConcat, e1, e2);
+            IntExpr intCountConcat = e.intCount(nameConcat, e1, e2);
 
-            BoolExpr firstCondition = ctx.mkFalse();
+            LinkedList<BoolExpr> firstCondition = new LinkedList<>();
+            LinkedList<BoolExpr> secondCondition = new LinkedList<>();
             for(Tuple tuple2 : fullEncodeTupleSet.getByFirst(e1)){
                 Event e3 = tuple2.getSecond();
                 if(!e2.equals(e3) && transitiveReachabilityMap.get(e3).contains(e2)) {
-                    firstCondition = ctx.mkOr(firstCondition, ctx.mkAnd(
-                        edge(e1, e3),
-                        edge(e3, e2),
-                        ctx.mkGt(intCountConcat, intCount(e1, e3)),
-                        ctx.mkGt(intCountConcat, intCount(e3, e2))));
+                    firstCondition.add(e.and(
+                        e.edge(this, e1, e3),
+                        e.edge(this, e3, e2),
+                        e.lt(e.intCount(this, e1, e3), intCountConcat),
+                        e.lt(e.intCount(this, e3, e2), intCountConcat)));
+                    secondCondition.add(e.and(e.edge(this, e1, e3), e.edge(this, e3, e2)));
                 }
             }
 
-            BoolExpr secondCondition = ctx.mkFalse();
-            for(Tuple tuple2 : fullEncodeTupleSet.getByFirst(e1)){
-                assert !tuple2.equals(tuple);
-                Event e3 = tuple2.getSecond();
-                if(!e2.equals(e3) && transitiveReachabilityMap.get(e3).contains(e2)) {
-                    secondCondition = ctx.mkOr(secondCondition, ctx.mkAnd(edge(e1, e3), edge(e3, e2)));
-                }
-            }
-
-            enc = ctx.mkAnd(enc,
-                    ctx.mkEq(edgeConcat, firstCondition),
-                    ctx.mkEq(edgeConcat, secondCondition),
-                    ctx.mkImplies(edgeConcat, ctx.mkGt(intCount(e1, e2), intCountConcat)),
-                    ctx.mkEq(edge(e1, e2), ctx.mkOr(r1.edge(e1, e2), edgeConcat)));
+            enc.add(e.and(
+                    e.eq(edgeConcat, e.or(firstCondition)),
+                    e.eq(edgeConcat, e.or(secondCondition)),
+                    e.implies(edgeConcat, e.lt(intCountConcat, e.intCount(this, e1, e2))),
+                    e.eq(e.edge(this, e1, e2), e.or(e.edge(r1, e1, e2), edgeConcat))));
         }
 
-        return enc;
+        return e.and(enc);
     }
 
     @Override

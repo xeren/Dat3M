@@ -57,29 +57,21 @@ public class RelMinus extends BinaryRelation {
     }
 
     @Override
-    protected BoolExpr encodeApprox(EncodeContext context) {
-        BoolExpr enc = ctx.mkTrue();
-        if (Relation.PostFixApprox)
-            for(Tuple tuple : encodeTupleSet)
-                enc = ctx.mkAnd(enc, ctx.mkImplies(ctx.mkAnd(r1.edge(tuple), ctx.mkNot(r2.edge(tuple))), edge(tuple)));
-        else
-            for(Tuple tuple : encodeTupleSet)
-                enc = ctx.mkAnd(enc, ctx.mkEq(edge(tuple), ctx.mkAnd(r1.edge(tuple), ctx.mkNot(r2.edge(tuple)))));
-        return enc;
+    protected BoolExpr encodeApprox(EncodeContext e) {
+        return e.and(encodeTupleSet.stream().map(Relation.PostFixApprox
+            ? tuple->e.or(e.edge(this, tuple), e.not(e.edge(r1, tuple)), e.edge(r2, tuple))
+            : tuple->e.eq(e.edge(this, tuple), e.and(e.edge(r1, tuple), e.not(e.edge(r2, tuple))))));
     }
 
     @Override
-    protected BoolExpr encodeIDL(EncodeContext context) {
-        if(recursiveGroupId == 0){
-            return encodeApprox(context);
-        }
+    protected BoolExpr encodeIDL(EncodeContext e) {
+        if(recursiveGroupId == 0)
+            return encodeApprox(e);
 
-        BoolExpr enc = ctx.mkTrue();
-
-        for(Tuple tuple : encodeTupleSet){
-            enc = ctx.mkAnd(enc, ctx.mkEq(edge(tuple), ctx.mkAnd(r1.edge(tuple), ctx.mkNot(r2.edge(tuple)), ctx.mkGt(intCount(tuple), r1.intCount(tuple)))));
-        }
-        return enc;
+        return e.and(encodeTupleSet.stream().map(tuple->e.eq(e.edge(this, tuple), e.and(
+            e.edge(r1, tuple),
+            e.not(e.edge(r2, tuple)),
+            e.lt(e.intCount(r1, tuple), e.intCount(this, tuple))))));
     }
 
     @Override
