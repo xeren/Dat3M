@@ -121,28 +121,25 @@ public class Wmm {
             recursiveGroup.updateEncodeTupleSets();
         }
 
-        EncodeContext c = new EncodeContext(ctx, program, settings);
-        BoolExpr enc = ctx.mkTrue();
+        EncodeContext e = new EncodeContext(ctx, program, settings);
         for(String relName : baseRelations){
-            enc = ctx.mkAnd(enc, relationRepository.getRelation(relName).encode(c));
+            relationRepository.getRelation(relName).encode(e);
         }
-        enc = ctx.mkAnd(enc, c.allRules());
 
         if(settings.getMode() == Mode.KLEENE){
             for(RecursiveGroup group : recursiveGroups){
-                enc = ctx.mkAnd(enc, group.encode(ctx));
+                group.encode(e);
             }
         }
 
-        return enc;
+        return e.allRules();
     }
 
     public BoolExpr encode(Program program, Context ctx, Settings settings) {
         EncodeContext c = new EncodeContext(ctx, program, settings);
         BoolExpr enc = encodeBase(program, ctx, settings);
-        for (Axiom ax : axioms) {
-            enc = ctx.mkAnd(enc, ax.getRel().encode(c));
-        }
+        for (Axiom ax : axioms)
+            ax.getRel().encode(c);
         return ctx.mkAnd(enc, c.allRules());
     }
 

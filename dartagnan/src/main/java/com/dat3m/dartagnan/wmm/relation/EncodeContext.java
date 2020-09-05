@@ -65,18 +65,65 @@ public class EncodeContext {
 		return Utils.edge(name, first, second, context);
 	}
 
+	/**
+	 * Creates an atomic formula for a relationship.
+	 * @param first
+	 * Event in this domain set.
+	 * @param second
+	 * Event in this range set.
+	 * @return
+	 * Proposition that the specified event pair is contained by this relation.
+	 * @see #edge(Relation,Tuple)
+	 */
 	public BoolExpr edge(Relation relation, Event first, Event second) {
 		return edge(relation.getName(), first, second);
 	}
 
+	/**
+	 * Creates an atomic formula for a relationship.
+	 * @param tuple
+	 * Pair of events.
+	 * @return
+	 * Proposition that the pair is contained by this relation.
+	 * @see #edge(Relation,Event,Event)
+	 */
 	public BoolExpr edge(Relation relation, Tuple tuple) {
 		return edge(relation, tuple.getFirst(), tuple.getSecond());
 	}
 
+	/**
+	 * Creates an atomic formula for a relationship.
+	 * Used in the Kleene/LFP variant for recursion evaluation.
+	 * @param relation
+	 * Context of the variable.
+	 * @param iteration
+	 * Index of the associated version of this relation.
+	 * Between 0 and the iteration count of the {@link com.dat3m.dartagnan.wmm.utils.RecursiveGroup} in context.
+	 * @param first
+	 * Event in this domain set.
+	 * @param second
+	 * Event in this range set.
+	 * @return
+	 * Proposition that the pair is contained by this relation's version.
+	 * @see #edge(Relation,int,Tuple)
+	 */
 	public BoolExpr edge(Relation relation, int iteration, Event first, Event second) {
 		return Utils.edge(relation.getName() + "_" + iteration, first, second, context);
 	}
 
+	/**
+	 * Creates an atomic formula for a relationship.
+	 * Used in the Kleene/LFP variant for recursion evaluation.
+	 * @param relation
+	 * Context of the variable.
+	 * @param iteration
+	 * Index of the associated version of this relation.
+	 * Between 0 and the iteration count of the {@link com.dat3m.dartagnan.wmm.utils.RecursiveGroup} in context.
+	 * @param tuple
+	 * Pair of events.
+	 * @return
+	 * Proposition that the pair is contained by this relation's version.
+	 */
 	public BoolExpr edge(Relation relation, int iteration, Tuple tuple) {
 		return edge(relation, iteration, tuple.getFirst(), tuple.getSecond());
 	}

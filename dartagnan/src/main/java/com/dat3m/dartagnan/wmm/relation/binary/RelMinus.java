@@ -10,109 +10,103 @@ import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 /**
- *
  * @author Florian Furbach
  */
 public class RelMinus extends BinaryRelation {
 
-    public static String makeTerm(Relation r1, Relation r2){
-        return "(" + r1.getName() + "\\" + r2.getName() + ")";
-    }
+	public static String makeTerm(Relation r1, Relation r2) {
+		return "(" + r1.getName() + "\\" + r2.getName() + ")";
+	}
 
-    public RelMinus(Relation r1, Relation r2) {
-        super(r1, r2);
-        term = makeTerm(r1, r2);
-    }
+	public RelMinus(Relation r1, Relation r2) {
+		super(r1, r2);
+		term = makeTerm(r1, r2);
+	}
 
-    public RelMinus(Relation r1, Relation r2, String name) {
-        super(r1, r2, name);
-        term = makeTerm(r1, r2);
-    }
+	public RelMinus(Relation r1, Relation r2, String name) {
+		super(r1, r2, name);
+		term = makeTerm(r1, r2);
+	}
 
-    @Override
-    public void initialise(Program program, Context ctx, Settings settings){
-        super.initialise(program, ctx, settings);
-        if(r2.getRecursiveGroupId() > 0){
-            throw new RuntimeException("Relation " + r2.getName() + " cannot be recursive since it occurs in a set minus.");
-        }
-    }
+	@Override
+	public void initialise(Program program, Context ctx, Settings settings) {
+		super.initialise(program, ctx, settings);
+		if(r2.getRecursiveGroupId() > 0) {
+			throw new RuntimeException("Relation " + r2.getName() + " cannot be recursive since it occurs in a set minus.");
+		}
+	}
 
-    @Override
-    public TupleSet getMaxTupleSet(){
-        if(maxTupleSet == null){
-            maxTupleSet = new TupleSet();
-            maxTupleSet.addAll(r1.getMaxTupleSet());
-            r2.getMaxTupleSet();
-        }
-        return maxTupleSet;
-    }
+	@Override
+	public TupleSet getMaxTupleSet() {
+		if(maxTupleSet == null) {
+			maxTupleSet = new TupleSet();
+			maxTupleSet.addAll(r1.getMaxTupleSet());
+			r2.getMaxTupleSet();
+		}
+		return maxTupleSet;
+	}
 
-    @Override
-    public TupleSet getMaxTupleSetRecursive(){
-        if(recursiveGroupId > 0 && maxTupleSet != null){
-            maxTupleSet.addAll(r1.getMaxTupleSetRecursive());
-            return maxTupleSet;
-        }
-        return getMaxTupleSet();
-    }
+	@Override
+	public TupleSet getMaxTupleSetRecursive() {
+		if(recursiveGroupId > 0 && maxTupleSet != null) {
+			maxTupleSet.addAll(r1.getMaxTupleSetRecursive());
+			return maxTupleSet;
+		}
+		return getMaxTupleSet();
+	}
 
-    @Override
-    protected BoolExpr encodeApprox(EncodeContext e) {
-        return e.and(encodeTupleSet.stream().map(Relation.PostFixApprox
-            ? tuple->e.or(e.edge(this, tuple), e.not(e.edge(r1, tuple)), e.edge(r2, tuple))
-            : tuple->e.eq(e.edge(this, tuple), e.and(e.edge(r1, tuple), e.not(e.edge(r2, tuple))))));
-    }
+	@Override
+	protected void encodeApprox(EncodeContext e) {
+		e.rule(e.and(encodeTupleSet.stream().map(Relation.PostFixApprox
+			? t->e.or(e.edge(this, t), e.not(e.edge(r1, t)), e.edge(r2, t))
+			: t->e.eq(e.edge(this, t), e.and(e.edge(r1, t), e.not(e.edge(r2, t)))))));
+	}
 
-    @Override
-    protected BoolExpr encodeIDL(EncodeContext e) {
-        if(recursiveGroupId == 0)
-            return encodeApprox(e);
+	@Override
+	protected void encodeIDL(EncodeContext e) {
+		if(recursiveGroupId == 0) {
+			encodeApprox(e);
+			return;
+		}
 
-        return e.and(encodeTupleSet.stream().map(tuple->e.eq(e.edge(this, tuple), e.and(
-            e.edge(r1, tuple),
-            e.not(e.edge(r2, tuple)),
-            e.lt(e.intCount(r1, tuple), e.intCount(this, tuple))))));
-    }
+		e.rule(e.and(encodeTupleSet.stream().map(t->e.eq(e.edge(this, t), e.and(
+			e.edge(r1, t),
+			e.not(e.edge(r2, t)),
+			e.lt(e.intCount(r1, t), e.intCount(this, t)))))));
+	}
 
-    @Override
-    public BoolExpr encodeIteration(int groupId, int iteration){
-        BoolExpr enc = ctx.mkTrue();
+	@Override
+	public void encodeIteration(EncodeContext e, int groupId, int iteration) {
+		if((groupId & recursiveGroupId) <= 0 || iteration <= lastEncodedIteration)
+			return;
+		lastEncodedIteration = iteration;
 
-        if((groupId & recursiveGroupId) > 0 && iteration > lastEncodedIteration){
-            lastEncodedIteration = iteration;
+		if(iteration == 0 && isRecursive) {
+			for(Tuple tuple: encodeTupleSet)
+				e.rule(e.not(e.edge(this, iteration, tuple)));
+			return;
+		}
+		int childIteration = isRecursive ? iteration - 1 : iteration;
+		boolean recurse = (r1.getRecursiveGroupId() & groupId) > 0;
+		assert (r2.getRecursiveGroupId() & groupId) == 0;
 
-            if(iteration == 0 && isRecursive){
-                for(Tuple tuple : encodeTupleSet){
-                    enc = ctx.mkAnd(ctx.mkNot(edge(iteration, tuple)));
-                }
-            } else {
-                int childIteration = isRecursive ? iteration - 1 : iteration;
-                boolean recurse = (r1.getRecursiveGroupId() & groupId) > 0;
-                assert (r2.getRecursiveGroupId() & groupId) == 0;
+		java.util.function.Function<?super Tuple,?extends BoolExpr> edge
+			= recurse ? t->e.edge(r1, childIteration, t) : t->e.edge(r1, t);
 
-                java.util.function.Function<?super Tuple,?extends BoolExpr> e
-                        = recurse ? t->r1.edge(childIteration, t) : r1::edge;
+		for(Tuple tuple: encodeTupleSet)
+			e.rule(e.eq(e.edge(this, iteration, tuple), e.and(edge.apply(tuple), e.not(e.edge(r2, tuple)))));
 
-                for(Tuple tuple : encodeTupleSet){
-                    enc = ctx.mkAnd(enc, ctx.mkEq(edge(iteration, tuple), ctx.mkAnd(e.apply(tuple), ctx.mkNot(r2.edge(tuple)))));
-                }
+		if(recurse)
+			r1.encodeIteration(e, groupId, childIteration);
+	}
 
-                if(recurse){
-                    enc = ctx.mkAnd(enc, r1.encodeIteration(groupId, childIteration));
-                }
-            }
-        }
-
-        return enc;
-    }
-
-    @Override
-    protected BoolExpr encodeFirstOrder(EncodeContext e) {
-        EncodeContext.RelationPredicate edge = e.of(this);
-        EncodeContext.RelationPredicate edge1 = e.of(r1);
-        EncodeContext.RelationPredicate edge2 = e.of(r2);
-        return e.forall(0, (a,b)->e.eq(edge.of(a, b), e.and(edge1.of(a, b), e.not(edge2.of(a, b)))),
-                (a,b)->e.pattern(edge.of(a, b)),
-                (a,b)->e.pattern(edge1.of(a, b), edge2.of(a, b)));
-    }
+	@Override
+	protected void encodeFirstOrder(EncodeContext e) {
+		EncodeContext.RelationPredicate edge = e.of(this);
+		EncodeContext.RelationPredicate edge1 = e.of(r1);
+		EncodeContext.RelationPredicate edge2 = e.of(r2);
+		e.rule(e.forall(0, (a,b)->e.eq(edge.of(a, b), e.and(edge1.of(a, b), e.not(edge2.of(a, b)))),
+			(a,b)->e.pattern(edge.of(a, b)),
+			(a,b)->e.pattern(edge1.of(a, b), edge2.of(a, b))));
+	}
 }

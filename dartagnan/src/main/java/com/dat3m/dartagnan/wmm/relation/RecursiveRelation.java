@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan.wmm.relation;
 
 import com.dat3m.dartagnan.utils.Settings;
-import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
@@ -95,44 +94,41 @@ public class RecursiveRelation extends Relation {
     }
 
     @Override
-    protected BoolExpr doEncode(EncodeContext context) {
-        return r1.encode(context);
+    protected void doEncode(EncodeContext context) {
+        r1.encode(context);
     }
 
     @Override
-    protected BoolExpr encodeLFP(EncodeContext context) {
-        return r1.encodeLFP(context);
+    protected void encodeLFP(EncodeContext context) {
+        r1.encodeLFP(context);
     }
 
     @Override
-    protected BoolExpr encodeIDL(EncodeContext context) {
-        return r1.encodeIDL(context);
+    protected void encodeIDL(EncodeContext context) {
+        r1.encodeIDL(context);
     }
 
     @Override
-    protected BoolExpr encodeApprox(EncodeContext context) {
-        return r1.encodeApprox(context);
+    protected void encodeApprox(EncodeContext context) {
+        r1.encodeApprox(context);
     }
 
     @Override
-    public BoolExpr encodeIteration(int recGroupId, int iteration){
+    public void encodeIteration(EncodeContext e, int recGroupId, int iteration){
         if(doRecurse){
             doRecurse = false;
-            return r1.encodeIteration(recGroupId, iteration);
+            r1.encodeIteration(e, recGroupId, iteration);
         }
-        return ctx.mkTrue();
     }
 
-    public BoolExpr encodeFinalIteration(int iteration){
-        BoolExpr enc = ctx.mkTrue();
+    public void encodeFinalIteration(EncodeContext e, int iteration){
         for(Tuple tuple : encodeTupleSet){
-            enc = ctx.mkAnd(enc, ctx.mkEq(edge(tuple), edge(iteration, tuple)));
+            e.rule(e.eq(e.edge(this, tuple), e.edge(this, iteration, tuple)));
         }
-        return enc;
     }
 
     @Override
-    protected BoolExpr encodeFirstOrder(EncodeContext context) {
-        return r1.encodeFirstOrder(context);
+    protected void encodeFirstOrder(EncodeContext context) {
+        r1.encodeFirstOrder(context);
     }
 }

@@ -12,6 +12,8 @@ import com.microsoft.z3.Context;
 import java.util.HashSet;
 import java.util.Set;
 
+import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
+
 public class EdgeTestHelper {
 
     private Program program;
@@ -32,9 +34,9 @@ public class EdgeTestHelper {
         Set<Tuple> max = relation.getMaxTupleSet();
         Set<Tuple> expected = mkExpectedTuples(all, data);
         BoolExpr enc = ctx.mkFalse();
-
+        String name = relation.getName();
         for(Tuple tuple : all){
-            BoolExpr edge = relation.edge(tuple);
+            BoolExpr edge = edge(name, tuple.getFirst(), tuple.getSecond(), ctx);
             if(expected.contains(tuple)){
                 enc = ctx.mkOr(enc, ctx.mkNot(edge));
             } else if(max.contains(tuple)){

@@ -8,34 +8,34 @@ import com.dat3m.dartagnan.wmm.utils.Tuple;
 
 public abstract class StaticRelation extends Relation {
 
-    public StaticRelation() {
-        super();
-    }
+	public StaticRelation() {
+		super();
+	}
 
-    public StaticRelation(String name) {
-        super(name);
-    }
+	public StaticRelation(String name) {
+		super(name);
+	}
 
-    @FunctionalInterface
-    protected interface Atom {
-        BoolExpr of(Event first, Event second);
-        default BoolExpr of(Tuple tuple) {
-            return of(tuple.getFirst(), tuple.getSecond());
-        }
-    }
+	@FunctionalInterface
+	protected interface Atom {
+		BoolExpr of(Event first, Event second);
+		default BoolExpr of(Tuple tuple) {
+			return of(tuple.getFirst(), tuple.getSecond());
+		}
+	}
 
-    protected BoolExpr encodeApprox(EncodeContext context, Atom atom) {
-        return context.and(encodeTupleSet.stream().map(tuple->ctx.mkEq(atom.of(tuple), ctx.mkAnd(tuple.getFirst().exec(), tuple.getSecond().exec()))));
-    }
+	protected void encodeApprox(EncodeContext e, Atom atom) {
+		e.rule(e.and(encodeTupleSet.stream().map(t->e.eq(atom.of(t), e.and(t.getFirst().exec(), t.getSecond().exec())))));
+	}
 
-    @Override
-    protected BoolExpr encodeApprox(EncodeContext context) {
-        return encodeApprox(context, this::edge);
-    }
+	@Override
+	protected void encodeApprox(EncodeContext context) {
+		encodeApprox(context, (a,b)->context.edge(this, a, b));
+	}
 
-    @Override
-    protected BoolExpr encodeFirstOrder(EncodeContext e) {
-        EncodeContext.RelationPredicate edge = e.of(this);
-        return encodeApprox(e, (a,b)->edge.of(e.event(a), e.event(b)));
-    }
+	@Override
+	protected void encodeFirstOrder(EncodeContext context) {
+		EncodeContext.RelationPredicate edge = context.of(this);
+		encodeApprox(context, (a,b)->edge.of(context.event(a), context.event(b)));
+	}
 }

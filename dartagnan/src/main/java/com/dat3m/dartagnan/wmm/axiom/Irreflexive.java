@@ -6,6 +6,8 @@ import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
+import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
+
 /**
  *
  * @author Florian Furbach
@@ -34,9 +36,10 @@ public class Irreflexive extends Axiom {
     @Override
     protected BoolExpr _consistent(Context ctx) {
         BoolExpr enc = ctx.mkTrue();
+        String name = rel.getName();
         for(Tuple tuple : rel.getEncodeTupleSet()){
             if(tuple.getFirst().getCId() == tuple.getSecond().getCId()){
-                enc = ctx.mkAnd(enc, ctx.mkNot(rel.edge(tuple.getFirst(), tuple.getFirst())));
+                enc = ctx.mkAnd(enc, ctx.mkNot(edge(name, tuple.getFirst(), tuple.getFirst(), ctx)));
             }
         }
         return enc;
@@ -45,9 +48,10 @@ public class Irreflexive extends Axiom {
     @Override
     protected BoolExpr _inconsistent(Context ctx) {
         BoolExpr enc = ctx.mkTrue();
+        String name = rel.getName();
         for(Tuple tuple : rel.getEncodeTupleSet()){
             if(tuple.getFirst().getCId() == tuple.getSecond().getCId()){
-                enc = ctx.mkOr(enc, rel.edge(tuple.getFirst(), tuple.getFirst()));
+                enc = ctx.mkOr(enc, edge(name, tuple.getFirst(), tuple.getFirst(), ctx));
             }
         }
         return enc;

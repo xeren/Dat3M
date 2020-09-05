@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan.wmm.utils;
 
-import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.relation.RecursiveRelation;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 
@@ -32,20 +31,14 @@ public class RecursiveGroup {
         }
     }
 
-    public BoolExpr encode(Context ctx){
-        BoolExpr enc = ctx.mkTrue();
-        for(int i = 0; i < encodeIterations; i++){
-            for(RecursiveRelation relation : relations){
-                relation.setDoRecurse();
-                enc = ctx.mkAnd(enc, relation.encodeIteration(id, i));
-            }
-        }
+    public void encode(EncodeContext e){
+        relations.forEach(RecursiveRelation::setDoRecurse);
+        for(int i = 0; i < encodeIterations; i++)
+            for(RecursiveRelation relation : relations)
+                relation.encodeIteration(e, id, i);
 
-        for(RecursiveRelation relation : relations){
-            enc = ctx.mkAnd(enc, relation.encodeFinalIteration(encodeIterations - 1));
-        }
-
-        return enc;
+        for(RecursiveRelation relation : relations)
+            relation.encodeFinalIteration(e, encodeIterations - 1);
     }
 
     public void initMaxTupleSets(){
