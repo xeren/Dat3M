@@ -1,10 +1,13 @@
 package com.dat3m.dartagnan.wmm.relation;
 
 import com.dat3m.dartagnan.program.Program;
+import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.utils.Settings;
+import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.Utils;
+import com.google.common.collect.ImmutableList;
 import com.microsoft.z3.*;
 import java.util.*;
 import java.util.stream.Stream;
@@ -55,6 +58,15 @@ public class EncodeContext {
 
 	public BoolExpr allRules() {
 		return context.mkAnd(rule.toArray(new BoolExpr[0]));
+	}
+
+	public List<Event> cache(FilterAbstract filter) {
+		return program.getCache().getEvents(filter);
+	}
+
+	public List<Event> cache(Register register) {
+		List<Event> result = program.getCache().getRegWriterMap().get(register);
+		return null != result ? result : ImmutableList.of();
 	}
 
 	public Expr event(Event event) {

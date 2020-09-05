@@ -21,7 +21,6 @@ public abstract class Relation {
 
 	protected Program program;
 	protected Context ctx;
-	protected Sort eventSort;
 
 	protected TupleSet maxTupleSet;
 	protected TupleSet encodeTupleSet;
@@ -53,9 +52,7 @@ public abstract class Relation {
 
 	public void initialise(Program program, Context ctx, Settings settings) {
 		this.program = program;
-		this.ctx = ctx;
 		this.maxTupleSet = null;
-		this.eventSort = ctx.mkIntSort();//ctx.mkUninterpretedSort("Event");
 		encodeTupleSet = new TupleSet();
 	}
 

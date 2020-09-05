@@ -54,9 +54,8 @@ public class RelRf extends Relation {
 
 	@Override
 	protected void encodeApprox(EncodeContext e) {
-		BoolExpr enc = ctx.mkTrue();
-		Map<MemEvent, List<BoolExpr>> edgeMap = new HashMap<>();
-		Map<MemEvent, BoolExpr> memInitMap = new HashMap<>();
+		Map<MemEvent,LinkedList<BoolExpr>> edgeMap = new HashMap<>();
+		Map<MemEvent,LinkedList<BoolExpr>> memInitMap = new HashMap<>();
 
 		boolean canAccNonInitMem = e.settings.getFlag(Settings.FLAG_CAN_ACCESS_UNINITIALIZED_MEMORY);
 
@@ -64,15 +63,16 @@ public class RelRf extends Relation {
 			MemEvent w = (MemEvent) tuple.getFirst();
 			MemEvent r = (MemEvent) tuple.getSecond();
 			BoolExpr edge = e.edge(this, w, r);
-			BoolExpr sameAddress = ctx.mkEq(w.getMemAddressExpr(), r.getMemAddressExpr());
-			BoolExpr sameValue = ctx.mkEq(w.getMemValueExpr(), r.getMemValueExpr());
+			BoolExpr sameAddress = e.eq(w.getMemAddressExpr(), r.getMemAddressExpr());
+			BoolExpr sameValue = e.eq(w.getMemValueExpr(), r.getMemValueExpr());
 
-			edgeMap.putIfAbsent(r, new ArrayList<>());
+			edgeMap.putIfAbsent(r, new LinkedList<>());
 			edgeMap.get(r).add(edge);
 			if(canAccNonInitMem && w.is(EType.INIT)) {
-				memInitMap.put(r, ctx.mkOr(memInitMap.getOrDefault(r, ctx.mkFalse()), sameAddress));
+				memInitMap.putIfAbsent(r, new LinkedList<>());
+				memInitMap.get(r).add(sameAddress);
 			}
-			enc = ctx.mkAnd(enc, ctx.mkImplies(edge, ctx.mkAnd(w.exec(), r.exec(), sameAddress, sameValue)));
+			e.rule(e.implies(edge, e.and(w.exec(), r.exec(), sameAddress, sameValue)));
 		}
 
 		if(e.settings.getFlag(Settings.FLAG_USE_SEQ_ENCODING_REL_RF)) {
@@ -92,7 +92,7 @@ public class RelRf extends Relation {
 				}
 				BoolExpr atLeastOne = e.or(lastSeqVar, edges.get(edges.size() - 1));
 				e.rule(e.and(atMostOne));
-				e.rule(e.implies(canAccNonInitMem ? e.and(r.exec(), memInitMap.get(r)) : r.exec(), atLeastOne));
+				e.rule(e.implies(canAccNonInitMem ? e.and(r.exec(), e.or(memInitMap.get(r))) : r.exec(), atLeastOne));
 			}
 		} else {
 			for(MemEvent r: edgeMap.keySet()) {
@@ -105,7 +105,7 @@ public class RelRf extends Relation {
 						atMostOne.add(e.or(e.not(edges.get(i)), e.not(edges.get(j))));
 				}
 				e.rule(e.and(atMostOne));
-				e.rule(e.implies(canAccNonInitMem ? e.and(r.exec(), memInitMap.get(r)) : r.exec(), e.or(atLeastOne)));
+				e.rule(e.implies(canAccNonInitMem ? e.and(r.exec(), e.or(memInitMap.get(r))) : r.exec(), e.or(atLeastOne)));
 			}
 		}
 	}

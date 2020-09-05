@@ -87,8 +87,8 @@ public class RelTrans extends UnaryRelation {
 					orClause.add(e.and(e.edge(this, e1, e3), e.edge(this, e3, e2)));
 
 			e.rule(Relation.PostFixApprox
-				? ctx.mkImplies(e.or(orClause), e.edge(this, e1, e2))
-				: ctx.mkEq(e.edge(this, e1, e2), e.or(orClause)));
+				? e.implies(e.or(orClause), e.edge(this, e1, e2))
+				: e.eq(e.edge(this, e1, e2), e.or(orClause)));
 		}
 	}
 

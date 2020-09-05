@@ -113,7 +113,7 @@ public class RelRMW extends StaticRelation {
 		encodeTupleSet = origEncodeTupleSet;
 
 		// Encode RMW for exclusive pairs
-		BoolExpr unpredictable = ctx.mkFalse();
+		LinkedList<BoolExpr> unpredictable = new LinkedList<>();
 		for(Thread thread: program.getThreads()) {
 			for(Event store: thread.getCache().getEvents(storeFilter)) {
 				LinkedList<BoolExpr> storeExec = new LinkedList<>();
@@ -137,7 +137,7 @@ public class RelRMW extends StaticRelation {
 
 						// If load and store have the same address
 						BoolExpr sameAddress = e.eq(((MemEvent) load).getMemAddressExpr(), (((MemEvent) store).getMemAddressExpr()));
-						unpredictable = e.or(unpredictable, e.and(isExecPair, e.not(sameAddress)));
+						unpredictable.add(e.and(isExecPair, e.not(sameAddress)));
 
 						// Relation between exclusive load and store
 						e.rule(e.eq(atom.of(load, store), e.and(isExecPair, sameAddress)));
@@ -151,7 +151,7 @@ public class RelRMW extends StaticRelation {
 				e.rule(e.implies(store.exec(), e.or(storeExec)));
 			}
 		}
-		e.rule(e.eq(Flag.ARM_UNPREDICTABLE_BEHAVIOUR.repr(e.context), unpredictable));
+		e.rule(e.eq(Flag.ARM_UNPREDICTABLE_BEHAVIOUR.repr(e.context), e.or(unpredictable)));
 	}
 
 }
