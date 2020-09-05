@@ -1,5 +1,8 @@
 package com.dat3m.dartagnan.wmm.axiom;
 
+import com.dat3m.dartagnan.program.Program;
+import com.dat3m.dartagnan.utils.Settings;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.wmm.relation.Relation;
@@ -28,8 +31,9 @@ public abstract class Axiom {
         return rel;
     }
 
-    public BoolExpr encodeRelAndConsistency(Context ctx) {
-    	return ctx.mkAnd(rel.encode(), consistent(ctx));
+    public BoolExpr encodeRelAndConsistency(Context ctx, Program program, Settings settings) {
+        EncodeContext c = new EncodeContext(ctx, program, settings);
+        return ctx.mkAnd(rel.encode(c), c.allRules(), consistent(ctx));
     }
     
     public BoolExpr consistent(Context ctx) {

@@ -2,6 +2,7 @@ package com.dat3m.dartagnan.wmm.relation.unary;
 
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.program.Program;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.IntExpr;
@@ -76,7 +77,7 @@ public class RelTrans extends UnaryRelation {
     }
 
     @Override
-    protected BoolExpr encodeApprox() {
+    protected BoolExpr encodeApprox(EncodeContext context) {
         BoolExpr enc = ctx.mkTrue();
 
         for(Tuple tuple : fullEncodeTupleSet){
@@ -106,7 +107,7 @@ public class RelTrans extends UnaryRelation {
     }
 
     @Override
-    protected BoolExpr encodeIDL() {
+    protected BoolExpr encodeIDL(EncodeContext context) {
         BoolExpr enc = ctx.mkTrue();
         String nameConcat = "(" + getName() + ";" + getName() + ")";
 
@@ -148,7 +149,7 @@ public class RelTrans extends UnaryRelation {
     }
 
     @Override
-    protected BoolExpr encodeLFP() {
+    protected BoolExpr encodeLFP(EncodeContext context) {
         BoolExpr enc = ctx.mkTrue();
         int iteration = 0;
 
@@ -243,7 +244,7 @@ public class RelTrans extends UnaryRelation {
         return result;
     }
 
-    protected BoolExpr encodeFirstOrder() {
+    protected BoolExpr encodeFirstOrder(EncodeContext context) {
         return ctx.mkAnd(
             forall(0, (a,c)->ctx.mkOr(ctx.mkNot(edge(a, c)), r1.edge(a, c),
                     exists(2, b->ctx.mkAnd(edge(a, b), edge(b, c)),

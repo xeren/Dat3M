@@ -3,6 +3,7 @@ package com.dat3m.dartagnan.wmm.relation.base.memory;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.filter.FilterMinus;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.IntExpr;
 import com.dat3m.dartagnan.program.event.Event;
@@ -52,7 +53,7 @@ public class RelCo extends Relation {
     }
 
     @Override
-    protected BoolExpr encodeApprox() {
+    protected BoolExpr encodeApprox(EncodeContext context) {
         BoolExpr enc = ctx.mkTrue();
 
         List<Event> eventsInit = program.getCache().getEvents(FilterBasic.get(EType.INIT));
@@ -102,7 +103,7 @@ public class RelCo extends Relation {
     }
 
     @Override
-    protected BoolExpr encodeFirstOrder() {
+    protected BoolExpr encodeFirstOrder(EncodeContext context) {
         List<Event> eventsInit = program.getCache().getEvents(FilterBasic.get(EType.INIT));
         List<Event> eventsWrite = program.getCache().getEvents(FilterBasic.get(EType.WRITE));
         List<Event> eventsStore = program.getCache().getEvents(

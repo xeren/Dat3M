@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.wmm.relation.binary;
 
 import com.dat3m.dartagnan.utils.Settings;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.Program;
@@ -60,19 +61,19 @@ public abstract class BinaryRelation extends Relation {
     }
 
     @Override
-    public BoolExpr encode() {
+    public BoolExpr encode(EncodeContext context) {
         if(isEncoded){
             return ctx.mkTrue();
         }
         isEncoded = true;
-        return ctx.mkAnd(r1.encode(), r2.encode(), doEncode());
+        return ctx.mkAnd(r1.encode(context), r2.encode(context), doEncode(context));
     }
 
     @Override
-    protected BoolExpr encodeLFP() {
+    protected BoolExpr encodeLFP(EncodeContext context) {
         if(recursiveGroupId > 0){
             return ctx.mkTrue();
         }
-        return encodeApprox();
+        return encodeApprox(context);
     }
 }

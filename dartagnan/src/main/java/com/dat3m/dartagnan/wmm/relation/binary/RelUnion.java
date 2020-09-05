@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.wmm.relation.binary;
 
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
@@ -46,7 +47,7 @@ public class RelUnion extends BinaryRelation {
     }
 
     @Override
-    protected BoolExpr encodeApprox() {
+    protected BoolExpr encodeApprox(EncodeContext context) {
         BoolExpr enc = ctx.mkTrue();
 
         if(Relation.PostFixApprox)
@@ -59,9 +60,9 @@ public class RelUnion extends BinaryRelation {
     }
 
     @Override
-    protected BoolExpr encodeIDL() {
+    protected BoolExpr encodeIDL(EncodeContext context) {
         if(recursiveGroupId == 0){
-            return encodeApprox();
+            return encodeApprox(context);
         }
 
         BoolExpr enc = ctx.mkTrue();
@@ -125,7 +126,7 @@ public class RelUnion extends BinaryRelation {
     }
 
     @Override
-    protected BoolExpr encodeFirstOrder() {
+    protected BoolExpr encodeFirstOrder(EncodeContext context) {
         return forall(0, (a,b)->ctx.mkEq(edge(a, b), ctx.mkOr(r1.edge(a, b), r2.edge(a, b))),
                 (a,b)->ctx.mkPattern(edge(a, b)),
                 (a,b)->ctx.mkPattern(r1.edge(a, b)),

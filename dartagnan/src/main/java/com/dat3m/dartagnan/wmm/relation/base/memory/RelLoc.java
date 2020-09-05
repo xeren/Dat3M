@@ -2,6 +2,7 @@ package com.dat3m.dartagnan.wmm.relation.base.memory;
 
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.program.event.Event;
@@ -34,7 +35,7 @@ public class RelLoc extends Relation {
     }
 
     @Override
-    protected BoolExpr encodeApprox() {
+    protected BoolExpr encodeApprox(EncodeContext context) {
         BoolExpr enc = ctx.mkTrue();
         for(Tuple tuple : encodeTupleSet) {
             enc = ctx.mkAnd(enc, ctx.mkEq(edge(tuple), ctx.mkAnd(
@@ -47,7 +48,7 @@ public class RelLoc extends Relation {
     }
 
     @Override
-    protected BoolExpr encodeFirstOrder() {
+    protected BoolExpr encodeFirstOrder(EncodeContext context) {
         //TODO restrict to M*M
         List<Event> events = program.getCache().getEvents(FilterBasic.get(EType.MEMORY));
         return ctx.mkAnd(and(events.stream().map(MemEvent.class::cast).flatMap(a->events.stream().map(MemEvent.class::cast)

@@ -3,6 +3,7 @@ package com.dat3m.dartagnan.wmm.relation.base.stat;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.program.event.Event;
@@ -12,8 +13,6 @@ import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 import java.util.List;
 import java.util.ListIterator;
-
-import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 
 public class RelFencerel extends Relation {
 
@@ -64,7 +63,7 @@ public class RelFencerel extends Relation {
     }
 
     @Override
-    protected BoolExpr encodeApprox() {
+    protected BoolExpr encodeApprox(EncodeContext context) {
         BoolExpr enc = ctx.mkTrue();
 
         List<Event> fences = program.getCache().getEvents(FilterBasic.get(fenceName));
@@ -87,7 +86,7 @@ public class RelFencerel extends Relation {
     }
 
     @Override
-    protected BoolExpr encodeFirstOrder() {
+    protected BoolExpr encodeFirstOrder(EncodeContext context) {
         List<Event> fences = program.getCache().getEvents(FilterBasic.get(fenceName));
         return forall(0,
                 (a,b)->ctx.mkEq(edge(a, b), or(fences.stream().map(f->ctx.mkAnd(f.exec(),

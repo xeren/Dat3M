@@ -97,33 +97,11 @@ public class Dartagnan {
 		ctx.close();
 	}
 
-	@FunctionalInterface
-	private interface F {
-		int of(com.dat3m.dartagnan.program.event.Event e);
-	}
-
-	private static void printProgram(Program p, F f) {
-		p.getThreads().forEach(t -> {
-			com.dat3m.dartagnan.program.event.Event e = t.getEntry();
-			System.out.print(f.of(e));
-			while ((e = e.getSuccessor()) != null) {
-				System.out.print(' ');
-				System.out.print(f.of(e));
-			}
-			System.out.println();
-		});
-		System.out.println();
-	}
-
 	public static Result testProgram(Solver s1, Context ctx, Program program, Wmm wmm, Arch target, Settings settings) {
 
-		printProgram(program, com.dat3m.dartagnan.program.event.Event::getOId);
-
 		program.unroll(settings.getBound(), 0);
-		printProgram(program, com.dat3m.dartagnan.program.event.Event::getUId);
 
 		program.compile(target, 0);
-		printProgram(program, com.dat3m.dartagnan.program.event.Event::getCId);
 
 		// AssertionInline depends on compiled events (copies)
 		// Thus we need to set the assertion after compilation
@@ -205,7 +183,7 @@ public class Dartagnan {
 		solver.add(program.encodeCF(ctx));
 		solver.add(program.encodeFinalRegisterValues(ctx));
 		solver.add(wmm.encodeBase(program, ctx, settings));
-		solver.add(wmm.getAxioms().get(cegar).encodeRelAndConsistency(ctx));
+		solver.add(wmm.getAxioms().get(cegar).encodeRelAndConsistency(ctx, program, settings));
 
 		if (program.getAssFilter() != null) {
 			solver.add(program.getAssFilter().encode(ctx));
@@ -251,7 +229,7 @@ public class Dartagnan {
 			solver.add(execution);
 			solver.add(wmm.encodeBase(program, ctx, settings));
 			for (Axiom ax: wmm.getAxioms()) {
-				BoolExpr enc = ax.encodeRelAndConsistency(ctx);
+				BoolExpr enc = ax.encodeRelAndConsistency(ctx, program, settings);
 				BoolExpr axVar = ctx.mkBoolConst(ax.toString());
 				solver.assertAndTrack(enc, axVar);
 				track.put(axVar, enc);

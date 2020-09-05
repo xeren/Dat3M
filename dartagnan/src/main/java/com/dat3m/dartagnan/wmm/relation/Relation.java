@@ -131,50 +131,50 @@ public abstract class Relation {
      * Describes this relation's contents.
      * @return
      * Proposition that this relation contains only those tuples according to its semantics.
+     * @param context
      */
-    public BoolExpr encode() {
-        if(isEncoded){
+    public BoolExpr encode(EncodeContext context) {
+        if(!context.add(this))
             return ctx.mkTrue();
-        }
-        isEncoded = true;
-        return doEncode();
+        return doEncode(context);
     }
 
-    protected BoolExpr encodeLFP() {
-        return encodeApprox();
+    protected BoolExpr encodeLFP(EncodeContext context) {
+        return encodeApprox(context);
     }
 
-    protected BoolExpr encodeIDL() {
-        return encodeApprox();
+    protected BoolExpr encodeIDL(EncodeContext context) {
+        return encodeApprox(context);
     }
 
     /**
      * Describes this relation's content using first order logic.
      * @return
      * Proposition that this relation contains only those tuples according to its semantics.
+     * @param context
      */
-    protected abstract BoolExpr encodeFirstOrder();
+    protected abstract BoolExpr encodeFirstOrder(EncodeContext context);
 
-    protected abstract BoolExpr encodeApprox();
+    protected abstract BoolExpr encodeApprox(EncodeContext context);
 
     public BoolExpr encodeIteration(int recGroupId, int iteration){
         return ctx.mkTrue();
     }
 
-    protected BoolExpr doEncode(){
+    protected BoolExpr doEncode(EncodeContext context){
         BoolExpr enc = encodeNegations();
         if(encodeTupleSet.isEmpty() && !forceDoEncode)
             return enc;
         switch(settings.getMode())
         {
             case KLEENE:
-            return ctx.mkAnd(enc, encodeLFP());
+            return ctx.mkAnd(enc, encodeLFP(context));
             case IDL:
-            return ctx.mkAnd(enc, encodeIDL());
+            return ctx.mkAnd(enc, encodeIDL(context));
             case FO:
-            return encodeFirstOrder();
+            return encodeFirstOrder(context);
             default:
-            return ctx.mkAnd(enc, encodeApprox());
+            return ctx.mkAnd(enc, encodeApprox(context));
         }
     }
 

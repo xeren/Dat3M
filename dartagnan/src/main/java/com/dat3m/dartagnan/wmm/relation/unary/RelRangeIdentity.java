@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.wmm.relation.unary;
 
 import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -51,7 +52,7 @@ public class RelRangeIdentity extends UnaryRelation {
     }
 
     @Override
-    protected BoolExpr encodeApprox() {
+    protected BoolExpr encodeApprox(EncodeContext context) {
         BoolExpr enc = ctx.mkTrue();
         for(Tuple tuple1 : encodeTupleSet){
             Event e = tuple1.getFirst();
@@ -66,7 +67,7 @@ public class RelRangeIdentity extends UnaryRelation {
     }
 
     @Override
-    protected BoolExpr encodeFirstOrder() {
+    protected BoolExpr encodeFirstOrder(EncodeContext context) {
         return ctx.mkAnd(
             forall(0, (a,b)->ctx.mkEq(edge(a, b), ctx.mkAnd(
                     ctx.mkEq(a, b),

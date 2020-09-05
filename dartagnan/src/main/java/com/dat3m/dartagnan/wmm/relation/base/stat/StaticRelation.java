@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.wmm.relation.base.stat;
 
 import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
@@ -28,12 +29,12 @@ public abstract class StaticRelation extends Relation {
     }
 
     @Override
-    protected BoolExpr encodeApprox() {
+    protected BoolExpr encodeApprox(EncodeContext context) {
         return encodeApprox(this::edge);
     }
 
     @Override
-    protected BoolExpr encodeFirstOrder() {
+    protected BoolExpr encodeFirstOrder(EncodeContext context) {
         return encodeApprox((a,b)->edge(ctx.mkNumeral(a.getCId(), eventSort), ctx.mkNumeral(b.getCId(), eventSort)));
     }
 }

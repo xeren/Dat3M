@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.wmm.relation.unary;
 
 import com.dat3m.dartagnan.utils.Settings;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.Program;
@@ -42,11 +43,11 @@ public abstract class UnaryRelation extends Relation {
     }
 
     @Override
-    public BoolExpr encode() {
+    public BoolExpr encode(EncodeContext context) {
         if(isEncoded){
             return ctx.mkTrue();
         }
         isEncoded = true;
-        return ctx.mkAnd(r1.encode(), doEncode());
+        return ctx.mkAnd(r1.encode(context), doEncode(context));
     }
 }

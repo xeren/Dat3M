@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.wmm;
 
 import com.dat3m.dartagnan.utils.Settings;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.utils.*;
 import com.dat3m.dartagnan.wmm.utils.alias.AliasAnalysis;
 import com.google.common.collect.ImmutableSet;
@@ -120,10 +121,12 @@ public class Wmm {
             recursiveGroup.updateEncodeTupleSets();
         }
 
+        EncodeContext c = new EncodeContext(ctx, program, settings);
         BoolExpr enc = ctx.mkTrue();
         for(String relName : baseRelations){
-            enc = ctx.mkAnd(enc, relationRepository.getRelation(relName).encode());
+            enc = ctx.mkAnd(enc, relationRepository.getRelation(relName).encode(c));
         }
+        enc = ctx.mkAnd(enc, c.allRules());
 
         if(settings.getMode() == Mode.KLEENE){
             for(RecursiveGroup group : recursiveGroups){
@@ -135,11 +138,12 @@ public class Wmm {
     }
 
     public BoolExpr encode(Program program, Context ctx, Settings settings) {
+        EncodeContext c = new EncodeContext(ctx, program, settings);
         BoolExpr enc = encodeBase(program, ctx, settings);
         for (Axiom ax : axioms) {
-            enc = ctx.mkAnd(enc, ax.getRel().encode());
+            enc = ctx.mkAnd(enc, ax.getRel().encode(c));
         }
-        return enc;
+        return ctx.mkAnd(enc, c.allRules());
     }
 
     public BoolExpr consistent(Program program, Context ctx) {

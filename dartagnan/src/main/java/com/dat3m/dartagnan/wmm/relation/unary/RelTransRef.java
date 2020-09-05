@@ -3,6 +3,7 @@ package com.dat3m.dartagnan.wmm.relation.unary;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.Program;
@@ -83,17 +84,17 @@ public class RelTransRef extends RelTrans {
     }
 
     @Override
-    protected BoolExpr encodeApprox() {
+    protected BoolExpr encodeApprox(EncodeContext context) {
         return invokeEncode("encodeApprox");
     }
 
     @Override
-    protected BoolExpr encodeIDL() {
+    protected BoolExpr encodeIDL(EncodeContext context) {
         return invokeEncode("encodeIDL");
     }
 
     @Override
-    protected BoolExpr encodeLFP() {
+    protected BoolExpr encodeLFP(EncodeContext context) {
         return invokeEncode("encodeLFP");
     }
 
@@ -118,7 +119,7 @@ public class RelTransRef extends RelTrans {
     }
 
     @Override
-    protected BoolExpr encodeFirstOrder() {
+    protected BoolExpr encodeFirstOrder(EncodeContext context) {
         return ctx.mkAnd(
             forall(0, (a,c)->ctx.mkOr(ctx.mkNot(edge(a, c)), ctx.mkEq(a, c), r1.edge(a, c),
                 exists(2, b->ctx.mkAnd(edge(a, b), edge(b, c)),

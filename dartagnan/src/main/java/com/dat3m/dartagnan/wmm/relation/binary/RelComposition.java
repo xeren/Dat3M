@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.wmm.relation.binary;
 
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.relation.Relation;
@@ -99,7 +100,7 @@ public class RelComposition extends BinaryRelation {
     }
 
     @Override
-    protected BoolExpr encodeApprox() {
+    protected BoolExpr encodeApprox(EncodeContext context) {
         BoolExpr enc = ctx.mkTrue();
 
         TupleSet r1Set = new TupleSet();
@@ -137,9 +138,9 @@ public class RelComposition extends BinaryRelation {
     }
 
     @Override
-    protected BoolExpr encodeIDL() {
+    protected BoolExpr encodeIDL(EncodeContext context) {
         if(recursiveGroupId == 0){
-            return encodeApprox();
+            return encodeApprox(context);
         }
 
         BoolExpr enc = ctx.mkTrue();
@@ -259,7 +260,7 @@ public class RelComposition extends BinaryRelation {
     }
 
     @Override
-    protected BoolExpr encodeFirstOrder() {
+    protected BoolExpr encodeFirstOrder(EncodeContext context) {
         return forall(0, (a,c)->ctx.mkEq(edge(a, c), exists(2, b->ctx.mkAnd(r1.edge(a, b), r2.edge(b, c)),
                     b->ctx.mkPattern(r1.edge(a, b), r2.edge(b, c)))),
                 (a,c)->ctx.mkPattern(edge(a, c)));

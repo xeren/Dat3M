@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.wmm.relation.unary;
 
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.relation.Relation;
@@ -55,7 +56,7 @@ public class RelInverse extends UnaryRelation {
     }
 
     @Override
-    protected BoolExpr encodeApprox() {
+    protected BoolExpr encodeApprox(EncodeContext context) {
         BoolExpr enc = ctx.mkTrue();
         for(Tuple tuple : encodeTupleSet){
             Event e1 = tuple.getFirst();
@@ -66,7 +67,7 @@ public class RelInverse extends UnaryRelation {
     }
 
     @Override
-    protected BoolExpr encodeFirstOrder() {
+    protected BoolExpr encodeFirstOrder(EncodeContext context) {
         return forall(0, (a,b)->ctx.mkEq(edge(a, b), r1.edge(b, a)),
                 (a,b)->ctx.mkPattern(edge(a, b)),
                 (a,b)->ctx.mkPattern(r1.edge(b, a)));

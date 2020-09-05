@@ -4,6 +4,7 @@ import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.filter.FilterMinus;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.MemEvent;
@@ -52,7 +53,7 @@ public class RelRf extends Relation {
     }
 
     @Override
-    protected BoolExpr encodeApprox() {
+    protected BoolExpr encodeApprox(EncodeContext context) {
         BoolExpr enc = ctx.mkTrue();
         Map<MemEvent, List<BoolExpr>> edgeMap = new HashMap<>();
         Map<MemEvent, BoolExpr> memInitMap = new HashMap<>();
@@ -129,7 +130,7 @@ public class RelRf extends Relation {
     }
 
     @Override
-    protected BoolExpr encodeFirstOrder() {
+    protected BoolExpr encodeFirstOrder(EncodeContext context) {
         BoolExpr max = forall(0, (a,b)->ctx.mkImplies(edge(a,b), or(maxTupleSet.stream().map(t->ctx.mkAnd(
                 t.getFirst().exec(),
                 t.getSecond().exec(),

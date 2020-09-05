@@ -95,27 +95,27 @@ public class RecursiveRelation extends Relation {
     }
 
     @Override
-    public BoolExpr encode() {
+    public BoolExpr encode(EncodeContext context) {
         if(isEncoded){
             return ctx.mkTrue();
         }
         isEncoded = true;
-        return r1.encode();
+        return r1.encode(context);
     }
 
     @Override
-    protected BoolExpr encodeLFP() {
-        return r1.encodeLFP();
+    protected BoolExpr encodeLFP(EncodeContext context) {
+        return r1.encodeLFP(context);
     }
 
     @Override
-    protected BoolExpr encodeIDL() {
-        return r1.encodeIDL();
+    protected BoolExpr encodeIDL(EncodeContext context) {
+        return r1.encodeIDL(context);
     }
 
     @Override
-    protected BoolExpr encodeApprox() {
-        return r1.encodeApprox();
+    protected BoolExpr encodeApprox(EncodeContext context) {
+        return r1.encodeApprox(context);
     }
 
     @Override
@@ -136,7 +136,7 @@ public class RecursiveRelation extends Relation {
     }
 
     @Override
-    protected BoolExpr encodeFirstOrder() {
-        return r1.encodeFirstOrder();
+    protected BoolExpr encodeFirstOrder(EncodeContext context) {
+        return r1.encodeFirstOrder(context);
     }
 }
