@@ -114,14 +114,14 @@ public class RelCo extends Relation {
                     ctx.mkNot(edge(b, a)),
                     or(eventsWrite.stream().map(MemEvent.class::cast).map(v->ctx.mkAnd(
                         v.exec(),
-                        ctx.mkEq(a, ctx.mkNumeral(v.getCId(), eventSort)),
+                        ctx.mkEq(a, context.event(v)),
                         or(eventsStore.stream()
                             // already implied by asymmetric, but shortens the formula
                             .filter(w->v.getCId() != w.getCId())
                             .map(MemEvent.class::cast)
                             .map(w->ctx.mkAnd(
                                 w.exec(),
-                                ctx.mkEq(b, ctx.mkNumeral(w.getCId(), eventSort)),
+                                ctx.mkEq(b, context.event(w)),
                                 // pair has same address
                                 ctx.mkEq(v.getMemAddressExpr(), w.getMemAddressExpr()))))))))),
             (a,b)->ctx.mkPattern(edge(a, b)));
@@ -131,7 +131,7 @@ public class RelCo extends Relation {
 
         BoolExpr initial = and(eventsInit.stream().map(MemEvent.class::cast)
                 .flatMap(v->eventsStore.stream().map(MemEvent.class::cast)
-                    .map(w->ctx.mkNot(edge(ctx.mkNumeral(v.getCId(), eventSort), ctx.mkNumeral(w.getCId(), eventSort))))));
+                    .map(w->ctx.mkNot(edge(context.event(v), context.event(w))))));
 
         return ctx.mkAnd(typed, transitive, initial);
     }

@@ -58,8 +58,7 @@ public class RelRf extends Relation {
         Map<MemEvent, List<BoolExpr>> edgeMap = new HashMap<>();
         Map<MemEvent, BoolExpr> memInitMap = new HashMap<>();
 
-        boolean canAccNonInitMem = settings.getFlag(Settings.FLAG_CAN_ACCESS_UNINITIALIZED_MEMORY);
-        boolean useSeqEncoding = settings.getFlag(Settings.FLAG_USE_SEQ_ENCODING_REL_RF);
+        boolean canAccNonInitMem = context.settings.getFlag(Settings.FLAG_CAN_ACCESS_UNINITIALIZED_MEMORY);
 
         for(Tuple tuple : maxTupleSet){
             MemEvent w = (MemEvent) tuple.getFirst();
@@ -76,53 +75,41 @@ public class RelRf extends Relation {
             enc = ctx.mkAnd(enc, ctx.mkImplies(edge, ctx.mkAnd(w.exec(), r.exec(), sameAddress, sameValue)));
         }
 
-        for(MemEvent r : edgeMap.keySet()){
-            enc = ctx.mkAnd(enc, useSeqEncoding
-                    ? encodeEdgeSeq(r, memInitMap.get(r), edgeMap.get(r))
-                    : encodeEdgeNaive(r, memInitMap.get(r), edgeMap.get(r)));
-        }
-        return enc;
-    }
+        if(context.settings.getFlag(Settings.FLAG_USE_SEQ_ENCODING_REL_RF)) {
+            for(MemEvent r : edgeMap.keySet()){
+                List<BoolExpr> edges = edgeMap.get(r);
+                int num = edges.size();
+                int readId = r.getCId();
+                BoolExpr lastSeqVar = mkSeqVar(readId, 0);
+                BoolExpr newSeqVar = lastSeqVar;
+                BoolExpr atMostOne = ctx.mkEq(lastSeqVar, edges.get(0));
 
-    private BoolExpr encodeEdgeNaive(Event read, BoolExpr isMemInit, List<BoolExpr> edges){
-        BoolExpr atMostOne = ctx.mkTrue();
-        BoolExpr atLeastOne = ctx.mkFalse();
-        for(int i = 0; i < edges.size(); i++){
-            atLeastOne = ctx.mkOr(atLeastOne, edges.get(i));
-            for(int j = i + 1; j < edges.size(); j++){
-                atMostOne = ctx.mkAnd(atMostOne, ctx.mkNot(ctx.mkAnd(edges.get(i), edges.get(j))));
+                for(int i = 1; i < num; i++){
+                    newSeqVar = mkSeqVar(readId, i);
+                    atMostOne = ctx.mkAnd(atMostOne, ctx.mkEq(newSeqVar, ctx.mkOr(lastSeqVar, edges.get(i))));
+                    atMostOne = ctx.mkAnd(atMostOne, ctx.mkNot(ctx.mkAnd(edges.get(i), lastSeqVar)));
+                    lastSeqVar = newSeqVar;
+                }
+                BoolExpr atLeastOne = ctx.mkOr(newSeqVar, edges.get(edges.size() - 1));
+                enc = ctx.mkAnd(enc, atMostOne,
+                    ctx.mkImplies(canAccNonInitMem ? ctx.mkAnd(r.exec(), memInitMap.get(r)) : r.exec(), atLeastOne));
+            }
+        } else {
+            for(MemEvent r : edgeMap.keySet()){
+                List<BoolExpr> edges = edgeMap.get(r);
+                BoolExpr atMostOne = ctx.mkTrue();
+                BoolExpr atLeastOne = ctx.mkFalse();
+                for(int i = 0; i < edges.size(); i++){
+                    atLeastOne = ctx.mkOr(atLeastOne, edges.get(i));
+                    for(int j = i + 1; j < edges.size(); j++){
+                        atMostOne = ctx.mkAnd(atMostOne, ctx.mkNot(ctx.mkAnd(edges.get(i), edges.get(j))));
+                    }
+                }
+                enc = ctx.mkAnd(enc, atMostOne,
+                    ctx.mkImplies(canAccNonInitMem ? ctx.mkAnd(r.exec(), memInitMap.get(r)) : r.exec(), atLeastOne));
             }
         }
-
-        if(settings.getFlag(Settings.FLAG_CAN_ACCESS_UNINITIALIZED_MEMORY)) {
-            atLeastOne = ctx.mkImplies(ctx.mkAnd(read.exec(), isMemInit), atLeastOne);
-        } else {
-            atLeastOne = ctx.mkImplies(read.exec(), atLeastOne);
-        }
-        return ctx.mkAnd(atMostOne, atLeastOne);
-    }
-
-    private BoolExpr encodeEdgeSeq(Event read, BoolExpr isMemInit, List<BoolExpr> edges){
-        int num = edges.size();
-        int readId = read.getCId();
-        BoolExpr lastSeqVar = mkSeqVar(readId, 0);
-        BoolExpr newSeqVar = lastSeqVar;
-        BoolExpr atMostOne = ctx.mkEq(lastSeqVar, edges.get(0));
-
-        for(int i = 1; i < num; i++){
-            newSeqVar = mkSeqVar(readId, i);
-            atMostOne = ctx.mkAnd(atMostOne, ctx.mkEq(newSeqVar, ctx.mkOr(lastSeqVar, edges.get(i))));
-            atMostOne = ctx.mkAnd(atMostOne, ctx.mkNot(ctx.mkAnd(edges.get(i), lastSeqVar)));
-            lastSeqVar = newSeqVar;
-        }
-        BoolExpr atLeastOne = ctx.mkOr(newSeqVar, edges.get(edges.size() - 1));
-
-        if(settings.getFlag(Settings.FLAG_CAN_ACCESS_UNINITIALIZED_MEMORY)) {
-            atLeastOne = ctx.mkImplies(ctx.mkAnd(read.exec(), isMemInit), atLeastOne);
-        } else {
-            atLeastOne = ctx.mkImplies(read.exec(), atLeastOne);
-        }
-        return ctx.mkAnd(atMostOne, atLeastOne);
+        return enc;
     }
 
     private BoolExpr mkSeqVar(int readId, int i) {
@@ -134,13 +121,13 @@ public class RelRf extends Relation {
         BoolExpr max = forall(0, (a,b)->ctx.mkImplies(edge(a,b), or(maxTupleSet.stream().map(t->ctx.mkAnd(
                 t.getFirst().exec(),
                 t.getSecond().exec(),
-                ctx.mkEq(a, ctx.mkNumeral(t.getFirst().getCId(), eventSort)),
-                ctx.mkEq(b, ctx.mkNumeral(t.getSecond().getCId(), eventSort)),
+                ctx.mkEq(a, context.event(t.getFirst())),
+                ctx.mkEq(b, context.event(t.getSecond())),
                 ctx.mkEq(((MemEvent)t.getFirst()).getMemAddressExpr(), ((MemEvent)t.getSecond()).getMemAddressExpr()),
                 ctx.mkEq(((MemEvent)t.getFirst()).getMemValueExpr(), ((MemEvent)t.getSecond()).getMemValueExpr()))))),
                 (a,b)->ctx.mkPattern(edge(a,b)));
         BoolExpr satisfaction = and(program.getCache().getEvents(FilterBasic.get(EType.READ)).stream()
-                .map(r->exists(0, w->edge(w, ctx.mkNumeral(r.getCId(), eventSort)))));
+                .map(r->exists(0, w->edge(w, context.event(r)))));
         BoolExpr determinism = forall(0, (a,b,c)->ctx.mkImplies(ctx.mkAnd(edge(a,c), edge(b,c)), ctx.mkEq(a, b)),
                 (a,b,c)->ctx.mkPattern(edge(a, c), edge(b, c)));
         return ctx.mkAnd(max, satisfaction, determinism);

@@ -35,6 +35,6 @@ public abstract class StaticRelation extends Relation {
 
     @Override
     protected BoolExpr encodeFirstOrder(EncodeContext context) {
-        return encodeApprox((a,b)->edge(ctx.mkNumeral(a.getCId(), eventSort), ctx.mkNumeral(b.getCId(), eventSort)));
+        return encodeApprox((a,b)->edge(context.event(a), context.event(b)));
     }
 }

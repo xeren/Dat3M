@@ -25,7 +25,6 @@ public abstract class Relation {
     protected String name;
     protected String term;
 
-    protected Settings settings;
     protected Program program;
     protected Context ctx;
     protected Sort eventSort;
@@ -60,7 +59,6 @@ public abstract class Relation {
     public void initialise(Program program, Context ctx, Settings settings){
         this.program = program;
         this.ctx = ctx;
-        this.settings = settings;
         this.maxTupleSet = null;
         this.eventSort = ctx.mkIntSort();//ctx.mkUninterpretedSort("Event");
         encodeTupleSet = new TupleSet();
@@ -164,7 +162,7 @@ public abstract class Relation {
         BoolExpr enc = encodeNegations();
         if(encodeTupleSet.isEmpty() && !forceDoEncode)
             return enc;
-        switch(settings.getMode())
+        switch(context.settings.getMode())
         {
             case KLEENE:
             return ctx.mkAnd(enc, encodeLFP(context));

@@ -55,7 +55,7 @@ public class RelLoc extends Relation {
                 .filter(b->a.getCId() != b.getCId())
                 .filter(b->MemEvent.canAddressTheSameLocation(a, b))
                 .map(b->ctx.mkEq(
-                    edge(ctx.mkNumeral(a.getCId(), eventSort), ctx.mkNumeral(b.getCId(), eventSort)),
+                    edge(context.event(a), context.event(b)),
                     ctx.mkAnd(a.exec(), b.exec(), ctx.mkEq(a.getMemAddressExpr(), b.getMemAddressExpr())))))));
     }
 }

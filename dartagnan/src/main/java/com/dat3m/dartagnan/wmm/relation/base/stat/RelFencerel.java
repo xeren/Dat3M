@@ -90,12 +90,12 @@ public class RelFencerel extends Relation {
         List<Event> fences = program.getCache().getEvents(FilterBasic.get(fenceName));
         return forall(0,
                 (a,b)->ctx.mkEq(edge(a, b), or(fences.stream().map(f->ctx.mkAnd(f.exec(),
-                    ctx.mkLt((ArithExpr)a, (ArithExpr)ctx.mkNumeral(f.getCId(), eventSort)),
-                    ctx.mkLt((ArithExpr)ctx.mkNumeral(f.getCId(), eventSort), (ArithExpr)b)
+                    ctx.mkLt((ArithExpr)a, (ArithExpr)context.event(f)),
+                    ctx.mkLt((ArithExpr)context.event(f), (ArithExpr)b)
                 )))),
                 fences.stream().map(f->(BinaryPattern)(a,b)->ctx.mkPattern(f.exec(),
-                    ctx.mkLt((ArithExpr)a, (ArithExpr)ctx.mkNumeral(f.getCId(), eventSort)),
-                    ctx.mkLt((ArithExpr)ctx.mkNumeral(f.getCId(), eventSort), (ArithExpr)b)
+                    ctx.mkLt((ArithExpr)a, (ArithExpr)context.event(f)),
+                    ctx.mkLt((ArithExpr)context.event(f), (ArithExpr)b)
                 )).toArray(BinaryPattern[]::new));
     }
 }
