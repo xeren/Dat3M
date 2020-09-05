@@ -30,8 +30,6 @@ public abstract class Relation {
     protected Context ctx;
     protected Sort eventSort;
 
-    protected boolean isEncoded;
-
     protected TupleSet maxTupleSet;
     protected TupleSet encodeTupleSet;
 
@@ -64,7 +62,6 @@ public abstract class Relation {
         this.ctx = ctx;
         this.settings = settings;
         this.maxTupleSet = null;
-        this.isEncoded = false;
         this.eventSort = ctx.mkIntSort();//ctx.mkUninterpretedSort("Event");
         encodeTupleSet = new TupleSet();
     }
@@ -129,9 +126,10 @@ public abstract class Relation {
 
     /**
      * Describes this relation's contents.
+     * @param context
+     * Utility used to create propositions and to specialize the encoding for the current program.
      * @return
      * Proposition that this relation contains only those tuples according to its semantics.
-     * @param context
      */
     public BoolExpr encode(EncodeContext context) {
         if(!context.add(this))
@@ -149,9 +147,10 @@ public abstract class Relation {
 
     /**
      * Describes this relation's content using first order logic.
+     * @param context
+     * Utility used to create propositions and to specialize the encoding for the current program.
      * @return
      * Proposition that this relation contains only those tuples according to its semantics.
-     * @param context
      */
     protected abstract BoolExpr encodeFirstOrder(EncodeContext context);
 

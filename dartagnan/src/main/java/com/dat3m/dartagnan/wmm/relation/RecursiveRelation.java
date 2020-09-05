@@ -95,11 +95,7 @@ public class RecursiveRelation extends Relation {
     }
 
     @Override
-    public BoolExpr encode(EncodeContext context) {
-        if(isEncoded){
-            return ctx.mkTrue();
-        }
-        isEncoded = true;
+    protected BoolExpr doEncode(EncodeContext context) {
         return r1.encode(context);
     }
 
