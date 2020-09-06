@@ -45,7 +45,7 @@ public class RelTransRef extends RelTrans {
 		super.update(e, s, s1);
 		for(Map.Entry<Event, Set<Event>> entry: transitiveReachabilityMap.entrySet())
 			entry.getValue().remove(entry.getKey());
-		for(Event x: e.program.getCache().getEvents(FilterBasic.get(EType.ANY)))
+		for(Event x: e.cache(FilterBasic.get(EType.ANY)))
 			s.add(new Tuple(x, x));
 	}
 

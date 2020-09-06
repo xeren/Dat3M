@@ -1,6 +1,5 @@
 package com.dat3m.dartagnan.wmm.relation.base.stat;
 
-import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.If;
 import com.dat3m.dartagnan.program.utils.EType;
@@ -19,17 +18,17 @@ public class RelCtrlDirect extends StaticRelation {
 
 	@Override
 	protected void update(EncodeContext e, TupleSet s) {
-		for(Thread thread: e.program.getThreads()) {
-			for(Event e1: thread.getCache().getEvents(FilterBasic.get(EType.CMP))) {
+		for(EncodeContext.Thread thread: e.thread()) {
+			for(Event e1: thread.cache(FilterBasic.get(EType.CMP))) {
 				for(Event e2: ((If) e1).getMainBranchEvents())
 					s.add(new Tuple(e1, e2));
 				for(Event e2: ((If) e1).getElseBranchEvents())
 					s.add(new Tuple(e1, e2));
 			}
 
-			List<Event> condJumps = thread.getCache().getEvents(FilterBasic.get(EType.COND_JUMP));
+			List<Event> condJumps = thread.cache(FilterBasic.get(EType.COND_JUMP));
 			if(!condJumps.isEmpty())
-				for(Event e2: thread.getCache().getEvents(FilterBasic.get(EType.ANY)))
+				for(Event e2: thread.cache(FilterBasic.get(EType.ANY)))
 					for(Event e1: condJumps)
 						if(e1.getCId() < e2.getCId())
 							s.add(new Tuple(e1, e2));

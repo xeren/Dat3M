@@ -1,6 +1,5 @@
 package com.dat3m.dartagnan.wmm.relation.base;
 
-import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Load;
 import com.dat3m.dartagnan.program.event.MemEvent;
@@ -16,7 +15,6 @@ import com.dat3m.dartagnan.wmm.utils.Flag;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.BoolExpr;
-
 import java.util.LinkedList;
 
 public class RelRMW extends StaticRelation {
@@ -82,9 +80,9 @@ public class RelRMW extends StaticRelation {
 
 		s.addAll(baseMaxTupleSet);
 
-		for(Thread thread: e.program.getThreads())
-			for(Event load: thread.getCache().getEvents(loadFilter))
-				for(Event store: thread.getCache().getEvents(storeFilter))
+		for(EncodeContext.Thread thread: e.thread())
+			for(Event load: thread.cache(loadFilter))
+				for(Event store: thread.cache(storeFilter))
 					if(load.getCId() < store.getCId())
 						s.add(new Tuple(load, store));
 	}
@@ -99,10 +97,10 @@ public class RelRMW extends StaticRelation {
 
 		// Encode RMW for exclusive pairs
 		LinkedList<BoolExpr> unpredictable = new LinkedList<>();
-		for(Thread thread: e.program.getThreads()) {
-			for(Event store: thread.getCache().getEvents(storeFilter)) {
+		for(EncodeContext.Thread thread: e.thread()) {
+			for(Event store: thread.cache(storeFilter)) {
 				LinkedList<BoolExpr> storeExec = new LinkedList<>();
-				for(Event load: thread.getCache().getEvents(loadFilter)) {
+				for(Event load: thread.cache(loadFilter)) {
 					if(load.getCId() < store.getCId()) {
 
 						// Encode if load and store form an exclusive pair
@@ -112,10 +110,10 @@ public class RelRMW extends StaticRelation {
 						pairingCond.add(load.exec());
 						pairingCond.add(store.cf());
 
-						for(Event otherLoad: thread.getCache().getEvents(loadFilter))
+						for(Event otherLoad: thread.cache(loadFilter))
 							if(otherLoad.getCId() > load.getCId() && otherLoad.getCId() < store.getCId())
 								pairingCond.add(e.not(otherLoad.exec()));
-						for(Event otherStore: thread.getCache().getEvents(storeFilter))
+						for(Event otherStore: thread.cache(storeFilter))
 							if(otherStore.getCId() > load.getCId() && otherStore.getCId() < store.getCId())
 								pairingCond.add(e.not(otherStore.cf()));
 						e.rule(e.eq(isPair, e.and(pairingCond)));

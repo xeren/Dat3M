@@ -50,9 +50,9 @@ public abstract class Compare
 				Solver s = c.mkSolver();
 				s.add(p.encodeUINonDet(c),
 					p.encodeCF(c),
-					p.encodeFinalRegisterValues(c),
-					model.encode(e),
-					model.consistent(c));
+					p.encodeFinalRegisterValues(c));
+				model.encode(e);
+				s.add(e.allRules(), model.consistent(c));
 				if(null != p.getAss())
 					s.add(p.getAss().encode(c));
 				if(null != p.getAssFilter())
