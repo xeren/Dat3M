@@ -1,19 +1,16 @@
 package com.dat3m.dartagnan.wmm;
 
-import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.utils.*;
 import com.dat3m.dartagnan.wmm.utils.alias.AliasAnalysis;
-import com.google.common.collect.ImmutableSet;
-import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
-import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
 import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.relation.RecursiveRelation;
 import com.dat3m.dartagnan.wmm.relation.Relation;
-
+import com.google.common.collect.ImmutableSet;
+import com.microsoft.z3.BoolExpr;
+import com.microsoft.z3.Context;
 import java.util.*;
 
 /**
@@ -28,8 +25,6 @@ public class Wmm {
     private Map<String, FilterAbstract> filters = new HashMap<>();
     private RelationRepository relationRepository;
     private List<RecursiveGroup> recursiveGroups = new ArrayList<>();
-
-    private Program program;
 
     public Wmm() {
         relationRepository = new RelationRepository();
@@ -67,15 +62,14 @@ public class Wmm {
         recursiveGroups.add(new RecursiveGroup(id, recursiveGroup));
     }
 
-    public BoolExpr encodeBase(Program program, Context ctx, Settings settings) {
-        this.program = program;
-        new AliasAnalysis().calculateLocationSets(this.program, settings.getAlias());
+    public void encodeBase(EncodeContext context) {
+        new AliasAnalysis().calculateLocationSets(context.program, context.settings.getAlias());
 
         for(String relName : baseRelations){
             relationRepository.getRelation(relName);
         }
 
-        for (Axiom ax : axioms) {
+        for(Axiom ax : axioms) {
             ax.getRel().updateRecursiveGroupId(ax.getRel().getRecursiveGroupId());
         }
 
@@ -84,78 +78,67 @@ public class Wmm {
         }
 
         for(Relation relation : relationRepository.getRelations()){
-            relation.initialise(program, ctx, settings);
+            relation.initialise();
         }
-
-        EncodeContext e = new EncodeContext(ctx, program, settings);
 
         for(RecursiveGroup recursiveGroup : recursiveGroups){
-            recursiveGroup.initMaxTupleSets(e);
+            recursiveGroup.initMaxTupleSets(context);
         }
 
-        for (Axiom ax : axioms) {
-            ax.getRel().getMaxTupleSet(e);
+        for(Axiom ax : axioms) {
+            ax.getRel().getMaxTupleSet(context);
         }
 
         for(String relName : baseRelations){
-            relationRepository.getRelation(relName).getMaxTupleSet(e);
+            relationRepository.getRelation(relName).getMaxTupleSet(context);
         }
 
-        if(settings.getDrawGraph()){
-            for(String relName : settings.getGraphRelations()){
+        if(context.settings.getDrawGraph()){
+            for(String relName : context.settings.getGraphRelations()){
                 Relation relation = relationRepository.getRelation(relName);
                 if(relation != null){
-                    relation.addEncodeTupleSet(e, relation.getMaxTupleSet(e));
+                    relation.addEncodeTupleSet(context, relation.getMaxTupleSet(context));
                 }
             }
         }
 
-        for (Axiom ax : axioms) {
-            ax.getRel().addEncodeTupleSet(e, ax.getEncodeTupleSet(e));
+        for(Axiom ax : axioms) {
+            ax.getRel().addEncodeTupleSet(context, ax.getEncodeTupleSet(context));
         }
 
         Collections.reverse(recursiveGroups);
         for(RecursiveGroup recursiveGroup : recursiveGroups){
-            recursiveGroup.updateEncodeTupleSets(e);
+            recursiveGroup.updateEncodeTupleSets(context);
         }
 
         for(String relName : baseRelations){
-            relationRepository.getRelation(relName).encode(e);
+            relationRepository.getRelation(relName).encode(context);
         }
 
-        if(settings.getMode() == Mode.KLEENE){
+        if(context.settings.getMode() == Mode.KLEENE){
             for(RecursiveGroup group : recursiveGroups){
-                group.encode(e);
+                group.encode(context);
             }
         }
-
-        return e.allRules();
     }
 
-    public BoolExpr encode(EncodeContext context) {
-        BoolExpr enc = encodeBase(context.program, context.context, context.settings);
-        for (Axiom ax : axioms)
+    public void encode(EncodeContext context) {
+        encodeBase(context);
+        for(Axiom ax : axioms)
             ax.getRel().encode(context);
-        return context.and(enc, context.allRules());
     }
 
-    public BoolExpr consistent(Program program, Context ctx) {
-        if(this.program != program){
-            throw new RuntimeException("Wmm relations must be encoded before consistency predicate");
-        }
+    public BoolExpr consistent(Context ctx) {
         BoolExpr expr = ctx.mkTrue();
-        for (Axiom ax : axioms) {
+        for(Axiom ax : axioms) {
             expr = ctx.mkAnd(expr, ax.consistent(ctx));
         }
         return expr;
     }
 
-    public BoolExpr inconsistent(Program program, Context ctx) {
-        if(this.program != program){
-            throw new RuntimeException("Wmm relations must be encoded before inconsistency predicate");
-        }
+    public BoolExpr inconsistent(Context ctx) {
         BoolExpr expr = ctx.mkFalse();
-        for (Axiom ax : axioms) {
+        for(Axiom ax : axioms) {
             expr = ctx.mkOr(expr, ax.inconsistent(ctx));
         }
         return expr;
@@ -164,17 +147,17 @@ public class Wmm {
     public String toString() {
         StringBuilder sb = new StringBuilder();
 
-        for (Axiom axiom : axioms) {
+        for(Axiom axiom : axioms) {
             sb.append(axiom).append("\n");
         }
 
-        for (Relation relation : relationRepository.getRelations()) {
+        for(Relation relation : relationRepository.getRelations()) {
             if(relation.getIsNamed()){
                 sb.append(relation).append("\n");
             }
         }
 
-        for (Map.Entry<String, FilterAbstract> filter : filters.entrySet()){
+        for(Map.Entry<String, FilterAbstract> filter : filters.entrySet()){
             sb.append(filter.getValue()).append("\n");
         }
 

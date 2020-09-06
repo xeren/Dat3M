@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import org.apache.commons.cli.HelpFormatter;
 
 import com.dat3m.dartagnan.asserts.AbstractAssert;
@@ -24,6 +23,7 @@ import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.utils.options.DartagnanOptions;
 import com.dat3m.dartagnan.wmm.Wmm;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.microsoft.z3.BoolExpr;
@@ -43,8 +43,8 @@ public class Dartagnan {
 		DartagnanOptions options = new DartagnanOptions();
 		try {
 			options.parse(args);
-		} catch (Exception e) {
-			if (e instanceof UnsupportedOperationException) {
+		} catch(Exception e) {
+			if(e instanceof UnsupportedOperationException) {
 				System.out.println(e.getMessage());
 			}
 			new HelpFormatter().printHelp("DARTAGNAN", options);
@@ -56,17 +56,17 @@ public class Dartagnan {
 		Program p = new ProgramParser().parse(new File(options.getProgramFilePath()));
 
 		Arch target = p.getArch();
-		if (target == null) {
+		if(target == null) {
 			target = options.getTarget();
 		}
-		if (target == null) {
+		if(target == null) {
 			System.out.println("Compilation target cannot be inferred");
 			System.exit(0);
 			return;
 		}
 
 		Integer cegar = options.getCegar();
-		if (cegar != null && cegar >= mcm.getAxioms().size()) {
+		if(cegar != null && cegar >= mcm.getAxioms().size()) {
 			System.out.println("CEGAR argument must be between 1 and #axioms");
 			System.exit(0);
 			return;
@@ -78,9 +78,9 @@ public class Dartagnan {
 
 		Result result = cegar != null ? runCegar(s, ctx, p, mcm, target, settings, cegar) : testProgram(s, ctx, p, mcm, target, settings);
 
-		if (options.getProgramFilePath().endsWith(".litmus")) {
+		if(options.getProgramFilePath().endsWith(".litmus")) {
 			System.out.println("Settings: " + options.getSettings());
-			if (p.getAssFilter() != null) {
+			if(p.getAssFilter() != null) {
 				System.out.println("Filter " + (p.getAssFilter()));
 			}
 			System.out.println("Condition " + p.getAss().toStringWithType());
@@ -89,7 +89,7 @@ public class Dartagnan {
 			System.out.println(result);
 		}
 
-		if (settings.getDrawGraph() && canDrawGraph(p.getAss(), result.equals(FAIL))) {
+		if(settings.getDrawGraph() && canDrawGraph(p.getAss(), result.equals(FAIL))) {
 			ctx.setPrintMode(Z3_ast_print_mode.Z3_PRINT_SMTLIB_FULL);
 			drawGraph(new Graph(s.getModel(), ctx, p, settings.getGraphRelations()), options.getGraphFilePath());
 			System.out.println("Execution graph is written to " + options.getGraphFilePath());
@@ -113,12 +113,12 @@ public class Dartagnan {
 
 		// AssertionInline depends on compiled events (copies)
 		// Thus we need to set the assertion after compilation
-		if (program.getAss() == null) {
+		if(program.getAss() == null) {
 			AbstractAssert ass = program.createAssertion();
 			program.setAss(ass);
 			// Due to optimizations, the program might be trivially true
 			// Not returning here might loop forever for cyclic programs
-			if (ass instanceof AssertTrue) {
+			if(ass instanceof AssertTrue) {
 				return PASS;
 			}
 		}
@@ -139,16 +139,17 @@ public class Dartagnan {
 		s1.add(encodeFinalRegisterValues);
 		s2.add(encodeFinalRegisterValues);
 
-		BoolExpr encodeWmm = wmm.encode(context);
+		wmm.encode(context);
+		BoolExpr encodeWmm = context.allRules();
 		s1.add(encodeWmm);
 		s2.add(encodeWmm);
 
-		BoolExpr encodeConsistency = wmm.consistent(program, ctx);
+		BoolExpr encodeConsistency = wmm.consistent(ctx);
 		s1.add(encodeConsistency);
 		s2.add(encodeConsistency);
 
 		s1.add(program.getAss().encode(ctx));
-		if (program.getAssFilter() != null) {
+		if(program.getAssFilter() != null) {
 			BoolExpr encodeFilter = program.getAssFilter().encode(ctx);
 			s1.add(encodeFilter);
 			s2.add(encodeFilter);
@@ -157,7 +158,7 @@ public class Dartagnan {
 		BoolExpr encodeNoBoundEventExec = program.encodeNoBoundEventExec(ctx);
 
 		Result res;
-		if (s1.check() == Status.SATISFIABLE) {
+		if(s1.check() == Status.SATISFIABLE) {
 			s1.add(encodeNoBoundEventExec);
 			res = s1.check() == Status.SATISFIABLE ? FAIL : BFAIL;
 		} else {
@@ -165,7 +166,7 @@ public class Dartagnan {
 			res = s2.check() == Status.SATISFIABLE ? BPASS : PASS;
 		}
 
-		if (program.getAss().getInvert()) {
+		if(program.getAss().getInvert()) {
 			res = res.invert();
 		}
 		return res;
@@ -177,7 +178,7 @@ public class Dartagnan {
 		program.compile(target, 0);
 		// AssertionInline depends on compiled events (copies)
 		// Thus we need to set the assertion after compilation
-		if (program.getAss() == null) {
+		if(program.getAss() == null) {
 			AbstractAssert ass = program.createAssertion();
 			program.setAss(ass);
 			// Due to optimizations, the program might be trivially true
@@ -187,25 +188,27 @@ public class Dartagnan {
 			}
 		}
 
+		EncodeContext e = new EncodeContext(ctx, program, settings);
+
 		solver.add(program.encodeUINonDet(ctx));
 		solver.add(program.encodeCF(ctx));
 		solver.add(program.encodeFinalRegisterValues(ctx));
-		solver.add(wmm.encodeBase(program, ctx, settings));
+		wmm.encodeBase(e);
+		solver.add(e.allRules());
 		solver.add(wmm.getAxioms().get(cegar).encodeRelAndConsistency(ctx, program, settings));
 
-		if (program.getAssFilter() != null) {
+		if(program.getAssFilter() != null)
 			solver.add(program.getAssFilter().encode(ctx));
-		}
 
 		// Termination guaranteed because we add a new constraint in each 
 		// iteration and thus the formula will eventually become UNSAT
 		Result res;
-		while (true) {
+		while(true){
 			solver.push();
 			// This needs to be pop for the else branch below
 			// If not the formula will always remain UNSAT
 			solver.add(program.getAss().encode(ctx));
-			if (solver.check() == Status.SATISFIABLE) {
+			if(solver.check() == Status.SATISFIABLE) {
 				solver.push();
 				solver.add(program.encodeNoBoundEventExec(ctx));
 				res = solver.check() == Status.SATISFIABLE ? FAIL : BFAIL;
@@ -219,12 +222,12 @@ public class Dartagnan {
 			// We get rid of the formulas added in the above branches
 			solver.pop();
 
-			if (program.getAss().getInvert()) {
+			if(program.getAss().getInvert()) {
 				res = res.invert();
 			}
 
 			// If we are not using CEGAR or the formula was UNSAT, we return
-			if (cegar == -1 || res.equals(PASS) || res.equals(BPASS)) {
+			if(cegar == -1 || res.equals(PASS) || res.equals(BPASS)) {
 				return res;
 			}
 
@@ -235,25 +238,25 @@ public class Dartagnan {
 			solver.check();
 			BoolExpr execution = program.getRf(ctx, solver.getModel());
 			solver.add(execution);
-			solver.add(wmm.encodeBase(program, ctx, settings));
-			for (Axiom ax: wmm.getAxioms()) {
+			wmm.encodeBase(e);
+			solver.add(e.allRules());
+			for(Axiom ax: wmm.getAxioms()) {
 				BoolExpr enc = ax.encodeRelAndConsistency(ctx, program, settings);
 				BoolExpr axVar = ctx.mkBoolConst(ax.toString());
 				solver.assertAndTrack(enc, axVar);
 				track.put(axVar, enc);
 			}
 
-			if (solver.check() == Status.SATISFIABLE) {
+			if(solver.check() == Status.SATISFIABLE) {
 				// For CEGAR, the same code above seems to never give BFAIL
 				// Thus we add the constraint here to avoid FAIL when the unrolling was not enough
 				solver.add(program.encodeNoBoundEventExec(ctx));
-				res = solver.check() == Status.SATISFIABLE ? FAIL : BFAIL;
-				return res;
+				return solver.check() == Status.SATISFIABLE ? FAIL : BFAIL;
 			}
 
 			BoolExpr[] unsatCore = solver.getUnsatCore();
 			solver.pop();
-			for (BoolExpr axVar: unsatCore) {
+			for(BoolExpr axVar: unsatCore) {
 				solver.add(track.get(axVar));
 			}
 			solver.add(ctx.mkNot(execution));
@@ -262,11 +265,11 @@ public class Dartagnan {
 
 	public static boolean canDrawGraph(AbstractAssert ass, boolean result) {
 		String type = ass.getType();
-		if (type == null) {
+		if(type == null) {
 			return result;
 		}
 
-		if (result) {
+		if(result) {
 			return type.equals(AbstractAssert.ASSERT_TYPE_EXISTS) || type.equals(AbstractAssert.ASSERT_TYPE_FINAL);
 		}
 		return type.equals(AbstractAssert.ASSERT_TYPE_NOT_EXISTS) || type.equals(AbstractAssert.ASSERT_TYPE_FORALL);

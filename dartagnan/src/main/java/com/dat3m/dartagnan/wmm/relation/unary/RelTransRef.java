@@ -1,11 +1,8 @@
 package com.dat3m.dartagnan.wmm.relation.unary;
 
 import com.dat3m.dartagnan.program.utils.EType;
-import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.relation.EncodeContext;
-import com.microsoft.z3.Context;
-import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
@@ -37,8 +34,8 @@ public class RelTransRef extends RelTrans {
 	}
 
 	@Override
-	public void initialise(Program program, Context ctx, Settings settings) {
-		super.initialise(program, ctx, settings);
+	public void initialise() {
+		super.initialise();
 		identityEncodeTupleSet = new TupleSet();
 		transEncodeTupleSet = new TupleSet();
 	}

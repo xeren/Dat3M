@@ -1,10 +1,7 @@
 package com.dat3m.dartagnan.wmm.relation.binary;
 
-import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
-import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -29,8 +26,8 @@ public class RelMinus extends BinaryRelation {
 	}
 
 	@Override
-	public void initialise(Program program, Context ctx, Settings settings) {
-		super.initialise(program, ctx, settings);
+	public void initialise() {
+		super.initialise();
 		if(r2.getRecursiveGroupId() > 0) {
 			throw new RuntimeException("Relation " + r2.getName() + " cannot be recursive since it occurs in a set minus.");
 		}

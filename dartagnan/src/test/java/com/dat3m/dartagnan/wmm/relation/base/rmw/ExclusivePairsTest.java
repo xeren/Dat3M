@@ -112,8 +112,9 @@ public class ExclusivePairsTest {
             program.compile(program.getArch(), 0);
             solver.add(program.encodeCF(ctx));
             solver.add(program.encodeFinalRegisterValues(ctx));
-            solver.add(wmm.encode(context));
-            solver.add(wmm.consistent(program, ctx));
+            wmm.encode(context);
+            solver.add(context.allRules());
+            solver.add(wmm.consistent(ctx));
 
             // Check flag
             solver.add(ctx.mkEq(Flag.ARM_UNPREDICTABLE_BEHAVIOUR.repr(ctx), ctx.mkTrue()));

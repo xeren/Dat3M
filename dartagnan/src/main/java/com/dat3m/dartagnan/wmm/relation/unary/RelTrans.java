@@ -1,10 +1,7 @@
 package com.dat3m.dartagnan.wmm.relation.unary;
 
-import com.dat3m.dartagnan.utils.Settings;
-import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.microsoft.z3.IntExpr;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.relation.Relation;
@@ -36,8 +33,8 @@ public class RelTrans extends UnaryRelation {
 	}
 
 	@Override
-	public void initialise(Program program, Context ctx, Settings settings) {
-		super.initialise(program, ctx, settings);
+	public void initialise() {
+		super.initialise();
 		fullEncodeTupleSet = new TupleSet();
 		transitiveReachabilityMap = null;
 	}

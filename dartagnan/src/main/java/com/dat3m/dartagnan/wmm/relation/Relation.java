@@ -1,8 +1,5 @@
 package com.dat3m.dartagnan.wmm.relation;
 
-import com.dat3m.dartagnan.utils.Settings;
-import com.microsoft.z3.*;
-import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import java.util.HashSet;
@@ -46,7 +43,7 @@ public abstract class Relation {
 		return recursiveGroupId;
 	}
 
-	public void initialise(Program program, Context ctx, Settings settings) {
+	public void initialise() {
 		this.maxTupleSet = null;
 		encodeTupleSet = new TupleSet();
 	}

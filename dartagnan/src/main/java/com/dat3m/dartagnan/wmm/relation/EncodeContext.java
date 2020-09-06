@@ -57,7 +57,9 @@ public class EncodeContext {
 	}
 
 	public BoolExpr allRules() {
-		return context.mkAnd(rule.toArray(new BoolExpr[0]));
+		BoolExpr result = context.mkAnd(rule.toArray(new BoolExpr[0]));
+		rule.clear();
+		return result;
 	}
 
 	public List<Event> cache(FilterAbstract filter) {

@@ -52,7 +52,7 @@ public abstract class Compare
 					p.encodeCF(c),
 					p.encodeFinalRegisterValues(c),
 					model.encode(e),
-					model.consistent(p, c));
+					model.consistent(c));
 				if(null != p.getAss())
 					s.add(p.getAss().encode(c));
 				if(null != p.getAssFilter())
