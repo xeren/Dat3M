@@ -56,7 +56,15 @@ public abstract class Relation {
 		encodeTupleSet = new TupleSet();
 	}
 
-	public abstract TupleSet getMaxTupleSet();
+	protected abstract void update(TupleSet set);
+
+	public TupleSet getMaxTupleSet() {
+		if(null == maxTupleSet) {
+			maxTupleSet = new TupleSet();
+			update(maxTupleSet);
+		}
+		return maxTupleSet;
+	}
 
 	public TupleSet getMaxTupleSetRecursive() {
 		return getMaxTupleSet();

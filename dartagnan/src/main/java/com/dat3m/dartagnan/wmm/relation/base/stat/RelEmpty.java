@@ -12,10 +12,7 @@ public class RelEmpty extends Relation {
 	}
 
 	@Override
-	public TupleSet getMaxTupleSet() {
-		if (maxTupleSet == null)
-			maxTupleSet = new TupleSet();
-		return maxTupleSet;
+	protected void update(TupleSet s) {
 	}
 
 	@Override

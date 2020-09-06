@@ -7,31 +7,26 @@ import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 public class RelSetIdentity extends StaticRelation {
 
-    protected FilterAbstract filter;
+	protected FilterAbstract filter;
 
-    public static String makeTerm(FilterAbstract filter){
-        return "[" + filter + "]";
-    }
+	public static String makeTerm(FilterAbstract filter) {
+		return "[" + filter + "]";
+	}
 
-    public RelSetIdentity(FilterAbstract filter) {
-        this.filter = filter;
-        term = makeTerm(filter);
-    }
+	public RelSetIdentity(FilterAbstract filter) {
+		this.filter = filter;
+		term = makeTerm(filter);
+	}
 
-    public RelSetIdentity(FilterAbstract filter, String name) {
-        super(name);
-        this.filter = filter;
-        term = makeTerm(filter);
-    }
+	public RelSetIdentity(FilterAbstract filter, String name) {
+		super(name);
+		this.filter = filter;
+		term = makeTerm(filter);
+	}
 
-    @Override
-    public TupleSet getMaxTupleSet(){
-        if(maxTupleSet == null){
-            maxTupleSet = new TupleSet();
-            for(Event e : program.getCache().getEvents(filter)){
-                maxTupleSet.add(new Tuple(e, e));
-            }
-        }
-        return maxTupleSet;
-    }
+	@Override
+	public void update(TupleSet s) {
+		for(Event e: program.getCache().getEvents(filter))
+			s.add(new Tuple(e, e));
+	}
 }

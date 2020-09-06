@@ -12,37 +12,26 @@ import java.util.List;
 
 public class RelCtrlDirect extends StaticRelation {
 
-    public RelCtrlDirect(){
-        term = "ctrlDirect";
-    }
+	public RelCtrlDirect() {
+		term = "ctrlDirect";
+	}
 
-    @Override
-    public TupleSet getMaxTupleSet(){
-        if(maxTupleSet == null){
-            maxTupleSet = new TupleSet();
+	@Override
+	protected void update(TupleSet s) {
+		for(Thread thread: program.getThreads()) {
+			for(Event e1: thread.getCache().getEvents(FilterBasic.get(EType.CMP))) {
+				for(Event e2: ((If) e1).getMainBranchEvents())
+					s.add(new Tuple(e1, e2));
+				for(Event e2: ((If) e1).getElseBranchEvents())
+					s.add(new Tuple(e1, e2));
+			}
 
-            for(Thread thread : program.getThreads()){
-                for(Event e1 : thread.getCache().getEvents(FilterBasic.get(EType.CMP))){
-                    for(Event e2 : ((If) e1).getMainBranchEvents()){
-                        maxTupleSet.add(new Tuple(e1, e2));
-                    }
-                    for(Event e2 : ((If) e1).getElseBranchEvents()){
-                        maxTupleSet.add(new Tuple(e1, e2));
-                    }
-                }
-
-                List<Event> condJumps = thread.getCache().getEvents(FilterBasic.get(EType.COND_JUMP));
-                if(!condJumps.isEmpty()){
-                    for(Event e2 : thread.getCache().getEvents(FilterBasic.get(EType.ANY))){
-                        for(Event e1 : condJumps){
-                            if(e1.getCId() < e2.getCId()){
-                                maxTupleSet.add(new Tuple(e1, e2));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return maxTupleSet;
-    }
+			List<Event> condJumps = thread.getCache().getEvents(FilterBasic.get(EType.COND_JUMP));
+			if(!condJumps.isEmpty())
+				for(Event e2: thread.getCache().getEvents(FilterBasic.get(EType.ANY)))
+					for(Event e1: condJumps)
+						if(e1.getCId() < e2.getCId())
+							s.add(new Tuple(e1, e2));
+		}
+	}
 }

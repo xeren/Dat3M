@@ -49,59 +49,47 @@ public class RelRMW extends StaticRelation {
 	}
 
 	@Override
-	public TupleSet getMaxTupleSet() {
-		if(maxTupleSet == null) {
-			baseMaxTupleSet = new TupleSet();
-			FilterAbstract filter = FilterIntersection.get(FilterBasic.get(EType.RMW), FilterBasic.get(EType.WRITE));
-			for(Event store: program.getCache().getEvents(filter)) {
-				if(store instanceof RMWStore) {
-					baseMaxTupleSet.add(new Tuple(((RMWStore) store).getLoadEvent(), store));
-				}
-			}
+	protected void update(TupleSet s){
+		FilterAbstract filter = FilterIntersection.get(FilterBasic.get(EType.RMW), FilterBasic.get(EType.WRITE));
+		for(Event store: program.getCache().getEvents(filter))
+			if(store instanceof RMWStore)
+				baseMaxTupleSet.add(new Tuple(((RMWStore) store).getLoadEvent(), store));
 
-			filter = FilterIntersection.get(FilterBasic.get(EType.RMW), FilterBasic.get(EType.LOCK));
-			for(Event e: program.getCache().getEvents(filter)) {
-				if(e instanceof Load) {
-					Event next = e.getSuccessor();
-					Event nnext = next.getSuccessor();
-					baseMaxTupleSet.add(new Tuple(e, next));
-					baseMaxTupleSet.add(new Tuple(e, nnext));
-					baseMaxTupleSet.add(new Tuple(next, nnext));
-				}
-			}
-
-			filter = FilterIntersection.get(FilterBasic.get(EType.RMW), FilterBasic.get(EType.ATOMIC));
-			for(Event end: program.getCache().getEvents(filter)) {
-				// TODO: why some non EndAtomic events match the ATOMIC filter?
-				// The check below should not be necessary, but better to have
-				// in case some other event might get ATOMIC tag in the future
-				if(!(end instanceof EndAtomic)) {
-					continue;
-				}
-				for(Event b: ((EndAtomic) end).getBlock()) {
-					Event next = b.getSuccessor();
-					while(next != null && !(next instanceof EndAtomic)) {
-						baseMaxTupleSet.add(new Tuple(b, next));
-						next = next.getSuccessor();
-					}
-					baseMaxTupleSet.add(new Tuple(b, end));
-				}
-			}
-
-			maxTupleSet = new TupleSet();
-			maxTupleSet.addAll(baseMaxTupleSet);
-
-			for(Thread thread: program.getThreads()) {
-				for(Event load: thread.getCache().getEvents(loadFilter)) {
-					for(Event store: thread.getCache().getEvents(storeFilter)) {
-						if(load.getCId() < store.getCId()) {
-							maxTupleSet.add(new Tuple(load, store));
-						}
-					}
-				}
+		filter = FilterIntersection.get(FilterBasic.get(EType.RMW), FilterBasic.get(EType.LOCK));
+		for(Event e: program.getCache().getEvents(filter)) {
+			if(e instanceof Load) {
+				Event next = e.getSuccessor();
+				Event nnext = next.getSuccessor();
+				baseMaxTupleSet.add(new Tuple(e, next));
+				baseMaxTupleSet.add(new Tuple(e, nnext));
+				baseMaxTupleSet.add(new Tuple(next, nnext));
 			}
 		}
-		return maxTupleSet;
+
+		filter = FilterIntersection.get(FilterBasic.get(EType.RMW), FilterBasic.get(EType.ATOMIC));
+		for(Event end: program.getCache().getEvents(filter)) {
+			// TODO: why some non EndAtomic events match the ATOMIC filter?
+			// The check below should not be necessary, but better to have
+			// in case some other event might get ATOMIC tag in the future
+			if(!(end instanceof EndAtomic))
+				continue;
+			for(Event b: ((EndAtomic) end).getBlock()) {
+				Event next = b.getSuccessor();
+				while(next != null && !(next instanceof EndAtomic)) {
+					baseMaxTupleSet.add(new Tuple(b, next));
+					next = next.getSuccessor();
+				}
+				baseMaxTupleSet.add(new Tuple(b, end));
+			}
+		}
+
+		s.addAll(baseMaxTupleSet);
+
+		for(Thread thread: program.getThreads())
+			for(Event load: thread.getCache().getEvents(loadFilter))
+				for(Event store: thread.getCache().getEvents(storeFilter))
+					if(load.getCId() < store.getCId())
+						s.add(new Tuple(load, store));
 	}
 
 	@Override

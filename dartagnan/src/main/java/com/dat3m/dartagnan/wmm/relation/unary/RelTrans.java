@@ -43,17 +43,11 @@ public class RelTrans extends UnaryRelation {
 	}
 
 	@Override
-	public TupleSet getMaxTupleSet() {
-		if(maxTupleSet == null) {
-			transitiveReachabilityMap = r1.getMaxTupleSet().transMap();
-			maxTupleSet = new TupleSet();
-			for(Event e1: transitiveReachabilityMap.keySet()) {
-				for(Event e2: transitiveReachabilityMap.get(e1)) {
-					maxTupleSet.add(new Tuple(e1, e2));
-				}
-			}
-		}
-		return maxTupleSet;
+	protected void update(TupleSet s, TupleSet s1) {
+		transitiveReachabilityMap = s1.transMap();
+		for(Event e1: transitiveReachabilityMap.keySet())
+			for(Event e2: transitiveReachabilityMap.get(e1))
+				s.add(new Tuple(e1, e2));
 	}
 
 	@Override

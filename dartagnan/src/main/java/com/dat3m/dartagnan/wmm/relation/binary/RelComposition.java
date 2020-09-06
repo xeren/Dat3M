@@ -6,7 +6,6 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
-
 import java.util.*;
 
 /**
@@ -29,33 +28,10 @@ public class RelComposition extends BinaryRelation {
 	}
 
 	@Override
-	public TupleSet getMaxTupleSet() {
-		if (maxTupleSet == null) {
-			maxTupleSet = new TupleSet();
-			TupleSet set1 = r1.getMaxTupleSet();
-			TupleSet set2 = r2.getMaxTupleSet();
-			for (Tuple rel1: set1) {
-				for (Tuple rel2: set2.getByFirst(rel1.getSecond())) {
-					maxTupleSet.add(new Tuple(rel1.getFirst(), rel2.getSecond()));
-				}
-			}
-		}
-		return maxTupleSet;
-	}
-
-	@Override
-	public TupleSet getMaxTupleSetRecursive() {
-		if (recursiveGroupId > 0 && maxTupleSet != null) {
-			TupleSet set1 = r1.getMaxTupleSetRecursive();
-			TupleSet set2 = r2.getMaxTupleSetRecursive();
-			for (Tuple rel1: set1) {
-				for (Tuple rel2: set2.getByFirst(rel1.getSecond())) {
-					maxTupleSet.add(new Tuple(rel1.getFirst(), rel2.getSecond()));
-				}
-			}
-			return maxTupleSet;
-		}
-		return getMaxTupleSet();
+	protected void update(TupleSet s, TupleSet s1, TupleSet s2) {
+		for(Tuple t1: s1)
+			for(Tuple t2: s2.getByFirst(t1.getSecond()))
+				s.add(new Tuple(t1.getFirst(), t2.getSecond()));
 	}
 
 	@Override
@@ -65,25 +41,25 @@ public class RelComposition extends BinaryRelation {
 		encodeTupleSet.addAll(tuples);
 		activeSet.retainAll(maxTupleSet);
 
-		if (!activeSet.isEmpty()) {
+		if(!activeSet.isEmpty()) {
 			TupleSet r1Set = new TupleSet();
 			TupleSet r2Set = new TupleSet();
 
 			Map<Integer, Set<Integer>> myMap = new HashMap<>();
-			for (Tuple tuple: activeSet) {
+			for(Tuple tuple: activeSet) {
 				int id1 = tuple.getFirst().getCId();
 				int id2 = tuple.getSecond().getCId();
 				myMap.putIfAbsent(id1, new HashSet<>());
 				myMap.get(id1).add(id2);
 			}
 
-			for (Tuple tuple1: r1.getMaxTupleSet()) {
+			for(Tuple tuple1: r1.getMaxTupleSet()) {
 				Event e1 = tuple1.getFirst();
 				Set<Integer> ends = myMap.get(e1.getCId());
-				if (ends == null) continue;
-				for (Tuple tuple2: r2.getMaxTupleSet().getByFirst(tuple1.getSecond())) {
+				if(ends == null) continue;
+				for(Tuple tuple2: r2.getMaxTupleSet().getByFirst(tuple1.getSecond())) {
 					Event e2 = tuple2.getSecond();
-					if (ends.contains(e2.getCId())) {
+					if(ends.contains(e2.getCId())) {
 						r1Set.add(tuple1);
 						r2Set.add(tuple2);
 					}
@@ -192,9 +168,9 @@ public class RelComposition extends BinaryRelation {
 		boolean recurseInR1 = (r1.getRecursiveGroupId() & groupId) > 0;
 		boolean recurseInR2 = (r2.getRecursiveGroupId() & groupId) > 0;
 
-		java.util.function.BiFunction<? super Event, ? super Event, ? extends BoolExpr> edge1
+		java.util.function.BiFunction<?super Event,?super Event,?extends BoolExpr> edge1
 			= recurseInR1 ? (x,y)->e.edge(r1, childIteration, x, y) : (x,y)->e.edge(r1, x, y);
-		java.util.function.BiFunction<? super Event, ? super Event, ? extends BoolExpr> edge2
+		java.util.function.BiFunction<?super Event,?super Event,?extends BoolExpr> edge2
 			= recurseInR2 ? (x,y)->e.edge(r2, childIteration, x, y) : (x,y)->e.edge(r2, x, y);
 
 		TupleSet r1Set = new TupleSet();
@@ -206,27 +182,27 @@ public class RelComposition extends BinaryRelation {
 		r2Set.retainAll(r2.getMaxTupleSet());
 
 		Map<Tuple, LinkedList<BoolExpr>> exprMap = new HashMap<>();
-		for (Tuple tuple: encodeTupleSet)
+		for(Tuple tuple: encodeTupleSet)
 			exprMap.put(tuple, new LinkedList<>());
 
-		for (Tuple tuple1: r1Set) {
+		for(Tuple tuple1: r1Set) {
 			Event e1 = tuple1.getFirst();
 			Event e3 = tuple1.getSecond();
-			for (Tuple tuple2: r2Set.getByFirst(e3)) {
+			for(Tuple tuple2: r2Set.getByFirst(e3)) {
 				Event e2 = tuple2.getSecond();
 				Tuple id = new Tuple(e1, e2);
-				if (exprMap.containsKey(id))
+				if(exprMap.containsKey(id))
 					exprMap.get(id).add(e.and(edge1.apply(e1, e3), edge2.apply(e3, e2)));
 			}
 		}
 
-		for (Tuple tuple: encodeTupleSet)
+		for(Tuple tuple: encodeTupleSet)
 			e.rule(e.eq(e.edge(this, iteration, tuple), e.or(exprMap.get(tuple))));
 
-		if (recurseInR1)
+		if(recurseInR1)
 			r1.encodeIteration(e, groupId, childIteration);
 
-		if (recurseInR2)
+		if(recurseInR2)
 			r2.encodeIteration(e, groupId, childIteration);
 
 	}

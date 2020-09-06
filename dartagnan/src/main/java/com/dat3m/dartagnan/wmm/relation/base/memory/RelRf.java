@@ -22,34 +22,23 @@ public class RelRf extends Relation {
 	}
 
 	@Override
-	public TupleSet getMaxTupleSet() {
-		if(maxTupleSet == null) {
-			maxTupleSet = new TupleSet();
+	public void update(TupleSet s){
+		List<Event> eventsLoad = program.getCache().getEvents(FilterBasic.get(EType.READ));
+		List<Event> eventsInit = program.getCache().getEvents(FilterBasic.get(EType.INIT));
+		List<Event> eventsStore = program.getCache().getEvents(FilterMinus.get(
+			FilterBasic.get(EType.WRITE),
+			FilterBasic.get(EType.INIT)
+		));
 
-			List<Event> eventsLoad = program.getCache().getEvents(FilterBasic.get(EType.READ));
-			List<Event> eventsInit = program.getCache().getEvents(FilterBasic.get(EType.INIT));
-			List<Event> eventsStore = program.getCache().getEvents(FilterMinus.get(
-				FilterBasic.get(EType.WRITE),
-				FilterBasic.get(EType.INIT)
-			));
+		for(Event e1: eventsInit)
+			for(Event e2: eventsLoad)
+				if(MemEvent.canAddressTheSameLocation((MemEvent) e1, (MemEvent) e2))
+					s.add(new Tuple(e1, e2));
 
-			for(Event e1: eventsInit) {
-				for(Event e2: eventsLoad) {
-					if(MemEvent.canAddressTheSameLocation((MemEvent) e1, (MemEvent) e2)) {
-						maxTupleSet.add(new Tuple(e1, e2));
-					}
-				}
-			}
-
-			for(Event e1: eventsStore) {
-				for(Event e2: eventsLoad) {
-					if(MemEvent.canAddressTheSameLocation((MemEvent) e1, (MemEvent) e2)) {
-						maxTupleSet.add(new Tuple(e1, e2));
-					}
-				}
-			}
-		}
-		return maxTupleSet;
+		for(Event e1: eventsStore)
+			for(Event e2: eventsLoad)
+				if(MemEvent.canAddressTheSameLocation((MemEvent) e1, (MemEvent) e2))
+					s.add(new Tuple(e1, e2));
 	}
 
 	@Override

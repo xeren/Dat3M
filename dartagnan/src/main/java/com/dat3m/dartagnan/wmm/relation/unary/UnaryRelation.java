@@ -2,7 +2,7 @@ package com.dat3m.dartagnan.wmm.relation.unary;
 
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.relation.EncodeContext;
-import com.microsoft.z3.BoolExpr;
+import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.wmm.relation.Relation;
@@ -21,6 +21,13 @@ public abstract class UnaryRelation extends Relation {
 	UnaryRelation(Relation r1, String name) {
 		super(name);
 		this.r1 = r1;
+	}
+
+	protected abstract void update(TupleSet set, TupleSet first);
+
+	@Override
+	protected void update(TupleSet set) {
+		update(maxTupleSet, r1.getMaxTupleSet());
 	}
 
 	@Override

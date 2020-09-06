@@ -19,20 +19,12 @@ public class RelCrit extends StaticRelation {
 	}
 
 	@Override
-	public TupleSet getMaxTupleSet() {
-		if(maxTupleSet == null) {
-			maxTupleSet = new TupleSet();
-			for(Thread thread: program.getThreads()) {
-				for(Event lock: thread.getCache().getEvents(FilterBasic.get(EType.RCU_LOCK))) {
-					for(Event unlock: thread.getCache().getEvents(FilterBasic.get(EType.RCU_UNLOCK))) {
-						if(lock.getCId() < unlock.getCId()) {
-							maxTupleSet.add(new Tuple(lock, unlock));
-						}
-					}
-				}
-			}
-		}
-		return maxTupleSet;
+	protected void update(TupleSet s) {
+		for(Thread thread: program.getThreads())
+			for(Event lock: thread.getCache().getEvents(FilterBasic.get(EType.RCU_LOCK)))
+				for(Event unlock: thread.getCache().getEvents(FilterBasic.get(EType.RCU_UNLOCK)))
+					if(lock.getCId() < unlock.getCId())
+						s.add(new Tuple(lock, unlock));
 	}
 
 	// TODO: Not the most efficient implementation

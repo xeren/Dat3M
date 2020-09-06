@@ -18,19 +18,12 @@ public class RelLoc extends Relation {
 	}
 
 	@Override
-	public TupleSet getMaxTupleSet() {
-		if(maxTupleSet == null) {
-			maxTupleSet = new TupleSet();
-			List<Event> events = program.getCache().getEvents(FilterBasic.get(EType.MEMORY));
-			for(Event e1: events) {
-				for(Event e2: events) {
-					if(e1.getCId() != e2.getCId() && MemEvent.canAddressTheSameLocation((MemEvent) e1, (MemEvent) e2)) {
-						maxTupleSet.add(new Tuple(e1, e2));
-					}
-				}
-			}
-		}
-		return maxTupleSet;
+	protected void update(TupleSet s){
+		List<Event> events = program.getCache().getEvents(FilterBasic.get(EType.MEMORY));
+		for(Event e1: events)
+			for(Event e2: events)
+				if(e1.getCId() != e2.getCId() && MemEvent.canAddressTheSameLocation((MemEvent) e1, (MemEvent) e2))
+					s.add(new Tuple(e1, e2));
 	}
 
 	@Override

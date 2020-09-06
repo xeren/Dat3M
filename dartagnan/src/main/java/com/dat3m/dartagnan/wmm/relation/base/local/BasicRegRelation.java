@@ -64,21 +64,17 @@ abstract class BasicRegRelation extends StaticRelation {
 	}
 
 	@Override
-	public TupleSet getMaxTupleSet() {
-		if(maxTupleSet == null) {
-			maxTupleSet = new TupleSet();
-			ImmutableMap<Register, ImmutableList<Event>> regWriterMap = program.getCache().getRegWriterMap();
-			for(Event regReader: program.getCache().getEvents(FilterBasic.get(etype))) {
-				for(Register register: getRegisters(regReader)) {
-					for(Event regWriter: regWriterMap.getOrDefault(register, ImmutableList.of())) {
-						if(regWriter.getCId() >= regReader.getCId())
-							break;
-						maxTupleSet.add(new Tuple(regWriter, regReader));
-					}
+	protected void update(TupleSet s) {
+		ImmutableMap<Register, ImmutableList<Event>> regWriterMap = program.getCache().getRegWriterMap();
+		for(Event regReader: program.getCache().getEvents(FilterBasic.get(etype))) {
+			for(Register register: getRegisters(regReader)) {
+				for(Event regWriter: regWriterMap.getOrDefault(register, ImmutableList.of())) {
+					if(regWriter.getCId() >= regReader.getCId())
+						break;
+					s.add(new Tuple(regWriter, regReader));
 				}
 			}
 		}
-		return maxTupleSet;
 	}
 
 	@Override

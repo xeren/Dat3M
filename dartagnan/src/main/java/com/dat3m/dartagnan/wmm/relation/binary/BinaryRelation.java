@@ -28,6 +28,22 @@ public abstract class BinaryRelation extends Relation {
 		this.r2 = r2;
 	}
 
+	protected abstract void update(TupleSet set, TupleSet first, TupleSet second);
+
+	@Override
+	protected void update(TupleSet set) {
+		update(set, r1.getMaxTupleSet(), r2.getMaxTupleSet());
+	}
+
+	@Override
+	public TupleSet getMaxTupleSetRecursive() {
+		if(recursiveGroupId > 0 && maxTupleSet != null) {
+			update(maxTupleSet, r1.getMaxTupleSetRecursive(), r2.getMaxTupleSetRecursive());
+			return maxTupleSet;
+		}
+		return getMaxTupleSet();
+	}
+
 	@Override
 	public int updateRecursiveGroupId(int parentId) {
 		if(recursiveGroupId == 0 || forceUpdateRecursiveGroupId) {

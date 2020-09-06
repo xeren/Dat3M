@@ -34,32 +34,28 @@ public class RelFencerel extends Relation {
 	}
 
 	@Override
-	public TupleSet getMaxTupleSet() {
-		if(maxTupleSet == null) {
-			maxTupleSet = new TupleSet();
-			for(Thread t: program.getThreads()) {
-				List<Event> fences = t.getCache().getEvents(FilterBasic.get(fenceName));
-				if(!fences.isEmpty()) {
-					List<Event> events = t.getCache().getEvents(FilterBasic.get(EType.MEMORY));
-					ListIterator<Event> it1 = events.listIterator();
+	protected void update(TupleSet s){
+		for(Thread t: program.getThreads()) {
+			List<Event> fences = t.getCache().getEvents(FilterBasic.get(fenceName));
+			if(!fences.isEmpty()) {
+				List<Event> events = t.getCache().getEvents(FilterBasic.get(EType.MEMORY));
+				ListIterator<Event> it1 = events.listIterator();
 
-					while(it1.hasNext()) {
-						Event e1 = it1.next();
-						ListIterator<Event> it2 = events.listIterator(it1.nextIndex());
-						while(it2.hasNext()) {
-							Event e2 = it2.next();
-							for(Event f: fences) {
-								if(f.getCId() > e1.getCId() && f.getCId() < e2.getCId()) {
-									maxTupleSet.add(new Tuple(e1, e2));
-									break;
-								}
+				while(it1.hasNext()) {
+					Event e1 = it1.next();
+					ListIterator<Event> it2 = events.listIterator(it1.nextIndex());
+					while(it2.hasNext()) {
+						Event e2 = it2.next();
+						for(Event f: fences) {
+							if(f.getCId() > e1.getCId() && f.getCId() < e2.getCId()) {
+								s.add(new Tuple(e1, e2));
+								break;
 							}
 						}
 					}
 				}
 			}
 		}
-		return maxTupleSet;
 	}
 
 	@Override

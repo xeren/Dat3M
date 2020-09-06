@@ -44,17 +44,12 @@ public class RelTransRef extends RelTrans {
 	}
 
 	@Override
-	public TupleSet getMaxTupleSet() {
-		if(maxTupleSet == null) {
-			super.getMaxTupleSet();
-			for(Map.Entry<Event, Set<Event>> entry: transitiveReachabilityMap.entrySet()) {
-				entry.getValue().remove(entry.getKey());
-			}
-			for(Event e: program.getCache().getEvents(FilterBasic.get(EType.ANY))) {
-				maxTupleSet.add(new Tuple(e, e));
-			}
-		}
-		return maxTupleSet;
+	protected void update(TupleSet s, TupleSet s1) {
+		super.update(s, s1);
+		for(Map.Entry<Event, Set<Event>> entry: transitiveReachabilityMap.entrySet())
+			entry.getValue().remove(entry.getKey());
+		for(Event e: program.getCache().getEvents(FilterBasic.get(EType.ANY)))
+			s.add(new Tuple(e, e));
 	}
 
 	@Override
