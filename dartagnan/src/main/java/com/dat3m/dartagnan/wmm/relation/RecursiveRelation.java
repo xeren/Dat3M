@@ -7,124 +7,107 @@ import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 /**
- *
  * @author Florian Furbach
  */
 public class RecursiveRelation extends Relation {
 
-    private Relation r1;
-    private boolean doRecurse = false;
+	private Relation r1;
 
-    public RecursiveRelation(String name) {
-        super(name);
-        term = name;
-    }
+	public RecursiveRelation(String name) {
+		super(name);
+		term = name;
+	}
 
-    public static String makeTerm(String name){
-        return name;
-    }
+	public static String makeTerm(String name) {
+		return name;
+	}
 
-    public void initialise(Program program, Context ctx, Settings settings){
-        if(doRecurse){
-            doRecurse = false;
-            super.initialise(program, ctx, settings);
-            r1.initialise(program, ctx, settings);
-        }
-    }
+	public void initialise(Program program, Context ctx, Settings settings) {
+		super.initialise(program, ctx, settings);
+		r1.initialise(program, ctx, settings);
+	}
 
-    public void setConcreteRelation(Relation r1){
-        r1.isRecursive = true;
-        r1.setName(name);
-        this.r1 = r1;
-        this.isRecursive = true;
-        this.term = r1.getTerm();
-    }
+	public void setConcreteRelation(Relation r1) {
+		r1.isRecursive = true;
+		r1.setName(name);
+		this.r1 = r1;
+		this.isRecursive = true;
+		this.term = r1.getTerm();
+	}
 
-    public void setDoRecurse(){
-        doRecurse = true;
-    }
+	@Override
+	public void update(TupleSet s) {
+	}
 
-    @Override
-    public void update(TupleSet s){
-    }
+	/**
+	 * @return
+	 * The tuple set changed by some element.
+	 */
+	public boolean getMaxTupleSetRecursiveR() {
+		int old = getMaxTupleSet().size();
+		maxTupleSet = r1.getMaxTupleSetRecursive();
+		return old != maxTupleSet.size();
+	}
 
-    @Override
-    public TupleSet getMaxTupleSetRecursive(){
-        if(doRecurse){
-            doRecurse = false;
-            maxTupleSet = r1.getMaxTupleSetRecursive();
-            return maxTupleSet;
-        }
-        return getMaxTupleSet();
-    }
+	@Override
+	public void addEncodeTupleSet(TupleSet tuples) {
+		if(encodeTupleSet != tuples)
+			encodeTupleSet.addAll(tuples);
+	}
 
-    @Override
-    public void addEncodeTupleSet(TupleSet tuples){
-        if(encodeTupleSet != tuples){
-            encodeTupleSet.addAll(tuples);
-        }
-        if(doRecurse){
-            doRecurse = false;
-            r1.addEncodeTupleSet(encodeTupleSet);
-        }
-    }
+	public void addEncodeTupleSetR(TupleSet tuples) {
+		addEncodeTupleSet(tuples);
+		r1.addEncodeTupleSet(encodeTupleSet);
+	}
 
-    @Override
-    public void setRecursiveGroupId(int id){
-        if(doRecurse){
-            doRecurse = false;
-            forceUpdateRecursiveGroupId = true;
-            recursiveGroupId = id;
-            r1.setRecursiveGroupId(id);
-        }
-    }
+	public void setRecursiveGroupIdR(int id) {
+		forceUpdateRecursiveGroupId = true;
+		recursiveGroupId = id;
+		r1.setRecursiveGroupId(id);
+	}
 
-    @Override
-    public int updateRecursiveGroupId(int parentId){
-        if(forceUpdateRecursiveGroupId){
-            forceUpdateRecursiveGroupId = false;
-            int r1Id = r1.updateRecursiveGroupId(parentId | recursiveGroupId);
-            recursiveGroupId |= r1Id & parentId;
-        }
-        return recursiveGroupId;
-    }
+	@Override
+	public int updateRecursiveGroupId(int parentId) {
+		if(forceUpdateRecursiveGroupId) {
+			forceUpdateRecursiveGroupId = false;
+			int r1Id = r1.updateRecursiveGroupId(parentId | recursiveGroupId);
+			recursiveGroupId |= r1Id & parentId;
+		}
+		return recursiveGroupId;
+	}
 
-    @Override
-    protected void doEncode(EncodeContext context) {
-        r1.encode(context);
-    }
+	@Override
+	protected void doEncode(EncodeContext context) {
+		r1.encode(context);
+	}
 
-    @Override
-    protected void encodeLFP(EncodeContext context) {
-        r1.encodeLFP(context);
-    }
+	@Override
+	protected void encodeLFP(EncodeContext context) {
+		r1.encodeLFP(context);
+	}
 
-    @Override
-    protected void encodeIDL(EncodeContext context) {
-        r1.encodeIDL(context);
-    }
+	@Override
+	protected void encodeIDL(EncodeContext context) {
+		r1.encodeIDL(context);
+	}
 
-    @Override
-    protected void encodeApprox(EncodeContext context) {
-        r1.encodeApprox(context);
-    }
+	@Override
+	protected void encodeApprox(EncodeContext context) {
+		r1.encodeApprox(context);
+	}
 
-    @Override
-    public void encodeIteration(EncodeContext e, int recGroupId, int iteration){
-        if(doRecurse){
-            doRecurse = false;
-            r1.encodeIteration(e, recGroupId, iteration);
-        }
-    }
+	public void encodeIterationR(EncodeContext e, int recGroupId, int iteration) {
+		r1.encodeIteration(e, recGroupId, iteration);
+	}
 
-    public void encodeFinalIteration(EncodeContext e, int iteration){
-        for(Tuple tuple : encodeTupleSet){
-            e.rule(e.eq(e.edge(this, tuple), e.edge(this, iteration, tuple)));
-        }
-    }
+	public void encodeFinalIteration(EncodeContext e, int iteration) {
+		for(Tuple tuple: encodeTupleSet) {
+			e.rule(e.eq(e.edge(this, tuple), e.edge(this, iteration, tuple)));
+		}
+	}
 
-    @Override
-    protected void encodeFirstOrder(EncodeContext context) {
-        r1.encodeFirstOrder(context);
-    }
+	@Override
+	protected void encodeFirstOrder(EncodeContext context) {
+		r1.encodeFirstOrder(context);
+	}
 }

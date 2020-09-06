@@ -20,7 +20,6 @@ public abstract class Relation {
 	protected String term;
 
 	protected Program program;
-	protected Context ctx;
 
 	protected TupleSet maxTupleSet;
 	protected TupleSet encodeTupleSet;
