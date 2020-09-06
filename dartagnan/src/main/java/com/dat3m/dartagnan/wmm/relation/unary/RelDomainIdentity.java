@@ -26,21 +26,21 @@ public class RelDomainIdentity extends UnaryRelation {
 	}
 
 	@Override
-	protected void update(TupleSet s, TupleSet s1) {
+	protected void update(EncodeContext e, TupleSet s, TupleSet s1) {
 		for(Tuple tuple: s1)
 			s.add(new Tuple(tuple.getFirst(), tuple.getFirst()));
 	}
 
 	@Override
-	public void addEncodeTupleSet(TupleSet tuples) {
+	public void addEncodeTupleSet(EncodeContext e, TupleSet tuples) {
 		encodeTupleSet.addAll(tuples);
 		Set<Tuple> activeSet = new HashSet<>(tuples);
 		activeSet.retainAll(maxTupleSet);
 		if(!activeSet.isEmpty()) {
 			TupleSet r1Set = new TupleSet();
 			for(Tuple tuple: activeSet)
-				r1Set.addAll(r1.getMaxTupleSet().getByFirst(tuple.getFirst()));
-			r1.addEncodeTupleSet(r1Set);
+				r1Set.addAll(r1.getMaxTupleSet(e).getByFirst(tuple.getFirst()));
+			r1.addEncodeTupleSet(e, r1Set);
 		}
 	}
 
@@ -49,7 +49,7 @@ public class RelDomainIdentity extends UnaryRelation {
 		for(Tuple tuple: encodeTupleSet) {
 			Event event = tuple.getFirst();
 			e.rule(e.eq(e.edge(this, event, event),
-				e.or(r1.getMaxTupleSet().getByFirst(event).stream().map(t->e.edge(r1, event, t.getSecond())))));
+				e.or(r1.getMaxTupleSet(e).getByFirst(event).stream().map(t->e.edge(r1, event, t.getSecond())))));
 		}
 	}
 

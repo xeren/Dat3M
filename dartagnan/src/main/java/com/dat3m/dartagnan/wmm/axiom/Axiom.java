@@ -59,7 +59,7 @@ public abstract class Axiom {
         return _toString();
     }
 
-    public abstract TupleSet getEncodeTupleSet();
+    public abstract TupleSet getEncodeTupleSet(EncodeContext context);
 
     protected abstract BoolExpr _consistent(Context ctx);
 

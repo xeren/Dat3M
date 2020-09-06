@@ -25,9 +25,9 @@ public class RelCo extends Relation {
 	}
 
 	@Override
-	public void update(TupleSet s) {
-		List<Event> eventsInit = program.getCache().getEvents(FilterBasic.get(EType.INIT));
-		List<Event> eventsStore = program.getCache().getEvents(FilterMinus.get(
+	public void update(EncodeContext e, TupleSet s) {
+		List<Event> eventsInit = e.cache(FilterBasic.get(EType.INIT));
+		List<Event> eventsStore = e.cache(FilterMinus.get(
 			FilterBasic.get(EType.WRITE),
 			FilterBasic.get(EType.INIT)
 		));
@@ -47,11 +47,8 @@ public class RelCo extends Relation {
 	protected void encodeApprox(EncodeContext e) {
 		String name = getName();
 
-		List<Event> eventsInit = program.getCache().getEvents(FilterBasic.get(EType.INIT));
-		List<Event> eventsStore = program.getCache().getEvents(FilterMinus.get(
-			FilterBasic.get(EType.WRITE),
-			FilterBasic.get(EType.INIT)
-		));
+		List<Event> eventsInit = e.cache(FilterBasic.get(EType.INIT));
+		List<Event> eventsStore = e.cache(FilterMinus.get(FilterBasic.get(EType.WRITE), FilterBasic.get(EType.INIT)));
 
 		for(Event i: eventsInit) {
 			e.rule(e.eq(e.intVar(name, i), e.zero()));
@@ -65,7 +62,7 @@ public class RelCo extends Relation {
 		}
 		e.rule(e.distinct(intVars));
 
-		for(Event w: program.getCache().getEvents(FilterBasic.get(EType.WRITE))) {
+		for(Event w: e.cache(FilterBasic.get(EType.WRITE))) {
 			MemEvent w1 = (MemEvent) w;
 			LinkedList<BoolExpr> lastCo = new LinkedList<>();
 			lastCo.add(w1.exec());
@@ -95,10 +92,9 @@ public class RelCo extends Relation {
 
 	@Override
 	protected void encodeFirstOrder(EncodeContext e) {
-		List<Event> eventsInit = program.getCache().getEvents(FilterBasic.get(EType.INIT));
-		List<Event> eventsWrite = program.getCache().getEvents(FilterBasic.get(EType.WRITE));
-		List<Event> eventsStore = program.getCache().getEvents(
-			FilterMinus.get(FilterBasic.get(EType.WRITE), FilterBasic.get(EType.INIT)));
+		List<Event> eventsInit = e.cache(FilterBasic.get(EType.INIT));
+		List<Event> eventsWrite = e.cache(FilterBasic.get(EType.WRITE));
+		List<Event> eventsStore = e.cache(FilterMinus.get(FilterBasic.get(EType.WRITE), FilterBasic.get(EType.INIT)));
 		EncodeContext.RelationPredicate edge = e.of(this);
 		e.rule(e.forall(0, (a,b)->e.eq(edge.of(a, b),
 			e.and(

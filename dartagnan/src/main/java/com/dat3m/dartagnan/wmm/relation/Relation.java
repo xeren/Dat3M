@@ -8,7 +8,6 @@ import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import java.util.HashSet;
 import java.util.Set;
 
-
 /**
  * @author Florian Furbach
  */
@@ -18,8 +17,6 @@ public abstract class Relation {
 
 	protected String name;
 	protected String term;
-
-	protected Program program;
 
 	protected TupleSet maxTupleSet;
 	protected TupleSet encodeTupleSet;
@@ -50,30 +47,29 @@ public abstract class Relation {
 	}
 
 	public void initialise(Program program, Context ctx, Settings settings) {
-		this.program = program;
 		this.maxTupleSet = null;
 		encodeTupleSet = new TupleSet();
 	}
 
-	protected abstract void update(TupleSet set);
+	protected abstract void update(EncodeContext context, TupleSet set);
 
-	public TupleSet getMaxTupleSet() {
+	public TupleSet getMaxTupleSet(EncodeContext context) {
 		if(null == maxTupleSet) {
 			maxTupleSet = new TupleSet();
-			update(maxTupleSet);
+			update(context, maxTupleSet);
 		}
 		return maxTupleSet;
 	}
 
-	public TupleSet getMaxTupleSetRecursive() {
-		return getMaxTupleSet();
+	public TupleSet getMaxTupleSetRecursive(EncodeContext context) {
+		return getMaxTupleSet(context);
 	}
 
 	public TupleSet getEncodeTupleSet() {
 		return encodeTupleSet;
 	}
 
-	public void addEncodeTupleSet(TupleSet tuples) {
+	public void addEncodeTupleSet(EncodeContext context, TupleSet tuples) {
 		encodeTupleSet.addAll(tuples);
 	}
 

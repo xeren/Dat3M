@@ -4,6 +4,7 @@ import com.dat3m.dartagnan.parsers.program.ProgramParser;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.Wmm;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.dat3m.dartagnan.wmm.utils.alias.Alias;
@@ -23,50 +24,49 @@ public abstract class Compare
 		String[] argument)
 		throws IOException
 	{
-		Context context = new Context();
-		int bound = 2;
-		Alias alias = Alias.CFS;
-		Arch target = Arch.NONE;
-
-		EnumMap<Mode,Settings> settings = new EnumMap<>(Mode.class);
-		for(Mode m: Mode.values())
-			settings.put(m, new Settings(m, alias, bound));
-
-		Wmm model = new ParserCat().parse(new File(argument[0]));
-
-		EnumMap<Mode,Program> program = new EnumMap<>(Mode.class);
-		for(Mode m: Mode.values())
+		try(Context c = new Context())
 		{
-			Program p = new ProgramParser().parse(new File(argument[1]));
-			program.put(m, p);
-			p.unroll(bound, 0);
-			p.compile(target, 0);
-		}
+			int bound = 2;
+			Alias alias = Alias.CFS;
+			Arch target = Arch.NONE;
 
-		EnumMap<Mode,Boolean> result = new EnumMap<>(Mode.class);
-		for(Mode m: Mode.values())
-		{
-			Program p = program.get(m);
-			long timeStart = System.nanoTime();
-			Solver s = context.mkSolver();
-			s.add(p.encodeUINonDet(context),
-				p.encodeCF(context),
-				p.encodeFinalRegisterValues(context),
-				model.encode(p, context, settings.get(m)),
-				model.consistent(p, context));
-			if(null != p.getAss())
-				s.add(p.getAss().encode(context));
-			if(null != p.getAssFilter())
-				s.add(p.getAssFilter().encode(context));
-			long timeEncode = System.nanoTime();
-			result.put(m, (null != p.getAss() && p.getAss().getInvert()) != (Status.SATISFIABLE == s.check()));
-			long timeSolve = System.nanoTime();
-			System.out.printf("%d %d ", timeEncode - timeStart, timeSolve - timeEncode);
-		}
-		System.out.println();
+			Wmm model = new ParserCat().parse(new File(argument[0]));
 
-		if(result.values().stream().anyMatch(x->x) && result.values().stream().anyMatch(x->!x))
-			System.err.println(result);
+			EnumMap<Mode,EncodeContext> context = new EnumMap<>(Mode.class);
+			for(Mode m: Mode.values())
+			{
+				Program p = new ProgramParser().parse(new File(argument[1]));
+				context.put(m, new EncodeContext(c, p, new Settings(m, alias, bound)));
+				p.unroll(bound, 0);
+				p.compile(target, 0);
+			}
+
+			EnumMap<Mode,Boolean> result = new EnumMap<>(Mode.class);
+			for(Mode m: Mode.values())
+			{
+				EncodeContext e = context.get(m);
+				Program p = e.program;
+				long timeStart = System.nanoTime();
+				Solver s = c.mkSolver();
+				s.add(p.encodeUINonDet(c),
+					p.encodeCF(c),
+					p.encodeFinalRegisterValues(c),
+					model.encode(e),
+					model.consistent(p, c));
+				if(null != p.getAss())
+					s.add(p.getAss().encode(c));
+				if(null != p.getAssFilter())
+					s.add(p.getAssFilter().encode(c));
+				long timeEncode = System.nanoTime();
+				result.put(m, (null != p.getAss() && p.getAss().getInvert()) != (Status.SATISFIABLE == s.check()));
+				long timeSolve = System.nanoTime();
+				System.out.printf("%d %d ", timeEncode - timeStart, timeSolve - timeEncode);
+			}
+			System.out.println();
+
+			if(result.values().stream().anyMatch(x->x) && result.values().stream().anyMatch(x->!x))
+				System.err.println(result);
+		}
 	}
 
 }

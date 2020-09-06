@@ -23,11 +23,11 @@ public abstract class UnaryRelation extends Relation {
 		this.r1 = r1;
 	}
 
-	protected abstract void update(TupleSet set, TupleSet first);
+	protected abstract void update(EncodeContext context, TupleSet set, TupleSet first);
 
 	@Override
-	protected void update(TupleSet set) {
-		update(maxTupleSet, r1.getMaxTupleSet());
+	protected void update(EncodeContext e, TupleSet s) {
+		update(e, s, r1.getMaxTupleSet(e));
 	}
 
 	@Override

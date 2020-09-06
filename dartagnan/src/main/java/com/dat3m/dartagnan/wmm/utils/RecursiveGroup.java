@@ -23,32 +23,32 @@ public class RecursiveGroup {
         return id;
     }
 
-    public void encode(EncodeContext e){
+    public void encode(EncodeContext context){
         for(int i = 0; i < encodeIterations; i++) {
             for(RecursiveRelation relation : relations) {
-                relation.encodeIterationR(e, id, i);
+                relation.encodeIterationR(context, id, i);
             }
         }
 
         for(RecursiveRelation relation : relations)
-            relation.encodeFinalIteration(e, encodeIterations - 1);
+            relation.encodeFinalIteration(context, encodeIterations - 1);
     }
 
-    public void initMaxTupleSets(){
+    public void initMaxTupleSets(EncodeContext context){
         int iterationCounter = 0;
         boolean changed = true;
 
         while(changed){
             changed = false;
             for(RecursiveRelation relation : relations)
-                changed |= relation.getMaxTupleSetRecursiveR();
+                changed |= relation.getMaxTupleSetRecursiveR(context);
             iterationCounter++;
         }
         // iterationCounter + zero iteration + 1
         encodeIterations = iterationCounter + 2;
     }
 
-    public void updateEncodeTupleSets(){
+    public void updateEncodeTupleSets(EncodeContext context){
         Map<Relation,int[]> encodeSetSizes = new HashMap<>();
         for(Relation relation : relations)
             encodeSetSizes.put(relation, new int[]{0});
@@ -57,7 +57,7 @@ public class RecursiveGroup {
         while(changed){
             changed = false;
             for(RecursiveRelation relation : relations){
-                relation.addEncodeTupleSetR(relation.getEncodeTupleSet());
+                relation.addEncodeTupleSetR(context, relation.getEncodeTupleSet());
                 int newSize = relation.getEncodeTupleSet().size();
                 int[] value = encodeSetSizes.get(relation);
                 changed |= newSize != value[0];

@@ -28,20 +28,20 @@ public abstract class BinaryRelation extends Relation {
 		this.r2 = r2;
 	}
 
-	protected abstract void update(TupleSet set, TupleSet first, TupleSet second);
+	protected abstract void update(EncodeContext context, TupleSet set, TupleSet first, TupleSet second);
 
 	@Override
-	protected void update(TupleSet set) {
-		update(set, r1.getMaxTupleSet(), r2.getMaxTupleSet());
+	protected void update(EncodeContext e, TupleSet s) {
+		update(e, s, r1.getMaxTupleSet(e), r2.getMaxTupleSet(e));
 	}
 
 	@Override
-	public TupleSet getMaxTupleSetRecursive() {
+	public TupleSet getMaxTupleSetRecursive(EncodeContext e) {
 		if(recursiveGroupId > 0 && maxTupleSet != null) {
-			update(maxTupleSet, r1.getMaxTupleSetRecursive(), r2.getMaxTupleSetRecursive());
+			update(e, maxTupleSet, r1.getMaxTupleSetRecursive(e), r2.getMaxTupleSetRecursive(e));
 			return maxTupleSet;
 		}
-		return getMaxTupleSet();
+		return getMaxTupleSet(e);
 	}
 
 	@Override
@@ -62,15 +62,15 @@ public abstract class BinaryRelation extends Relation {
 	}
 
 	@Override
-	public void addEncodeTupleSet(TupleSet tuples) {
+	public void addEncodeTupleSet(EncodeContext e, TupleSet s) {
 		TupleSet activeSet = new TupleSet();
-		activeSet.addAll(tuples);
+		activeSet.addAll(s);
 		activeSet.removeAll(encodeTupleSet);
 		encodeTupleSet.addAll(activeSet);
 		activeSet.retainAll(maxTupleSet);
 		if(!activeSet.isEmpty()) {
-			r1.addEncodeTupleSet(activeSet);
-			r2.addEncodeTupleSet(activeSet);
+			r1.addEncodeTupleSet(e, activeSet);
+			r2.addEncodeTupleSet(e, activeSet);
 		}
 	}
 

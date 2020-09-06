@@ -8,8 +8,6 @@ import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.microsoft.z3.BoolExpr;
 import java.util.*;
 
@@ -24,11 +22,9 @@ abstract class BasicRegRelation extends StaticRelation {
 	protected abstract Collection<Register> getRegisters(Event regReader);
 
 	protected final void doEncodeApprox(EncodeContext e, Atom atom, Collection<Event> regReaders) {
-		ImmutableMap<Register, ImmutableList<Event>> regWriterMap = program.getCache().getRegWriterMap();
-
 		for(Event regReader: regReaders) {
 			for(Register register: getRegisters(regReader)) {
-				List<Event> writers = regWriterMap.getOrDefault(register, ImmutableList.of());
+				List<Event> writers = e.cache(register);
 				if(writers.isEmpty() || writers.get(0).getCId() >= regReader.getCId()) {
 					e.rule(e.eq(e.zero(), register.toZ3Int(regReader, e.context)));
 					continue;
@@ -64,11 +60,10 @@ abstract class BasicRegRelation extends StaticRelation {
 	}
 
 	@Override
-	protected void update(TupleSet s) {
-		ImmutableMap<Register, ImmutableList<Event>> regWriterMap = program.getCache().getRegWriterMap();
-		for(Event regReader: program.getCache().getEvents(FilterBasic.get(etype))) {
+	protected void update(EncodeContext e, TupleSet s) {
+		for(Event regReader: e.cache(FilterBasic.get(etype))) {
 			for(Register register: getRegisters(regReader)) {
-				for(Event regWriter: regWriterMap.getOrDefault(register, ImmutableList.of())) {
+				for(Event regWriter: e.cache(register)) {
 					if(regWriter.getCId() >= regReader.getCId())
 						break;
 					s.add(new Tuple(regWriter, regReader));
@@ -79,6 +74,6 @@ abstract class BasicRegRelation extends StaticRelation {
 
 	@Override
 	protected void encodeApprox(EncodeContext context, Atom atom) {
-		doEncodeApprox(context, atom, program.getCache().getEvents(FilterBasic.get(etype)));
+		doEncodeApprox(context, atom, context.cache(FilterBasic.get(etype)));
 	}
 }

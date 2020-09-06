@@ -19,8 +19,8 @@ public class RelCrit extends StaticRelation {
 	}
 
 	@Override
-	protected void update(TupleSet s) {
-		for(Thread thread: program.getThreads())
+	protected void update(EncodeContext e, TupleSet s) {
+		for(Thread thread: e.program.getThreads())
 			for(Event lock: thread.getCache().getEvents(FilterBasic.get(EType.RCU_LOCK)))
 				for(Event unlock: thread.getCache().getEvents(FilterBasic.get(EType.RCU_UNLOCK)))
 					if(lock.getCId() < unlock.getCId())
@@ -31,7 +31,7 @@ public class RelCrit extends StaticRelation {
 	// Let's see if we need to keep a reference to a thread in events for anything else, and then optimize this method
 	@Override
 	protected void encodeApprox(EncodeContext e, Atom atom) {
-		for(Thread thread: program.getThreads()) {
+		for(Thread thread: e.program.getThreads()) {
 			for(Event lock: thread.getCache().getEvents(FilterBasic.get(EType.RCU_LOCK))) {
 				for(Event unlock: thread.getCache().getEvents(FilterBasic.get(EType.RCU_UNLOCK))) {
 					if(lock.getCId() < unlock.getCId()) {

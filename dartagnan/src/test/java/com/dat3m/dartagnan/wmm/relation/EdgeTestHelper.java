@@ -9,6 +9,7 @@ import com.google.common.collect.Multimap;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -29,21 +30,21 @@ public class EdgeTestHelper {
     }
 
     // Encode violation of expected event pairs in the relation
-    public BoolExpr encodeIllegalEdges(int[] data, Context ctx){
+    public BoolExpr encodeIllegalEdges(EncodeContext context, int[] data){
         Set<Tuple> all = mkAllTuples();
-        Set<Tuple> max = relation.getMaxTupleSet();
+        Set<Tuple> max = relation.getMaxTupleSet(context);
         Set<Tuple> expected = mkExpectedTuples(all, data);
-        BoolExpr enc = ctx.mkFalse();
+        ArrayList<BoolExpr> enc = new ArrayList<>();
         String name = relation.getName();
         for(Tuple tuple : all){
-            BoolExpr edge = edge(name, tuple.getFirst(), tuple.getSecond(), ctx);
+            BoolExpr edge = context.edge(name, tuple.getFirst(), tuple.getSecond());
             if(expected.contains(tuple)){
-                enc = ctx.mkOr(enc, ctx.mkNot(edge));
+                enc.add(context.not(edge));
             } else if(max.contains(tuple)){
-                enc = ctx.mkOr(enc, edge);
+                enc.add(edge);
             }
         }
-        return enc;
+        return context.or(enc);
     }
 
     // Generate set of all possible pairs (can be greater than maxTupleSet of the relation)

@@ -4,6 +4,7 @@ import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
@@ -17,8 +18,8 @@ public class RelInt extends StaticRelation {
 	}
 
 	@Override
-	protected void update(TupleSet s) {
-		for(Thread t: program.getThreads()) {
+	protected void update(EncodeContext e, TupleSet s) {
+		for(Thread t: e.program.getThreads()) {
 			List<Event> events = t.getCache().getEvents(FilterBasic.get(EType.VISIBLE));
 			ListIterator<Event> it1 = events.listIterator();
 			while(it1.hasNext()) {

@@ -49,25 +49,25 @@ public class RelRMW extends StaticRelation {
 	}
 
 	@Override
-	protected void update(TupleSet s){
+	protected void update(EncodeContext e, TupleSet s){
 		FilterAbstract filter = FilterIntersection.get(FilterBasic.get(EType.RMW), FilterBasic.get(EType.WRITE));
-		for(Event store: program.getCache().getEvents(filter))
+		for(Event store: e.cache(filter))
 			if(store instanceof RMWStore)
 				baseMaxTupleSet.add(new Tuple(((RMWStore) store).getLoadEvent(), store));
 
 		filter = FilterIntersection.get(FilterBasic.get(EType.RMW), FilterBasic.get(EType.LOCK));
-		for(Event e: program.getCache().getEvents(filter)) {
-			if(e instanceof Load) {
-				Event next = e.getSuccessor();
+		for(Event x: e.cache(filter)) {
+			if(x instanceof Load) {
+				Event next = x.getSuccessor();
 				Event nnext = next.getSuccessor();
-				baseMaxTupleSet.add(new Tuple(e, next));
-				baseMaxTupleSet.add(new Tuple(e, nnext));
+				baseMaxTupleSet.add(new Tuple(x, next));
+				baseMaxTupleSet.add(new Tuple(x, nnext));
 				baseMaxTupleSet.add(new Tuple(next, nnext));
 			}
 		}
 
 		filter = FilterIntersection.get(FilterBasic.get(EType.RMW), FilterBasic.get(EType.ATOMIC));
-		for(Event end: program.getCache().getEvents(filter)) {
+		for(Event end: e.cache(filter)) {
 			// TODO: why some non EndAtomic events match the ATOMIC filter?
 			// The check below should not be necessary, but better to have
 			// in case some other event might get ATOMIC tag in the future
@@ -85,7 +85,7 @@ public class RelRMW extends StaticRelation {
 
 		s.addAll(baseMaxTupleSet);
 
-		for(Thread thread: program.getThreads())
+		for(Thread thread: e.program.getThreads())
 			for(Event load: thread.getCache().getEvents(loadFilter))
 				for(Event store: thread.getCache().getEvents(storeFilter))
 					if(load.getCId() < store.getCId())
@@ -102,7 +102,7 @@ public class RelRMW extends StaticRelation {
 
 		// Encode RMW for exclusive pairs
 		LinkedList<BoolExpr> unpredictable = new LinkedList<>();
-		for(Thread thread: program.getThreads()) {
+		for(Thread thread: e.program.getThreads()) {
 			for(Event store: thread.getCache().getEvents(storeFilter)) {
 				LinkedList<BoolExpr> storeExec = new LinkedList<>();
 				for(Event load: thread.getCache().getEvents(loadFilter)) {

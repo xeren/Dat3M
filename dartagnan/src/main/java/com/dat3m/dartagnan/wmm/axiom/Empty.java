@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.wmm.axiom;
 
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.wmm.relation.Relation;
@@ -19,8 +20,8 @@ public class Empty extends Axiom {
     }
 
     @Override
-    public TupleSet getEncodeTupleSet(){
-        return rel.getMaxTupleSet();
+    public TupleSet getEncodeTupleSet(EncodeContext e){
+        return rel.getMaxTupleSet(e);
     }
 
     @Override

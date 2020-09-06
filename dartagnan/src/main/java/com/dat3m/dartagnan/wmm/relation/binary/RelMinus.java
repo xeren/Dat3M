@@ -37,7 +37,7 @@ public class RelMinus extends BinaryRelation {
 	}
 
 	@Override
-	public void update(TupleSet s, TupleSet s1, TupleSet s2) {
+	public void update(EncodeContext e, TupleSet s, TupleSet s1, TupleSet s2) {
 		s.addAll(s1);
 	}
 

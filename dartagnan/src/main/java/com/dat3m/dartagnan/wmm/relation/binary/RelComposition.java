@@ -28,17 +28,17 @@ public class RelComposition extends BinaryRelation {
 	}
 
 	@Override
-	protected void update(TupleSet s, TupleSet s1, TupleSet s2) {
+	protected void update(EncodeContext e, TupleSet s, TupleSet s1, TupleSet s2) {
 		for(Tuple t1: s1)
 			for(Tuple t2: s2.getByFirst(t1.getSecond()))
 				s.add(new Tuple(t1.getFirst(), t2.getSecond()));
 	}
 
 	@Override
-	public void addEncodeTupleSet(TupleSet tuples) {
-		Set<Tuple> activeSet = new HashSet<>(tuples);
+	public void addEncodeTupleSet(EncodeContext e, TupleSet s) {
+		Set<Tuple> activeSet = new HashSet<>(s);
 		activeSet.removeAll(encodeTupleSet);
-		encodeTupleSet.addAll(tuples);
+		encodeTupleSet.addAll(s);
 		activeSet.retainAll(maxTupleSet);
 
 		if(!activeSet.isEmpty()) {
@@ -53,11 +53,11 @@ public class RelComposition extends BinaryRelation {
 				myMap.get(id1).add(id2);
 			}
 
-			for(Tuple tuple1: r1.getMaxTupleSet()) {
+			for(Tuple tuple1: r1.getMaxTupleSet(e)) {
 				Event e1 = tuple1.getFirst();
 				Set<Integer> ends = myMap.get(e1.getCId());
 				if(ends == null) continue;
-				for(Tuple tuple2: r2.getMaxTupleSet().getByFirst(tuple1.getSecond())) {
+				for(Tuple tuple2: r2.getMaxTupleSet(e).getByFirst(tuple1.getSecond())) {
 					Event e2 = tuple2.getSecond();
 					if(ends.contains(e2.getCId())) {
 						r1Set.add(tuple1);
@@ -66,8 +66,8 @@ public class RelComposition extends BinaryRelation {
 				}
 			}
 
-			r1.addEncodeTupleSet(r1Set);
-			r2.addEncodeTupleSet(r2Set);
+			r1.addEncodeTupleSet(e, r1Set);
+			r2.addEncodeTupleSet(e, r2Set);
 		}
 	}
 
@@ -75,11 +75,11 @@ public class RelComposition extends BinaryRelation {
 	protected void encodeApprox(EncodeContext e) {
 		TupleSet r1Set = new TupleSet();
 		r1Set.addAll(r1.getEncodeTupleSet());
-		r1Set.retainAll(r1.getMaxTupleSet());
+		r1Set.retainAll(r1.getMaxTupleSet(e));
 
 		TupleSet r2Set = new TupleSet();
 		r2Set.addAll(r2.getEncodeTupleSet());
-		r2Set.retainAll(r2.getMaxTupleSet());
+		r2Set.retainAll(r2.getMaxTupleSet(e));
 
 		Map<Tuple,LinkedList<BoolExpr>> exprMap = new HashMap<>();
 		for(Tuple tuple: encodeTupleSet)
@@ -113,11 +113,11 @@ public class RelComposition extends BinaryRelation {
 
 		TupleSet r1Set = new TupleSet();
 		r1Set.addAll(r1.getEncodeTupleSet());
-		r1Set.retainAll(r1.getMaxTupleSet());
+		r1Set.retainAll(r1.getMaxTupleSet(e));
 
 		TupleSet r2Set = new TupleSet();
 		r2Set.addAll(r2.getEncodeTupleSet());
-		r2Set.retainAll(r2.getMaxTupleSet());
+		r2Set.retainAll(r2.getMaxTupleSet(e));
 
 		Map<Tuple, LinkedList<BoolExpr>> orClauseMap = new HashMap<>();
 		Map<Tuple, LinkedList<BoolExpr>> idlClauseMap = new HashMap<>();
@@ -175,11 +175,11 @@ public class RelComposition extends BinaryRelation {
 
 		TupleSet r1Set = new TupleSet();
 		r1Set.addAll(r1.getEncodeTupleSet());
-		r1Set.retainAll(r1.getMaxTupleSet());
+		r1Set.retainAll(r1.getMaxTupleSet(e));
 
 		TupleSet r2Set = new TupleSet();
 		r2Set.addAll(r2.getEncodeTupleSet());
-		r2Set.retainAll(r2.getMaxTupleSet());
+		r2Set.retainAll(r2.getMaxTupleSet(e));
 
 		Map<Tuple, LinkedList<BoolExpr>> exprMap = new HashMap<>();
 		for(Tuple tuple: encodeTupleSet)

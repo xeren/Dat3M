@@ -4,6 +4,7 @@ import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
@@ -17,8 +18,8 @@ public class RelExt extends StaticRelation {
 	}
 
 	@Override
-	protected void update(TupleSet s) {
-		List<Thread> threads = program.getThreads();
+	protected void update(EncodeContext e, TupleSet s) {
+		List<Thread> threads = e.program.getThreads();
 		ListIterator<Thread> it1 = threads.listIterator();
 		while(it1.hasNext()) {
 			Thread t1 = it1.next();

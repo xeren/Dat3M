@@ -43,7 +43,7 @@ public class RelTrans extends UnaryRelation {
 	}
 
 	@Override
-	protected void update(TupleSet s, TupleSet s1) {
+	protected void update(EncodeContext e, TupleSet s, TupleSet s1) {
 		transitiveReachabilityMap = s1.transMap();
 		for(Event e1: transitiveReachabilityMap.keySet())
 			for(Event e2: transitiveReachabilityMap.get(e1))
@@ -51,17 +51,41 @@ public class RelTrans extends UnaryRelation {
 	}
 
 	@Override
-	public void addEncodeTupleSet(TupleSet tuples) {
+	public void addEncodeTupleSet(EncodeContext e, TupleSet tuples) {
 		TupleSet activeSet = new TupleSet();
 		activeSet.addAll(tuples);
 		activeSet.removeAll(encodeTupleSet);
 		encodeTupleSet.addAll(activeSet);
 		activeSet.retainAll(maxTupleSet);
 
-		TupleSet fullActiveSet = getFullEncodeTupleSet(activeSet);
-		if(fullEncodeTupleSet.addAll(fullActiveSet)) {
-			fullActiveSet.retainAll(r1.getMaxTupleSet());
-			r1.addEncodeTupleSet(fullActiveSet);
+		TupleSet processNow = new TupleSet();
+		processNow.addAll(activeSet);
+		processNow.retainAll(getMaxTupleSet(e));
+
+		TupleSet result = new TupleSet();
+
+		while(!processNow.isEmpty()) {
+			TupleSet processNext = new TupleSet();
+			result.addAll(processNow);
+
+			for(Tuple tuple: processNow) {
+				Event e1 = tuple.getFirst();
+				Event e2 = tuple.getSecond();
+				for(Event e3: transitiveReachabilityMap.get(e1)) {
+					if(e3.getCId() != e1.getCId() && e3.getCId() != e2.getCId()
+						&& transitiveReachabilityMap.get(e3).contains(e2)) {
+						processNext.add(new Tuple(e1, e3));
+						processNext.add(new Tuple(e3, e2));
+					}
+				}
+			}
+			processNext.removeAll(result);
+			processNow = processNext;
+		}
+
+		if(fullEncodeTupleSet.addAll(result)) {
+			result.retainAll(r1.getMaxTupleSet(e));
+			r1.addEncodeTupleSet(e, result);
 		}
 	}
 
@@ -73,7 +97,7 @@ public class RelTrans extends UnaryRelation {
 			Event e1 = tuple.getFirst();
 			Event e2 = tuple.getSecond();
 
-			if(r1.getMaxTupleSet().contains(tuple))
+			if(r1.getMaxTupleSet(e).contains(tuple))
 				orClause.add(e.edge(r1, e1, e2));
 
 			for(Event e3: transitiveReachabilityMap.get(e1))
@@ -166,34 +190,6 @@ public class RelTrans extends UnaryRelation {
 		// Encode that transitive relation equals the relation at the last iteration
 		for(Tuple tuple: encodeTupleSet)
 			e.rule(e.eq(e.edge(this, tuple), e.edge(r1, iteration, tuple)));
-	}
-
-	private TupleSet getFullEncodeTupleSet(TupleSet tuples) {
-		TupleSet processNow = new TupleSet();
-		processNow.addAll(tuples);
-		processNow.retainAll(getMaxTupleSet());
-
-		TupleSet result = new TupleSet();
-
-		while(!processNow.isEmpty()) {
-			TupleSet processNext = new TupleSet();
-			result.addAll(processNow);
-
-			for(Tuple tuple: processNow) {
-				Event e1 = tuple.getFirst();
-				Event e2 = tuple.getSecond();
-				for(Event e3: transitiveReachabilityMap.get(e1)) {
-					if(e3.getCId() != e1.getCId() && e3.getCId() != e2.getCId()
-						&& transitiveReachabilityMap.get(e3).contains(e2)) {
-						processNext.add(new Tuple(e1, e3));
-						processNext.add(new Tuple(e3, e2));
-					}
-				}
-			}
-			processNext.removeAll(result);
-			processNow = processNext;
-		}
-		return result;
 	}
 
 	protected void encodeFirstOrder(EncodeContext e) {

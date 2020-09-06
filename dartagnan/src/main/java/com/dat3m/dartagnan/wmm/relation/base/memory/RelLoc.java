@@ -18,8 +18,8 @@ public class RelLoc extends Relation {
 	}
 
 	@Override
-	protected void update(TupleSet s){
-		List<Event> events = program.getCache().getEvents(FilterBasic.get(EType.MEMORY));
+	protected void update(EncodeContext e, TupleSet s){
+		List<Event> events = e.cache(FilterBasic.get(EType.MEMORY));
 		for(Event e1: events)
 			for(Event e2: events)
 				if(e1.getCId() != e2.getCId() && MemEvent.canAddressTheSameLocation((MemEvent) e1, (MemEvent) e2))
@@ -41,7 +41,7 @@ public class RelLoc extends Relation {
 	protected void encodeFirstOrder(EncodeContext e) {
 		//TODO restrict to M*M
 		EncodeContext.RelationPredicate edge = e.of(this);
-		List<Event> events = program.getCache().getEvents(FilterBasic.get(EType.MEMORY));
+		List<Event> events = e.cache(FilterBasic.get(EType.MEMORY));
 		e.rule(e.and(events.stream().map(MemEvent.class::cast).flatMap(a->events.stream().map(MemEvent.class::cast)
 			.filter(b->a.getCId() != b.getCId())
 			.filter(b->MemEvent.canAddressTheSameLocation(a, b))

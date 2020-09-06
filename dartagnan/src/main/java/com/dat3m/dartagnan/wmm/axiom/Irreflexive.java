@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.wmm.axiom;
 
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.wmm.relation.Relation;
@@ -23,9 +24,9 @@ public class Irreflexive extends Axiom {
     }
 
     @Override
-    public TupleSet getEncodeTupleSet(){
+    public TupleSet getEncodeTupleSet(EncodeContext e){
         TupleSet set = new TupleSet();
-        for(Tuple tuple : rel.getMaxTupleSet()){
+        for(Tuple tuple : rel.getMaxTupleSet(e)){
             if(tuple.getFirst().getCId() == tuple.getSecond().getCId()){
                 set.add(tuple);
             }

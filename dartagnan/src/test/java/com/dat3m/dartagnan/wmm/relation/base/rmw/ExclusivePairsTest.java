@@ -12,6 +12,7 @@ import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.filter.FilterIntersection;
 import com.dat3m.dartagnan.wmm.relation.EdgeTestHelper;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.utils.Flag;
 import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.dat3m.dartagnan.wmm.utils.alias.Alias;
@@ -74,13 +75,13 @@ public class ExclusivePairsTest {
 
     @Test
     public void testReachableStates() {
-        try{
-            Context ctx = new Context();
+        try(Context ctx = new Context()) {
             Solver solver = ctx.mkSolver(ctx.mkTactic(Settings.TACTIC));
             Program program = new ProgramParser().parse(new File(path));
 
             // Test final state
-            assertEquals(expectedState, Dartagnan.testProgram(solver, ctx, program, wmm, program.getArch(), settings));
+            EncodeContext context = new EncodeContext(ctx, program, settings);
+            assertEquals(expectedState, Dartagnan.testProgram(context, solver, wmm, program.getArch()));
 
             // Test edges
             if(expectedEdges != null){
@@ -90,11 +91,9 @@ public class ExclusivePairsTest {
                         FilterIntersection.get(FilterBasic.get(EType.EXCL), FilterBasic.get(EType.READ)),
                         FilterIntersection.get(FilterBasic.get(EType.EXCL), FilterBasic.get(EType.WRITE))
                 );
-                solver.add(helper.encodeIllegalEdges(expectedEdges, ctx));
+                solver.add(helper.encodeIllegalEdges(context, expectedEdges));
                 assertSame(Status.UNSATISFIABLE, solver.check());
             }
-
-            ctx.close();
 
         } catch (IOException e){
             fail("Missing resource file");
@@ -103,25 +102,24 @@ public class ExclusivePairsTest {
 
     @Test
     public void testUnpredictableBehaviourFlag(){
-        try{
-            Context ctx = new Context();
+        try(Context ctx = new Context()) {
             Solver solver = ctx.mkSolver(ctx.mkTactic(Settings.TACTIC));
             Program program = new ProgramParser().parse(new File(path));
+            EncodeContext context = new EncodeContext(ctx, program, settings);
 
             // Add program without assertions
             program.unroll(1, 0);
             program.compile(program.getArch(), 0);
             solver.add(program.encodeCF(ctx));
             solver.add(program.encodeFinalRegisterValues(ctx));
-            solver.add(wmm.encode(program, ctx, settings));
+            solver.add(wmm.encode(context));
             solver.add(wmm.consistent(program, ctx));
 
             // Check flag
             solver.add(ctx.mkEq(Flag.ARM_UNPREDICTABLE_BEHAVIOUR.repr(ctx), ctx.mkTrue()));
             assertEquals(expectedFlag, solver.check() == Status.SATISFIABLE);
-            ctx.close();
 
-        } catch (IOException e){
+        } catch (IOException e) {
             fail("Missing resource file");
         }
     }

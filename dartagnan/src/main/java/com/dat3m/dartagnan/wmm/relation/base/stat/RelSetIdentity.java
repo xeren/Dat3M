@@ -2,6 +2,7 @@ package com.dat3m.dartagnan.wmm.relation.base.stat;
 
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
@@ -25,8 +26,8 @@ public class RelSetIdentity extends StaticRelation {
 	}
 
 	@Override
-	public void update(TupleSet s) {
-		for(Event e: program.getCache().getEvents(filter))
-			s.add(new Tuple(e, e));
+	public void update(EncodeContext e, TupleSet s) {
+		for(Event x: e.cache(filter))
+			s.add(new Tuple(x, x));
 	}
 }

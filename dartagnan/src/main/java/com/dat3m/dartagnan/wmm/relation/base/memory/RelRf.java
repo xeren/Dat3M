@@ -22,13 +22,10 @@ public class RelRf extends Relation {
 	}
 
 	@Override
-	public void update(TupleSet s){
-		List<Event> eventsLoad = program.getCache().getEvents(FilterBasic.get(EType.READ));
-		List<Event> eventsInit = program.getCache().getEvents(FilterBasic.get(EType.INIT));
-		List<Event> eventsStore = program.getCache().getEvents(FilterMinus.get(
-			FilterBasic.get(EType.WRITE),
-			FilterBasic.get(EType.INIT)
-		));
+	public void update(EncodeContext e, TupleSet s){
+		List<Event> eventsLoad = e.cache(FilterBasic.get(EType.READ));
+		List<Event> eventsInit = e.cache(FilterBasic.get(EType.INIT));
+		List<Event> eventsStore = e.cache(FilterMinus.get(FilterBasic.get(EType.WRITE), FilterBasic.get(EType.INIT)));
 
 		for(Event e1: eventsInit)
 			for(Event e2: eventsLoad)
@@ -115,7 +112,7 @@ public class RelRf extends Relation {
 					e.eq(((MemEvent) t.getFirst()).getMemAddressExpr(), ((MemEvent) t.getSecond()).getMemAddressExpr()),
 					e.eq(((MemEvent) t.getFirst()).getMemValueExpr(), ((MemEvent) t.getSecond()).getMemValueExpr()))))),
 			(a,b)->e.pattern(edge.of(a, b))));
-		e.rule(e.and(program.getCache().getEvents(FilterBasic.get(EType.READ)).stream()
+		e.rule(e.and(e.cache(FilterBasic.get(EType.READ)).stream()
 			.map(r->e.exists(0, w->edge.of(w, e.event(r))))));
 		e.rule(e.forall(0, (a,b,c)->e.implies(e.and(edge.of(a, c), edge.of(b, c)), e.eq(a, b)),
 			(a,b,c)->e.pattern(edge.of(a, c), edge.of(b, c))));

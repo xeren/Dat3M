@@ -34,8 +34,8 @@ public class RelFencerel extends Relation {
 	}
 
 	@Override
-	protected void update(TupleSet s){
-		for(Thread t: program.getThreads()) {
+	protected void update(EncodeContext e, TupleSet s){
+		for(Thread t: e.program.getThreads()) {
 			List<Event> fences = t.getCache().getEvents(FilterBasic.get(fenceName));
 			if(!fences.isEmpty()) {
 				List<Event> events = t.getCache().getEvents(FilterBasic.get(EType.MEMORY));
@@ -60,7 +60,7 @@ public class RelFencerel extends Relation {
 
 	@Override
 	protected void encodeApprox(EncodeContext e) {
-		List<Event> fences = program.getCache().getEvents(FilterBasic.get(fenceName));
+		List<Event> fences = e.cache(FilterBasic.get(fenceName));
 		for(Tuple tuple: encodeTupleSet) {
 			Event e1 = tuple.getFirst();
 			Event e2 = tuple.getSecond();
@@ -77,7 +77,7 @@ public class RelFencerel extends Relation {
 	@Override
 	protected void encodeFirstOrder(EncodeContext e) {
 		EncodeContext.RelationPredicate edge = e.of(this);
-		List<Event> fences = program.getCache().getEvents(FilterBasic.get(fenceName));
+		List<Event> fences = e.cache(FilterBasic.get(fenceName));
 		e.rule(e.forall(0,
 			(a, b) -> e.eq(edge.of(a, b), e.or(fences.stream().map(f -> e.and(f.exec(),
 				e.lt((ArithExpr) a, (ArithExpr) e.event(f)),

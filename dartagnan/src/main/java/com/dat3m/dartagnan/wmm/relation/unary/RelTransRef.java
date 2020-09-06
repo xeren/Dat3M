@@ -44,18 +44,18 @@ public class RelTransRef extends RelTrans {
 	}
 
 	@Override
-	protected void update(TupleSet s, TupleSet s1) {
-		super.update(s, s1);
+	protected void update(EncodeContext e, TupleSet s, TupleSet s1) {
+		super.update(e, s, s1);
 		for(Map.Entry<Event, Set<Event>> entry: transitiveReachabilityMap.entrySet())
 			entry.getValue().remove(entry.getKey());
-		for(Event e: program.getCache().getEvents(FilterBasic.get(EType.ANY)))
-			s.add(new Tuple(e, e));
+		for(Event x: e.program.getCache().getEvents(FilterBasic.get(EType.ANY)))
+			s.add(new Tuple(x, x));
 	}
 
 	@Override
-	public void addEncodeTupleSet(TupleSet tuples) {
+	public void addEncodeTupleSet(EncodeContext e, TupleSet s) {
 		TupleSet activeSet = new TupleSet();
-		activeSet.addAll(tuples);
+		activeSet.addAll(s);
 		activeSet.removeAll(encodeTupleSet);
 		encodeTupleSet.addAll(activeSet);
 		activeSet.retainAll(maxTupleSet);
@@ -69,7 +69,7 @@ public class RelTransRef extends RelTrans {
 
 		TupleSet temp = encodeTupleSet;
 		encodeTupleSet = transEncodeTupleSet;
-		super.addEncodeTupleSet(activeSet);
+		super.addEncodeTupleSet(e, activeSet);
 		encodeTupleSet = temp;
 	}
 

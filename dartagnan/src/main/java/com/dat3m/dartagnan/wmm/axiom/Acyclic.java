@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.wmm.axiom;
 
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.event.Event;
@@ -30,8 +31,8 @@ public class Acyclic extends Axiom {
     }
 
     @Override
-    public TupleSet getEncodeTupleSet(){
-        Map<Event, Set<Event>> transMap = rel.getMaxTupleSet().transMap();
+    public TupleSet getEncodeTupleSet(EncodeContext e){
+        Map<Event, Set<Event>> transMap = rel.getMaxTupleSet(e).transMap();
         TupleSet result = new TupleSet();
 
         for(Event e1 : transMap.keySet()){
@@ -44,13 +45,13 @@ public class Acyclic extends Axiom {
             }
         }
 
-        for(Tuple tuple : rel.getMaxTupleSet()){
+        for(Tuple tuple : rel.getMaxTupleSet(e)){
             if(tuple.getFirst().getCId() == tuple.getSecond().getCId()){
                 result.add(tuple);
             }
         }
 
-        result.retainAll(rel.getMaxTupleSet());
+        result.retainAll(rel.getMaxTupleSet(e));
         return result;
     }
 

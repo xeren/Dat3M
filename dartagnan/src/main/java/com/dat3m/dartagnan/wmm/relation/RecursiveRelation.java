@@ -36,28 +36,28 @@ public class RecursiveRelation extends Relation {
 	}
 
 	@Override
-	public void update(TupleSet s) {
+	public void update(EncodeContext e, TupleSet s) {
 	}
 
 	/**
 	 * @return
 	 * The tuple set changed by some element.
 	 */
-	public boolean getMaxTupleSetRecursiveR() {
-		int old = getMaxTupleSet().size();
-		maxTupleSet = r1.getMaxTupleSetRecursive();
+	public boolean getMaxTupleSetRecursiveR(EncodeContext context) {
+		int old = getMaxTupleSet(context).size();
+		maxTupleSet = r1.getMaxTupleSetRecursive(context);
 		return old != maxTupleSet.size();
 	}
 
 	@Override
-	public void addEncodeTupleSet(TupleSet tuples) {
-		if(encodeTupleSet != tuples)
-			encodeTupleSet.addAll(tuples);
+	public void addEncodeTupleSet(EncodeContext e, TupleSet s) {
+		if(encodeTupleSet != s)
+			encodeTupleSet.addAll(s);
 	}
 
-	public void addEncodeTupleSetR(TupleSet tuples) {
-		addEncodeTupleSet(tuples);
-		r1.addEncodeTupleSet(encodeTupleSet);
+	public void addEncodeTupleSetR(EncodeContext context, TupleSet tuples) {
+		addEncodeTupleSet(context, tuples);
+		r1.addEncodeTupleSet(context, encodeTupleSet);
 	}
 
 	public void setRecursiveGroupIdR(int id) {

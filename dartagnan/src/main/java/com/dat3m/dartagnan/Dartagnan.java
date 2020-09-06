@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import org.apache.commons.cli.HelpFormatter;
 
 import com.dat3m.dartagnan.asserts.AbstractAssert;
@@ -98,8 +99,15 @@ public class Dartagnan {
 	}
 
 	public static Result testProgram(Solver s1, Context ctx, Program program, Wmm wmm, Arch target, Settings settings) {
+		return testProgram(new EncodeContext(ctx, program, settings), s1, wmm, target);
+	}
 
-		program.unroll(settings.getBound(), 0);
+	public static Result testProgram(EncodeContext context, Solver s1, Wmm wmm, Arch target) {
+
+		Context ctx = context.context;
+		Program program = context.program;
+
+		program.unroll(context.settings.getBound(), 0);
 
 		program.compile(target, 0);
 
@@ -131,7 +139,7 @@ public class Dartagnan {
 		s1.add(encodeFinalRegisterValues);
 		s2.add(encodeFinalRegisterValues);
 
-		BoolExpr encodeWmm = wmm.encode(program, ctx, settings);
+		BoolExpr encodeWmm = wmm.encode(context);
 		s1.add(encodeWmm);
 		s2.add(encodeWmm);
 

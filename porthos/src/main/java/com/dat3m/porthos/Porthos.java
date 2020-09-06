@@ -2,6 +2,7 @@ package com.dat3m.porthos;
 
 import com.dat3m.dartagnan.Dartagnan;
 import com.dat3m.dartagnan.utils.Settings;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.porthos.utils.options.PorthosOptions;
 import com.microsoft.z3.*;
 import com.microsoft.z3.enumerations.Z3_ast_print_mode;
@@ -80,13 +81,15 @@ public class Porthos {
         int nextId = pSource.compile(source, 0);
         pTarget.compile(target, nextId);
 
+        EncodeContext eSource = new EncodeContext(ctx, pSource, settings);
         BoolExpr sourceCF = pSource.encodeCF(ctx);
         BoolExpr sourceFV = pSource.encodeFinalRegisterValues(ctx);
-        BoolExpr sourceMM = sourceWmm.encode(pSource, ctx, settings);
+        BoolExpr sourceMM = sourceWmm.encode(eSource);
 
+        EncodeContext eTarget = new EncodeContext(ctx, pTarget, settings);
         s1.add(pTarget.encodeCF(ctx));
         s1.add(pTarget.encodeFinalRegisterValues(ctx));
-        s1.add(targetWmm.encode(pTarget, ctx, settings));
+        s1.add(targetWmm.encode(eTarget));
         s1.add(targetWmm.consistent(pTarget, ctx));
 
         s1.add(sourceCF);

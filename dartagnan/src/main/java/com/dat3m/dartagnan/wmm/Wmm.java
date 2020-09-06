@@ -87,37 +87,38 @@ public class Wmm {
             relation.initialise(program, ctx, settings);
         }
 
+        EncodeContext e = new EncodeContext(ctx, program, settings);
+
         for(RecursiveGroup recursiveGroup : recursiveGroups){
-            recursiveGroup.initMaxTupleSets();
+            recursiveGroup.initMaxTupleSets(e);
         }
 
         for (Axiom ax : axioms) {
-            ax.getRel().getMaxTupleSet();
+            ax.getRel().getMaxTupleSet(e);
         }
 
         for(String relName : baseRelations){
-            relationRepository.getRelation(relName).getMaxTupleSet();
+            relationRepository.getRelation(relName).getMaxTupleSet(e);
         }
 
         if(settings.getDrawGraph()){
             for(String relName : settings.getGraphRelations()){
                 Relation relation = relationRepository.getRelation(relName);
                 if(relation != null){
-                    relation.addEncodeTupleSet(relation.getMaxTupleSet());
+                    relation.addEncodeTupleSet(e, relation.getMaxTupleSet(e));
                 }
             }
         }
 
         for (Axiom ax : axioms) {
-            ax.getRel().addEncodeTupleSet(ax.getEncodeTupleSet());
+            ax.getRel().addEncodeTupleSet(e, ax.getEncodeTupleSet(e));
         }
 
         Collections.reverse(recursiveGroups);
         for(RecursiveGroup recursiveGroup : recursiveGroups){
-            recursiveGroup.updateEncodeTupleSets();
+            recursiveGroup.updateEncodeTupleSets(e);
         }
 
-        EncodeContext e = new EncodeContext(ctx, program, settings);
         for(String relName : baseRelations){
             relationRepository.getRelation(relName).encode(e);
         }
@@ -131,12 +132,11 @@ public class Wmm {
         return e.allRules();
     }
 
-    public BoolExpr encode(Program program, Context ctx, Settings settings) {
-        EncodeContext c = new EncodeContext(ctx, program, settings);
-        BoolExpr enc = encodeBase(program, ctx, settings);
+    public BoolExpr encode(EncodeContext context) {
+        BoolExpr enc = encodeBase(context.program, context.context, context.settings);
         for (Axiom ax : axioms)
-            ax.getRel().encode(c);
-        return ctx.mkAnd(enc, c.allRules());
+            ax.getRel().encode(context);
+        return context.and(enc, context.allRules());
     }
 
     public BoolExpr consistent(Program program, Context ctx) {

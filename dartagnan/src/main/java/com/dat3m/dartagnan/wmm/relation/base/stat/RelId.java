@@ -14,9 +14,9 @@ public class RelId extends StaticRelation {
 	}
 
 	@Override
-	protected void update(TupleSet s){
-		for(Event e: program.getCache().getEvents(FilterBasic.get(EType.VISIBLE)))
-			s.add(new Tuple(e, e));
+	protected void update(EncodeContext e, TupleSet s){
+		for(Event v: e.program.getCache().getEvents(FilterBasic.get(EType.VISIBLE)))
+			s.add(new Tuple(v, v));
 	}
 
 	@Override

@@ -29,13 +29,13 @@ public class RelInverse extends UnaryRelation {
 	}
 
 	@Override
-	protected void update(TupleSet s, TupleSet s1) {
+	protected void update(EncodeContext e, TupleSet s, TupleSet s1) {
 		for(Tuple pair: s1)
 			s.add(new Tuple(pair.getSecond(), pair.getFirst()));
 	}
 
 	@Override
-	public void addEncodeTupleSet(TupleSet tuples) {
+	public void addEncodeTupleSet(EncodeContext e, TupleSet tuples) {
 		encodeTupleSet.addAll(tuples);
 		Set<Tuple> activeSet = new HashSet<>(tuples);
 		activeSet.retainAll(maxTupleSet);
@@ -44,7 +44,7 @@ public class RelInverse extends UnaryRelation {
 			for(Tuple pair: activeSet) {
 				invSet.add(new Tuple(pair.getSecond(), pair.getFirst()));
 			}
-			r1.addEncodeTupleSet(invSet);
+			r1.addEncodeTupleSet(e, invSet);
 		}
 	}
 

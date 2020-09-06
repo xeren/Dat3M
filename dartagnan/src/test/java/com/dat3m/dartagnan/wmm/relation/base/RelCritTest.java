@@ -10,6 +10,7 @@ import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.relation.EdgeTestHelper;
 import com.dat3m.dartagnan.utils.ResourceHelper;
 import com.dat3m.dartagnan.wmm.Wmm;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.dat3m.dartagnan.wmm.utils.alias.Alias;
 import com.microsoft.z3.*;
@@ -64,9 +65,10 @@ public class RelCritTest {
 
             // Force encoding all possible "crit" relations
             Settings settings = new Settings(Mode.KNASTER, Alias.CFIS, 1, true, "crit");
+            EncodeContext context = new EncodeContext(ctx, program, settings);
 
             // Sanity check, can be skipped
-            assertTrue(Dartagnan.testProgram(solver, ctx, program, wmm, program.getArch(), settings).equals(FAIL));
+            assertTrue(Dartagnan.testProgram(context, solver, wmm, program.getArch()).equals(FAIL));
 
             // Test edges
             EdgeTestHelper helper = new EdgeTestHelper(
@@ -75,7 +77,7 @@ public class RelCritTest {
                     FilterBasic.get(EType.RCU_LOCK),
                     FilterBasic.get(EType.RCU_UNLOCK)
             );
-            solver.add(helper.encodeIllegalEdges(expectedEdges, ctx));
+            solver.add(helper.encodeIllegalEdges(context, expectedEdges));
             assertSame(Status.UNSATISFIABLE, solver.check());
 
             ctx.close();

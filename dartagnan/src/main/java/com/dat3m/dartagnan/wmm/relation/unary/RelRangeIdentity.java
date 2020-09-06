@@ -26,22 +26,22 @@ public class RelRangeIdentity extends UnaryRelation {
 	}
 
 	@Override
-	protected void update(TupleSet s, TupleSet s1) {
+	protected void update(EncodeContext e, TupleSet s, TupleSet s1) {
 		for(Tuple tuple: s1)
 			s.add(new Tuple(tuple.getSecond(), tuple.getSecond()));
 	}
 
 	@Override
-	public void addEncodeTupleSet(TupleSet tuples) {
+	public void addEncodeTupleSet(EncodeContext e, TupleSet tuples) {
 		encodeTupleSet.addAll(tuples);
 		Set<Tuple> activeSet = new HashSet<>(tuples);
 		activeSet.retainAll(maxTupleSet);
 		if(!activeSet.isEmpty()) {
 			TupleSet r1Set = new TupleSet();
 			for(Tuple tuple: activeSet) {
-				r1Set.addAll(r1.getMaxTupleSet().getBySecond(tuple.getFirst()));
+				r1Set.addAll(r1.getMaxTupleSet(e).getBySecond(tuple.getFirst()));
 			}
-			r1.addEncodeTupleSet(r1Set);
+			r1.addEncodeTupleSet(e, r1Set);
 		}
 	}
 
@@ -50,7 +50,7 @@ public class RelRangeIdentity extends UnaryRelation {
 		for(Tuple tuple: encodeTupleSet) {
 			Event a = tuple.getFirst();
 			e.rule(e.eq(e.edge(this, a, a),
-				e.or(r1.getMaxTupleSet().getBySecond(a).stream().map(t->e.edge(r1, t.getFirst(), a)))));
+				e.or(r1.getMaxTupleSet(e).getBySecond(a).stream().map(t->e.edge(r1, t.getFirst(), a)))));
 		}
 	}
 

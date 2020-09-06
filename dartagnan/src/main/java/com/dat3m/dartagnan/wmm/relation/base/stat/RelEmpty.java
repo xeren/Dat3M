@@ -12,7 +12,7 @@ public class RelEmpty extends Relation {
 	}
 
 	@Override
-	protected void update(TupleSet s) {
+	protected void update(EncodeContext e, TupleSet s) {
 	}
 
 	@Override
