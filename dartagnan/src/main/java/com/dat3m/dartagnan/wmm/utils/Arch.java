@@ -1,7 +1,22 @@
 package com.dat3m.dartagnan.wmm.utils;
 
 public enum Arch {
-    NONE, ARM, ARM8, POWER, TSO;
+    /**
+     * No particular instruction set.
+     */
+    NONE,
+    /**
+     * Acorn RISC Machine specific instruction set.
+     */
+    ARM,
+    /**
+     * Power PC specific instruction set.
+     */
+    POWER,
+    /**
+     * X86 specific instruction set.
+     */
+    TSO;
 
     public static Arch get(String arch){
         if(arch != null){
@@ -10,9 +25,8 @@ public enum Arch {
                 case "none":
                     return NONE;
                 case "arm":
-                    return ARM;
                 case "arm8":
-                    return ARM8;
+                    return ARM;
                 case "power":
                     return POWER;
                 case "tso":
@@ -29,8 +43,6 @@ public enum Arch {
                 return "none";
             case ARM:
                 return "arm";
-            case ARM8:
-                return "arm8";
             case POWER:
                 return "power";
             case TSO:

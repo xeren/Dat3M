@@ -79,7 +79,7 @@ public class AtomicStore extends MemEvent implements RegReaderData {
                     events.addFirst(new Fence("Sync"));
                 }
                 break;
-            case ARM: case ARM8:
+            case ARM:
                 if(RELEASE.equals(mo) || SC.equals(mo)){
                     events.addFirst(new Fence("Ish"));
                     if(SC.equals(mo)){

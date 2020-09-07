@@ -70,7 +70,7 @@ public class Read extends MemEvent implements RegWriter {
                     }
                 }
                 break;
-            case ARM: case ARM8:
+            case ARM:
                 if(Mo.SC.equals(mo) || Mo.ACQUIRE.equals(mo) || Mo.CONSUME.equals(mo)) {
                     events.addLast(new Fence("Ish"));
                 }

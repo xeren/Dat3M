@@ -14,7 +14,7 @@ public class DartagnanAARCH64Test extends AbstractDartagnanTest {
 
     @Parameterized.Parameters(name = "{index}: {0} {4}")
     public static Iterable<Object[]> data() throws IOException {
-        return buildParameters("litmus/AARCH64/", "cat/aarch64.cat", Arch.ARM8);
+        return buildParameters("litmus/AARCH64/", "cat/aarch64.cat", Arch.ARM);
     }
 
     public DartagnanAARCH64Test(String path, Result expected, Arch target, Wmm wmm, Settings settings) {

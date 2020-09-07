@@ -25,7 +25,7 @@ class ParserLitmusAArch64 implements ParserInterface {
         VisitorLitmusAArch64 visitor = new VisitorLitmusAArch64(pb);
 
         Program program = (Program) parserEntryPoint.accept(visitor);
-        program.setArch(Arch.ARM8);
+        program.setArch(Arch.ARM);
         return program;
     }
 }

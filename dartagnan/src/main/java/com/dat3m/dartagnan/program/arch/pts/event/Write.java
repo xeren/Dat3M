@@ -79,7 +79,7 @@ public class Write extends MemEvent implements RegReaderData {
                     events.addFirst(new Fence("Sync"));
                 }
                 break;
-            case ARM: case ARM8:
+            case ARM:
                 if(Mo.RELEASE.equals(mo) || Mo.SC.equals(mo)){
                     events.addFirst(new Fence("Ish"));
                     if(Mo.SC.equals(mo)){

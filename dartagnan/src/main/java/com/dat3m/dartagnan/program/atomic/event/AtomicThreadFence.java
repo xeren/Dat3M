@@ -60,7 +60,7 @@ public class AtomicThreadFence extends Fence {
                     events.add(new Fence("Lwsync"));
                 }
                 break;
-            case ARM: case ARM8:
+            case ARM:
                 if(ACQUIRE.equals(mo) || RELEASE.equals(mo) || ACQ_REL.equals(mo) || SC.equals(mo)){
                     events.addLast(new Fence("Ish"));
                 }

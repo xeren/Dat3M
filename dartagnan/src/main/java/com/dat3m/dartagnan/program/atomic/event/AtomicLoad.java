@@ -79,7 +79,7 @@ public class AtomicLoad extends MemEvent implements RegWriter {
                     }
                 }
                 break;
-            case ARM: case ARM8:
+            case ARM:
                 if(SC.equals(mo) || ACQUIRE.equals(mo) || CONSUME.equals(mo)) {
                     events.addLast(new Fence("Ish"));
                 }

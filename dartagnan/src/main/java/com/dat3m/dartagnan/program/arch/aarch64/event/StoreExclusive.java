@@ -54,7 +54,7 @@ public class StoreExclusive extends Store implements RegWriter, RegReaderData {
 
     @Override
     public int compile(Arch target, int nextId, Event predecessor) {
-        if(target == Arch.ARM || target == Arch.ARM8) {
+        if(target == Arch.ARM) {
             RMWStoreExclusive store = new RMWStoreExclusive(address, value, mo);
             RMWStoreExclusiveStatus status = new RMWStoreExclusiveStatus(register, store);
             LinkedList<Event> events = new LinkedList<>(Arrays.asList(store, status));
