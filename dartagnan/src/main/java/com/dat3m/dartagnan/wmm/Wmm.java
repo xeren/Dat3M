@@ -10,7 +10,6 @@ import com.dat3m.dartagnan.wmm.relation.RecursiveRelation;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import java.util.*;
 
 /**
@@ -62,8 +61,8 @@ public class Wmm {
         recursiveGroups.add(new RecursiveGroup(id, recursiveGroup));
     }
 
-    public void encodeBase(EncodeContext context) {
-        new AliasAnalysis().calculateLocationSets(context.program, context.settings.getAlias());
+    public void encodeBase(EncodeContext context, ProgramCache program) {
+        new AliasAnalysis().calculateLocationSets(program.program, context.settings.getAlias());
 
         for(String relName : baseRelations){
             relationRepository.getRelation(relName);
@@ -82,66 +81,58 @@ public class Wmm {
         }
 
         for(RecursiveGroup recursiveGroup : recursiveGroups){
-            recursiveGroup.initMaxTupleSets(context);
+            recursiveGroup.initMaxTupleSets(program);
         }
 
         for(Axiom ax : axioms) {
-            ax.getRel().getMaxTupleSet(context);
+            ax.getRel().getMaxTupleSet(program);
         }
 
         for(String relName : baseRelations){
-            relationRepository.getRelation(relName).getMaxTupleSet(context);
+            relationRepository.getRelation(relName).getMaxTupleSet(program);
         }
 
         if(context.settings.getDrawGraph()){
             for(String relName : context.settings.getGraphRelations()){
                 Relation relation = relationRepository.getRelation(relName);
                 if(relation != null){
-                    relation.addEncodeTupleSet(context, relation.getMaxTupleSet(context));
+                    relation.addEncodeTupleSet(program, relation.getMaxTupleSet(program));
                 }
             }
         }
 
         for(Axiom ax : axioms) {
-            ax.getRel().addEncodeTupleSet(context, ax.getEncodeTupleSet(context));
+            ax.getRel().addEncodeTupleSet(program, ax.getEncodeTupleSet(program));
         }
 
         Collections.reverse(recursiveGroups);
         for(RecursiveGroup recursiveGroup : recursiveGroups){
-            recursiveGroup.updateEncodeTupleSets(context);
+            recursiveGroup.updateEncodeTupleSets(program);
         }
 
         for(String relName : baseRelations){
-            relationRepository.getRelation(relName).encode(context);
+            relationRepository.getRelation(relName).encode(context, program);
         }
 
         if(context.settings.getMode() == Mode.KLEENE){
             for(RecursiveGroup group : recursiveGroups){
-                group.encode(context);
+                group.encode(context, program);
             }
         }
     }
 
-    public void encode(EncodeContext context) {
-        encodeBase(context);
+    public void encode(EncodeContext context, ProgramCache program) {
+        encodeBase(context, program);
         for(Axiom ax : axioms)
-            ax.getRel().encode(context);
+            ax.getRel().encode(context, program);
     }
 
-    public BoolExpr consistent(Context ctx) {
-        BoolExpr expr = ctx.mkTrue();
-        for(Axiom ax : axioms) {
-            expr = ctx.mkAnd(expr, ax.consistent(ctx));
-        }
-        return expr;
+    public BoolExpr consistent(EncodeContext context) {
+        return context.and(axioms.stream().map(a->a.consistent(context)));
     }
 
-    public BoolExpr inconsistent(Context ctx) {
-        BoolExpr expr = ctx.mkFalse();
-        for(Axiom ax : axioms) {
-            expr = ctx.mkOr(expr, ax.inconsistent(ctx));
-        }
-        return expr;
+    public BoolExpr inconsistent(EncodeContext context) {
+        return context.or(axioms.stream().map(a->a.inconsistent(context)));
     }
 
     public String toString() {

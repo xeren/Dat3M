@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.wmm.relation.binary;
 
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.program.event.Event;
@@ -28,14 +29,14 @@ public class RelComposition extends BinaryRelation {
 	}
 
 	@Override
-	protected void update(EncodeContext e, TupleSet s, TupleSet s1, TupleSet s2) {
+	protected void update(ProgramCache p, TupleSet s, TupleSet s1, TupleSet s2) {
 		for(Tuple t1: s1)
 			for(Tuple t2: s2.getByFirst(t1.getSecond()))
 				s.add(new Tuple(t1.getFirst(), t2.getSecond()));
 	}
 
 	@Override
-	public void addEncodeTupleSet(EncodeContext e, TupleSet s) {
+	public void addEncodeTupleSet(ProgramCache p, TupleSet s) {
 		Set<Tuple> activeSet = new HashSet<>(s);
 		activeSet.removeAll(encodeTupleSet);
 		encodeTupleSet.addAll(s);
@@ -53,11 +54,11 @@ public class RelComposition extends BinaryRelation {
 				myMap.get(id1).add(id2);
 			}
 
-			for(Tuple tuple1: r1.getMaxTupleSet(e)) {
+			for(Tuple tuple1: r1.getMaxTupleSet(p)) {
 				Event e1 = tuple1.getFirst();
 				Set<Integer> ends = myMap.get(e1.getCId());
 				if(ends == null) continue;
-				for(Tuple tuple2: r2.getMaxTupleSet(e).getByFirst(tuple1.getSecond())) {
+				for(Tuple tuple2: r2.getMaxTupleSet(p).getByFirst(tuple1.getSecond())) {
 					Event e2 = tuple2.getSecond();
 					if(ends.contains(e2.getCId())) {
 						r1Set.add(tuple1);
@@ -66,20 +67,20 @@ public class RelComposition extends BinaryRelation {
 				}
 			}
 
-			r1.addEncodeTupleSet(e, r1Set);
-			r2.addEncodeTupleSet(e, r2Set);
+			r1.addEncodeTupleSet(p, r1Set);
+			r2.addEncodeTupleSet(p, r2Set);
 		}
 	}
 
 	@Override
-	protected void encodeApprox(EncodeContext e) {
+	protected void encodeApprox(EncodeContext e, ProgramCache p) {
 		TupleSet r1Set = new TupleSet();
 		r1Set.addAll(r1.getEncodeTupleSet());
-		r1Set.retainAll(r1.getMaxTupleSet(e));
+		r1Set.retainAll(r1.getMaxTupleSet(p));
 
 		TupleSet r2Set = new TupleSet();
 		r2Set.addAll(r2.getEncodeTupleSet());
-		r2Set.retainAll(r2.getMaxTupleSet(e));
+		r2Set.retainAll(r2.getMaxTupleSet(p));
 
 		Map<Tuple,LinkedList<BoolExpr>> exprMap = new HashMap<>();
 		for(Tuple tuple: encodeTupleSet)
@@ -101,10 +102,10 @@ public class RelComposition extends BinaryRelation {
 	}
 
 	@Override
-	protected void encodeIDL(EncodeContext e) {
+	protected void encodeIDL(EncodeContext e, ProgramCache p) {
 		if(recursiveGroupId == 0)
 		{
-			encodeApprox(e);
+			encodeApprox(e, p);
 			return;
 		}
 
@@ -113,11 +114,11 @@ public class RelComposition extends BinaryRelation {
 
 		TupleSet r1Set = new TupleSet();
 		r1Set.addAll(r1.getEncodeTupleSet());
-		r1Set.retainAll(r1.getMaxTupleSet(e));
+		r1Set.retainAll(r1.getMaxTupleSet(p));
 
 		TupleSet r2Set = new TupleSet();
 		r2Set.addAll(r2.getEncodeTupleSet());
-		r2Set.retainAll(r2.getMaxTupleSet(e));
+		r2Set.retainAll(r2.getMaxTupleSet(p));
 
 		Map<Tuple, LinkedList<BoolExpr>> orClauseMap = new HashMap<>();
 		Map<Tuple, LinkedList<BoolExpr>> idlClauseMap = new HashMap<>();
@@ -152,7 +153,7 @@ public class RelComposition extends BinaryRelation {
 	}
 
 	@Override
-	public void encodeIteration(EncodeContext e, int groupId, int iteration) {
+	public void encodeIteration(EncodeContext e, ProgramCache p, int groupId, int iteration) {
 		if((groupId & recursiveGroupId) <= 0 || iteration <= lastEncodedIteration)
 			return;
 		lastEncodedIteration = iteration;
@@ -175,11 +176,11 @@ public class RelComposition extends BinaryRelation {
 
 		TupleSet r1Set = new TupleSet();
 		r1Set.addAll(r1.getEncodeTupleSet());
-		r1Set.retainAll(r1.getMaxTupleSet(e));
+		r1Set.retainAll(r1.getMaxTupleSet(p));
 
 		TupleSet r2Set = new TupleSet();
 		r2Set.addAll(r2.getEncodeTupleSet());
-		r2Set.retainAll(r2.getMaxTupleSet(e));
+		r2Set.retainAll(r2.getMaxTupleSet(p));
 
 		Map<Tuple, LinkedList<BoolExpr>> exprMap = new HashMap<>();
 		for(Tuple tuple: encodeTupleSet)
@@ -200,15 +201,15 @@ public class RelComposition extends BinaryRelation {
 			e.rule(e.eq(e.edge(this, iteration, tuple), e.or(exprMap.get(tuple))));
 
 		if(recurseInR1)
-			r1.encodeIteration(e, groupId, childIteration);
+			r1.encodeIteration(e, p, groupId, childIteration);
 
 		if(recurseInR2)
-			r2.encodeIteration(e, groupId, childIteration);
+			r2.encodeIteration(e, p, groupId, childIteration);
 
 	}
 
 	@Override
-	protected void encodeFirstOrder(EncodeContext e) {
+	protected void encodeFirstOrder(EncodeContext e, ProgramCache p) {
 		EncodeContext.RelationPredicate edge = e.of(this);
 		EncodeContext.RelationPredicate edge1 = e.of(r1);
 		EncodeContext.RelationPredicate edge2 = e.of(r2);

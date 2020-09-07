@@ -3,6 +3,7 @@ import com.dat3m.dartagnan.parsers.cat.ParserCat;
 import com.dat3m.dartagnan.parsers.program.ProgramParser;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.utils.Settings;
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.utils.Arch;
@@ -34,9 +35,13 @@ public abstract class Compare
 
 			EnumMap<Mode,EncodeContext> context = new EnumMap<>(Mode.class);
 			for(Mode m: Mode.values())
+				context.put(m, new EncodeContext(c, new Settings(m, alias, bound)));
+
+			EnumMap<Mode,Program> program = new EnumMap<>(Mode.class);
+			for(Mode m: Mode.values())
 			{
 				Program p = new ProgramParser().parse(new File(argument[1]));
-				context.put(m, new EncodeContext(c, p, new Settings(m, alias, bound)));
+				program.put(m, p);
 				p.unroll(bound, 0);
 				p.compile(target, 0);
 			}
@@ -45,14 +50,15 @@ public abstract class Compare
 			for(Mode m: Mode.values())
 			{
 				EncodeContext e = context.get(m);
-				Program p = e.program;
+				Program p = program.get(m);
 				long timeStart = System.nanoTime();
 				Solver s = c.mkSolver();
 				s.add(p.encodeUINonDet(c),
 					p.encodeCF(c),
 					p.encodeFinalRegisterValues(c));
-				model.encode(e);
-				s.add(e.allRules(), model.consistent(c));
+				model.encode(e, new ProgramCache(p));
+				model.consistent(e);
+				s.add(e.allRules());
 				if(null != p.getAss())
 					s.add(p.getAss().encode(c));
 				if(null != p.getAssFilter())

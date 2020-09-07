@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.wmm.relation.unary;
 
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.relation.Relation;
@@ -29,13 +30,13 @@ public class RelInverse extends UnaryRelation {
 	}
 
 	@Override
-	protected void update(EncodeContext e, TupleSet s, TupleSet s1) {
+	protected void update(ProgramCache p, TupleSet s, TupleSet s1) {
 		for(Tuple pair: s1)
 			s.add(new Tuple(pair.getSecond(), pair.getFirst()));
 	}
 
 	@Override
-	public void addEncodeTupleSet(EncodeContext e, TupleSet tuples) {
+	public void addEncodeTupleSet(ProgramCache p, TupleSet tuples) {
 		encodeTupleSet.addAll(tuples);
 		Set<Tuple> activeSet = new HashSet<>(tuples);
 		activeSet.retainAll(maxTupleSet);
@@ -44,12 +45,12 @@ public class RelInverse extends UnaryRelation {
 			for(Tuple pair: activeSet) {
 				invSet.add(new Tuple(pair.getSecond(), pair.getFirst()));
 			}
-			r1.addEncodeTupleSet(e, invSet);
+			r1.addEncodeTupleSet(p, invSet);
 		}
 	}
 
 	@Override
-	protected void encodeApprox(EncodeContext e) {
+	protected void encodeApprox(EncodeContext e, ProgramCache p) {
 		for(Tuple tuple: encodeTupleSet) {
 			Event e1 = tuple.getFirst();
 			Event e2 = tuple.getSecond();
@@ -58,7 +59,7 @@ public class RelInverse extends UnaryRelation {
 	}
 
 	@Override
-	protected void encodeFirstOrder(EncodeContext e) {
+	protected void encodeFirstOrder(EncodeContext e, ProgramCache p) {
 		EncodeContext.RelationPredicate edge = e.of(this);
 		EncodeContext.RelationPredicate edge1 = e.of(r1);
 		e.rule(e.forall(0, (a,b)->e.eq(edge.of(a, b), edge1.of(b, a)),

@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.wmm.relation;
 
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import java.util.HashSet;
@@ -48,25 +49,25 @@ public abstract class Relation {
 		encodeTupleSet = new TupleSet();
 	}
 
-	protected abstract void update(EncodeContext context, TupleSet set);
+	protected abstract void update(ProgramCache program, TupleSet set);
 
-	public TupleSet getMaxTupleSet(EncodeContext context) {
+	public TupleSet getMaxTupleSet(ProgramCache program) {
 		if(null == maxTupleSet) {
 			maxTupleSet = new TupleSet();
-			update(context, maxTupleSet);
+			update(program, maxTupleSet);
 		}
 		return maxTupleSet;
 	}
 
-	public TupleSet getMaxTupleSetRecursive(EncodeContext context) {
-		return getMaxTupleSet(context);
+	public TupleSet getMaxTupleSetRecursive(ProgramCache program) {
+		return getMaxTupleSet(program);
 	}
 
 	public TupleSet getEncodeTupleSet() {
 		return encodeTupleSet;
 	}
 
-	public void addEncodeTupleSet(EncodeContext context, TupleSet tuples) {
+	public void addEncodeTupleSet(ProgramCache program, TupleSet tuples) {
 		encodeTupleSet.addAll(tuples);
 	}
 
@@ -117,55 +118,57 @@ public abstract class Relation {
 	/**
 	 * Describes this relation's contents.
 	 * Proposes that this relation contains only those tuples according to its semantics.
-	 * @param context Utility used to create propositions and to specialize the encoding for the current program.
+	 * @param context
+	 * Utility used to create propositions and to specialize the encoding for the current program.
 	 */
-	public void encode(EncodeContext context) {
+	public void encode(EncodeContext context, ProgramCache program) {
 		if(context.add(this))
-			doEncode(context);
+			doEncode(context, program);
 	}
 
-	protected void encodeLFP(EncodeContext context) {
-		encodeApprox(context);
+	protected void encodeLFP(EncodeContext context, ProgramCache program) {
+		encodeApprox(context, program);
 	}
 
-	protected void encodeIDL(EncodeContext context) {
-		encodeApprox(context);
+	protected void encodeIDL(EncodeContext context, ProgramCache program) {
+		encodeApprox(context, program);
 	}
 
 	/**
 	 * Describes this relation's content using first order logic.
 	 * Proposes that this relation contains only those tuples according to its semantics.
-	 * @param context Utility used to create propositions and to specialize the encoding for the current program.
+	 * @param context
+	 * Utility used to create propositions and to specialize the encoding for the current program.
 	 */
-	protected abstract void encodeFirstOrder(EncodeContext context);
+	protected abstract void encodeFirstOrder(EncodeContext context, ProgramCache program);
 
-	protected abstract void encodeApprox(EncodeContext context);
+	protected abstract void encodeApprox(EncodeContext context, ProgramCache program);
 
-	public void encodeIteration(EncodeContext context, int recGroupId, int iteration) {
+	public void encodeIteration(EncodeContext context, ProgramCache program, int recGroupId, int iteration) {
 	}
 
-	protected void doEncode(EncodeContext e) {
+	protected void doEncode(EncodeContext context, ProgramCache program) {
 		if(!encodeTupleSet.isEmpty()) {
 			Set<Tuple> negations = new HashSet<>(encodeTupleSet);
 			negations.removeAll(maxTupleSet);
 			for(Tuple tuple: negations)
-				e.rule(e.not(e.edge(this, tuple)));
+				context.rule(context.not(context.edge(this, tuple)));
 			encodeTupleSet.removeAll(negations);
 		}
 		if(encodeTupleSet.isEmpty() && !forceDoEncode)
 			return;
-		switch(e.settings.getMode()) {
+		switch(context.settings.getMode()) {
 			case KLEENE:
-				encodeLFP(e);
+				encodeLFP(context, program);
 				break;
 			case IDL:
-				encodeIDL(e);
+				encodeIDL(context, program);
 				break;
 			case FO:
-				encodeFirstOrder(e);
+				encodeFirstOrder(context, program);
 				break;
 			default:
-				encodeApprox(e);
+				encodeApprox(context, program);
 		}
 	}
 

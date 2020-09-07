@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.wmm.relation.base.stat;
 
 import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.wmm.relation.Relation;
@@ -24,18 +25,19 @@ public abstract class StaticRelation extends Relation {
 		}
 	}
 
-	protected void encodeApprox(EncodeContext e, Atom atom) {
-		e.rule(e.and(encodeTupleSet.stream().map(t->e.eq(atom.of(t), e.and(t.getFirst().exec(), t.getSecond().exec())))));
+	protected void encodeApprox(EncodeContext context, ProgramCache program, Atom atom) {
+		context.rule(context.and(encodeTupleSet.stream()
+			.map(t->context.eq(atom.of(t), context.and(t.getFirst().exec(), t.getSecond().exec())))));
 	}
 
 	@Override
-	protected void encodeApprox(EncodeContext context) {
-		encodeApprox(context, (a,b)->context.edge(this, a, b));
+	protected void encodeApprox(EncodeContext e, ProgramCache p) {
+		encodeApprox(e, p, (a,b)->e.edge(this, a, b));
 	}
 
 	@Override
-	protected void encodeFirstOrder(EncodeContext context) {
-		EncodeContext.RelationPredicate edge = context.of(this);
-		encodeApprox(context, (a,b)->edge.of(context.event(a), context.event(b)));
+	protected void encodeFirstOrder(EncodeContext e, ProgramCache p) {
+		EncodeContext.RelationPredicate edge = e.of(this);
+		encodeApprox(e, p, (a,b)->edge.of(e.event(a), e.event(b)));
 	}
 }

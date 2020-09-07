@@ -8,6 +8,7 @@ import com.dat3m.dartagnan.program.arch.aarch64.utils.EType;
 import com.dat3m.dartagnan.utils.ResourceHelper;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.utils.Settings;
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.filter.FilterIntersection;
@@ -80,8 +81,9 @@ public class ExclusivePairsTest {
             Program program = new ProgramParser().parse(new File(path));
 
             // Test final state
-            EncodeContext context = new EncodeContext(ctx, program, settings);
-            assertEquals(expectedState, Dartagnan.testProgram(context, solver, wmm, program.getArch()));
+            EncodeContext context = new EncodeContext(ctx, settings);
+            ProgramCache cache = new ProgramCache(program);
+            assertEquals(expectedState, Dartagnan.testProgram(context, cache, solver, wmm, program.getArch()));
 
             // Test edges
             if(expectedEdges != null){
@@ -91,7 +93,7 @@ public class ExclusivePairsTest {
                         FilterIntersection.get(FilterBasic.get(EType.EXCL), FilterBasic.get(EType.READ)),
                         FilterIntersection.get(FilterBasic.get(EType.EXCL), FilterBasic.get(EType.WRITE))
                 );
-                solver.add(helper.encodeIllegalEdges(context, expectedEdges));
+                solver.add(helper.encodeIllegalEdges(context, cache, expectedEdges));
                 assertSame(Status.UNSATISFIABLE, solver.check());
             }
 
@@ -105,16 +107,18 @@ public class ExclusivePairsTest {
         try(Context ctx = new Context()) {
             Solver solver = ctx.mkSolver(ctx.mkTactic(Settings.TACTIC));
             Program program = new ProgramParser().parse(new File(path));
-            EncodeContext context = new EncodeContext(ctx, program, settings);
+            EncodeContext context = new EncodeContext(ctx, settings);
+
+            ProgramCache cache = new ProgramCache(program);
 
             // Add program without assertions
             program.unroll(1, 0);
             program.compile(program.getArch(), 0);
             solver.add(program.encodeCF(ctx));
             solver.add(program.encodeFinalRegisterValues(ctx));
-            wmm.encode(context);
+            wmm.encode(context, cache);
             solver.add(context.allRules());
-            solver.add(wmm.consistent(ctx));
+            solver.add(wmm.consistent(context));
 
             // Check flag
             solver.add(ctx.mkEq(Flag.ARM_UNPREDICTABLE_BEHAVIOUR.repr(ctx), ctx.mkTrue()));

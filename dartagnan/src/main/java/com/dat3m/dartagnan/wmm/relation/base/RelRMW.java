@@ -6,6 +6,7 @@ import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.program.svcomp.event.EndAtomic;
 import com.dat3m.dartagnan.program.event.rmw.RMWStore;
 import com.dat3m.dartagnan.program.arch.aarch64.utils.EType;
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.filter.FilterIntersection;
@@ -44,14 +45,14 @@ public class RelRMW extends StaticRelation {
 	}
 
 	@Override
-	protected void update(EncodeContext e, TupleSet s){
+	protected void update(ProgramCache p, TupleSet s){
 		FilterAbstract filter = FilterIntersection.get(FilterBasic.get(EType.RMW), FilterBasic.get(EType.WRITE));
-		for(Event store: e.cache(filter))
+		for(Event store: p.cache(filter))
 			if(store instanceof RMWStore)
 				baseMaxTupleSet.add(new Tuple(((RMWStore) store).getLoadEvent(), store));
 
 		filter = FilterIntersection.get(FilterBasic.get(EType.RMW), FilterBasic.get(EType.LOCK));
-		for(Event x: e.cache(filter)) {
+		for(Event x: p.cache(filter)) {
 			if(x instanceof Load) {
 				Event next = x.getSuccessor();
 				Event nnext = next.getSuccessor();
@@ -62,7 +63,7 @@ public class RelRMW extends StaticRelation {
 		}
 
 		filter = FilterIntersection.get(FilterBasic.get(EType.RMW), FilterBasic.get(EType.ATOMIC));
-		for(Event end: e.cache(filter)) {
+		for(Event end: p.cache(filter)) {
 			// TODO: why some non EndAtomic events match the ATOMIC filter?
 			// The check below should not be necessary, but better to have
 			// in case some other event might get ATOMIC tag in the future
@@ -80,7 +81,7 @@ public class RelRMW extends StaticRelation {
 
 		s.addAll(baseMaxTupleSet);
 
-		for(EncodeContext.Thread thread: e.thread())
+		for(ProgramCache.Thread thread: p.thread())
 			for(Event load: thread.cache(loadFilter))
 				for(Event store: thread.cache(storeFilter))
 					if(load.getCId() < store.getCId())
@@ -88,16 +89,16 @@ public class RelRMW extends StaticRelation {
 	}
 
 	@Override
-	protected void encodeApprox(EncodeContext e, Atom atom) {
+	protected void encodeApprox(EncodeContext e, ProgramCache p, Atom atom) {
 		// Encode base (not exclusive pairs) RMW
 		TupleSet origEncodeTupleSet = encodeTupleSet;
 		encodeTupleSet = baseMaxTupleSet;
-		super.encodeApprox(e, atom);
+		super.encodeApprox(e, p, atom);
 		encodeTupleSet = origEncodeTupleSet;
 
 		// Encode RMW for exclusive pairs
 		LinkedList<BoolExpr> unpredictable = new LinkedList<>();
-		for(EncodeContext.Thread thread: e.thread()) {
+		for(ProgramCache.Thread thread: p.thread()) {
 			for(Event store: thread.cache(storeFilter)) {
 				LinkedList<BoolExpr> storeExec = new LinkedList<>();
 				for(Event load: thread.cache(loadFilter)) {

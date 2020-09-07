@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.wmm.relation.base.stat;
 
 import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.program.event.Event;
@@ -33,8 +34,8 @@ public class RelFencerel extends Relation {
 	}
 
 	@Override
-	protected void update(EncodeContext e, TupleSet s){
-		for(EncodeContext.Thread t: e.thread()) {
+	protected void update(ProgramCache p, TupleSet s){
+		for(ProgramCache.Thread t: p.thread()) {
 			List<Event> fences = t.cache(FilterBasic.get(fenceName));
 			if(!fences.isEmpty()) {
 				List<Event> events = t.cache(FilterBasic.get(EType.MEMORY));
@@ -57,8 +58,8 @@ public class RelFencerel extends Relation {
 	}
 
 	@Override
-	protected void encodeApprox(EncodeContext e) {
-		List<Event> fences = e.cache(FilterBasic.get(fenceName));
+	protected void encodeApprox(EncodeContext e, ProgramCache p) {
+		List<Event> fences = p.cache(FilterBasic.get(fenceName));
 		for(Tuple tuple: encodeTupleSet) {
 			Event e1 = tuple.getFirst();
 			Event e2 = tuple.getSecond();
@@ -73,9 +74,9 @@ public class RelFencerel extends Relation {
 	}
 
 	@Override
-	protected void encodeFirstOrder(EncodeContext e) {
+	protected void encodeFirstOrder(EncodeContext e, ProgramCache p) {
 		EncodeContext.RelationPredicate edge = e.of(this);
-		List<Event> fences = e.cache(FilterBasic.get(fenceName));
+		List<Event> fences = p.cache(FilterBasic.get(fenceName));
 		e.rule(e.forall(0,
 			(a, b) -> e.eq(edge.of(a, b), e.or(fences.stream().map(f -> e.and(f.exec(),
 				e.lt((ArithExpr) a, (ArithExpr) e.event(f)),

@@ -2,6 +2,7 @@ package com.dat3m.dartagnan.wmm.relation.base;
 
 import com.dat3m.dartagnan.program.arch.linux.utils.EType;
 import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.relation.base.stat.StaticRelation;
@@ -18,8 +19,8 @@ public class RelCrit extends StaticRelation {
 	}
 
 	@Override
-	protected void update(EncodeContext e, TupleSet s) {
-		for(EncodeContext.Thread thread: e.thread())
+	protected void update(ProgramCache p, TupleSet s) {
+		for(ProgramCache.Thread thread: p.thread())
 			for(Event lock: thread.cache(FilterBasic.get(EType.RCU_LOCK)))
 				for(Event unlock: thread.cache(FilterBasic.get(EType.RCU_UNLOCK)))
 					if(lock.getCId() < unlock.getCId())
@@ -29,8 +30,8 @@ public class RelCrit extends StaticRelation {
 	// TODO: Not the most efficient implementation
 	// Let's see if we need to keep a reference to a thread in events for anything else, and then optimize this method
 	@Override
-	protected void encodeApprox(EncodeContext e, Atom atom) {
-		for(EncodeContext.Thread thread: e.thread()) {
+	protected void encodeApprox(EncodeContext e, ProgramCache p, Atom atom) {
+		for(ProgramCache.Thread thread: p.thread()) {
 			for(Event lock: thread.cache(FilterBasic.get(EType.RCU_LOCK))) {
 				for(Event unlock: thread.cache(FilterBasic.get(EType.RCU_UNLOCK))) {
 					if(lock.getCId() < unlock.getCId()) {

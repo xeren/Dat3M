@@ -1,10 +1,8 @@
 package com.dat3m.dartagnan.wmm.axiom;
 
-import com.dat3m.dartagnan.program.Program;
-import com.dat3m.dartagnan.utils.Settings;
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
@@ -31,24 +29,23 @@ public abstract class Axiom {
         return rel;
     }
 
-    public BoolExpr encodeRelAndConsistency(Context ctx, Program program, Settings settings) {
-        EncodeContext e = new EncodeContext(ctx, program, settings);
-        rel.encode(e);
-        return ctx.mkAnd(e.allRules(), consistent(ctx));
+    public void encodeRelAndConsistency(EncodeContext context, ProgramCache program) {
+        rel.encode(context, program);
+        context.rule(consistent(context));
     }
     
-    public BoolExpr consistent(Context ctx) {
+    public BoolExpr consistent(EncodeContext context) {
         if(negate){
-            return _inconsistent(ctx);
+            return _inconsistent(context);
         }
-        return _consistent(ctx);
+        return _consistent(context);
     }
 
-    public BoolExpr inconsistent(Context ctx) {
+    public BoolExpr inconsistent(EncodeContext context) {
         if(negate){
-            return _consistent(ctx);
+            return _consistent(context);
         }
-        return _inconsistent(ctx);
+        return _inconsistent(context);
     }
 
     @Override
@@ -59,11 +56,11 @@ public abstract class Axiom {
         return _toString();
     }
 
-    public abstract TupleSet getEncodeTupleSet(EncodeContext context);
+    public abstract TupleSet getEncodeTupleSet(ProgramCache program);
 
-    protected abstract BoolExpr _consistent(Context ctx);
+    protected abstract BoolExpr _consistent(EncodeContext context);
 
-    protected abstract BoolExpr _inconsistent(Context ctx);
+    protected abstract BoolExpr _inconsistent(EncodeContext context);
 
     protected abstract String _toString();
 }

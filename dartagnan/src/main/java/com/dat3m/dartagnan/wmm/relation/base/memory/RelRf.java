@@ -2,6 +2,7 @@ package com.dat3m.dartagnan.wmm.relation.base.memory;
 
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.utils.Settings;
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.filter.FilterMinus;
 import com.dat3m.dartagnan.wmm.relation.EncodeContext;
@@ -22,10 +23,10 @@ public class RelRf extends Relation {
 	}
 
 	@Override
-	public void update(EncodeContext e, TupleSet s){
-		List<Event> eventsLoad = e.cache(FilterBasic.get(EType.READ));
-		List<Event> eventsInit = e.cache(FilterBasic.get(EType.INIT));
-		List<Event> eventsStore = e.cache(FilterMinus.get(FilterBasic.get(EType.WRITE), FilterBasic.get(EType.INIT)));
+	public void update(ProgramCache p, TupleSet s){
+		List<Event> eventsLoad = p.cache(FilterBasic.get(EType.READ));
+		List<Event> eventsInit = p.cache(FilterBasic.get(EType.INIT));
+		List<Event> eventsStore = p.cache(FilterMinus.get(FilterBasic.get(EType.WRITE), FilterBasic.get(EType.INIT)));
 
 		for(Event e1: eventsInit)
 			for(Event e2: eventsLoad)
@@ -39,7 +40,7 @@ public class RelRf extends Relation {
 	}
 
 	@Override
-	protected void encodeApprox(EncodeContext e) {
+	protected void encodeApprox(EncodeContext e, ProgramCache p) {
 		Map<MemEvent,LinkedList<BoolExpr>> edgeMap = new HashMap<>();
 		Map<MemEvent,LinkedList<BoolExpr>> memInitMap = new HashMap<>();
 
@@ -101,7 +102,7 @@ public class RelRf extends Relation {
 	}
 
 	@Override
-	protected void encodeFirstOrder(EncodeContext e) {
+	protected void encodeFirstOrder(EncodeContext e, ProgramCache p) {
 		EncodeContext.RelationPredicate edge = e.of(this);
 		e.rule(e.forall(0, (a,b)->e.implies(edge.of(a, b), e.or(
 				maxTupleSet.stream().map(t->e.and(
@@ -112,7 +113,7 @@ public class RelRf extends Relation {
 					e.eq(((MemEvent) t.getFirst()).getMemAddressExpr(), ((MemEvent) t.getSecond()).getMemAddressExpr()),
 					e.eq(((MemEvent) t.getFirst()).getMemValueExpr(), ((MemEvent) t.getSecond()).getMemValueExpr()))))),
 			(a,b)->e.pattern(edge.of(a, b))));
-		e.rule(e.and(e.cache(FilterBasic.get(EType.READ)).stream()
+		e.rule(e.and(p.cache(FilterBasic.get(EType.READ)).stream()
 			.map(r->e.exists(0, w->edge.of(w, e.event(r))))));
 		e.rule(e.forall(0, (a,b,c)->e.implies(e.and(edge.of(a, c), edge.of(b, c)), e.eq(a, b)),
 			(a,b,c)->e.pattern(edge.of(a, c), edge.of(b, c))));

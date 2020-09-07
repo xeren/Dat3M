@@ -2,9 +2,9 @@ package com.dat3m.dartagnan.wmm.relation.base.stat;
 
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
-import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import java.util.List;
@@ -29,8 +29,8 @@ public class RelPo extends StaticRelation {
 	}
 
 	@Override
-	public void update(EncodeContext e, TupleSet s) {
-		for(EncodeContext.Thread t: e.thread()) {
+	public void update(ProgramCache p, TupleSet s) {
+		for(ProgramCache.Thread t: p.thread()) {
 			List<Event> events = t.cache(filter);
 			ListIterator<Event> it1 = events.listIterator();
 			while(it1.hasNext()) {

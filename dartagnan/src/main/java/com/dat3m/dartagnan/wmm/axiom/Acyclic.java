@@ -1,155 +1,118 @@
 package com.dat3m.dartagnan.wmm.axiom;
 
-import com.dat3m.dartagnan.wmm.relation.EncodeContext;
-import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.wmm.ProgramCache;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.IntExpr;
 
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
-import static com.dat3m.dartagnan.wmm.utils.Utils.intVar;
-
 /**
- *
  * @author Florian Furbach
  */
 public class Acyclic extends Axiom {
 
-    public Acyclic(Relation rel) {
-        super(rel);
-    }
+	public Acyclic(Relation rel) {
+		super(rel);
+	}
 
-    public Acyclic(Relation rel, boolean negate) {
-        super(rel, negate);
-    }
+	public Acyclic(Relation rel, boolean negate) {
+		super(rel, negate);
+	}
 
-    @Override
-    public TupleSet getEncodeTupleSet(EncodeContext e){
-        Map<Event, Set<Event>> transMap = rel.getMaxTupleSet(e).transMap();
-        TupleSet result = new TupleSet();
+	@Override
+	public TupleSet getEncodeTupleSet(ProgramCache p) {
+		Map<Event,Set<Event>> transMap = rel.getMaxTupleSet(p).transMap();
+		TupleSet result = new TupleSet();
 
-        for(Event e1 : transMap.keySet()){
-            if(transMap.get(e1).contains(e1)){
-                for(Event e2 : transMap.get(e1)){
-                    if(e2.getCId() != e1.getCId() && transMap.get(e2).contains(e1)){
-                        result.add(new Tuple(e1, e2));
-                    }
-                }
-            }
-        }
+		for(Event e1: transMap.keySet()) {
+			if(transMap.get(e1).contains(e1)) {
+				for(Event e2: transMap.get(e1)) {
+					if(e2.getCId() != e1.getCId() && transMap.get(e2).contains(e1)) {
+						result.add(new Tuple(e1, e2));
+					}
+				}
+			}
+		}
 
-        for(Tuple tuple : rel.getMaxTupleSet(e)){
-            if(tuple.getFirst().getCId() == tuple.getSecond().getCId()){
-                result.add(tuple);
-            }
-        }
+		for(Tuple tuple: rel.getMaxTupleSet(p)) {
+			if(tuple.getFirst().getCId() == tuple.getSecond().getCId()) {
+				result.add(tuple);
+			}
+		}
 
-        result.retainAll(rel.getMaxTupleSet(e));
-        return result;
-    }
+		result.retainAll(rel.getMaxTupleSet(p));
+		return result;
+	}
 
-    @Override
-    protected BoolExpr _consistent(Context ctx) {
-        BoolExpr enc = ctx.mkTrue();
-        String name = rel.getName();
-        for(Tuple tuple : rel.getEncodeTupleSet()){
-            Event e1 = tuple.getFirst();
-            Event e2 = tuple.getSecond();
-            IntExpr i1 = intVar(name, e1, ctx);
-            IntExpr i2 = intVar(name, e2, ctx);
-            enc = ctx.mkAnd(enc, ctx.mkImplies(e1.exec(), ctx.mkGt(i1, ctx.mkInt(0))));
-            enc = ctx.mkAnd(enc, ctx.mkImplies(edge(name, e1, e2, ctx), ctx.mkLt(i1, i2)));
-        }
-        return enc;
-    }
+	@Override
+	protected BoolExpr _consistent(EncodeContext e) {
+		String name = rel.getName();
+		return e.and(rel.getEncodeTupleSet().stream()
+			.map(tuple->{
+				Event e1 = tuple.getFirst();
+				Event e2 = tuple.getSecond();
+				IntExpr i1 = e.intVar(name, e1);
+				IntExpr i2 = e.intVar(name, e2);
+				return e.and(
+					e.implies(e1.exec(), e.lt(e.zero(), i1)),
+					e.implies(e.edge(name, e1, e2), e.lt(i1, i2)));
+			}));
+	}
 
-    @Override
-    protected BoolExpr _inconsistent(Context ctx) {
-        return ctx.mkAnd(satCycleDef(ctx), satCycle(ctx));
-    }
+	@FunctionalInterface
+	private interface CycleVar {
+		BoolExpr of(Event event);
+	}
 
-    @Override
-    protected String _toString() {
-        return "acyclic " + rel.getName();
-    }
+	@Override
+	protected BoolExpr _inconsistent(EncodeContext e) {
+		String name = rel.getName();
+		String cycleName = "Cycle:" + name;
+		CycleVar cycleVar = event->e.context.mkBoolConst("Cycle(" + event.repr() + ")(" + name + ")");
+		return e.and(
+			e.and(rel.getEncodeTupleSet().stream()
+				.map(t->e.implies(
+					e.edge(cycleName, t),
+					e.and(
+						t.getFirst().exec(),
+						t.getSecond().exec(),
+						e.edge(name, t),
+						cycleVar.of(t.getFirst()),
+						cycleVar.of(t.getSecond()))))),
+			e.and(rel.getEncodeTupleSet().stream()
+				.map(Tuple::getFirst)
+				.distinct()
+				.map(t->e.implies(cycleVar.of(t), e.and(
+					e.or(rel.getEncodeTupleSet().getByFirst(t).stream()
+						.map(Tuple::getSecond)
+						.map(t1->e.and(
+							e.edge(cycleName, t, t1),
+							e.and(rel.getEncodeTupleSet().getByFirst(t).stream()
+								.map(Tuple::getSecond)
+								.filter(t2->t1.getCId() != t2.getCId())
+								.map(t2->e.not(e.edge(cycleName, t, t2))))))),
+					e.or(rel.getEncodeTupleSet().getBySecond(t).stream()
+						.map(Tuple::getFirst)
+						.map(t1->e.and(
+							e.edge(cycleName, t1, t),
+							e.and(rel.getEncodeTupleSet().getBySecond(t).stream()
+								.map(Tuple::getFirst)
+								.filter(t2->t1.getCId() != t2.getCId())
+								.map(t2->e.not(e.edge(cycleName, t2, t))))))))))),
+			e.or(rel.getEncodeTupleSet().stream()
+				.map(Tuple::getFirst)
+				.distinct()
+				.map(cycleVar::of)));
+	}
 
-    private BoolExpr satCycle(Context ctx) {
-        Set<Event> cycleEvents = new HashSet<>();
-        for(Tuple tuple : rel.getEncodeTupleSet()){
-            cycleEvents.add(tuple.getFirst());
-        }
-
-        BoolExpr cycle = ctx.mkFalse();
-        for(Event e : cycleEvents){
-            cycle = ctx.mkOr(cycle, cycleVar(rel.getName(), e, ctx));
-        }
-
-        return cycle;
-    }
-
-    private BoolExpr satCycleDef(Context ctx){
-        BoolExpr enc = ctx.mkTrue();
-        Set<Event> encoded = new HashSet<>();
-        String name = rel.getName();
-
-        for(Tuple t : rel.getEncodeTupleSet()){
-            Event e1 = t.getFirst();
-            Event e2 = t.getSecond();
-
-            enc = ctx.mkAnd(enc, ctx.mkImplies(
-                    cycleEdge(name, e1, e2, ctx),
-                    ctx.mkAnd(
-                            e1.exec(),
-                            e2.exec(),
-                            edge(name, e1, e2, ctx),
-                            cycleVar(name, e1, ctx),
-                            cycleVar(name, e2, ctx)
-            )));
-
-            if(!encoded.contains(e1)){
-                encoded.add(e1);
-
-                BoolExpr source = ctx.mkFalse();
-                for(Tuple tuple1 : rel.getEncodeTupleSet().getByFirst(e1)){
-                    BoolExpr opt = cycleEdge(name, e1, tuple1.getSecond(), ctx);
-                    for(Tuple tuple2 : rel.getEncodeTupleSet().getByFirst(e1)){
-                        if(tuple1.getSecond().getCId() != tuple2.getSecond().getCId()){
-                            opt = ctx.mkAnd(opt, ctx.mkNot(cycleEdge(name, e1, tuple2.getSecond(), ctx)));
-                        }
-                    }
-                    source = ctx.mkOr(source, opt);
-                }
-
-                BoolExpr target = ctx.mkFalse();
-                for(Tuple tuple1 : rel.getEncodeTupleSet().getBySecond(e1)){
-                    BoolExpr opt = cycleEdge(name, tuple1.getFirst(), e1, ctx);
-                    for(Tuple tuple2 : rel.getEncodeTupleSet().getBySecond(e1)){
-                        if(tuple1.getFirst().getCId() != tuple2.getFirst().getCId()){
-                            opt = ctx.mkAnd(opt, ctx.mkNot(cycleEdge(name, tuple2.getFirst(), e1, ctx)));
-                        }
-                    }
-                    target = ctx.mkOr(target, opt);
-                }
-
-                enc = ctx.mkAnd(enc, ctx.mkImplies(cycleVar(name, e1, ctx), ctx.mkAnd(source, target)));
-            }
-        }
-
-        return enc;
-    }
-
-    private BoolExpr cycleVar(String relName, Event e, Context ctx) {
-        return ctx.mkBoolConst("Cycle(" + e.repr() + ")(" + relName + ")");
-    }
-
-    private BoolExpr cycleEdge(String relName, Event e1, Event e2, Context ctx) {
-        return ctx.mkBoolConst("Cycle:" + relName + "(" + e1.repr() + "," + e2.repr() + ")");
-    }
+	@Override
+	protected String _toString() {
+		return "acyclic " + rel.getName();
+	}
 }

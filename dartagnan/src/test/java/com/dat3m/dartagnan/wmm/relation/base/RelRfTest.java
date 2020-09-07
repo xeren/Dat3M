@@ -8,6 +8,7 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.utils.ResourceHelper;
 import com.dat3m.dartagnan.utils.Settings;
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.relation.EncodeContext;
@@ -97,7 +98,8 @@ public class RelRfTest {
 
         Context ctx = new Context();
         Solver solver = ctx.mkSolver(ctx.mkTactic(Settings.TACTIC));
-        EncodeContext context = new EncodeContext(ctx, program, settings);
+        EncodeContext context = new EncodeContext(ctx, settings);
+        ProgramCache cache = new ProgramCache(program);
 
         solver.add(program.getAss().encode(ctx));
         if(program.getAssFilter() != null){
@@ -105,7 +107,7 @@ public class RelRfTest {
         }
         solver.add(program.encodeCF(ctx));
         solver.add(program.encodeFinalRegisterValues(ctx));
-        wmm.encode(context);
+        wmm.encode(context, cache);
         solver.add(context.allRules());
         // Don't add constraint of MM, they can also forbid illegal edges
 

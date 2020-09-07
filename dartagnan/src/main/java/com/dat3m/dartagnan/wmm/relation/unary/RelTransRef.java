@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.wmm.relation.unary;
 
 import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.program.event.Event;
@@ -41,16 +42,16 @@ public class RelTransRef extends RelTrans {
 	}
 
 	@Override
-	protected void update(EncodeContext e, TupleSet s, TupleSet s1) {
-		super.update(e, s, s1);
+	protected void update(ProgramCache p, TupleSet s, TupleSet s1) {
+		super.update(p, s, s1);
 		for(Map.Entry<Event, Set<Event>> entry: transitiveReachabilityMap.entrySet())
 			entry.getValue().remove(entry.getKey());
-		for(Event x: e.cache(FilterBasic.get(EType.ANY)))
+		for(Event x: p.cache(FilterBasic.get(EType.ANY)))
 			s.add(new Tuple(x, x));
 	}
 
 	@Override
-	public void addEncodeTupleSet(EncodeContext e, TupleSet s) {
+	public void addEncodeTupleSet(ProgramCache p, TupleSet s) {
 		TupleSet activeSet = new TupleSet();
 		activeSet.addAll(s);
 		activeSet.removeAll(encodeTupleSet);
@@ -66,41 +67,41 @@ public class RelTransRef extends RelTrans {
 
 		TupleSet temp = encodeTupleSet;
 		encodeTupleSet = transEncodeTupleSet;
-		super.addEncodeTupleSet(e, activeSet);
+		super.addEncodeTupleSet(p, activeSet);
 		encodeTupleSet = temp;
 	}
 
 	@Override
-	protected void encodeApprox(EncodeContext context) {
-		invokeEncode(context, super::encodeApprox);
+	protected void encodeApprox(EncodeContext e, ProgramCache p) {
+		invokeEncode(e, p, super::encodeApprox);
 	}
 
 	@Override
-	protected void encodeIDL(EncodeContext context) {
-		invokeEncode(context, super::encodeIDL);
+	protected void encodeIDL(EncodeContext e, ProgramCache p) {
+		invokeEncode(e, p, super::encodeIDL);
 	}
 
 	@Override
-	protected void encodeLFP(EncodeContext context) {
-		invokeEncode(context, super::encodeLFP);
+	protected void encodeLFP(EncodeContext e, ProgramCache p) {
+		invokeEncode(e, p, super::encodeLFP);
 	}
 
 	@FunctionalInterface
 	private interface Encoder {
-		void encode(EncodeContext context);
+		void encode(EncodeContext context, ProgramCache program);
 	}
 
-	private void invokeEncode(EncodeContext context, Encoder encoder) {
+	private void invokeEncode(EncodeContext context, ProgramCache program, Encoder encoder) {
 		TupleSet temp = encodeTupleSet;
 		encodeTupleSet = transEncodeTupleSet;
-		encoder.encode(context);
+		encoder.encode(context, program);
 		encodeTupleSet = temp;
 		for(Tuple tuple: identityEncodeTupleSet)
 			context.rule(context.edge(this, tuple.getFirst(), tuple.getFirst()));
 	}
 
 	@Override
-	protected void encodeFirstOrder(EncodeContext e) {
+	protected void encodeFirstOrder(EncodeContext e, ProgramCache p) {
 		EncodeContext.RelationPredicate edge = e.of(this);
 		EncodeContext.RelationPredicate edge1 = e.of(r1);
 		e.rule(e.forall(0, (a,c)->e.or(e.not(edge.of(a, c)), e.eq(a, c), edge1.of(a, c),

@@ -1,13 +1,9 @@
 package com.dat3m.dartagnan.wmm.relation;
 
-import com.dat3m.dartagnan.program.Program;
-import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.utils.Settings;
-import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.Utils;
-import com.google.common.collect.ImmutableList;
 import com.microsoft.z3.*;
 import java.util.*;
 import java.util.stream.Stream;
@@ -15,15 +11,13 @@ import java.util.stream.Stream;
 public class EncodeContext {
 
 	public final Context context;
-	public final Program program;
 	public final Settings settings;
 	private final Sort sortEvent;
 	private final HashSet<Relation> done = new HashSet<>();
 	private final LinkedList<BoolExpr> rule = new LinkedList<>();
 
-	public EncodeContext(Context context, Program program, Settings settings) {
+	public EncodeContext(Context context, Settings settings) {
 		this.context = context;
-		this.program = program;
 		this.settings = settings;
 		sortEvent = context.mkIntSort();
 	}
@@ -62,33 +56,16 @@ public class EncodeContext {
 		return result;
 	}
 
-	@FunctionalInterface
-	public interface Thread {
-		List<Event> cache(FilterAbstract filter);
-	}
-
-	public Thread[] thread() {
-		return program.getThreads().stream()
-			.map(com.dat3m.dartagnan.program.Thread::getCache)
-			.map(t->(Thread)(t::getEvents))
-			.toArray(Thread[]::new);
-	}
-
-	public List<Event> cache(FilterAbstract filter) {
-		return program.getCache().getEvents(filter);
-	}
-
-	public List<Event> cache(Register register) {
-		List<Event> result = program.getCache().getRegWriterMap().get(register);
-		return null != result ? result : ImmutableList.of();
-	}
-
 	public Expr event(Event event) {
 		return context.mkNumeral(event.getCId(), sortEvent);
 	}
 
 	public BoolExpr edge(String name, Event first, Event second) {
 		return Utils.edge(name, first, second, context);
+	}
+
+	public BoolExpr edge(String name, Tuple tuple) {
+		return edge(name, tuple.getFirst(), tuple.getSecond());
 	}
 
 	/**

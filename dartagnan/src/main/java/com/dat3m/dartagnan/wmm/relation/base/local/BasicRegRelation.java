@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.wmm.relation.base.local;
 
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.relation.base.stat.StaticRelation;
@@ -21,10 +22,10 @@ abstract class BasicRegRelation extends StaticRelation {
 
 	protected abstract Collection<Register> getRegisters(Event regReader);
 
-	protected final void doEncodeApprox(EncodeContext e, Atom atom, Collection<Event> regReaders) {
-		for(Event regReader: regReaders) {
+	protected final void encodeApprox(EncodeContext e, ProgramCache p, Atom atom) {
+		for(Event regReader: p.cache(FilterBasic.get(etype))) {
 			for(Register register: getRegisters(regReader)) {
-				List<Event> writers = e.cache(register);
+				List<Event> writers = p.cache(register);
 				if(writers.isEmpty() || writers.get(0).getCId() >= regReader.getCId()) {
 					e.rule(e.eq(e.zero(), register.toZ3Int(regReader, e.context)));
 					continue;
@@ -60,20 +61,15 @@ abstract class BasicRegRelation extends StaticRelation {
 	}
 
 	@Override
-	protected void update(EncodeContext e, TupleSet s) {
-		for(Event regReader: e.cache(FilterBasic.get(etype))) {
+	protected void update(ProgramCache p, TupleSet s) {
+		for(Event regReader: p.cache(FilterBasic.get(etype))) {
 			for(Register register: getRegisters(regReader)) {
-				for(Event regWriter: e.cache(register)) {
+				for(Event regWriter: p.cache(register)) {
 					if(regWriter.getCId() >= regReader.getCId())
 						break;
 					s.add(new Tuple(regWriter, regReader));
 				}
 			}
 		}
-	}
-
-	@Override
-	protected void encodeApprox(EncodeContext context, Atom atom) {
-		doEncodeApprox(context, atom, context.cache(FilterBasic.get(etype)));
 	}
 }

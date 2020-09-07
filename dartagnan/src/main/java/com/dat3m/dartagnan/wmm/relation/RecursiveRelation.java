@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.wmm.relation;
 
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
@@ -33,28 +34,28 @@ public class RecursiveRelation extends Relation {
 	}
 
 	@Override
-	public void update(EncodeContext e, TupleSet s) {
+	public void update(ProgramCache p, TupleSet s) {
 	}
 
 	/**
 	 * @return
 	 * The tuple set changed by some element.
 	 */
-	public boolean getMaxTupleSetRecursiveR(EncodeContext context) {
-		int old = getMaxTupleSet(context).size();
-		maxTupleSet = r1.getMaxTupleSetRecursive(context);
+	public boolean getMaxTupleSetRecursiveR(ProgramCache program) {
+		int old = getMaxTupleSet(program).size();
+		maxTupleSet = r1.getMaxTupleSetRecursive(program);
 		return old != maxTupleSet.size();
 	}
 
 	@Override
-	public void addEncodeTupleSet(EncodeContext e, TupleSet s) {
+	public void addEncodeTupleSet(ProgramCache p, TupleSet s) {
 		if(encodeTupleSet != s)
 			encodeTupleSet.addAll(s);
 	}
 
-	public void addEncodeTupleSetR(EncodeContext context, TupleSet tuples) {
-		addEncodeTupleSet(context, tuples);
-		r1.addEncodeTupleSet(context, encodeTupleSet);
+	public void addEncodeTupleSetR(ProgramCache program, TupleSet tuples) {
+		addEncodeTupleSet(program, tuples);
+		r1.addEncodeTupleSet(program, encodeTupleSet);
 	}
 
 	public void setRecursiveGroupIdR(int id) {
@@ -74,27 +75,27 @@ public class RecursiveRelation extends Relation {
 	}
 
 	@Override
-	protected void doEncode(EncodeContext context) {
-		r1.encode(context);
+	protected void doEncode(EncodeContext e, ProgramCache p) {
+		r1.encode(e, p);
 	}
 
 	@Override
-	protected void encodeLFP(EncodeContext context) {
-		r1.encodeLFP(context);
+	protected void encodeLFP(EncodeContext e, ProgramCache p) {
+		r1.encodeLFP(e, p);
 	}
 
 	@Override
-	protected void encodeIDL(EncodeContext context) {
-		r1.encodeIDL(context);
+	protected void encodeIDL(EncodeContext e, ProgramCache p) {
+		r1.encodeIDL(e, p);
 	}
 
 	@Override
-	protected void encodeApprox(EncodeContext context) {
-		r1.encodeApprox(context);
+	protected void encodeApprox(EncodeContext e, ProgramCache p) {
+		r1.encodeApprox(e, p);
 	}
 
-	public void encodeIterationR(EncodeContext e, int recGroupId, int iteration) {
-		r1.encodeIteration(e, recGroupId, iteration);
+	public void encodeIterationR(EncodeContext e, ProgramCache p, int recGroupId, int iteration) {
+		r1.encodeIteration(e, p, recGroupId, iteration);
 	}
 
 	public void encodeFinalIteration(EncodeContext e, int iteration) {
@@ -104,7 +105,7 @@ public class RecursiveRelation extends Relation {
 	}
 
 	@Override
-	protected void encodeFirstOrder(EncodeContext context) {
-		r1.encodeFirstOrder(context);
+	protected void encodeFirstOrder(EncodeContext e, ProgramCache p) {
+		r1.encodeFirstOrder(e, p);
 	}
 }

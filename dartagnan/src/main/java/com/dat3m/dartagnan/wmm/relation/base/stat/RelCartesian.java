@@ -1,8 +1,8 @@
 package com.dat3m.dartagnan.wmm.relation.base.stat;
 
 import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
-import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
@@ -30,9 +30,9 @@ public class RelCartesian extends StaticRelation {
 	}
 
 	@Override
-	public void update(EncodeContext e, TupleSet s) {
-		List<Event> l1 = e.cache(filter1);
-		List<Event> l2 = e.cache(filter2);
+	public void update(ProgramCache p, TupleSet s) {
+		List<Event> l1 = p.cache(filter1);
+		List<Event> l2 = p.cache(filter2);
 		for(Event e1: l1)
 			for(Event e2: l2)
 				s.add(new Tuple(e1, e2));

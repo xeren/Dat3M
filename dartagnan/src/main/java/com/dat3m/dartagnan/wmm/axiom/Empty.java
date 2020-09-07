@@ -1,13 +1,10 @@
 package com.dat3m.dartagnan.wmm.axiom;
 
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.wmm.relation.Relation;
-import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
-
-import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 
 public class Empty extends Axiom {
 
@@ -20,28 +17,20 @@ public class Empty extends Axiom {
     }
 
     @Override
-    public TupleSet getEncodeTupleSet(EncodeContext e){
-        return rel.getMaxTupleSet(e);
+    public TupleSet getEncodeTupleSet(ProgramCache p){
+        return rel.getMaxTupleSet(p);
     }
 
     @Override
-    protected BoolExpr _consistent(Context ctx) {
-        BoolExpr enc = ctx.mkTrue();
+    protected BoolExpr _consistent(EncodeContext e) {
         String name = rel.getName();
-        for(Tuple tuple : rel.getEncodeTupleSet()){
-            enc = ctx.mkAnd(enc, ctx.mkNot(edge(name, tuple.getFirst(), tuple.getSecond(), ctx)));
-        }
-        return enc;
+        return e.and(rel.getEncodeTupleSet().stream().map(t->e.not(e.edge(name, t))));
     }
 
     @Override
-    protected BoolExpr _inconsistent(Context ctx) {
-        BoolExpr enc = ctx.mkFalse();
+    protected BoolExpr _inconsistent(EncodeContext e) {
         String name = rel.getName();
-        for(Tuple tuple : rel.getEncodeTupleSet()){
-            enc = ctx.mkOr(enc, edge(name, tuple.getFirst(), tuple.getSecond(), ctx));
-        }
-        return enc;
+        return e.or(rel.getEncodeTupleSet().stream().map(t->e.edge(name, t)));
     }
 
     @Override

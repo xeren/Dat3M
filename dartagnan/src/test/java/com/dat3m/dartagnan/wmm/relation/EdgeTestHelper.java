@@ -2,6 +2,7 @@ package com.dat3m.dartagnan.wmm.relation;
 
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.google.common.collect.HashMultimap;
@@ -30,9 +31,9 @@ public class EdgeTestHelper {
     }
 
     // Encode violation of expected event pairs in the relation
-    public BoolExpr encodeIllegalEdges(EncodeContext context, int[] data){
+    public BoolExpr encodeIllegalEdges(EncodeContext context, ProgramCache program, int[] data){
         Set<Tuple> all = mkAllTuples();
-        Set<Tuple> max = relation.getMaxTupleSet(context);
+        Set<Tuple> max = relation.getMaxTupleSet(program);
         Set<Tuple> expected = mkExpectedTuples(all, data);
         ArrayList<BoolExpr> enc = new ArrayList<>();
         String name = relation.getName();

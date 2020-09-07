@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.wmm.relation.unary;
 
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.dat3m.dartagnan.wmm.relation.Relation;
@@ -20,11 +21,11 @@ public abstract class UnaryRelation extends Relation {
 		this.r1 = r1;
 	}
 
-	protected abstract void update(EncodeContext context, TupleSet set, TupleSet first);
+	protected abstract void update(ProgramCache program, TupleSet set, TupleSet first);
 
 	@Override
-	protected void update(EncodeContext e, TupleSet s) {
-		update(e, s, r1.getMaxTupleSet(e));
+	protected void update(ProgramCache p, TupleSet s) {
+		update(p, s, r1.getMaxTupleSet(p));
 	}
 
 	@Override
@@ -46,8 +47,8 @@ public abstract class UnaryRelation extends Relation {
 	}
 
 	@Override
-	protected void doEncode(EncodeContext context) {
-		r1.encode(context);
-		super.doEncode(context);
+	protected void doEncode(EncodeContext e, ProgramCache p) {
+		r1.encode(e, p);
+		super.doEncode(e, p);
 	}
 }

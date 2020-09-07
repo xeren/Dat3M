@@ -3,8 +3,8 @@ package com.dat3m.dartagnan.wmm.relation.base.stat;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.If;
 import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
-import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
@@ -17,8 +17,8 @@ public class RelCtrlDirect extends StaticRelation {
 	}
 
 	@Override
-	protected void update(EncodeContext e, TupleSet s) {
-		for(EncodeContext.Thread thread: e.thread()) {
+	protected void update(ProgramCache p, TupleSet s) {
+		for(ProgramCache.Thread thread: p.thread()) {
 			for(Event e1: thread.cache(FilterBasic.get(EType.CMP))) {
 				for(Event e2: ((If) e1).getMainBranchEvents())
 					s.add(new Tuple(e1, e2));

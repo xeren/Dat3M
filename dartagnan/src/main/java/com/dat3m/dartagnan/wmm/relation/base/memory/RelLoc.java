@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.wmm.relation.base.memory;
 
 import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.relation.Relation;
@@ -18,8 +19,8 @@ public class RelLoc extends Relation {
 	}
 
 	@Override
-	protected void update(EncodeContext e, TupleSet s){
-		List<Event> events = e.cache(FilterBasic.get(EType.MEMORY));
+	protected void update(ProgramCache p, TupleSet s){
+		List<Event> events = p.cache(FilterBasic.get(EType.MEMORY));
 		for(Event e1: events)
 			for(Event e2: events)
 				if(e1.getCId() != e2.getCId() && MemEvent.canAddressTheSameLocation((MemEvent) e1, (MemEvent) e2))
@@ -27,7 +28,7 @@ public class RelLoc extends Relation {
 	}
 
 	@Override
-	protected void encodeApprox(EncodeContext e) {
+	protected void encodeApprox(EncodeContext e, ProgramCache p) {
 		for(Tuple tuple: encodeTupleSet)
 			e.rule(e.eq(e.edge(this, tuple), e.and(
 				tuple.getFirst().exec(),
@@ -38,10 +39,10 @@ public class RelLoc extends Relation {
 	}
 
 	@Override
-	protected void encodeFirstOrder(EncodeContext e) {
+	protected void encodeFirstOrder(EncodeContext e, ProgramCache p) {
 		//TODO restrict to M*M
 		EncodeContext.RelationPredicate edge = e.of(this);
-		List<Event> events = e.cache(FilterBasic.get(EType.MEMORY));
+		List<Event> events = p.cache(FilterBasic.get(EType.MEMORY));
 		e.rule(e.and(events.stream().map(MemEvent.class::cast).flatMap(a->events.stream().map(MemEvent.class::cast)
 			.filter(b->a.getCId() != b.getCId())
 			.filter(b->MemEvent.canAddressTheSameLocation(a, b))

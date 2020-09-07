@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.wmm.relation.unary;
 
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.IntExpr;
@@ -40,7 +41,7 @@ public class RelTrans extends UnaryRelation {
 	}
 
 	@Override
-	protected void update(EncodeContext e, TupleSet s, TupleSet s1) {
+	protected void update(ProgramCache p, TupleSet s, TupleSet s1) {
 		transitiveReachabilityMap = s1.transMap();
 		for(Event e1: transitiveReachabilityMap.keySet())
 			for(Event e2: transitiveReachabilityMap.get(e1))
@@ -48,7 +49,7 @@ public class RelTrans extends UnaryRelation {
 	}
 
 	@Override
-	public void addEncodeTupleSet(EncodeContext e, TupleSet tuples) {
+	public void addEncodeTupleSet(ProgramCache p, TupleSet tuples) {
 		TupleSet activeSet = new TupleSet();
 		activeSet.addAll(tuples);
 		activeSet.removeAll(encodeTupleSet);
@@ -57,7 +58,7 @@ public class RelTrans extends UnaryRelation {
 
 		TupleSet processNow = new TupleSet();
 		processNow.addAll(activeSet);
-		processNow.retainAll(getMaxTupleSet(e));
+		processNow.retainAll(getMaxTupleSet(p));
 
 		TupleSet result = new TupleSet();
 
@@ -81,20 +82,20 @@ public class RelTrans extends UnaryRelation {
 		}
 
 		if(fullEncodeTupleSet.addAll(result)) {
-			result.retainAll(r1.getMaxTupleSet(e));
-			r1.addEncodeTupleSet(e, result);
+			result.retainAll(r1.getMaxTupleSet(p));
+			r1.addEncodeTupleSet(p, result);
 		}
 	}
 
 	@Override
-	protected void encodeApprox(EncodeContext e) {
+	protected void encodeApprox(EncodeContext e, ProgramCache p) {
 		for(Tuple tuple: fullEncodeTupleSet) {
 			LinkedList<BoolExpr> orClause = new LinkedList<>();
 
 			Event e1 = tuple.getFirst();
 			Event e2 = tuple.getSecond();
 
-			if(r1.getMaxTupleSet(e).contains(tuple))
+			if(r1.getMaxTupleSet(p).contains(tuple))
 				orClause.add(e.edge(r1, e1, e2));
 
 			for(Event e3: transitiveReachabilityMap.get(e1))
@@ -108,7 +109,7 @@ public class RelTrans extends UnaryRelation {
 	}
 
 	@Override
-	protected void encodeIDL(EncodeContext e) {
+	protected void encodeIDL(EncodeContext e, ProgramCache p) {
 		String nameConcat = "(" + getName() + ";" + getName() + ")";
 		for(Tuple tuple: fullEncodeTupleSet) {
 			Event e1 = tuple.getFirst();
@@ -138,7 +139,7 @@ public class RelTrans extends UnaryRelation {
 	}
 
 	@Override
-	protected void encodeLFP(EncodeContext e) {
+	protected void encodeLFP(EncodeContext e, ProgramCache p) {
 		int iteration = 0;
 
 		// Encode initial iteration
@@ -189,7 +190,8 @@ public class RelTrans extends UnaryRelation {
 			e.rule(e.eq(e.edge(this, tuple), e.edge(r1, iteration, tuple)));
 	}
 
-	protected void encodeFirstOrder(EncodeContext e) {
+	@Override
+	protected void encodeFirstOrder(EncodeContext e, ProgramCache p) {
 		EncodeContext.RelationPredicate edge = e.of(this);
 		EncodeContext.RelationPredicate edge1 = e.of(r1);
 		e.rule(e.forall(0, (a,c)->e.or(e.not(edge.of(a, c)), edge1.of(a, c),

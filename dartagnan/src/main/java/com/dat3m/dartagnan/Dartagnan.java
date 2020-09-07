@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import org.apache.commons.cli.HelpFormatter;
 
 import com.dat3m.dartagnan.asserts.AbstractAssert;
@@ -99,13 +100,13 @@ public class Dartagnan {
 	}
 
 	public static Result testProgram(Solver s1, Context ctx, Program program, Wmm wmm, Arch target, Settings settings) {
-		return testProgram(new EncodeContext(ctx, program, settings), s1, wmm, target);
+		return testProgram(new EncodeContext(ctx, settings), new ProgramCache(program), s1, wmm, target);
 	}
 
-	public static Result testProgram(EncodeContext context, Solver s1, Wmm wmm, Arch target) {
+	public static Result testProgram(EncodeContext context, ProgramCache cache, Solver s1, Wmm wmm, Arch target) {
 
 		Context ctx = context.context;
-		Program program = context.program;
+		Program program = cache.program;
 
 		program.unroll(context.settings.getBound(), 0);
 
@@ -139,12 +140,13 @@ public class Dartagnan {
 		s1.add(encodeFinalRegisterValues);
 		s2.add(encodeFinalRegisterValues);
 
-		wmm.encode(context);
+		wmm.encode(context, new ProgramCache(program));
 		BoolExpr encodeWmm = context.allRules();
 		s1.add(encodeWmm);
 		s2.add(encodeWmm);
 
-		BoolExpr encodeConsistency = wmm.consistent(ctx);
+		wmm.consistent(context);
+		BoolExpr encodeConsistency = context.allRules();
 		s1.add(encodeConsistency);
 		s2.add(encodeConsistency);
 
@@ -188,14 +190,15 @@ public class Dartagnan {
 			}
 		}
 
-		EncodeContext e = new EncodeContext(ctx, program, settings);
+		EncodeContext e = new EncodeContext(ctx, settings);
 
 		solver.add(program.encodeUINonDet(ctx));
 		solver.add(program.encodeCF(ctx));
 		solver.add(program.encodeFinalRegisterValues(ctx));
-		wmm.encodeBase(e);
+		ProgramCache p = new ProgramCache(program);
+		wmm.encodeBase(e, p);
+		wmm.getAxioms().get(cegar).encodeRelAndConsistency(e, p);
 		solver.add(e.allRules());
-		solver.add(wmm.getAxioms().get(cegar).encodeRelAndConsistency(ctx, program, settings));
 
 		if(program.getAssFilter() != null)
 			solver.add(program.getAssFilter().encode(ctx));
@@ -238,10 +241,11 @@ public class Dartagnan {
 			solver.check();
 			BoolExpr execution = program.getRf(ctx, solver.getModel());
 			solver.add(execution);
-			wmm.encodeBase(e);
+			wmm.encodeBase(e, new ProgramCache(program));
 			solver.add(e.allRules());
 			for(Axiom ax: wmm.getAxioms()) {
-				BoolExpr enc = ax.encodeRelAndConsistency(ctx, program, settings);
+				ax.encodeRelAndConsistency(e, p);
+				BoolExpr enc = e.allRules();
 				BoolExpr axVar = ctx.mkBoolConst(ax.toString());
 				solver.assertAndTrack(enc, axVar);
 				track.put(axVar, enc);

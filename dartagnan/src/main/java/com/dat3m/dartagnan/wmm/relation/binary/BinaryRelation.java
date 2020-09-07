@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.wmm.relation.binary;
 
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -25,20 +26,20 @@ public abstract class BinaryRelation extends Relation {
 		this.r2 = r2;
 	}
 
-	protected abstract void update(EncodeContext context, TupleSet set, TupleSet first, TupleSet second);
+	protected abstract void update(ProgramCache program, TupleSet set, TupleSet first, TupleSet second);
 
 	@Override
-	protected void update(EncodeContext e, TupleSet s) {
-		update(e, s, r1.getMaxTupleSet(e), r2.getMaxTupleSet(e));
+	protected void update(ProgramCache p, TupleSet s) {
+		update(p, s, r1.getMaxTupleSet(p), r2.getMaxTupleSet(p));
 	}
 
 	@Override
-	public TupleSet getMaxTupleSetRecursive(EncodeContext e) {
+	public TupleSet getMaxTupleSetRecursive(ProgramCache p) {
 		if(recursiveGroupId > 0 && maxTupleSet != null) {
-			update(e, maxTupleSet, r1.getMaxTupleSetRecursive(e), r2.getMaxTupleSetRecursive(e));
+			update(p, maxTupleSet, r1.getMaxTupleSetRecursive(p), r2.getMaxTupleSetRecursive(p));
 			return maxTupleSet;
 		}
-		return getMaxTupleSet(e);
+		return getMaxTupleSet(p);
 	}
 
 	@Override
@@ -59,28 +60,28 @@ public abstract class BinaryRelation extends Relation {
 	}
 
 	@Override
-	public void addEncodeTupleSet(EncodeContext e, TupleSet s) {
+	public void addEncodeTupleSet(ProgramCache p, TupleSet s) {
 		TupleSet activeSet = new TupleSet();
 		activeSet.addAll(s);
 		activeSet.removeAll(encodeTupleSet);
 		encodeTupleSet.addAll(activeSet);
 		activeSet.retainAll(maxTupleSet);
 		if(!activeSet.isEmpty()) {
-			r1.addEncodeTupleSet(e, activeSet);
-			r2.addEncodeTupleSet(e, activeSet);
+			r1.addEncodeTupleSet(p, activeSet);
+			r2.addEncodeTupleSet(p, activeSet);
 		}
 	}
 
 	@Override
-	protected void doEncode(EncodeContext e) {
-		r1.encode(e);
-		r2.encode(e);
-		super.doEncode(e);
+	protected void doEncode(EncodeContext e, ProgramCache p) {
+		r1.encode(e, p);
+		r2.encode(e, p);
+		super.doEncode(e, p);
 	}
 
 	@Override
-	protected void encodeLFP(EncodeContext e) {
+	protected void encodeLFP(EncodeContext e, ProgramCache p) {
 		if(recursiveGroupId <= 0)
-			encodeApprox(e);
+			encodeApprox(e, p);
 	}
 }
