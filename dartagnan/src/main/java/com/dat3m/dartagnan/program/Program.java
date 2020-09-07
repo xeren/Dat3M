@@ -3,6 +3,7 @@ package com.dat3m.dartagnan.program;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.program.utils.ThreadCache;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
@@ -19,8 +20,6 @@ import com.dat3m.dartagnan.program.event.Local;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
 import com.dat3m.dartagnan.program.memory.Location;
 import com.dat3m.dartagnan.program.memory.Memory;
-
-import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 
 import java.util.*;
 
@@ -220,22 +219,18 @@ public class Program {
         	}
         	ExprInterface expr = ((Local)e).getExpr();
 			if(expr instanceof INonDet) {
-	        	enc = ctx.mkAnd(enc, ctx.mkGe(((INonDet)expr).toZ3Int(e, ctx), ctx.mkInt(((INonDet)expr).getMin())));
-	        	enc = ctx.mkAnd(enc, ctx.mkLe(((INonDet)expr).toZ3Int(e, ctx), ctx.mkInt(((INonDet)expr).getMax())));
+	        	enc = ctx.mkAnd(enc, ctx.mkGe(expr.toZ3Int(e, ctx), ctx.mkInt(((INonDet)expr).getMin())));
+	        	enc = ctx.mkAnd(enc, ctx.mkLe(expr.toZ3Int(e, ctx), ctx.mkInt(((INonDet)expr).getMax())));
 			}
         }
         return enc;  	
     }
 
-    public BoolExpr getRf(Context ctx, Model m) {
-    	BoolExpr enc = ctx.mkTrue();
-        for(Event r : getCache().getEvents(FilterBasic.get(EType.READ))){
-            for(Event w : getCache().getEvents(FilterBasic.get(EType.WRITE))){
-        		if(m.getConstInterp(edge("rf", w, r, ctx)) != null && m.getConstInterp(edge("rf", w, r, ctx)).isTrue()) {
-        			enc = ctx.mkAnd(enc, edge("rf", w, r, ctx));
-        		}
-        	}
-        }
-        return enc;  	
+    public BoolExpr getRf(EncodeContext context, Model model) {
+    	List<Event> write = getCache().getEvents(FilterBasic.get(EType.WRITE));
+    	return context.and(getCache().getEvents(FilterBasic.get(EType.READ)).stream()
+				.flatMap(r->write.stream()
+					.map(w->context.edge("rf", w, r)))
+				.filter(e->model.getConstInterp(e) != null && model.getConstInterp(e).isTrue()));
     }
 }

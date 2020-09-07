@@ -3,16 +3,15 @@ package com.dat3m.dartagnan.utils;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Load;
 import com.dat3m.dartagnan.program.utils.EType;
-import com.dat3m.dartagnan.wmm.filter.FilterBasic;
-import com.dat3m.dartagnan.wmm.utils.Utils;
-import com.microsoft.z3.*;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Init;
 import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.program.memory.Location;
-
+import com.dat3m.dartagnan.wmm.filter.FilterBasic;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
+import com.microsoft.z3.*;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -33,8 +32,8 @@ public class Graph {
         colorMap.put("po", "brown");
     }
 
+    private final EncodeContext context;
     private Model model;
-    private Context ctx;
 
     private StringBuilder buffer;
     private Map<Integer, Location> mapAddressLocation;
@@ -49,19 +48,19 @@ public class Graph {
 
     private final String DEFAULT_EDGE_COLOR = "indigo";
 
-    public Graph(Model model, Context ctx, Program program, Collection<String> relations){
-        this(model, ctx, relations);
+    public Graph(EncodeContext context, Model model, Program program, Collection<String> relations){
+        this(context, model, relations);
         build(program);
     }
 
-    public Graph(Model model, Context ctx, Program pSource, Program pTarget, Collection<String> relations){
-        this(model, ctx, relations);
+    public Graph(EncodeContext context, Model model, Program pSource, Program pTarget, Collection<String> relations){
+        this(context, model, relations);
         build(pSource, pTarget);
     }
 
-    private Graph(Model model, Context ctx, Collection<String> relations){
+    private Graph(EncodeContext context, Model model, Collection<String> relations){
         this.model = model;
-        this.ctx = ctx;
+        this.context = context;
         this.relations.addAll(relations);
         this.relations.add("rf");
         this.relations.remove("po");
@@ -114,7 +113,7 @@ public class Graph {
             Event firstEvent = t.getEntry().getSuccessor();
             if(firstEvent instanceof Init){
                 Init e = (Init)firstEvent;
-                Location location = mapAddressLocation.get(e.getAddress().getIntValue(e, ctx, model));
+                Location location = mapAddressLocation.get(e.getAddress().getIntValue(e, context.context, model));
                 String label = e.label() + " " + location.getName() + " = " + e.getValue();
                 sb.append(L3).append(e.repr()).append(" ").append(getEventDef(label)).append(";\n");
             } else {
@@ -123,13 +122,13 @@ public class Graph {
                     if(model.getConstInterp(e.exec()).isTrue()){
                         String label = e.label();
                         if(e instanceof MemEvent) {
-                            Location location = mapAddressLocation.get(((MemEvent) e).getAddress().getIntValue(e, ctx, model));
-                            int value = 0;
+                            Location location = mapAddressLocation.get(((MemEvent) e).getAddress().getIntValue(e, context.context, model));
+                            int value;
                             if(e instanceof Load){
                                 Register r = ((Load) e).getResultRegister();
-                                value = Integer.parseInt(model.getConstInterp(r.toZ3IntResult(e, ctx)).toString());
+                                value = Integer.parseInt(model.getConstInterp(r.toZ3IntResult(e, context.context)).toString());
                             } else {
-                                value = ((MemEvent) e).getMemValue().getIntValue(e, ctx, model);
+                                value = ((MemEvent) e).getMemValue().getIntValue(e, context.context, model);
                             }
                             label += " " + location + " = " + value;
                         }
@@ -170,7 +169,7 @@ public class Graph {
         Map<Integer, Set<Event>> mapAddressEvent = new HashMap<>();
         for(Event e : program.getCache().getEvents(FilterBasic.get(EType.WRITE))){
             if(model.getConstInterp(e.exec()).isTrue()){
-                int address = ((MemEvent)e).getAddress().getIntValue(e, ctx, model);
+                int address = ((MemEvent)e).getAddress().getIntValue(e, context.context, model);
                 mapAddressEvent.putIfAbsent(address, new HashSet<>());
                 mapAddressEvent.get(address).add(e);
             }
@@ -181,7 +180,7 @@ public class Graph {
             for(Event e2 : mapAddressEvent.get(address)){
                 map.put(e2, 0);
                 for(Event e1 : mapAddressEvent.get(address)){
-                    Expr expr = model.getConstInterp(Utils.edge("co", e1, e2, ctx));
+                    Expr expr = model.getConstInterp(context.edge("co", e1, e2));
                     if(expr != null && expr.isTrue()){
                         map.put(e2, map.get(e2) + 1);
                     }
@@ -213,7 +212,7 @@ public class Graph {
             String edge = " " + getEdgeDef(relName) + ";\n";
             for(Event e1 : events) {
                 for(Event e2 : events) {
-                    Expr expr = model.getConstInterp(Utils.edge(relName, e1, e2, ctx));
+                    Expr expr = model.getConstInterp(context.edge(relName, e1, e2));
                     if(expr != null && expr.isTrue()){
                         sb.append("      ").append(e1.repr()).append(" -> ").append(e2.repr()).append(edge);
                     }
@@ -243,7 +242,7 @@ public class Graph {
     private void buildAddressLocationMap(Program program){
         mapAddressLocation = new HashMap<>();
         for(Location location : program.getLocations()){
-            mapAddressLocation.put(location.getAddress().getIntValue(null, ctx, model), location);
+            mapAddressLocation.put(location.getAddress().getIntValue(null, context.context, model), location);
         }
     }
 

@@ -2,6 +2,7 @@ package com.dat3m.porthos;
 
 import com.dat3m.dartagnan.Dartagnan;
 import com.dat3m.dartagnan.utils.Settings;
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.porthos.utils.options.PorthosOptions;
 import com.microsoft.z3.*;
@@ -53,7 +54,8 @@ public class Porthos {
         Settings settings = options.getSettings();
         System.out.println("Settings: " + options.getSettings());
 
-        PorthosResult result = testProgram(s1, s2, ctx, pSource, pTarget, source, target, mcmS, mcmT, settings);
+        EncodeContext context = new EncodeContext(ctx, settings);
+        PorthosResult result = testProgram(context, s1, s2, pSource, pTarget, source, target, mcmS, mcmT);
 
         if(result.getIsPortable()){
             System.out.println("The program is state-portable");
@@ -64,7 +66,7 @@ public class Porthos {
             System.out.println("Iterations: " + result.getIterations());
             if(settings.getDrawGraph()) {
                 ctx.setPrintMode(Z3_ast_print_mode.Z3_PRINT_SMTLIB_FULL);
-                Dartagnan.drawGraph(new Graph(s1.getModel(), ctx, pSource, pTarget, settings.getGraphRelations()), options.getGraphFilePath());
+                Dartagnan.drawGraph(new Graph(context, s1.getModel(), pSource, pTarget, settings.getGraphRelations()), options.getGraphFilePath());
                 System.out.println("Execution graph is written to " + options.getGraphFilePath());
             }
         }
@@ -72,37 +74,44 @@ public class Porthos {
         ctx.close();
     }
 
-    public static PorthosResult testProgram(Solver s1, Solver s2, Context ctx, Program pSource, Program pTarget, Arch source, Arch target,
-                                     Wmm sourceWmm, Wmm targetWmm, Settings settings){
+    public static PorthosResult testProgram(EncodeContext context,
+        Solver s1, Solver s2,
+        Program pSource, Program pTarget,
+        Arch source, Arch target,
+        Wmm sourceWmm, Wmm targetWmm){
 
-        pSource.unroll(settings.getBound(), 0);
-        pTarget.unroll(settings.getBound(), 0);
+        Context ctx = context.context;
+
+        pSource.unroll(context.settings.getBound(), 0);
+        pTarget.unroll(context.settings.getBound(), 0);
 
         int nextId = pSource.compile(source, 0);
         pTarget.compile(target, nextId);
 
-        EncodeContext eSource = new EncodeContext(ctx, pSource, settings);
+        ProgramCache cCache = new ProgramCache(pSource);
         BoolExpr sourceCF = pSource.encodeCF(ctx);
         BoolExpr sourceFV = pSource.encodeFinalRegisterValues(ctx);
-        BoolExpr sourceMM = sourceWmm.encode(eSource);
+        sourceWmm.encode(context, cCache);
+        BoolExpr sourceMM = context.allRules();
 
-        EncodeContext eTarget = new EncodeContext(ctx, pTarget, settings);
+        ProgramCache cTarget = new ProgramCache(pTarget);
         s1.add(pTarget.encodeCF(ctx));
         s1.add(pTarget.encodeFinalRegisterValues(ctx));
-        s1.add(targetWmm.encode(eTarget));
-        s1.add(targetWmm.consistent(ctx));
+        targetWmm.encode(context, cTarget);
+        s1.add(context.allRules());
+        s1.add(targetWmm.consistent(context));
 
         s1.add(sourceCF);
         s1.add(sourceFV);
         s1.add(sourceMM);
-        s1.add(sourceWmm.inconsistent(ctx));
+        s1.add(sourceWmm.inconsistent(context));
 
-        s1.add(encodeCommonExecutions(pTarget, pSource, ctx));
+        s1.add(encodeCommonExecutions(context, pTarget, pSource));
 
         s2.add(sourceCF);
         s2.add(sourceFV);
         s2.add(sourceMM);
-        s2.add(sourceWmm.consistent(ctx));
+        s2.add(sourceWmm.consistent(context));
 
         boolean isPortable = true;
         int iterations = 1;

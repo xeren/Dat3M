@@ -3,7 +3,6 @@ package com.dat3m.dartagnan.wmm.relation;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.microsoft.z3.*;
 import java.util.*;
 import java.util.stream.Stream;
@@ -61,7 +60,7 @@ public class EncodeContext {
 	}
 
 	public BoolExpr edge(String name, Event first, Event second) {
-		return Utils.edge(name, first, second, context);
+		return context.mkBoolConst(name + "(" + first.repr() + "," + second.repr() + ")");
 	}
 
 	public BoolExpr edge(String name, Tuple tuple) {
@@ -111,7 +110,7 @@ public class EncodeContext {
 	 * @see #edge(Relation,int,Tuple)
 	 */
 	public BoolExpr edge(Relation relation, int iteration, Event first, Event second) {
-		return Utils.edge(relation.getName() + "_" + iteration, first, second, context);
+		return edge(relation.getName() + "_" + iteration, first, second);
 	}
 
 	/**
@@ -143,11 +142,11 @@ public class EncodeContext {
 	 * Integer equally ordered with respect to other events.
 	 */
 	public IntExpr intVar(String name, Event event) {
-		return Utils.intVar(name, event, context);
+		return context.mkIntConst(name + "(" + event.repr() + ")");
 	}
 
 	public IntExpr intCount(String name, Event first, Event second) {
-		return Utils.intCount(name, first, second, context);
+		return context.mkIntConst(name + "(" + first.repr() + "," + second.repr() + ")");
 	}
 
 	/**

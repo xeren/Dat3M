@@ -8,13 +8,10 @@ import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
-
-import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 
 public class EdgeTestHelper {
 

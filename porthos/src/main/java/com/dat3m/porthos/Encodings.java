@@ -3,6 +3,7 @@ package com.dat3m.porthos;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.filter.FilterUnion;
+import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.Model;
@@ -13,7 +14,6 @@ import com.dat3m.dartagnan.program.event.Load;
 import com.dat3m.dartagnan.program.event.Store;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
 import com.dat3m.dartagnan.program.memory.Location;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 
 class Encodings {
 
-	static BoolExpr encodeCommonExecutions(Program p1, Program p2, Context ctx) {
+	static BoolExpr encodeCommonExecutions(EncodeContext context, Program p1, Program p2) {
 		List<Event> p1Events = p1.getCache().getEvents(FilterUnion.get(
                 FilterBasic.get(EType.MEMORY),
                 FilterBasic.get(EType.LOCAL)
@@ -39,7 +39,7 @@ class Encodings {
         Set<Tuple> rTuples = new TupleSet();
         Set<Tuple> wTuples = new TupleSet();
 
-        BoolExpr enc = ctx.mkTrue();
+        LinkedList<BoolExpr> enc = new LinkedList<>();
 
         while(it1.hasNext() && it2.hasNext()) {
             Event e1 = it1.next();
@@ -48,7 +48,7 @@ class Encodings {
             if(e1.getUId() != e2.getUId()){
                 throw new RuntimeException("Invalid unrolled Id");
             }
-            enc = ctx.mkAnd(enc, ctx.mkEq(e1.exec(), e2.exec()));
+            enc.add(context.eq(e1.exec(), e2.exec()));
 
             if(e1 instanceof Load && e2 instanceof Load){
                 rTuples.add(new Tuple(e1, e2));
@@ -62,9 +62,9 @@ class Encodings {
             Event r1 = rTuple.getFirst();
             Event r2 = rTuple.getSecond();
             for(Tuple wTuple : wTuples){
-                enc = ctx.mkAnd(enc, ctx.mkEq(
-                        Utils.edge("rf", wTuple.getFirst(), r1, ctx),
-                        Utils.edge("rf", wTuple.getSecond(), r2, ctx)
+                enc.add(context.eq(
+                        context.edge("rf", wTuple.getFirst(), r1),
+                        context.edge("rf", wTuple.getSecond(), r2)
                 ));
             }
         }
@@ -74,14 +74,14 @@ class Encodings {
             Event w2From = wTupleFrom.getSecond();
             for(Tuple wTupleTo : wTuples){
                 if(w1From.getCId() != wTupleTo.getFirst().getCId()){
-                    enc = ctx.mkAnd(enc, ctx.mkEq(
-                            Utils.edge("co", w1From, wTupleTo.getFirst(), ctx),
-                            Utils.edge("co", w2From, wTupleTo.getSecond(), ctx)
+                    enc.add(context.eq(
+                            context.edge("co", w1From, wTupleTo.getFirst()),
+                            context.edge("co", w2From, wTupleTo.getSecond())
                     ));
                 }
             }
         }
-		return enc;
+		return context.and(enc);
 	}
 	
 	static BoolExpr encodeReachedState(Program p, Model model, Context ctx) {
