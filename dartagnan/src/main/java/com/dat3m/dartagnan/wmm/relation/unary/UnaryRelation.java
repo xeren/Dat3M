@@ -1,7 +1,8 @@
 package com.dat3m.dartagnan.wmm.relation.unary;
 
 import com.dat3m.dartagnan.wmm.ProgramCache;
-import com.dat3m.dartagnan.wmm.relation.EncodeContext;
+import com.dat3m.dartagnan.EncodeContext;
+import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 
@@ -47,8 +48,8 @@ public abstract class UnaryRelation extends Relation {
 	}
 
 	@Override
-	protected void doEncode(EncodeContext e, ProgramCache p) {
-		r1.encode(e, p);
-		super.doEncode(e, p);
+	protected void doEncode(EncodeContext e, ProgramCache p, Mode m) {
+		r1.encode(e, p, m);
+		super.doEncode(e, p, m);
 	}
 }

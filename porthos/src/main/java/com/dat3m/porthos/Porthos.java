@@ -3,7 +3,7 @@ package com.dat3m.porthos;
 import com.dat3m.dartagnan.Dartagnan;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.ProgramCache;
-import com.dat3m.dartagnan.wmm.relation.EncodeContext;
+import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.porthos.utils.options.PorthosOptions;
 import com.microsoft.z3.*;
 import com.microsoft.z3.enumerations.Z3_ast_print_mode;
@@ -54,8 +54,8 @@ public class Porthos {
         Settings settings = options.getSettings();
         System.out.println("Settings: " + options.getSettings());
 
-        EncodeContext context = new EncodeContext(ctx, settings);
-        PorthosResult result = testProgram(context, s1, s2, pSource, pTarget, source, target, mcmS, mcmT);
+        EncodeContext context = new EncodeContext(ctx);
+        PorthosResult result = testProgram(context, s1, s2, pSource, pTarget, source, target, mcmS, mcmT, settings);
 
         if(result.getIsPortable()){
             System.out.println("The program is state-portable");
@@ -78,12 +78,13 @@ public class Porthos {
         Solver s1, Solver s2,
         Program pSource, Program pTarget,
         Arch source, Arch target,
-        Wmm sourceWmm, Wmm targetWmm){
+        Wmm sourceWmm, Wmm targetWmm,
+        Settings settings){
 
         Context ctx = context.context;
 
-        pSource.unroll(context.settings.getBound(), 0);
-        pTarget.unroll(context.settings.getBound(), 0);
+        pSource.unroll(settings.getBound(), 0);
+        pTarget.unroll(settings.getBound(), 0);
 
         int nextId = pSource.compile(source, 0);
         pTarget.compile(target, nextId);
@@ -91,13 +92,13 @@ public class Porthos {
         ProgramCache cCache = new ProgramCache(pSource);
         BoolExpr sourceCF = pSource.encodeCF(ctx);
         BoolExpr sourceFV = pSource.encodeFinalRegisterValues(ctx);
-        sourceWmm.encode(context, cCache);
+        sourceWmm.encode(context, cCache, settings);
         BoolExpr sourceMM = context.allRules();
 
         ProgramCache cTarget = new ProgramCache(pTarget);
         s1.add(pTarget.encodeCF(ctx));
         s1.add(pTarget.encodeFinalRegisterValues(ctx));
-        targetWmm.encode(context, cTarget);
+        targetWmm.encode(context, cTarget, settings);
         s1.add(context.allRules());
         s1.add(targetWmm.consistent(context));
 

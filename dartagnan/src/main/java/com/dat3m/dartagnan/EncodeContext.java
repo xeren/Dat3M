@@ -1,7 +1,7 @@
-package com.dat3m.dartagnan.wmm.relation;
+package com.dat3m.dartagnan;
 
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.utils.Settings;
+import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.microsoft.z3.*;
 import java.util.*;
@@ -10,14 +10,12 @@ import java.util.stream.Stream;
 public class EncodeContext {
 
 	public final Context context;
-	public final Settings settings;
 	private final Sort sortEvent;
 	private final HashSet<Relation> done = new HashSet<>();
 	private final LinkedList<BoolExpr> rule = new LinkedList<>();
 
-	public EncodeContext(Context context, Settings settings) {
+	public EncodeContext(Context context) {
 		this.context = context;
-		this.settings = settings;
 		sortEvent = context.mkIntSort();
 	}
 

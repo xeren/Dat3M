@@ -1,6 +1,8 @@
 package com.dat3m.dartagnan.wmm.relation;
 
+import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.wmm.ProgramCache;
+import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
@@ -75,8 +77,8 @@ public class RecursiveRelation extends Relation {
 	}
 
 	@Override
-	protected void doEncode(EncodeContext e, ProgramCache p) {
-		r1.encode(e, p);
+	protected void doEncode(EncodeContext e, ProgramCache p, Mode m) {
+		r1.encode(e, p, m);
 	}
 
 	@Override

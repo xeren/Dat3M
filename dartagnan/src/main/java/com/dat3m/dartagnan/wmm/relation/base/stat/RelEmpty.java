@@ -1,7 +1,7 @@
 package com.dat3m.dartagnan.wmm.relation.base.stat;
 
 import com.dat3m.dartagnan.wmm.ProgramCache;
-import com.dat3m.dartagnan.wmm.relation.EncodeContext;
+import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 

@@ -1,6 +1,8 @@
 package com.dat3m.dartagnan.wmm.relation;
 
+import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.wmm.ProgramCache;
+import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import java.util.HashSet;
@@ -120,10 +122,14 @@ public abstract class Relation {
 	 * Proposes that this relation contains only those tuples according to its semantics.
 	 * @param context
 	 * Utility used to create propositions and to specialize the encoding for the current program.
+	 * @param cache
+	 * Events issued by the tested program.
+	 * @param mode
+	 * Dialect for the encoding.
 	 */
-	public void encode(EncodeContext context, ProgramCache program) {
+	public void encode(EncodeContext context, ProgramCache cache, Mode mode) {
 		if(context.add(this))
-			doEncode(context, program);
+			doEncode(context, cache, mode);
 	}
 
 	protected void encodeLFP(EncodeContext context, ProgramCache program) {
@@ -147,7 +153,7 @@ public abstract class Relation {
 	public void encodeIteration(EncodeContext context, ProgramCache program, int recGroupId, int iteration) {
 	}
 
-	protected void doEncode(EncodeContext context, ProgramCache program) {
+	protected void doEncode(EncodeContext context, ProgramCache cache, Mode mode) {
 		if(!encodeTupleSet.isEmpty()) {
 			Set<Tuple> negations = new HashSet<>(encodeTupleSet);
 			negations.removeAll(maxTupleSet);
@@ -157,18 +163,18 @@ public abstract class Relation {
 		}
 		if(encodeTupleSet.isEmpty() && !forceDoEncode)
 			return;
-		switch(context.settings.getMode()) {
+		switch(mode) {
 			case KLEENE:
-				encodeLFP(context, program);
+				encodeLFP(context, cache);
 				break;
 			case IDL:
-				encodeIDL(context, program);
+				encodeIDL(context, cache);
 				break;
 			case FO:
-				encodeFirstOrder(context, program);
+				encodeFirstOrder(context, cache);
 				break;
 			default:
-				encodeApprox(context, program);
+				encodeApprox(context, cache);
 		}
 	}
 

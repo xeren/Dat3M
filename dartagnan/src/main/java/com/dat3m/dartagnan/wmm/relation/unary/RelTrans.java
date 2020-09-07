@@ -1,7 +1,7 @@
 package com.dat3m.dartagnan.wmm.relation.unary;
 
 import com.dat3m.dartagnan.wmm.ProgramCache;
-import com.dat3m.dartagnan.wmm.relation.EncodeContext;
+import com.dat3m.dartagnan.EncodeContext;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.IntExpr;
 import com.dat3m.dartagnan.program.event.Event;

@@ -1,21 +1,23 @@
 package com.dat3m.dartagnan.wmm.relation.base.memory;
 
+import com.dat3m.dartagnan.EncodeContext;
+import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.program.utils.EType;
-import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.filter.FilterMinus;
-import com.dat3m.dartagnan.wmm.relation.EncodeContext;
-import com.microsoft.z3.BoolExpr;
-import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
-
+import com.microsoft.z3.BoolExpr;
 import java.util.*;
 
 public class RelRf extends Relation {
+
+	//FIXME
+	public static boolean FLAG_CAN_ACCESS_UNINITIALIZED_MEMORY = false;
+	public static boolean FLAG_USE_SEQ_ENCODING_REL_RF = true;
 
 	public RelRf() {
 		term = "rf";
@@ -44,7 +46,7 @@ public class RelRf extends Relation {
 		Map<MemEvent,LinkedList<BoolExpr>> edgeMap = new HashMap<>();
 		Map<MemEvent,LinkedList<BoolExpr>> memInitMap = new HashMap<>();
 
-		boolean canAccNonInitMem = e.settings.getFlag(Settings.FLAG_CAN_ACCESS_UNINITIALIZED_MEMORY);
+		boolean canAccNonInitMem = FLAG_CAN_ACCESS_UNINITIALIZED_MEMORY;
 
 		for(Tuple tuple: maxTupleSet) {
 			MemEvent w = (MemEvent) tuple.getFirst();
@@ -62,7 +64,7 @@ public class RelRf extends Relation {
 			e.rule(e.implies(edge, e.and(w.exec(), r.exec(), sameAddress, sameValue)));
 		}
 
-		if(e.settings.getFlag(Settings.FLAG_USE_SEQ_ENCODING_REL_RF)) {
+		if(FLAG_USE_SEQ_ENCODING_REL_RF) {
 			for(MemEvent r: edgeMap.keySet()) {
 				List<BoolExpr> edges = edgeMap.get(r);
 				int num = edges.size();

@@ -3,7 +3,7 @@ package com.dat3m.dartagnan.program;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.program.utils.ThreadCache;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
-import com.dat3m.dartagnan.wmm.relation.EncodeContext;
+import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;

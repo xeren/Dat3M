@@ -3,7 +3,7 @@ package com.dat3m.ui.result;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.utils.Graph;
 import com.dat3m.dartagnan.wmm.Wmm;
-import com.dat3m.dartagnan.wmm.relation.EncodeContext;
+import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.dat3m.porthos.Porthos;
 import com.dat3m.porthos.PorthosResult;
@@ -45,10 +45,10 @@ public class PortabilityResult implements Dat3mResult {
             Context ctx = new Context();
             Solver s1 = ctx.mkSolver();
             Solver s2 = ctx.mkSolver();
-            EncodeContext context = new EncodeContext(ctx, options.getSettings());
+            EncodeContext context = new EncodeContext(ctx);
 
             PorthosResult result = Porthos.testProgram(context, s1, s2, sourceProgram, targetProgram, sourceProgram.getArch(),
-                    targetProgram.getArch(), sourceWmm, targetWmm);
+                    targetProgram.getArch(), sourceWmm, targetWmm, options.getSettings());
 
             verdict = "Settings: " + options.getSettings() + "\n"
                     + "The program is" + (result.getIsPortable() ? " " : " not ") + "state-portable\n"

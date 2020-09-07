@@ -11,7 +11,8 @@ import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
-import com.dat3m.dartagnan.wmm.relation.EncodeContext;
+import com.dat3m.dartagnan.EncodeContext;
+import com.dat3m.dartagnan.wmm.relation.base.memory.RelRf;
 import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.dat3m.dartagnan.wmm.utils.alias.Alias;
 import com.microsoft.z3.BoolExpr;
@@ -33,7 +34,7 @@ public class RelRfTest {
     @Test
     public void testUninitializedMemory() throws IOException {
         Settings settings = new Settings(Mode.KNASTER, Alias.CFIS, 1);
-        settings.setFlag(Settings.FLAG_CAN_ACCESS_UNINITIALIZED_MEMORY, true);
+        RelRf.FLAG_CAN_ACCESS_UNINITIALIZED_MEMORY = true;
 
         String programPath = ResourceHelper.TEST_RESOURCE_PATH + "wmm/relation/basic/rf/";
         String wmmPath = ResourceHelper.CAT_RESOURCE_PATH + "cat/linux-kernel.cat";
@@ -45,13 +46,13 @@ public class RelRfTest {
 
         Wmm wmm = new ParserCat().parse(new File(wmmPath));
 
-        settings.setFlag(Settings.FLAG_USE_SEQ_ENCODING_REL_RF, false);
+        RelRf.FLAG_USE_SEQ_ENCODING_REL_RF = false;
         assertTrue(Dartagnan.testProgram(solver, ctx, p1, wmm, p1.getArch(), settings).equals(FAIL));
         solver.reset();
         assertTrue(Dartagnan.testProgram(solver, ctx, p2, wmm, p2.getArch(), settings).equals(FAIL));
         solver.reset();
 
-        settings.setFlag(Settings.FLAG_USE_SEQ_ENCODING_REL_RF, true);
+        RelRf.FLAG_USE_SEQ_ENCODING_REL_RF = true;
         assertTrue(Dartagnan.testProgram(solver, ctx, p1, wmm, p1.getArch(), settings).equals(FAIL));
         solver.reset();
         assertTrue(Dartagnan.testProgram(solver, ctx, p2, wmm, p2.getArch(), settings).equals(FAIL));
@@ -68,19 +69,19 @@ public class RelRfTest {
 
         Settings settings = new Settings(Mode.KNASTER, Alias.CFIS, 1);
 
-        settings.setFlag(Settings.FLAG_CAN_ACCESS_UNINITIALIZED_MEMORY, false);
-        settings.setFlag(Settings.FLAG_USE_SEQ_ENCODING_REL_RF, false);
+        RelRf.FLAG_CAN_ACCESS_UNINITIALIZED_MEMORY = false;
+        RelRf.FLAG_USE_SEQ_ENCODING_REL_RF = false;
         doTestDuplicatedEdges(p1Path, wmm, settings);
         doTestDuplicatedEdges(p2Path, wmm, settings);
-        settings.setFlag(Settings.FLAG_USE_SEQ_ENCODING_REL_RF, true);
+        RelRf.FLAG_USE_SEQ_ENCODING_REL_RF = true;
         doTestDuplicatedEdges(p1Path, wmm, settings);
         doTestDuplicatedEdges(p2Path, wmm, settings);
 
-        settings.setFlag(Settings.FLAG_CAN_ACCESS_UNINITIALIZED_MEMORY, true);
-        settings.setFlag(Settings.FLAG_USE_SEQ_ENCODING_REL_RF, false);
+        RelRf.FLAG_CAN_ACCESS_UNINITIALIZED_MEMORY = true;
+        RelRf.FLAG_USE_SEQ_ENCODING_REL_RF = false;
         doTestDuplicatedEdges(p1Path, wmm, settings);
         doTestDuplicatedEdges(p2Path, wmm, settings);
-        settings.setFlag(Settings.FLAG_USE_SEQ_ENCODING_REL_RF, true);
+        RelRf.FLAG_USE_SEQ_ENCODING_REL_RF = true;
         doTestDuplicatedEdges(p1Path, wmm, settings);
         doTestDuplicatedEdges(p2Path, wmm, settings);
     }
@@ -97,7 +98,7 @@ public class RelRfTest {
 
         Context ctx = new Context();
         Solver solver = ctx.mkSolver(ctx.mkTactic(Settings.TACTIC));
-        EncodeContext context = new EncodeContext(ctx, settings);
+        EncodeContext context = new EncodeContext(ctx);
         ProgramCache cache = new ProgramCache(program);
 
         solver.add(program.getAss().encode(ctx));
@@ -106,7 +107,7 @@ public class RelRfTest {
         }
         solver.add(program.encodeCF(ctx));
         solver.add(program.encodeFinalRegisterValues(ctx));
-        wmm.encode(context, cache);
+        wmm.encode(context, cache, settings);
         solver.add(context.allRules());
         // Don't add constraint of MM, they can also forbid illegal edges
 

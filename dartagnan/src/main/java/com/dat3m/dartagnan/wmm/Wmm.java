@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.wmm;
 
-import com.dat3m.dartagnan.wmm.relation.EncodeContext;
+import com.dat3m.dartagnan.EncodeContext;
+import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.utils.*;
 import com.dat3m.dartagnan.wmm.utils.alias.AliasAnalysis;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
@@ -61,8 +62,8 @@ public class Wmm {
         recursiveGroups.add(new RecursiveGroup(id, recursiveGroup));
     }
 
-    public void encodeBase(EncodeContext context, ProgramCache program) {
-        new AliasAnalysis().calculateLocationSets(program.program, context.settings.getAlias());
+    public void encodeBase(EncodeContext context, ProgramCache program, Settings settings) {
+        new AliasAnalysis().calculateLocationSets(program.program, settings.getAlias());
 
         for(String relName : baseRelations){
             relationRepository.getRelation(relName);
@@ -92,8 +93,8 @@ public class Wmm {
             relationRepository.getRelation(relName).getMaxTupleSet(program);
         }
 
-        if(context.settings.getDrawGraph()){
-            for(String relName : context.settings.getGraphRelations()){
+        if(settings.getDrawGraph()){
+            for(String relName : settings.getGraphRelations()){
                 Relation relation = relationRepository.getRelation(relName);
                 if(relation != null){
                     relation.addEncodeTupleSet(program, relation.getMaxTupleSet(program));
@@ -110,21 +111,23 @@ public class Wmm {
             recursiveGroup.updateEncodeTupleSets(program);
         }
 
+        Mode mode = settings.getMode();
         for(String relName : baseRelations){
-            relationRepository.getRelation(relName).encode(context, program);
+            relationRepository.getRelation(relName).encode(context, program, mode);
         }
 
-        if(context.settings.getMode() == Mode.KLEENE){
+        if(mode == Mode.KLEENE){
             for(RecursiveGroup group : recursiveGroups){
                 group.encode(context, program);
             }
         }
     }
 
-    public void encode(EncodeContext context, ProgramCache program) {
-        encodeBase(context, program);
+    public void encode(EncodeContext context, ProgramCache program, Settings settings) {
+        encodeBase(context, program, settings);
+        Mode mode = settings.getMode();
         for(Axiom ax : axioms)
-            ax.getRel().encode(context, program);
+            ax.getRel().encode(context, program, mode);
     }
 
     public BoolExpr consistent(EncodeContext context) {

@@ -5,7 +5,6 @@ import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.Wmm;
-import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.dat3m.dartagnan.wmm.utils.alias.Alias;
@@ -25,38 +24,38 @@ public abstract class Compare
 		String[] argument)
 		throws IOException
 	{
-		try(Context c = new Context())
+		int bound = 2;
+		Alias alias = Alias.CFS;
+		Arch target = Arch.NONE;
+
+		Wmm model = new ParserCat().parse(new File(argument[0]));
+
+		EnumMap<Mode,Settings> settings = new EnumMap<>(Mode.class);
+		for(Mode m: Mode.values())
+			settings.put(m, new Settings(m, alias, bound));
+
+		EnumMap<Mode,Program> program = new EnumMap<>(Mode.class);
+		for(Mode m: Mode.values())
 		{
-			int bound = 2;
-			Alias alias = Alias.CFS;
-			Arch target = Arch.NONE;
+			Program p = new ProgramParser().parse(new File(argument[1]));
+			program.put(m, p);
+			p.unroll(bound, 0);
+			p.compile(target, 0);
+		}
 
-			Wmm model = new ParserCat().parse(new File(argument[0]));
-
-			EnumMap<Mode,EncodeContext> context = new EnumMap<>(Mode.class);
-			for(Mode m: Mode.values())
-				context.put(m, new EncodeContext(c, new Settings(m, alias, bound)));
-
-			EnumMap<Mode,Program> program = new EnumMap<>(Mode.class);
-			for(Mode m: Mode.values())
+		EnumMap<Mode,Boolean> result = new EnumMap<>(Mode.class);
+		for(Mode m: Mode.values())
+		{
+			try(Context c = new Context())
 			{
-				Program p = new ProgramParser().parse(new File(argument[1]));
-				program.put(m, p);
-				p.unroll(bound, 0);
-				p.compile(target, 0);
-			}
-
-			EnumMap<Mode,Boolean> result = new EnumMap<>(Mode.class);
-			for(Mode m: Mode.values())
-			{
-				EncodeContext e = context.get(m);
+				EncodeContext e = new EncodeContext(c);
 				Program p = program.get(m);
 				long timeStart = System.nanoTime();
 				Solver s = c.mkSolver();
 				s.add(p.encodeUINonDet(c),
 					p.encodeCF(c),
 					p.encodeFinalRegisterValues(c));
-				model.encode(e, new ProgramCache(p));
+				model.encode(e, new ProgramCache(p), settings.get(m));
 				model.consistent(e);
 				s.add(e.allRules());
 				if(null != p.getAss())
@@ -68,11 +67,11 @@ public abstract class Compare
 				long timeSolve = System.nanoTime();
 				System.out.printf("%d %d ", timeEncode - timeStart, timeSolve - timeEncode);
 			}
-			System.out.println();
-
-			if(result.values().stream().anyMatch(x->x) && result.values().stream().anyMatch(x->!x))
-				System.err.println(result);
 		}
+		System.out.println();
+
+		if(result.values().stream().anyMatch(x->x) && result.values().stream().anyMatch(x->!x))
+			System.err.println(result);
 	}
 
 }

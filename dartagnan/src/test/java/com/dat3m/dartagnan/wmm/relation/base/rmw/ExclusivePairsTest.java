@@ -13,7 +13,7 @@ import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.filter.FilterIntersection;
 import com.dat3m.dartagnan.wmm.relation.EdgeTestHelper;
-import com.dat3m.dartagnan.wmm.relation.EncodeContext;
+import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.wmm.utils.Flag;
 import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.dat3m.dartagnan.wmm.utils.alias.Alias;
@@ -81,9 +81,9 @@ public class ExclusivePairsTest {
             Program program = new ProgramParser().parse(new File(path));
 
             // Test final state
-            EncodeContext context = new EncodeContext(ctx, settings);
+            EncodeContext context = new EncodeContext(ctx);
             ProgramCache cache = new ProgramCache(program);
-            assertEquals(expectedState, Dartagnan.testProgram(context, cache, solver, wmm, program.getArch()));
+            assertEquals(expectedState, Dartagnan.testProgram(context, cache, solver, wmm, program.getArch(), settings));
 
             // Test edges
             if(expectedEdges != null){
@@ -107,7 +107,7 @@ public class ExclusivePairsTest {
         try(Context ctx = new Context()) {
             Solver solver = ctx.mkSolver(ctx.mkTactic(Settings.TACTIC));
             Program program = new ProgramParser().parse(new File(path));
-            EncodeContext context = new EncodeContext(ctx, settings);
+            EncodeContext context = new EncodeContext(ctx);
 
             ProgramCache cache = new ProgramCache(program);
 
@@ -116,7 +116,7 @@ public class ExclusivePairsTest {
             program.compile(program.getArch(), 0);
             solver.add(program.encodeCF(ctx));
             solver.add(program.encodeFinalRegisterValues(ctx));
-            wmm.encode(context, cache);
+            wmm.encode(context, cache, settings);
             solver.add(context.allRules());
             solver.add(wmm.consistent(context));
 

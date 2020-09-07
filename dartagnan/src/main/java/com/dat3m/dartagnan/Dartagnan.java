@@ -24,7 +24,6 @@ import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.utils.options.DartagnanOptions;
 import com.dat3m.dartagnan.wmm.Wmm;
-import com.dat3m.dartagnan.wmm.relation.EncodeContext;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.microsoft.z3.BoolExpr;
@@ -76,9 +75,9 @@ public class Dartagnan {
 		Context ctx = new Context();
 		Solver s = ctx.mkSolver();
 		Settings settings = options.getSettings();
-		EncodeContext context = new EncodeContext(ctx, settings);
+		EncodeContext context = new EncodeContext(ctx);
 
-		Result result = cegar != null ? runCegar(context, s, p, mcm, target, cegar) : testProgram(context, new ProgramCache(p), s, mcm, target);
+		Result result = cegar != null ? runCegar(context, s, p, mcm, target, cegar, settings) : testProgram(context, new ProgramCache(p), s, mcm, target, settings);
 
 		if(options.getProgramFilePath().endsWith(".litmus")) {
 			System.out.println("Settings: " + options.getSettings());
@@ -101,15 +100,15 @@ public class Dartagnan {
 	}
 
 	public static Result testProgram(Solver s1, Context ctx, Program program, Wmm wmm, Arch target, Settings settings) {
-		return testProgram(new EncodeContext(ctx, settings), new ProgramCache(program), s1, wmm, target);
+		return testProgram(new EncodeContext(ctx), new ProgramCache(program), s1, wmm, target, settings);
 	}
 
-	public static Result testProgram(EncodeContext context, ProgramCache cache, Solver s1, Wmm wmm, Arch target) {
+	public static Result testProgram(EncodeContext context, ProgramCache cache, Solver s1, Wmm wmm, Arch target, Settings settings) {
 
 		Context ctx = context.context;
 		Program program = cache.program;
 
-		program.unroll(context.settings.getBound(), 0);
+		program.unroll(settings.getBound(), 0);
 
 		program.compile(target, 0);
 
@@ -141,7 +140,7 @@ public class Dartagnan {
 		s1.add(encodeFinalRegisterValues);
 		s2.add(encodeFinalRegisterValues);
 
-		wmm.encode(context, new ProgramCache(program));
+		wmm.encode(context, new ProgramCache(program), settings);
 		BoolExpr encodeWmm = context.allRules();
 		s1.add(encodeWmm);
 		s2.add(encodeWmm);
@@ -176,13 +175,13 @@ public class Dartagnan {
 	}
 
 	public static Result runCegar(Solver solver, Context ctx, Program program, Wmm wmm, Arch target, Settings settings, int cegar) {
-		return runCegar(new EncodeContext(ctx, settings), solver, program, wmm, target, cegar);
+		return runCegar(new EncodeContext(ctx), solver, program, wmm, target, cegar, settings);
 	}
 
-	public static Result runCegar(EncodeContext context, Solver solver, Program program, Wmm wmm, Arch target, int cegar) {
+	public static Result runCegar(EncodeContext context, Solver solver, Program program, Wmm wmm, Arch target, int cegar, Settings settings) {
 		Context ctx = context.context;
 		Map<BoolExpr, BoolExpr> track = new HashMap<>();
-		program.unroll(context.settings.getBound(), 0);
+		program.unroll(settings.getBound(), 0);
 		program.compile(target, 0);
 		// AssertionInline depends on compiled events (copies)
 		// Thus we need to set the assertion after compilation
@@ -200,8 +199,8 @@ public class Dartagnan {
 		solver.add(program.encodeCF(ctx));
 		solver.add(program.encodeFinalRegisterValues(ctx));
 		ProgramCache p = new ProgramCache(program);
-		wmm.encodeBase(context, p);
-		wmm.getAxioms().get(cegar).encodeRelAndConsistency(context, p);
+		wmm.encodeBase(context, p, settings);
+		wmm.getAxioms().get(cegar).encodeRelAndConsistency(context, p, settings.getMode());
 		solver.add(context.allRules());
 
 		if(program.getAssFilter() != null)
@@ -245,10 +244,10 @@ public class Dartagnan {
 			solver.check();
 			BoolExpr execution = program.getRf(context, solver.getModel());
 			solver.add(execution);
-			wmm.encodeBase(context, new ProgramCache(program));
+			wmm.encodeBase(context, new ProgramCache(program), settings);
 			solver.add(context.allRules());
 			for(Axiom ax: wmm.getAxioms()) {
-				ax.encodeRelAndConsistency(context, p);
+				ax.encodeRelAndConsistency(context, p, settings.getMode());
 				BoolExpr enc = context.allRules();
 				BoolExpr axVar = ctx.mkBoolConst(ax.toString());
 				solver.assertAndTrack(enc, axVar);

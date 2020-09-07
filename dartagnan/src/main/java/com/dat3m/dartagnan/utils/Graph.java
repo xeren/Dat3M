@@ -10,7 +10,7 @@ import com.dat3m.dartagnan.program.event.Init;
 import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.program.memory.Location;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
-import com.dat3m.dartagnan.wmm.relation.EncodeContext;
+import com.dat3m.dartagnan.EncodeContext;
 import com.microsoft.z3.*;
 import java.util.*;
 import java.util.regex.Matcher;

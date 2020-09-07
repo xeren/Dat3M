@@ -1,7 +1,8 @@
 package com.dat3m.dartagnan.wmm.axiom;
 
 import com.dat3m.dartagnan.wmm.ProgramCache;
-import com.dat3m.dartagnan.wmm.relation.EncodeContext;
+import com.dat3m.dartagnan.EncodeContext;
+import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -29,8 +30,8 @@ public abstract class Axiom {
         return rel;
     }
 
-    public void encodeRelAndConsistency(EncodeContext context, ProgramCache program) {
-        rel.encode(context, program);
+    public void encodeRelAndConsistency(EncodeContext context, ProgramCache program, Mode mode) {
+        rel.encode(context, program, mode);
         context.rule(consistent(context));
     }
     

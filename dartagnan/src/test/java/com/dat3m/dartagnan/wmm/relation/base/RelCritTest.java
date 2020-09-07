@@ -11,7 +11,7 @@ import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.relation.EdgeTestHelper;
 import com.dat3m.dartagnan.utils.ResourceHelper;
 import com.dat3m.dartagnan.wmm.Wmm;
-import com.dat3m.dartagnan.wmm.relation.EncodeContext;
+import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.dat3m.dartagnan.wmm.utils.alias.Alias;
 import com.microsoft.z3.*;
@@ -66,11 +66,11 @@ public class RelCritTest {
 
             // Force encoding all possible "crit" relations
             Settings settings = new Settings(Mode.KNASTER, Alias.CFIS, 1, true, "crit");
-            EncodeContext context = new EncodeContext(ctx, settings);
+            EncodeContext context = new EncodeContext(ctx);
             ProgramCache cache = new ProgramCache(program);
 
             // Sanity check, can be skipped
-            assertTrue(Dartagnan.testProgram(context, cache, solver, wmm, program.getArch()).equals(FAIL));
+            assertTrue(Dartagnan.testProgram(context, cache, solver, wmm, program.getArch(), settings).equals(FAIL));
 
             // Test edges
             EdgeTestHelper helper = new EdgeTestHelper(
