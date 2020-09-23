@@ -1,7 +1,7 @@
 package com.dat3m.dartagnan.program.event.rmw.cond;
 
+import com.dat3m.dartagnan.EncodeContext;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Fence;
 
@@ -20,8 +20,8 @@ public class FenceCond extends Fence {
     }
 
     @Override
-    protected BoolExpr encodeExec(Context ctx){
-        return ctx.mkEq(execVar, ctx.mkAnd(cfVar, loadEvent.getCond()));
+    protected BoolExpr encodeExec(EncodeContext e){
+        return e.eq(execVar, e.and(cfVar, loadEvent.getCond()));
     }
 
     // Unrolling

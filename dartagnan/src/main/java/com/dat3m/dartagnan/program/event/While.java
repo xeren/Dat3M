@@ -7,7 +7,6 @@ import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 
 public class While extends Event implements RegReaderData {
 
@@ -104,7 +103,7 @@ public class While extends Event implements RegReaderData {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	@Override
-	public BoolExpr encodeCF(Context ctx, BoolExpr cond) {
+	public BoolExpr encodeCF(com.dat3m.dartagnan.EncodeContext ctx, BoolExpr cond) {
 		throw new RuntimeException("While event must be unrolled before encoding");
 	}
 }

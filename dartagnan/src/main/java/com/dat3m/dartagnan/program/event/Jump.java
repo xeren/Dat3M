@@ -1,9 +1,9 @@
 package com.dat3m.dartagnan.program.event;
 
+import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 
 public class Jump extends Event {
 
@@ -88,12 +88,11 @@ public class Jump extends Event {
     // -----------------------------------------------------------------------------------------------------------------
 
     @Override
-    public BoolExpr encodeCF(Context ctx, BoolExpr cond) {
+    public BoolExpr encodeCF(EncodeContext e, BoolExpr cond) {
         if(cfEnc == null){
-            cfCond = (cfCond == null) ? cond : ctx.mkOr(cfCond, cond);
-            label.addCfCond(ctx, cfVar);
-            cfEnc = ctx.mkAnd(ctx.mkEq(cfVar, cfCond), encodeExec(ctx));
-            cfEnc = ctx.mkAnd(cfEnc, successor.encodeCF(ctx, ctx.mkFalse()));
+            cfCond = (cfCond == null) ? cond : e.or(cfCond, cond);
+            label.addCfCond(e, cfVar);
+            cfEnc = e.and(e.eq(cfVar, cfCond), encodeExec(e), successor.encodeCF(e, e.or()));
         }
         return cfEnc;
     }

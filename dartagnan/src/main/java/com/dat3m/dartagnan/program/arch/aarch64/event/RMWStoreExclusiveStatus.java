@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.program.arch.aarch64.event;
 
+import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
@@ -43,12 +44,11 @@ public class RMWStoreExclusiveStatus extends Event implements RegWriter {
     }
 
     @Override
-    protected BoolExpr encodeExec(Context ctx){
-        BoolExpr enc = ctx.mkAnd(
-                ctx.mkImplies(storeEvent.exec(), ctx.mkEq(regResultExpr, new IConst(0).toZ3Int(this, ctx))),
-                ctx.mkImplies(ctx.mkNot(storeEvent.exec()), ctx.mkEq(regResultExpr, new IConst(1).toZ3Int(this, ctx)))
-        );
-        return ctx.mkAnd(super.encodeExec(ctx), enc);
+    protected BoolExpr encodeExec(EncodeContext e){
+        return e.and(
+          super.encodeExec(e),
+          e.implies(storeEvent.exec(), e.eq(regResultExpr, new IConst(0).toZ3Int(this, e.context))),
+          e.or(storeEvent.exec(), e.eq(regResultExpr, e.context.mkInt(1))));
     }
 
     // Unrolling

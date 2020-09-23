@@ -105,8 +105,8 @@ public class RelRfTest {
         if(program.getAssFilter() != null){
             solver.add(program.getAssFilter().encode(ctx));
         }
-        solver.add(program.encodeCF(ctx));
-        solver.add(program.encodeFinalRegisterValues(ctx));
+        solver.add(program.encodeCF(context));
+        solver.add(program.encodeFinalRegisterValues(context));
         wmm.encode(context, cache, settings);
         solver.add(context.allRules());
         // Don't add constraint of MM, they can also forbid illegal edges

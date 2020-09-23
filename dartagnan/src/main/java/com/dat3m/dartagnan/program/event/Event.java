@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.program.event;
 
+import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
@@ -285,47 +286,47 @@ public abstract class Event implements Comparable<Event> {
 	/**
 	 * The control flow graph can join in any point.
 	 * It must reach a predecessor for which there may be several candidates.
-	 * @param ctx
+	 * @param context
 	 * Manager for expressions.
 	 * @param cond
 	 * Another condition that implies the control flow reaching this event.
-	 * @see #encodeCF(Context, BoolExpr)
+	 * @see #encodeCF(EncodeContext, BoolExpr)
 	 */
-	public void addCfCond(Context ctx, BoolExpr cond){
-		cfCond = (cfCond == null) ? cond : ctx.mkOr(cfCond, cond);
+	public void addCfCond(EncodeContext context, BoolExpr cond){
+		cfCond = cfCond == null ? cond : context.or(cfCond, cond);
 	}
 
 	/**
-	 * Accumulates the conditions previously passed to {@link #addCfCond(Context, BoolExpr)}.
+	 * Accumulates the conditions previously passed to {@link #addCfCond(EncodeContext, BoolExpr)}.
 	 * Finalizes the conditions: repeated calls will ignore parameters and return the same value.
-	 * @param ctx
+	 * @param context
 	 * Manager for expressions.
 	 * @param cond
 	 * Another condition that implies the control flow reaching this event.
 	 * @return
 	 * Proposition that this event is reached iff any of its preconditions is met.
 	 */
-	public BoolExpr encodeCF(Context ctx, BoolExpr cond) {
+	public BoolExpr encodeCF(EncodeContext context, BoolExpr cond) {
 		if(cfEnc == null){
-			cfCond = (cfCond == null) ? cond : ctx.mkOr(cfCond, cond);
-			cfEnc = ctx.mkAnd(ctx.mkEq(cfVar, cfCond), encodeExec(ctx));
-			if(successor != null){
-				cfEnc = ctx.mkAnd(cfEnc, successor.encodeCF(ctx, cfVar));
-			}
+			cfCond = cfCond == null ? cond : context.or(cfCond, cond);
+			cfEnc = context.and(
+				context.eq(cfVar, cfCond),
+				encodeExec(context),
+				successor == null ? context.and() : successor.encodeCF(context, cfVar));
 		}
 		return cfEnc;
 	}
 
 	/**
 	 * Binds conditions to the execution of this event.
-	 * Used in {@link #encodeCF(Context, BoolExpr)}.
+	 * Used in {@link #encodeCF(EncodeContext, BoolExpr)}.
 	 * Usually the control flow suffices.
-	 * @param ctx
+	 * @param context
 	 * Reasoning context and expression factory.
 	 * @return
 	 * Proposition that this event is executed iff specific conditions are satisfied.
 	 */
-	protected BoolExpr encodeExec(Context ctx){
-		return ctx.mkEq(execVar, cfVar);
+	protected BoolExpr encodeExec(EncodeContext context){
+		return context.eq(execVar, cfVar);
 	}
 }

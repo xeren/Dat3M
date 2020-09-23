@@ -128,15 +128,15 @@ public class Dartagnan {
 		// an incremental solver or check-sat-assuming
 		Solver s2 = ctx.mkSolver();
 
-		BoolExpr encodeUINonDet = program.encodeUINonDet(ctx);
+		BoolExpr encodeUINonDet = program.encodeUINonDet(context);
 		s1.add(encodeUINonDet);
 		s2.add(encodeUINonDet);
 
-		BoolExpr encodeCF = program.encodeCF(ctx);
+		BoolExpr encodeCF = program.encodeCF(context);
 		s1.add(encodeCF);
 		s2.add(encodeCF);
 
-		BoolExpr encodeFinalRegisterValues = program.encodeFinalRegisterValues(ctx);
+		BoolExpr encodeFinalRegisterValues = program.encodeFinalRegisterValues(context);
 		s1.add(encodeFinalRegisterValues);
 		s2.add(encodeFinalRegisterValues);
 
@@ -157,7 +157,7 @@ public class Dartagnan {
 			s2.add(encodeFilter);
 		}
 
-		BoolExpr encodeNoBoundEventExec = program.encodeNoBoundEventExec(ctx);
+		BoolExpr encodeNoBoundEventExec = program.encodeNoBoundEventExec(context);
 
 		Result res;
 		if(s1.check() == Status.SATISFIABLE) {
@@ -195,9 +195,9 @@ public class Dartagnan {
 			}
 		}
 
-		solver.add(program.encodeUINonDet(ctx));
-		solver.add(program.encodeCF(ctx));
-		solver.add(program.encodeFinalRegisterValues(ctx));
+		solver.add(program.encodeUINonDet(context));
+		solver.add(program.encodeCF(context));
+		solver.add(program.encodeFinalRegisterValues(context));
 		ProgramCache p = new ProgramCache(program);
 		wmm.encodeBase(context, p, settings);
 		wmm.getAxioms().get(cegar).encodeRelAndConsistency(context, p, settings.getMode());
@@ -216,13 +216,13 @@ public class Dartagnan {
 			solver.add(program.getAss().encode(ctx));
 			if(solver.check() == Status.SATISFIABLE) {
 				solver.push();
-				solver.add(program.encodeNoBoundEventExec(ctx));
+				solver.add(program.encodeNoBoundEventExec(context));
 				res = solver.check() == Status.SATISFIABLE ? FAIL : BFAIL;
 				solver.pop();
 			} else {
 				solver.pop();
 				solver.push();
-				solver.add(ctx.mkNot(program.encodeNoBoundEventExec(ctx)));
+				solver.add(ctx.mkNot(program.encodeNoBoundEventExec(context)));
 				res = solver.check() == Status.SATISFIABLE ? BPASS : PASS;
 			}
 			// We get rid of the formulas added in the above branches
@@ -257,7 +257,7 @@ public class Dartagnan {
 			if(solver.check() == Status.SATISFIABLE) {
 				// For CEGAR, the same code above seems to never give BFAIL
 				// Thus we add the constraint here to avoid FAIL when the unrolling was not enough
-				solver.add(program.encodeNoBoundEventExec(ctx));
+				solver.add(program.encodeNoBoundEventExec(context));
 				return solver.check() == Status.SATISFIABLE ? FAIL : BFAIL;
 			}
 
