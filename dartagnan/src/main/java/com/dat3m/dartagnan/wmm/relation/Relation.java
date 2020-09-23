@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
+ * Symbolic relation over events in an execution of a program.
  * @author Florian Furbach
  */
 public abstract class Relation {
@@ -47,29 +48,63 @@ public abstract class Relation {
 	}
 
 	public void initialise() {
-		this.maxTupleSet = null;
+		maxTupleSet = null;
 		encodeTupleSet = new TupleSet();
 	}
 
-	protected abstract void update(ProgramCache program, TupleSet set);
+	/**
+	 * Modifies the maximal set of events.
+	 * @param cache
+	 * Collection of defined events in all branches of an acyclic program.
+	 * @param set
+	 * Finite set of event pairs associated with this relation.
+	 * Modified by this method.
+	 */
+	protected abstract void update(ProgramCache cache, TupleSet set);
 
-	public TupleSet getMaxTupleSet(ProgramCache program) {
+	/**
+	 * Over-approximates the union of this relation's contents with respect to any computation.
+	 * @param cache
+	 * Collection of defined events in all branches of an acyclic program.
+	 * @return
+	 * Maximal set of event pairs.
+	 */
+	public TupleSet getMaxTupleSet(ProgramCache cache) {
 		if(null == maxTupleSet) {
 			maxTupleSet = new TupleSet();
-			update(program, maxTupleSet);
+			update(cache, maxTupleSet);
 		}
 		return maxTupleSet;
 	}
 
-	public TupleSet getMaxTupleSetRecursive(ProgramCache program) {
-		return getMaxTupleSet(program);
+	/**
+	 * Computes the maximal set of event pairs in this relation.
+	 * Recursive relations use this opportunity to refresh their tuple set.
+	 * @param cache
+	 * Collection of defined events in all branches of an acyclic program.
+	 * @return
+	 * Updated maximal set of event pairs.
+	 */
+	public TupleSet getMaxTupleSetRecursive(ProgramCache cache) {
+		return getMaxTupleSet(cache);
 	}
 
+	/**
+	 * @return
+	 * Collection of event pairs required to be checked.
+	 */
 	public TupleSet getEncodeTupleSet() {
 		return encodeTupleSet;
 	}
 
-	public void addEncodeTupleSet(ProgramCache program, TupleSet tuples) {
+	/**
+	 * Marks event pairs to be checked by the reasoner.
+	 * @param cache
+	 * Finite collection of events in an acyclic program.
+	 * @param tuples
+	 * Collection of pairs to mark.
+	 */
+	public void addEncodeTupleSet(ProgramCache cache, TupleSet tuples) {
 		encodeTupleSet.addAll(tuples);
 	}
 
@@ -132,33 +167,75 @@ public abstract class Relation {
 			doEncode(context, cache, mode);
 	}
 
-	protected void encodeLFP(EncodeContext context, ProgramCache program) {
-		encodeApprox(context, program);
-	}
-
-	protected void encodeIDL(EncodeContext context, ProgramCache program) {
-		encodeApprox(context, program);
+	/**
+	 * Describes this relation's contents as the least fixed point of a update mapping.
+	 * For a number of iterations, membership in that current version of this relation is specified.
+	 * @param context
+	 * Utility for building expressions and for collecting the constructed rules.
+	 * @param cache
+	 * Representation of the acyclic program in question.
+	 */
+	protected void encodeLFP(EncodeContext context, ProgramCache cache) {
+		encodeApprox(context, cache);
 	}
 
 	/**
-	 * Describes this relation's content using first order logic.
+	 * Describes this relation's contents with Integer Difference Logic:
+	 * In a recursion, in addition to boolean variables denoting the membership of a relationship,
+	 * the encoding features an order in which event pairs are added to a model of this relation.
+	 * @param context
+	 * Utility for building expressions and for collecting the constructed rules.
+	 * @param cache
+	 * Representation of the acyclic program in question.
+	 */
+	protected void encodeIDL(EncodeContext context, ProgramCache cache) {
+		encodeApprox(context, cache);
+	}
+
+	/**
+	 * Describes this relation's contents using first order logic.
 	 * Proposes that this relation contains only those tuples according to its semantics.
 	 * @param context
-	 * Utility used to create propositions and to specialize the encoding for the current program.
+	 * Utility for building expressions and for collecting the constructed rules.
+	 * @param cache
+	 * Representation of the acyclic program in question.
 	 */
-	protected abstract void encodeFirstOrder(EncodeContext context, ProgramCache program);
+	protected abstract void encodeFirstOrder(EncodeContext context, ProgramCache cache);
 
-	protected abstract void encodeApprox(EncodeContext context, ProgramCache program);
+	/**
+	 * Naive description of this relation's contents.
+	 * @param context
+	 * Utility for building expressions and for collecting the constructed rules.
+	 * @param cache
+	 * Representation of the acyclic program in question.
+	 */
+	protected abstract void encodeApprox(EncodeContext context, ProgramCache cache);
 
-	public void encodeIteration(EncodeContext context, ProgramCache program, int recGroupId, int iteration) {
+	/**
+	 * Called when Kleene-style encoding was used.
+	 * Creates a series of boolean variables for each pair in question and each iteration .
+	 * @param context
+	 * Utility for building expressions and for collecting the constructed rules.
+	 * @param cache
+	 * Representation of the acyclic program in question.
+	 * @param recGroupId
+	 * Group of recursive relations currently encoded.
+	 * @param iteration
+	 * Current step to be encoded.
+	 */
+	public void encodeIteration(EncodeContext context, ProgramCache cache, int recGroupId, int iteration) {
 	}
 
 	protected void doEncode(EncodeContext context, ProgramCache cache, Mode mode) {
+		// all pairs to be encoded that fall from the over-approximation
+		java.util.function.Function<Tuple,com.microsoft.z3.BoolExpr> atom = mode == Mode.FO
+			? t->context.of(this).of(context.event(t.getFirst()), context.event(t.getSecond()))
+			: t->context.edge(this, t);
 		if(!encodeTupleSet.isEmpty()) {
 			Set<Tuple> negations = new HashSet<>(encodeTupleSet);
 			negations.removeAll(maxTupleSet);
 			for(Tuple tuple: negations)
-				context.rule(context.not(context.edge(this, tuple)));
+				context.rule(context.not(atom.apply(tuple)));
 			encodeTupleSet.removeAll(negations);
 		}
 		if(encodeTupleSet.isEmpty() && !forceDoEncode)
