@@ -141,7 +141,7 @@ public class RelComposition extends BinaryRelation {
 					if(recurseInR1)
 						opt1 = e.and(opt1, e.lt(e.intCount(r1, e1, e2), e.intCount(this, e1, e3)));
 					if(recurseInR2)
-						opt2 = e.and(opt2, e.lt(e.intCount(r1, e1, e2), e.intCount(this, e3, e2)));
+						opt2 = e.and(opt2, e.lt(e.intCount(r2, e1, e2), e.intCount(this, e3, e2)));
 					idlClauseMap.get(id).add(e.and(opt1, opt2));
 				}
 			}
