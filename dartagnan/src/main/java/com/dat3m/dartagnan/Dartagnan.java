@@ -150,9 +150,9 @@ public class Dartagnan {
 		s1.add(encodeConsistency);
 		s2.add(encodeConsistency);
 
-		s1.add(program.getAss().encode(ctx));
+		s1.add(program.getAss().encode(context));
 		if(program.getAssFilter() != null) {
-			BoolExpr encodeFilter = program.getAssFilter().encode(ctx);
+			BoolExpr encodeFilter = program.getAssFilter().encode(context);
 			s1.add(encodeFilter);
 			s2.add(encodeFilter);
 		}
@@ -164,7 +164,7 @@ public class Dartagnan {
 			s1.add(encodeNoBoundEventExec);
 			res = s1.check() == Status.SATISFIABLE ? FAIL : BFAIL;
 		} else {
-			s2.add(ctx.mkNot(encodeNoBoundEventExec));
+			s2.add(context.not(encodeNoBoundEventExec));
 			res = s2.check() == Status.SATISFIABLE ? BPASS : PASS;
 		}
 
@@ -204,7 +204,7 @@ public class Dartagnan {
 		solver.add(context.allRules());
 
 		if(program.getAssFilter() != null)
-			solver.add(program.getAssFilter().encode(ctx));
+			solver.add(program.getAssFilter().encode(context));
 
 		// Termination guaranteed because we add a new constraint in each 
 		// iteration and thus the formula will eventually become UNSAT
@@ -213,7 +213,7 @@ public class Dartagnan {
 			solver.push();
 			// This needs to be pop for the else branch below
 			// If not the formula will always remain UNSAT
-			solver.add(program.getAss().encode(ctx));
+			solver.add(program.getAss().encode(context));
 			if(solver.check() == Status.SATISFIABLE) {
 				solver.push();
 				solver.add(program.encodeNoBoundEventExec(context));
@@ -222,7 +222,7 @@ public class Dartagnan {
 			} else {
 				solver.pop();
 				solver.push();
-				solver.add(ctx.mkNot(program.encodeNoBoundEventExec(context)));
+				solver.add(context.not(program.encodeNoBoundEventExec(context)));
 				res = solver.check() == Status.SATISFIABLE ? BPASS : PASS;
 			}
 			// We get rid of the formulas added in the above branches
@@ -238,7 +238,7 @@ public class Dartagnan {
 			}
 
 			solver.push();
-			solver.add(program.getAss().encode(ctx));
+			solver.add(program.getAss().encode(context));
 			// We need this to get the model below. This check will always succeed
 			// If not we would have returned above
 			solver.check();
@@ -266,7 +266,7 @@ public class Dartagnan {
 			for(BoolExpr axVar: unsatCore) {
 				solver.add(track.get(axVar));
 			}
-			solver.add(ctx.mkNot(execution));
+			solver.add(context.not(execution));
 		}
 	}
 

@@ -1,6 +1,6 @@
 package com.dat3m.dartagnan.program.event.rmw.cond;
 
-import com.microsoft.z3.Context;
+import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.Register;
@@ -14,9 +14,9 @@ public class RMWReadCondUnless extends RMWReadCond implements RegWriter, RegRead
     }
 
     @Override
-    public void initialise(Context ctx) {
-        super.initialise(ctx);
-        this.z3Cond = ctx.mkNot(z3Cond);
+    public void initialise(EncodeContext c) {
+        super.initialise(c);
+        this.z3Cond = c.not(z3Cond);
     }
 
     @Override

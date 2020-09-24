@@ -1,7 +1,7 @@
 package com.dat3m.dartagnan.expression;
 
+import com.dat3m.dartagnan.EncodeContext;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.microsoft.z3.IntExpr;
 import com.microsoft.z3.Model;
 import com.dat3m.dartagnan.program.Register;
@@ -16,18 +16,18 @@ public class BNonDet extends BExpr implements ExprInterface {
 	}
 
 	@Override
-	public BoolExpr toZ3Bool(Event e, Context ctx) {
-		return ctx.mkBoolConst(Integer.toString(hashCode()));
+	public BoolExpr toZ3Bool(Event e, EncodeContext c) {
+		return c.context.mkBoolConst(Integer.toString(hashCode()));
 	}
 
 	@Override
-	public IntExpr getLastValueExpr(Context ctx) {
+	public IntExpr getLastValueExpr(EncodeContext c) {
 		throw new UnsupportedOperationException("getLastValueExpr not supported for " + this);
 	}
 
 	@Override
-	public boolean getBoolValue(Event e, Context ctx, Model model) {
-		return model.getConstInterp(toZ3Int(e, ctx)).isTrue();
+	public boolean getBoolValue(Event e, EncodeContext c, Model m) {
+		return m.getConstInterp(toZ3Int(e, c)).isTrue();
 	}
 
 	@Override

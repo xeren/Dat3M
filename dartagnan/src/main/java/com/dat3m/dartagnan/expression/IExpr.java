@@ -1,19 +1,19 @@
 package com.dat3m.dartagnan.expression;
 
+import com.dat3m.dartagnan.EncodeContext;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.microsoft.z3.Model;
 import com.dat3m.dartagnan.program.event.Event;
 
 public abstract class IExpr implements ExprInterface {
 
-    @Override
-	public BoolExpr toZ3Bool(Event e, Context ctx) {
-		return ctx.mkGt(toZ3Int(e, ctx), ctx.mkInt(0));
+	@Override
+	public BoolExpr toZ3Bool(Event e, EncodeContext c) {
+		return c.lt(c.zero(), toZ3Int(e, c));
 	}
 
-    @Override
-    public boolean getBoolValue(Event e, Context ctx, Model model){
-        return getIntValue(e, ctx, model) > 0;
-    }
+	@Override
+	public boolean getBoolValue(Event e, EncodeContext c, Model m) {
+		return getIntValue(e, c, m) > 0;
+	}
 }

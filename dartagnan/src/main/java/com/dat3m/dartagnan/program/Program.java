@@ -169,9 +169,8 @@ public class Program {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	public BoolExpr encodeCF(EncodeContext context) {
-		Context ctx = context.context;
 		for(Event e: getEvents()) {
-			e.initialise(ctx);
+			e.initialise(context);
 		}
 		return context.and(memory.encode(context), context.and(threads.stream().map(t->t.encodeCF(context))));
 	}
@@ -189,7 +188,7 @@ public class Program {
 				.mapToObj(i->context.or(
 					context.not(e.getValue().get(i).exec()),
 					context.or(IntStream.range(i, e.getValue().size()).mapToObj(e.getValue()::get).map(Event::exec)),
-					context.eq(e.getKey().getLastValueExpr(context.context), ((RegWriter) e.getValue().get(i)).getResultRegisterExpr())))));
+					context.eq(e.getKey().getLastValueExpr(context), ((RegWriter) e.getValue().get(i)).getResultRegisterExpr())))));
 	}
 
 	/**
@@ -215,8 +214,8 @@ public class Program {
 			.flatMap(e->Stream.of(e.getExpr())
 				.filter(INonDet.class::isInstance).map(INonDet.class::cast)
 				.map(x->context.and(
-					ctx.mkGe(x.toZ3Int(e, ctx), ctx.mkInt(x.getMin())),
-					ctx.mkLe(x.toZ3Int(e, ctx), ctx.mkInt(x.getMax()))))));
+					ctx.mkGe(x.toZ3Int(e, context), ctx.mkInt(x.getMin())),
+					ctx.mkLe(x.toZ3Int(e, context), ctx.mkInt(x.getMax()))))));
 	}
 
 	public BoolExpr getRf(EncodeContext context, Model model) {

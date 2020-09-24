@@ -1,10 +1,10 @@
 package com.dat3m.dartagnan.program.event.rmw.cond;
 
+import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.Register;
@@ -27,9 +27,9 @@ public abstract class RMWReadCond extends RMWLoad implements RegWriter, RegReade
     }
 
     @Override
-    public void initialise(Context ctx) {
-        super.initialise(ctx);
-        z3Cond = ctx.mkEq(memValueExpr, cmp.toZ3Int(this, ctx));
+    public void initialise(EncodeContext c) {
+        super.initialise(c);
+        z3Cond = c.eq(memValueExpr, cmp.toZ3Int(this, c));
     }
 
     public BoolExpr getCond(){

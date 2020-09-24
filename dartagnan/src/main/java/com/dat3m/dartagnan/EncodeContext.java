@@ -215,6 +215,10 @@ public class EncodeContext {
 		return context.mkInt(0);
 	}
 
+	public IntExpr one() {
+		return context.mkInt(1);
+	}
+
 	@FunctionalInterface
 	public interface UnaryBody {
 		BoolExpr of(Expr event);

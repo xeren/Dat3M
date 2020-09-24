@@ -27,7 +27,7 @@ abstract class BasicRegRelation extends StaticRelation {
 			for(Register register: getRegisters(regReader)) {
 				List<Event> writers = p.cache(register);
 				if(writers.isEmpty() || writers.get(0).getCId() >= regReader.getCId()) {
-					e.rule(e.eq(e.zero(), register.toZ3Int(regReader, e.context)));
+					e.rule(e.eq(e.zero(), register.toZ3Int(regReader, e)));
 					continue;
 				}
 
@@ -54,7 +54,7 @@ abstract class BasicRegRelation extends StaticRelation {
 
 					// Encode edge and value binding
 					e.rule(e.eq(edge, e.and(clause)));
-					e.rule(e.implies(edge, e.eq(((RegWriter) regWriter).getResultRegisterExpr(), register.toZ3Int(regReader, e.context))));
+					e.rule(e.implies(edge, e.eq(((RegWriter) regWriter).getResultRegisterExpr(), register.toZ3Int(regReader, e))));
 				}
 			}
 		}

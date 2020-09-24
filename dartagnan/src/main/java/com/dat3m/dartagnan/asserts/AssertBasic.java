@@ -1,7 +1,7 @@
 package com.dat3m.dartagnan.asserts;
 
+import com.dat3m.dartagnan.EncodeContext;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.op.COpBin;
 import com.dat3m.dartagnan.program.Register;
@@ -19,8 +19,8 @@ public class AssertBasic extends AbstractAssert {
     }
 
     @Override
-    public BoolExpr encode(Context ctx) {
-        return op.encode(e1.getLastValueExpr(ctx), e2.getLastValueExpr(ctx), ctx);
+    public BoolExpr encode(EncodeContext c) {
+        return op.encode(e1.getLastValueExpr(c), e2.getLastValueExpr(c), c.context);
     }
 
     @Override

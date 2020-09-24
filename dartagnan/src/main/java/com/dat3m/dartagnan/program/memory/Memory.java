@@ -41,16 +41,16 @@ public class Memory {
 		List<BoolExpr> enc = new LinkedList<>();
 		for(List<Address> array: arrays.values()) {
 			int size = array.size();
-			IntExpr e1 = array.get(0).toZ3Int(ctx);
+			IntExpr e1 = array.get(0).toZ3Int(context);
 			for(int i = 1; i < size; i++) {
-				IntExpr e2 = array.get(i).toZ3Int(ctx);
-				enc.add(context.eq(e2, ctx.mkAdd(e1, ctx.mkInt(1))));
+				IntExpr e2 = array.get(i).toZ3Int(context);
+				enc.add(context.eq(e2, ctx.mkAdd(e1, context.one())));
 				e1 = e2;
 			}
 		}
 		return context.and(context.and(enc),
-			context.and(map.values().stream().filter(Address::hasConstValue).map(a->context.eq(a.toZ3Int(ctx), ctx.mkInt(a.getConstValue())))),
-			ctx.mkDistinct(getAllAddresses().stream().map(a->a.toZ3Int(ctx)).toArray(IntExpr[]::new)));
+			context.and(map.values().stream().filter(Address::hasConstValue).map(a->context.eq(a.toZ3Int(context), ctx.mkInt(a.getConstValue())))),
+			ctx.mkDistinct(getAllAddresses().stream().map(a->a.toZ3Int(context)).toArray(IntExpr[]::new)));
 	}
 
 	public List<Address> malloc(String name, int size) {

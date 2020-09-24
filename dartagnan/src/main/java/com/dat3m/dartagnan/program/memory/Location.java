@@ -1,8 +1,8 @@
 package com.dat3m.dartagnan.program.memory;
 
+import com.dat3m.dartagnan.EncodeContext;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.microsoft.z3.IntExpr;
 import com.microsoft.z3.Model;
 import com.dat3m.dartagnan.expression.ExprInterface;
@@ -58,12 +58,12 @@ public class Location implements ExprInterface {
 	}
 
 	@Override
-	public IntExpr getLastValueExpr(Context ctx){
-		return address.getLastMemValueExpr(ctx);
+	public IntExpr getLastValueExpr(EncodeContext c){
+		return address.getLastMemValueExpr(c);
 	}
 
 	@Override
-	public IntExpr toZ3Int(Event e, Context ctx){
+	public IntExpr toZ3Int(Event e, EncodeContext c){
 		if(e instanceof MemEvent){
 			return ((MemEvent) e).getMemValueExpr();
 		}
@@ -71,25 +71,25 @@ public class Location implements ExprInterface {
 	}
 
 	@Override
-	public BoolExpr toZ3Bool(Event e, Context ctx){
+	public BoolExpr toZ3Bool(Event e, EncodeContext c){
 		if(e instanceof MemEvent){
-			return ctx.mkGt(((MemEvent) e).getMemValueExpr(), ctx.mkInt(0));
+			return c.lt(c.zero(), ((MemEvent) e).getMemValueExpr());
 		}
 		throw new RuntimeException("Attempt to encode memory value for illegal event");
 	}
 
 	@Override
-	public int getIntValue(Event e, Context ctx, Model model){
+	public int getIntValue(Event e, EncodeContext c, Model m){
 		if(e instanceof MemEvent){
-			return ((MemEvent) e).getMemValue().getIntValue(e, ctx, model);
+			return ((MemEvent) e).getMemValue().getIntValue(e, c, m);
 		}
 		throw new RuntimeException("Attempt to encode memory value for illegal event");
 	}
 
 	@Override
-	public boolean getBoolValue(Event e, Context ctx, Model model){
+	public boolean getBoolValue(Event e, EncodeContext c, Model m){
 		if(e instanceof MemEvent){
-			return ((MemEvent) e).getMemValue().getBoolValue(e, ctx, model);
+			return ((MemEvent) e).getMemValue().getBoolValue(e, c, m);
 		}
 		throw new RuntimeException("Attempt to encode memory value for illegal event");
 	}

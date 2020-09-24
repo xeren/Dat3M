@@ -248,10 +248,11 @@ public abstract class Event implements Comparable<Event> {
 	 * @throws RuntimeException
 	 * The event has not been assigned a compilation ID.
 	 */
-	public void initialise(Context ctx){
+	public void initialise(EncodeContext c){
 		if(cId < 0){
 			throw new RuntimeException("Event ID is not set in " + this);
 		}
+		Context ctx = c.context;
 		//execVar = ctx.mkBoolConst("exec(" + repr() + ")");
 		//cfVar = ctx.mkBoolConst("cf(" + repr() + ")");
 		execVar = (BoolExpr)ctx.mkFuncDecl("exec", ctx.mkIntSort(), ctx.mkBoolSort()).apply(ctx.mkInt(cId));

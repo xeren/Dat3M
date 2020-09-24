@@ -1,7 +1,7 @@
 package com.dat3m.dartagnan.asserts;
 
+import com.dat3m.dartagnan.EncodeContext;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 
 public abstract class AbstractAssert {
 
@@ -38,5 +38,5 @@ public abstract class AbstractAssert {
         return toString();
     }
 
-    public abstract BoolExpr encode(Context ctx);
+    public abstract BoolExpr encode(EncodeContext c);
 }

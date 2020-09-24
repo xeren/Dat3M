@@ -59,9 +59,9 @@ public abstract class Compare
 				model.consistent(e);
 				s.add(e.allRules());
 				if(null != p.getAss())
-					s.add(p.getAss().encode(c));
+					s.add(p.getAss().encode(e));
 				if(null != p.getAssFilter())
-					s.add(p.getAssFilter().encode(c));
+					s.add(p.getAssFilter().encode(e));
 				long timeEncode = System.nanoTime();
 				result.put(m, (null != p.getAss() && p.getAss().getInvert()) != (Status.SATISFIABLE == s.check()));
 				long timeSolve = System.nanoTime();
