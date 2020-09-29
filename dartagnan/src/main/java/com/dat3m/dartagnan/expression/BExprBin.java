@@ -1,14 +1,12 @@
 package com.dat3m.dartagnan.expression;
 
 import com.dat3m.dartagnan.EncodeContext;
-import com.google.common.collect.ImmutableSet;
+import com.dat3m.dartagnan.expression.op.BOpBin;
+import com.dat3m.dartagnan.program.event.Event;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.IntExpr;
 import com.microsoft.z3.Model;
-
-import com.dat3m.dartagnan.expression.op.BOpBin;
-import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.event.Event;
+import java.util.function.Consumer;
 
 public class BExprBin extends BExpr {
 
@@ -35,8 +33,9 @@ public class BExprBin extends BExpr {
 	}
 
 	@Override
-	public ImmutableSet<Register> getRegs() {
-		return new ImmutableSet.Builder<Register>().addAll(b1.getRegs()).addAll(b2.getRegs()).build();
+	public void subexpression(Consumer<ExprInterface> a) {
+		a.accept(b1);
+		a.accept(b2);
 	}
 
 	@Override

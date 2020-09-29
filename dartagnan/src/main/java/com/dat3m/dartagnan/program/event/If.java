@@ -3,13 +3,13 @@ package com.dat3m.dartagnan.program.event;
 import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.utils.Arch;
-import com.google.common.collect.ImmutableSet;
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.microsoft.z3.BoolExpr;
-
-import java.util.*;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
 
 public class If extends Event implements RegReaderData {
 
@@ -19,7 +19,7 @@ public class If extends Event implements RegReaderData {
     private Event exitMainBranch;
     private Event exitElseBranch;
 
-    private final ImmutableSet<Register> dataRegs;
+    private final Set<Register> dataRegs;
 
     public If(ExprInterface expr, Skip exitMainBranch, Skip exitElseBranch) {
         if(expr == null){
@@ -34,7 +34,7 @@ public class If extends Event implements RegReaderData {
         this.expr = expr;
         this.exitMainBranch = exitMainBranch;
         this.exitElseBranch = exitElseBranch;
-        this.dataRegs = expr.getRegs();
+        this.dataRegs = Register.of(expr);
         addFilters(EType.ANY, EType.BRANCH, EType.CMP, EType.REG_READER);
     }
 
@@ -61,7 +61,7 @@ public class If extends Event implements RegReaderData {
     }
 
     @Override
-    public ImmutableSet<Register> getDataRegs(){
+    public Set<Register> getDataRegs(){
         return dataRegs;
     }
 

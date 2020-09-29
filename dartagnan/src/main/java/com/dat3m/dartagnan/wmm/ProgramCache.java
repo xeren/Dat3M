@@ -2,9 +2,8 @@ package com.dat3m.dartagnan.wmm;
 
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.program.event.utils.RegWriter;
 import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
-import com.google.common.collect.ImmutableList;
-
 import java.util.List;
 
 public class ProgramCache {
@@ -31,9 +30,9 @@ public class ProgramCache {
 		return program.getCache().getEvents(filter);
 	}
 
-	public List<Event> cache(Register register) {
-		List<Event> result = program.getCache().getRegWriterMap().get(register);
-		return null != result ? result : ImmutableList.of();
+	public List<RegWriter> cache(Register register) {
+		List<RegWriter> result = program.getCache().getRegWriterMap().get(register);
+		return null != result ? result : List.of();
 	}
 
 }

@@ -1,78 +1,47 @@
 package com.dat3m.dartagnan.program.utils;
 
-import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
 import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-
 import java.util.*;
+import java.util.stream.Collectors;
+import static java.util.stream.Stream.of;
 
 public class ThreadCache {
 
-    private Map<FilterAbstract, ImmutableList<Event>> events = new HashMap<>();
-    private ImmutableSet<Register> registers;
-    private ImmutableMap<Register, ImmutableList<Event>> regWriterMap;
+    private Map<FilterAbstract,List<Event>> events = new HashMap<>();
+    private Set<Register> registers;
+    private Map<Register,List<RegWriter>> regWriterMap;
 
     public ThreadCache(List<Event> events){
-        this.events.put(FilterBasic.get(EType.ANY), ImmutableList.copyOf(events));
+        this.events.put(FilterBasic.get(EType.ANY), List.copyOf(events));
     }
 
-    public ImmutableList<Event> getEvents(FilterAbstract filter){
-        if(!events.containsKey(filter)){
-            ImmutableList.Builder<Event> builder = new ImmutableList.Builder<>();
-            for(Event e : getEvents(FilterBasic.get(EType.ANY))){
-                if(filter.filter(e)){
-                    builder.add(e);
-                }
-            }
-            events.put(filter, builder.build());
-        }
-        return events.get(filter);
+    public List<Event> getEvents(FilterAbstract filter){
+        return events.computeIfAbsent(filter, k->getEvents(FilterBasic.get(EType.ANY)).stream().filter(filter::filter)
+          .collect(Collectors.toUnmodifiableList()));
     }
 
-    public ImmutableSet<Register> getRegisters(){
+    public Set<Register> getRegisters(){
         if(registers == null){
-            ImmutableSet.Builder<Register> builder = new ImmutableSet.Builder<>();
-            for(Event e : getEvents(FilterBasic.get(EType.ANY))){
-                if(e instanceof RegWriter){
-                    builder.add(((RegWriter) e).getResultRegister());
-                }
-                if(e instanceof MemEvent){
-                    IExpr address = ((MemEvent) e).getAddress();
-                    builder.addAll(address.getRegs());
-                }
-                if(e instanceof RegReaderData){
-                    builder.addAll(((RegReaderData) e).getDataRegs());
-                }
-            }
-            registers = builder.build();
+            registers = of(
+                getEvents(FilterBasic.get(EType.REG_WRITER)).stream().map(RegWriter.class::cast).map(RegWriter::getResultRegister),
+                getEvents(FilterBasic.get(EType.REG_READER)).stream().map(RegReaderData.class::cast).map(RegReaderData::getDataRegs).flatMap(Collection::stream),
+                getEvents(FilterBasic.get(EType.MEMORY)).stream().map(MemEvent.class::cast).map(MemEvent::getAddress).map(Register::of).flatMap(Collection::stream))
+              .flatMap(x->x)
+              .collect(Collectors.toUnmodifiableSet());
         }
         return registers;
     }
 
-    public ImmutableMap<Register, ImmutableList<Event>> getRegWriterMap(){
-        if(regWriterMap == null){
-            Map<Register, Set<Event>> setMap = new HashMap<>();
-            for (Event e : getEvents(FilterBasic.get(EType.REG_WRITER))) {
-                Register register = ((RegWriter) e).getResultRegister();
-                setMap.putIfAbsent(register, new TreeSet<>());
-                setMap.get(register).add(e);
-            }
-
-            ImmutableMap.Builder<Register, ImmutableList<Event>> builder = new ImmutableMap.Builder<>();
-            for (Register register : setMap.keySet()) {
-                List<Event> list = new ArrayList<>(setMap.get(register));
-                Collections.sort(list);
-                builder.put(register, ImmutableList.copyOf(list));
-            }
-
-            regWriterMap = builder.build();
+    public Map<Register,List<RegWriter>> getRegWriterMap(){
+        if(regWriterMap == null) {
+            regWriterMap = getEvents(FilterBasic.get(EType.REG_WRITER)).stream().map(RegWriter.class::cast)
+              .collect(Collectors.groupingBy(RegWriter::getResultRegister,
+                Collectors.collectingAndThen(Collectors.toCollection(TreeSet::new), List::copyOf)));
         }
         return regWriterMap;
     }

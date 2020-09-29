@@ -1,13 +1,15 @@
 package com.dat3m.dartagnan.program;
 
 import com.dat3m.dartagnan.EncodeContext;
-import com.google.common.collect.ImmutableSet;
-import com.microsoft.z3.IntExpr;
-import com.microsoft.z3.Model;
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IConst;
 import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.event.Event;
+import com.microsoft.z3.IntExpr;
+import com.microsoft.z3.Model;
+import java.util.Set;
+import static java.util.stream.Stream.concat;
+import static java.util.stream.Collectors.toUnmodifiableSet;
 
 public class Register extends IExpr implements ExprInterface {
 
@@ -63,9 +65,18 @@ public class Register extends IExpr implements ExprInterface {
 		return c.context.mkIntConst(getName() + "(" + e.repr() + "_result)");
 	}
 
-	@Override
-	public ImmutableSet<Register> getRegs() {
-		return ImmutableSet.of(this);
+	/**
+	 * @param expression
+	 * Some expression in a program.
+	 * @return
+	 * Immutable set of those registers occurring in {@code expression}.
+	 */
+	public static Set<Register> of(ExprInterface expression) {
+		return expression.stream().filter(Register.class::isInstance).map(Register.class::cast).collect(toUnmodifiableSet());
+	}
+
+	public static Set<Register> of(Set<?extends Register> base, ExprInterface expression) {
+		return concat(base.stream(), expression.stream().filter(Register.class::isInstance).map(Register.class::cast)).collect(toUnmodifiableSet());
 	}
 
 	@Override

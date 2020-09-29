@@ -2,9 +2,7 @@ package com.dat3m.porthos.utils.options;
 
 import com.dat3m.dartagnan.utils.options.BaseOptions;
 import com.dat3m.dartagnan.wmm.utils.Arch;
-import com.google.common.collect.ImmutableSet;
 
-import java.util.Arrays;
 import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
@@ -16,7 +14,7 @@ public class PorthosOptions extends BaseOptions {
 
     private String sourceModelFilePath;
     private Arch source;
-    protected Set<String> supportedFormats = ImmutableSet.copyOf(Arrays.asList("pts"));
+    protected Set<String> supportedFormats = Set.of("pts");
 
     public PorthosOptions(){
         super();

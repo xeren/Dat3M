@@ -9,7 +9,6 @@ import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.relation.RecursiveRelation;
 import com.dat3m.dartagnan.wmm.relation.Relation;
-import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
 import java.util.*;
 
@@ -19,7 +18,7 @@ import java.util.*;
  */
 public class Wmm {
 
-    private final static ImmutableSet<String> baseRelations = ImmutableSet.of("co", "rf", "idd", "addrDirect");
+    private final static Set<String> baseRelations = Set.of("co", "rf", "idd", "addrDirect");
 
     private List<Axiom> axioms = new ArrayList<>();
     private Map<String, FilterAbstract> filters = new HashMap<>();

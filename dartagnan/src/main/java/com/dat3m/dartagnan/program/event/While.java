@@ -5,14 +5,14 @@ import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.utils.Arch;
-import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
+import java.util.Set;
 
 public class While extends Event implements RegReaderData {
 
     private final ExprInterface expr;
 	private final Skip exitEvent;
-    private final ImmutableSet<Register> dataRegs;
+    private final Set<Register> dataRegs;
 
 	public While(ExprInterface expr, Skip exitEvent) {
 		if(expr == null){
@@ -23,7 +23,7 @@ public class While extends Event implements RegReaderData {
 		}
 		this.expr = expr;
 		this.exitEvent = exitEvent;
-		this.dataRegs = expr.getRegs();
+		this.dataRegs = Register.of(expr);
 		addFilters(EType.ANY, EType.BRANCH, EType.CMP, EType.REG_READER);
 	}
 
@@ -36,7 +36,7 @@ public class While extends Event implements RegReaderData {
 	}
 
 	@Override
-	public ImmutableSet<Register> getDataRegs(){
+	public Set<Register> getDataRegs(){
 		return dataRegs;
 	}
 

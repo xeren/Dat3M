@@ -3,7 +3,6 @@ package com.dat3m.dartagnan.wmm.utils.alias;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.program.memory.Address;
-import com.google.common.collect.ImmutableSet;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -23,7 +22,7 @@ public class Graph {
     }
 
     Set<Object> getEdges(Object v){
-        return edges.getOrDefault(v, ImmutableSet.of());
+        return edges.getOrDefault(v, Set.of());
     }
 
     void addAddress(Object v, Address a){
@@ -37,7 +36,7 @@ public class Graph {
     }
 
     Set<Address> getAddresses(Object v){
-        return addresses.getOrDefault(v, ImmutableSet.of());
+        return addresses.getOrDefault(v, Set.of());
     }
 
     void addEvent(Register r, MemEvent e){
@@ -46,7 +45,7 @@ public class Graph {
     }
 
     Set<MemEvent> getEvents(Register r){
-        return events.getOrDefault(r, ImmutableSet.of());
+        return events.getOrDefault(r, Set.of());
     }
 
     SSAReg getSSAReg(Register r, int i){

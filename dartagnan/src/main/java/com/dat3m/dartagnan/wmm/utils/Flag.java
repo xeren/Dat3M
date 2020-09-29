@@ -1,15 +1,15 @@
 package com.dat3m.dartagnan.wmm.utils;
 
-import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
+import java.util.Set;
 
 public enum  Flag {
     ARM_UNPREDICTABLE_BEHAVIOUR,
     LINUX_UNBALANCED_RCU;
 
     // TODO: Add linux when implemented
-    public static ImmutableSet<Flag> all = ImmutableSet.of(ARM_UNPREDICTABLE_BEHAVIOUR);
+    public static Set<Flag> all = Set.of(ARM_UNPREDICTABLE_BEHAVIOUR);
 
     public BoolExpr repr(Context ctx){
         return ctx.mkBoolConst(code());

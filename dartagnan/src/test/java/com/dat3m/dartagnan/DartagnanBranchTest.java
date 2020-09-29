@@ -10,7 +10,6 @@ import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.dat3m.dartagnan.wmm.utils.alias.Alias;
-import com.google.common.collect.ImmutableMap;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.Solver;
 import org.junit.Test;
@@ -24,6 +23,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.HashMap;
 import java.util.stream.Collectors;
 
 import static com.dat3m.dartagnan.utils.Result.FAIL;
@@ -35,7 +35,7 @@ public class DartagnanBranchTest {
 
     @Parameterized.Parameters(name = "{index}: {0}")
     public static Iterable<Object[]> data() throws IOException {
-        ImmutableMap<String, Result> expected = readExpectedResults();
+        HashMap<String, Result> expected = readExpectedResults();
         Settings settings = new Settings(Mode.KNASTER, Alias.CFIS, 1);
 
         Wmm linuxWmm = new ParserCat().parse(new File(ResourceHelper.CAT_RESOURCE_PATH + "cat/linux-kernel.cat"));
@@ -56,18 +56,19 @@ public class DartagnanBranchTest {
         return data;
     }
 
-    private static ImmutableMap<String, Result> readExpectedResults() throws IOException {
-        BufferedReader reader = new BufferedReader(new FileReader(ResourceHelper.TEST_RESOURCE_PATH + "branch/expected.csv"));
-        ImmutableMap.Builder<String, Result> builder = new ImmutableMap.Builder<>();
-        String str;
-        while((str = reader.readLine()) != null){
-            String[] line = str.split(",");
-            if(line.length == 2){
-                builder.put(line[0], Integer.parseInt(line[1]) == 1 ? FAIL : PASS);
+    private static HashMap<String, Result> readExpectedResults() throws IOException {
+        HashMap<String,Result> result = new HashMap<>();
+        try(BufferedReader reader = new BufferedReader(new FileReader(ResourceHelper.TEST_RESOURCE_PATH + "branch/expected.csv")))
+        {
+            String str;
+            while((str = reader.readLine()) != null){
+                String[] line = str.split(",");
+                if(line.length == 2){
+                    result.put(line[0], Integer.parseInt(line[1]) == 1 ? FAIL : PASS);
+                }
             }
         }
-        reader.close();
-        return builder.build();
+        return result;
     }
 
     private String path;

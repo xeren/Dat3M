@@ -1,13 +1,12 @@
 package com.dat3m.dartagnan.expression;
 
 import com.dat3m.dartagnan.EncodeContext;
-import com.google.common.collect.ImmutableSet;
+import com.dat3m.dartagnan.expression.op.IOpBin;
+import com.dat3m.dartagnan.program.event.Event;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.IntExpr;
 import com.microsoft.z3.Model;
-import com.dat3m.dartagnan.expression.op.IOpBin;
-import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.event.Event;
+import java.util.function.Consumer;
 
 public class IExprBin extends IExpr implements ExprInterface {
 
@@ -37,8 +36,9 @@ public class IExprBin extends IExpr implements ExprInterface {
 	}
 
 	@Override
-	public ImmutableSet<Register> getRegs() {
-		return new ImmutableSet.Builder<Register>().addAll(lhs.getRegs()).addAll(rhs.getRegs()).build();
+	public void subexpression(Consumer<ExprInterface> a) {
+		a.accept(lhs);
+		a.accept(rhs);
 	}
 
 	@Override

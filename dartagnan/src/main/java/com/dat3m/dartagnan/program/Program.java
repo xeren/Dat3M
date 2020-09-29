@@ -1,14 +1,6 @@
 package com.dat3m.dartagnan.program;
 
-import com.dat3m.dartagnan.program.utils.EType;
-import com.dat3m.dartagnan.program.utils.ThreadCache;
-import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.EncodeContext;
-import com.dat3m.dartagnan.wmm.utils.Arch;
-import com.google.common.collect.ImmutableSet;
-import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
-import com.microsoft.z3.Model;
 import com.dat3m.dartagnan.asserts.AbstractAssert;
 import com.dat3m.dartagnan.asserts.AssertCompositeOr;
 import com.dat3m.dartagnan.asserts.AssertInline;
@@ -16,9 +8,15 @@ import com.dat3m.dartagnan.asserts.AssertTrue;
 import com.dat3m.dartagnan.expression.INonDet;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Local;
-import com.dat3m.dartagnan.program.event.utils.RegWriter;
 import com.dat3m.dartagnan.program.memory.Location;
 import com.dat3m.dartagnan.program.memory.Memory;
+import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.program.utils.ThreadCache;
+import com.dat3m.dartagnan.wmm.filter.FilterBasic;
+import com.dat3m.dartagnan.wmm.utils.Arch;
+import com.microsoft.z3.BoolExpr;
+import com.microsoft.z3.Context;
+import com.microsoft.z3.Model;
 
 import java.util.*;
 import java.util.stream.*;
@@ -29,18 +27,18 @@ public class Program {
 	private AbstractAssert ass;
 	private AbstractAssert assFilter;
 	private List<Thread> threads;
-	private final ImmutableSet<Location> locations;
+	private final Set<Location> locations;
 	private Memory memory;
 	private Arch arch;
 	private ThreadCache cache;
 	private boolean isUnrolled;
 	private boolean isCompiled;
 
-	public Program(Memory memory, ImmutableSet<Location> locations) {
+	public Program(Memory memory, Set<Location> locations) {
 		this("", memory, locations);
 	}
 
-	public Program(String name, Memory memory, ImmutableSet<Location> locations) {
+	public Program(String name, Memory memory, Set<Location> locations) {
 		this.name = name;
 		this.memory = memory;
 		this.locations = locations;
@@ -112,7 +110,7 @@ public class Program {
 		return threads;
 	}
 
-	public ImmutableSet<Location> getLocations() {
+	public Set<Location> getLocations() {
 		return locations;
 	}
 
@@ -186,9 +184,9 @@ public class Program {
 		return context.and(getCache().getRegWriterMap().entrySet().stream()
 			.flatMap(e->IntStream.range(0, e.getValue().size())
 				.mapToObj(i->context.or(
-					context.not(e.getValue().get(i).exec()),
-					context.or(IntStream.range(i, e.getValue().size()).mapToObj(e.getValue()::get).map(Event::exec)),
-					context.eq(e.getKey().getLastValueExpr(context), ((RegWriter) e.getValue().get(i)).getResultRegisterExpr())))));
+					context.not(((Event)e.getValue().get(i)).exec()),
+					context.or(IntStream.range(i, e.getValue().size()).mapToObj(e.getValue()::get).map(Event.class::cast).map(Event::exec)),
+					context.eq(e.getKey().getLastValueExpr(context), e.getValue().get(i).getResultRegisterExpr())))));
 	}
 
 	/**

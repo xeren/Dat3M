@@ -6,13 +6,13 @@ import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.utils.Arch;
-import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
+import java.util.Set;
 
 public class CondJump extends Jump implements RegReaderData {
 
     private final BExpr expr;
-    private final ImmutableSet<Register> dataRegs;
+    private final Set<Register> dataRegs;
 
     public CondJump(BExpr expr, Label label){
         super(label);
@@ -20,7 +20,7 @@ public class CondJump extends Jump implements RegReaderData {
             throw new IllegalArgumentException("CondJump event requires non null expression");
         }
         this.expr = expr;
-        dataRegs = expr.getRegs();
+        dataRegs = Register.of(expr);
         addFilters(EType.BRANCH, EType.COND_JUMP, EType.REG_READER);
     }
 
@@ -31,7 +31,7 @@ public class CondJump extends Jump implements RegReaderData {
     }
     
     @Override
-    public ImmutableSet<Register> getDataRegs(){
+    public Set<Register> getDataRegs(){
         return dataRegs;
     }
 

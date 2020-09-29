@@ -1,15 +1,12 @@
 package com.dat3m.dartagnan.utils.options;
 
-import java.util.Arrays;
 import java.util.Set;
 
 import org.apache.commons.cli.*;
 
-import com.google.common.collect.ImmutableSet;
-
 public class DartagnanOptions extends BaseOptions {
 
-    protected Set<String> supportedFormats = ImmutableSet.copyOf(Arrays.asList("litmus", "bpl"));
+    protected Set<String> supportedFormats = Set.of("litmus", "bpl");
     protected Integer cegar;
 	
     public DartagnanOptions(){

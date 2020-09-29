@@ -2,11 +2,12 @@ package com.dat3m.dartagnan.utils;
 
 import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.dat3m.dartagnan.wmm.utils.alias.Alias;
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableSet;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Set;
+import static java.util.stream.Collectors.toUnmodifiableSet;
+import static java.util.stream.Stream.concat;
 
 public class Settings {
 
@@ -17,7 +18,7 @@ public class Settings {
     private final int bound;
 
     private boolean draw = false;
-    private ImmutableSet<String> relations = ImmutableSet.of();
+    private Set<String> relations = Set.of();
 
     public Settings(Mode mode, Alias alias, int bound){
         this.mode = mode == null ? Mode.KNASTER : mode;
@@ -32,12 +33,11 @@ public class Settings {
             if(mode == Mode.KNASTER){
                 this.mode = Mode.IDL;
             }
-            ImmutableSet.Builder<String> builder = new ImmutableSet.Builder<>();
-            builder.addAll(Graph.getDefaultRelations());
+
+            this.relations = Graph.getDefaultRelations();
             if(relations != null) {
-                builder.addAll(relations);
+                this.relations = concat(this.relations.stream(), relations.stream()).collect(toUnmodifiableSet());
             }
-            this.relations = builder.build();
         }
     }
 
@@ -61,7 +61,7 @@ public class Settings {
         return draw;
     }
 
-    public ImmutableSet<String> getGraphRelations(){
+    public Set<String> getGraphRelations(){
         return relations;
     }
 
@@ -70,7 +70,7 @@ public class Settings {
         StringBuilder sb = new StringBuilder();
         sb.append("mode=").append(mode).append(" alias=").append(alias).append(" bound=").append(bound);
         if(draw){
-            sb.append(" draw=").append(Joiner.on(",").join(relations));
+            sb.append(" draw=").append(String.join(",", relations));
         }
         return sb.toString();
     }

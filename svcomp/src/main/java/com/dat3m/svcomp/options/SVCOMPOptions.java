@@ -2,7 +2,6 @@ package com.dat3m.svcomp.options;
 
 import static java.util.stream.IntStream.rangeClosed;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -13,11 +12,11 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.ParseException;
 
 import com.dat3m.dartagnan.utils.options.BaseOptions;
-import com.google.common.collect.ImmutableSet;
+
 
 public class SVCOMPOptions extends BaseOptions {
 
-    protected Set<String> supportedFormats = ImmutableSet.copyOf(Arrays.asList("c", "i")); 
+    protected Set<String> supportedFormats = Set.of("c", "i");
     protected List<Integer> bounds = rangeClosed(1, 10000).boxed().collect(Collectors.toList());
     protected String optimization = "O0";
     protected boolean witness;

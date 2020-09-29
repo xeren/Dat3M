@@ -1,13 +1,9 @@
 package com.dat3m.dartagnan.expression;
 
 import com.dat3m.dartagnan.EncodeContext;
+import com.dat3m.dartagnan.program.event.Event;
 import com.microsoft.z3.IntExpr;
 import com.microsoft.z3.Model;
-import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.event.Event;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.primitives.UnsignedInteger;
-import com.google.common.primitives.UnsignedLong;
 
 public class INonDet extends IExpr implements ExprInterface {
 
@@ -38,11 +34,6 @@ public class INonDet extends IExpr implements ExprInterface {
 	}
 
 	@Override
-	public ImmutableSet<Register> getRegs() {
-		return ImmutableSet.of();
-	}
-
-	@Override
 	public String toString() {
 		switch(type) {
 			case INT:
@@ -70,17 +61,17 @@ public class INonDet extends IExpr implements ExprInterface {
 			case INT:
 				return Integer.MIN_VALUE;
 			case UINT:
-				return UnsignedInteger.ZERO.longValue();
+				return 0;
 			case LONG:
 				return Long.MIN_VALUE;
 			case ULONG:
-				return UnsignedLong.ZERO.longValue();
+				return 0;
 			case SHORT:
 				return Short.MIN_VALUE;
 			case USHORT:
 				return 0;
 			case CHAR:
-				return -128;
+				return Byte.MIN_VALUE;
 			case UCHAR:
 				return 0;
 		}
@@ -92,17 +83,17 @@ public class INonDet extends IExpr implements ExprInterface {
 			case INT:
 				return Integer.MAX_VALUE;
 			case UINT:
-				return UnsignedInteger.MAX_VALUE.longValue();
+				return 4294967295L;
 			case LONG:
 				return Long.MAX_VALUE;
 			case ULONG:
-				return UnsignedLong.MAX_VALUE.longValue();
+				return -1L;
 			case SHORT:
 				return Short.MAX_VALUE;
 			case USHORT:
 				return 65535;
 			case CHAR:
-				return 127;
+				return Byte.MAX_VALUE;
 			case UCHAR:
 				return 255;
 		}

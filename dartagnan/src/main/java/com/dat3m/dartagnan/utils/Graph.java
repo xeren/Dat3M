@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 public class Graph {
 
     public static Set<String> getDefaultRelations(){
-        return new HashSet<>(Arrays.asList("po", "co", "rf"));
+        return Set.of("po", "co", "rf");
     }
 
     private static Map<String, String> colorMap;

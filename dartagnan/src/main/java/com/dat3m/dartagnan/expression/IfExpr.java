@@ -1,12 +1,11 @@
 package com.dat3m.dartagnan.expression;
 
 import com.dat3m.dartagnan.EncodeContext;
-import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
-import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.IntExpr;
 import com.microsoft.z3.Model;
+import java.util.function.Consumer;
 
 public class IfExpr implements ExprInterface {
 
@@ -34,7 +33,7 @@ public class IfExpr implements ExprInterface {
 	public IntExpr getLastValueExpr(EncodeContext ctx) {
 		// In principle this method is only called by assertions 
 		// and thus it should never be called for this class
-        throw new RuntimeException("Problem with getLastValueExpr in " + this.toString());
+		throw new RuntimeException("Problem with getLastValueExpr in " + this.toString());
 	}
 
 	@Override
@@ -48,14 +47,16 @@ public class IfExpr implements ExprInterface {
 	}
 
 	@Override
-	public ImmutableSet<Register> getRegs() {
-        return new ImmutableSet.Builder<Register>().addAll(guard.getRegs()).addAll(tbranch.getRegs()).addAll(fbranch.getRegs()).build();
+	public void subexpression(Consumer<ExprInterface> a) {
+		a.accept(guard);
+		a.accept(tbranch);
+		a.accept(fbranch);
 	}
-	
-    @Override
-    public String toString() {
-        return "(if " + guard + " then " + tbranch + " else " + fbranch + ")";
-    }
+
+	@Override
+	public String toString() {
+		return "(if " + guard + " then " + tbranch + " else " + fbranch + ")";
+	}
 
 	@Override
 	public IConst reduce() {

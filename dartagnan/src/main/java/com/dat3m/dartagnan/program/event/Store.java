@@ -1,22 +1,22 @@
 package com.dat3m.dartagnan.program.event;
 
 import com.dat3m.dartagnan.EncodeContext;
-import com.google.common.collect.ImmutableSet;
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.utils.EType;
+import java.util.Set;
 
 public class Store extends MemEvent implements RegReaderData {
 
     protected final ExprInterface value;
-    private final ImmutableSet<Register> dataRegs;
+    private final Set<Register> dataRegs;
 
     public Store(IExpr address, ExprInterface value, String mo){
     	super(address, mo);
         this.value = value;
-        dataRegs = value.getRegs();
+        dataRegs = Register.of(value);
         addFilters(EType.ANY, EType.VISIBLE, EType.MEMORY, EType.WRITE, EType.REG_READER);
     }
 
@@ -33,7 +33,7 @@ public class Store extends MemEvent implements RegReaderData {
     }
 
     @Override
-    public ImmutableSet<Register> getDataRegs(){
+    public Set<Register> getDataRegs(){
         return dataRegs;
     }
 

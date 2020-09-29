@@ -1,19 +1,17 @@
 package com.dat3m.dartagnan.wmm.utils.alias;
 
 import com.dat3m.dartagnan.expression.ExprInterface;
-import com.dat3m.dartagnan.program.Thread;
-import com.dat3m.dartagnan.program.event.utils.RegReaderData;
-import com.dat3m.dartagnan.program.utils.EType;
-import com.dat3m.dartagnan.wmm.filter.FilterBasic;
-import com.google.common.collect.ImmutableSet;
 import com.dat3m.dartagnan.expression.IExpr;
+import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.*;
+import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
 import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.program.memory.Location;
-
+import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import java.util.*;
 
 /**
@@ -23,7 +21,7 @@ import java.util.*;
 public class AliasAnalysis {
 
     private List<Object> variables = new LinkedList<>();
-    private ImmutableSet<Address> maxAddressSet;
+    private Set<Address> maxAddressSet;
     private Map<Register, Map<Event, Integer>> ssaMap;
 
     private Graph graph = new Graph();
@@ -137,7 +135,7 @@ public class AliasAnalysis {
 
                 if (expr instanceof Register) {
                     // r1 = r2 -> add edge r2 --> r1
-                    graph.addEdge((Register) expr, register);
+                    graph.addEdge(expr, register);
 
                 } else if (expr instanceof Address) {
                     // r = &a
@@ -260,26 +258,25 @@ public class AliasAnalysis {
             IExpr address = ((MemEvent) e).getAddress();
             Set<Address> adresses;
             if (address instanceof Register) {
-                adresses = graph.getAddresses(((Register) address));
+                adresses = graph.getAddresses(address);
             } else if (address instanceof Address) {
-                    adresses = ImmutableSet.of(((Address) address));
+                    adresses = Set.of(((Address) address));
             } else {
                 adresses = maxAddressSet;
             }
             if (adresses.size() == 0) {
                 adresses = maxAddressSet;
             }
-            ImmutableSet<Address> addr = ImmutableSet.copyOf(adresses);
-            ((MemEvent) e).setMaxAddressSet(addr);
+            ((MemEvent) e).setMaxAddressSet(Set.copyOf(adresses));
         }
     }
 
     private void calculateLocationSetsNoAlias(Program program) {
-        ImmutableSet<Address> maxAddressSet = program.getMemory().getAllAddresses();
+        Set<Address> maxAddressSet = program.getMemory().getAllAddresses();
         for (Event e : program.getCache().getEvents(FilterBasic.get(EType.MEMORY))) {
             IExpr address = ((MemEvent) e).getAddress();
             if (address instanceof Address) {
-                ((MemEvent) e).setMaxAddressSet(ImmutableSet.of((Address) address));
+                ((MemEvent) e).setMaxAddressSet(Set.of((Address) address));
             } else {
                 ((MemEvent) e).setMaxAddressSet(maxAddressSet);
             }
@@ -290,8 +287,7 @@ public class AliasAnalysis {
         Map<Register, Map<Event, Integer>> ssaMap = new HashMap<>();
         Map<Register, Integer> indexMap = new HashMap<>();
         for(Thread thread : program.getThreads()){
-            List<Event> events = thread.getCache().getEvents(FilterBasic.get(EType.ANY));
-            mkSsaIndices(events, ssaMap, indexMap);
+            mkSsaIndices(thread.getCache().getEvents(FilterBasic.get(EType.ANY)), ssaMap, indexMap);
         }
         return ssaMap;
     }
@@ -313,7 +309,7 @@ public class AliasAnalysis {
             }
 
             if(e instanceof MemEvent){
-                for(Register register : ((MemEvent)e).getAddress().getRegs()){
+                for(Register register : Register.of(((MemEvent)e).getAddress())){
                     ssaMap.putIfAbsent(register, new HashMap<>());
                     ssaMap.get(register).put(e, indexMap.getOrDefault(register, 0));
                 }

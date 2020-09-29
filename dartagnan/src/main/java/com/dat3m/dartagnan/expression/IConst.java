@@ -1,11 +1,9 @@
 package com.dat3m.dartagnan.expression;
 
 import com.dat3m.dartagnan.EncodeContext;
-import com.google.common.collect.ImmutableSet;
+import com.dat3m.dartagnan.program.event.Event;
 import com.microsoft.z3.IntExpr;
 import com.microsoft.z3.Model;
-import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.event.Event;
 
 public class IConst extends IExpr implements ExprInterface {
 
@@ -18,11 +16,6 @@ public class IConst extends IExpr implements ExprInterface {
 	@Override
 	public IntExpr toZ3Int(Event e, EncodeContext c) {
 		return c.context.mkInt(value);
-	}
-
-	@Override
-	public ImmutableSet<Register> getRegs() {
-		return ImmutableSet.of();
 	}
 
 	@Override

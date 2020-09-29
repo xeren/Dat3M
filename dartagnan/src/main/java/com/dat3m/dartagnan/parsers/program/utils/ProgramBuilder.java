@@ -2,7 +2,6 @@ package com.dat3m.dartagnan.parsers.program.utils;
 
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.*;
-import com.google.common.collect.ImmutableSet;
 import com.dat3m.dartagnan.asserts.AbstractAssert;
 import com.dat3m.dartagnan.expression.IConst;
 import com.dat3m.dartagnan.program.Program;
@@ -31,7 +30,7 @@ public class ProgramBuilder {
     private int lastOrigId = 0;
 
     public Program build(){
-        Program program = new Program(memory, ImmutableSet.copyOf(locations.values()));
+        Program program = new Program(memory, Set.copyOf(locations.values()));
         buildInitThreads();
         for(Thread thread : threads.values()){
             validateLabels(thread);

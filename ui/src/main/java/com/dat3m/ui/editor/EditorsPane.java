@@ -2,7 +2,6 @@ package com.dat3m.ui.editor;
 
 import com.dat3m.ui.options.utils.ControlCode;
 import com.dat3m.ui.options.utils.Task;
-import com.google.common.collect.ImmutableMap;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -11,9 +10,11 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
+import java.util.Map;
+
 public class EditorsPane implements ActionListener {
 
-    private final ImmutableMap<EditorCode, Editor> editors = ImmutableMap.of(
+    private final Map<EditorCode, Editor> editors = Map.of(
             EditorCode.PROGRAM, new Editor(EditorCode.PROGRAM, new JEditorPane(), "litmus", "pts", "bpl"),
             EditorCode.SOURCE_MM, new Editor(EditorCode.SOURCE_MM, new JEditorPane(), "cat"),
             EditorCode.TARGET_MM, new Editor(EditorCode.TARGET_MM, new JEditorPane(), "cat")

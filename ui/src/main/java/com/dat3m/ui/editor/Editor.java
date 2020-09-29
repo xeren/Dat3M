@@ -1,7 +1,5 @@
 package com.dat3m.ui.editor;
 
-import com.google.common.collect.ImmutableSet;
-
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -30,7 +28,7 @@ public class Editor extends JScrollPane implements ActionListener {
     private final JFileChooser chooser;
     private final LineNumbersView lineNumbers;
 
-    private final ImmutableSet<String> allowedFormats;
+    private final Set<String> allowedFormats;
     private String loadedFormat = "";
 
     private Set<ActionListener> actionListeners = new HashSet<>();
@@ -48,7 +46,7 @@ public class Editor extends JScrollPane implements ActionListener {
         exporterItem.setActionCommand(code.editorMenuExportActionCommand());
         exporterItem.addActionListener(this);
 
-        this.allowedFormats = ImmutableSet.copyOf(Arrays.asList(formats));
+        this.allowedFormats = Set.copyOf(Arrays.asList(formats));
         this.chooser = new JFileChooser();
         for(String format : allowedFormats) {
             chooser.addChoosableFileFilter(new FileNameExtensionFilter("*." + format, format));

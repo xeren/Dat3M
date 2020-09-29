@@ -1,28 +1,28 @@
 package com.dat3m.dartagnan.program.event.rmw.cond;
 
 import com.dat3m.dartagnan.EncodeContext;
-import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.utils.EType;
-import com.google.common.collect.ImmutableSet;
-import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.Register;
+import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.rmw.RMWLoad;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
+import com.dat3m.dartagnan.program.utils.EType;
+import com.microsoft.z3.BoolExpr;
+import java.util.Set;
 
 public abstract class RMWReadCond extends RMWLoad implements RegWriter, RegReaderData {
 
     protected ExprInterface cmp;
-    private ImmutableSet<Register> dataRegs;
+    private Set<Register> dataRegs;
 
     BoolExpr z3Cond;
 
     RMWReadCond(Register reg, ExprInterface cmp, IExpr address, String atomic) {
         super(reg, address, atomic);
         this.cmp = cmp;
-        this.dataRegs = cmp.getRegs();
+        this.dataRegs = Register.of(cmp);
         addFilters(EType.REG_READER);
     }
 
@@ -40,7 +40,7 @@ public abstract class RMWReadCond extends RMWLoad implements RegWriter, RegReade
     }
 
     @Override
-    public ImmutableSet<Register> getDataRegs(){
+    public Set<Register> getDataRegs(){
         return dataRegs;
     }
 

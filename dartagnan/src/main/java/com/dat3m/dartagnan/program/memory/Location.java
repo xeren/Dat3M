@@ -1,15 +1,13 @@
 package com.dat3m.dartagnan.program.memory;
 
 import com.dat3m.dartagnan.EncodeContext;
-import com.google.common.collect.ImmutableSet;
+import com.dat3m.dartagnan.expression.ExprInterface;
+import com.dat3m.dartagnan.expression.IConst;
+import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.program.event.MemEvent;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.IntExpr;
 import com.microsoft.z3.Model;
-import com.dat3m.dartagnan.expression.ExprInterface;
-import com.dat3m.dartagnan.expression.IConst;
-import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.MemEvent;
 
 public class Location implements ExprInterface {
 
@@ -50,11 +48,6 @@ public class Location implements ExprInterface {
 			return false;
 
 		return address.hashCode() == obj.hashCode();
-	}
-
-	@Override
-	public ImmutableSet<Register> getRegs(){
-		return ImmutableSet.of();
 	}
 
 	@Override

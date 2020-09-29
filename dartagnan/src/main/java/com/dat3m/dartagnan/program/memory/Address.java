@@ -1,14 +1,12 @@
 package com.dat3m.dartagnan.program.memory;
 
 import com.dat3m.dartagnan.EncodeContext;
-import com.google.common.collect.ImmutableSet;
+import com.dat3m.dartagnan.expression.ExprInterface;
+import com.dat3m.dartagnan.expression.IConst;
+import com.dat3m.dartagnan.program.event.Event;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.IntExpr;
 import com.microsoft.z3.Model;
-import com.dat3m.dartagnan.expression.ExprInterface;
-import com.dat3m.dartagnan.expression.IConst;
-import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.event.Event;
 
 public class Address extends IConst implements ExprInterface {
 
@@ -18,11 +16,6 @@ public class Address extends IConst implements ExprInterface {
 	Address(int index) {
 		super(index);
 		this.index = index;
-	}
-
-	@Override
-	public ImmutableSet<Register> getRegs() {
-		return ImmutableSet.of();
 	}
 
 	@Override
