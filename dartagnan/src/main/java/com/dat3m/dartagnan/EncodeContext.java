@@ -7,16 +7,25 @@ import com.microsoft.z3.*;
 import java.util.*;
 import java.util.stream.Stream;
 
-public class EncodeContext {
+public class EncodeContext implements AutoCloseable {
 
-	public final Context context;
+	public final Context context = new Context();
+	private final Tactic tactic;
 	private final Sort sortEvent;
 	private final HashSet<Relation> done = new HashSet<>();
-	private LinkedList<BoolExpr> rule = new LinkedList<>();
+	private final Solver solver;
+	private final HashMap<BoolExpr,BoolExpr> track = new HashMap<>();
 
-	public EncodeContext(Context context) {
-		this.context = context;
+	public EncodeContext() {
+		tactic = null;
 		sortEvent = context.mkIntSort();
+		solver = context.mkSolver();
+	}
+
+	public EncodeContext(String tacticName) {
+		tactic = context.mkTactic(tacticName);
+		sortEvent = context.mkIntSort();
+		solver = context.mkSolver(tactic);
 	}
 
 	public boolean add(Relation self) {
@@ -43,28 +52,51 @@ public class EncodeContext {
 		return (a,b)->(BoolExpr)f.apply(a, b);
 	}
 
+	public void push() {
+		solver.push();
+	}
+
+	public void pop() {
+		solver.pop();
+	}
+
 	/**
 	 * Adds a proposition to the current conjunction.
 	 * @param assertion
 	 * Rule to assert.
 	 */
 	public void rule(BoolExpr assertion) {
-		rule.add(assertion);
+		solver.add(assertion);
 	}
 
 	/**
-	 * Check if the formula
-	 * Requires no instances of {@link Invert} to be active.
+	 * Adds a proposition to the current conjunction and tracks it.
+	 * If some combined formula is unsatisfiable because of {@code assertion}, it can return it.
+	 * @param assertion
+	 * Rule to assert.
+	 */
+	public void track(BoolExpr assertion, String name) {
+		BoolExpr n = context.mkBoolConst(name);
+		solver.assertAndTrack(assertion, n);
+		track.put(n, assertion);
+	}
+
+	public Solver solver()
+	{
+		Solver s = null == tactic ? context.mkSolver() : context.mkSolver(tactic);
+		s.add(solver.getAssertions());
+		return s;
+	}
+
+	/**
+	 * Check if the formula is satisfiable.
 	 * @return
 	 * There is a model for all current propositions.
 	 * @throws RuntimeException
 	 * The formula could not be decided.
 	 */
 	public boolean check() {
-		Solver s = context.mkSolver();
-		for(BoolExpr x: rule)
-			s.add(x);
-		switch(s.check())
+		switch(solver.check())
 		{
 			case SATISFIABLE:
 			return true;
@@ -81,40 +113,32 @@ public class EncodeContext {
 	 * A model that satisfies the formula.
 	 */
 	public Optional<Model> model() {
-		Solver s = context.mkSolver();
-		for(BoolExpr x: rule)
-			s.add(x);
-		switch(s.check())
+		switch(solver.check())
 		{
 			case SATISFIABLE:
-				return Optional.of(s.getModel());
+			return Optional.of(solver.getModel());
 			case UNSATISFIABLE:
-				return Optional.empty();
+			return Optional.empty();
 			default:
-				throw new RuntimeException("undecidable");
+			throw new RuntimeException("undecidable");
 		}
 	}
 
-	/**
-	 * Inverts the semantics such that the conjunction of future propositions is asserted to be violated.
-	 */
-	public class Invert implements AutoCloseable {
-		LinkedList<BoolExpr> list;
-		public Invert() {
-			list = rule;
-			rule = new LinkedList<>();
-		}
-		@Override
-		public void close() {
-			list.add(context.mkNot(context.mkAnd(rule.toArray(new BoolExpr[0]))));
-			rule = list;
+	public Optional<BoolExpr[]> unsatisfiableCore() {
+		switch(solver.check())
+		{
+			case SATISFIABLE:
+			return Optional.empty();
+			case UNSATISFIABLE:
+			return Optional.of(Arrays.stream(solver.getUnsatCore()).map(track::get).toArray(BoolExpr[]::new));
+			default:
+			throw new RuntimeException("undecidable");
 		}
 	}
 
+	@Deprecated
 	public BoolExpr allRules() {
-		BoolExpr result = context.mkAnd(rule.toArray(new BoolExpr[0]));
-		rule.clear();
-		return result;
+		return context.mkAnd(solver.getAssertions());
 	}
 
 	public Expr event(Event event) {
@@ -346,5 +370,10 @@ public class EncodeContext {
 
 	public Pattern pattern(Expr... part) {
 		return context.mkPattern(part);
+	}
+
+	@Override
+	public void close() {
+		context.close();
 	}
 }

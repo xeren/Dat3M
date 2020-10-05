@@ -9,71 +9,66 @@ import com.dat3m.porthos.Porthos;
 import com.dat3m.porthos.PorthosResult;
 import com.dat3m.ui.utils.UiOptions;
 import com.dat3m.ui.utils.Utils;
-import com.microsoft.z3.Context;
-import com.microsoft.z3.Solver;
 
 public class PortabilityResult implements Dat3mResult {
 
-    private final Program sourceProgram;
-    private final Program targetProgram;
-    private final Wmm sourceWmm;
-    private final Wmm targetWmm;
-    private final UiOptions options;
+	private final Program sourceProgram;
+	private final Program targetProgram;
+	private final Wmm sourceWmm;
+	private final Wmm targetWmm;
+	private final UiOptions options;
 
-    private Graph graph;
-    private String verdict;
+	private Graph graph;
+	private String verdict;
 
-    public PortabilityResult(Program sourceProgram, Program targetProgram, Wmm sourceWmm, Wmm targetWmm, UiOptions options){
-        this.sourceProgram = sourceProgram;
-        this.targetProgram = targetProgram;
-        this.sourceWmm = sourceWmm;
-        this.targetWmm = targetWmm;
-        this.options = options;
-        run();
-    }
-    
-    public Graph getGraph(){
-        return graph;
-    }
+	public PortabilityResult(Program sourceProgram, Program targetProgram, Wmm sourceWmm, Wmm targetWmm, UiOptions options) {
+		this.sourceProgram = sourceProgram;
+		this.targetProgram = targetProgram;
+		this.sourceWmm = sourceWmm;
+		this.targetWmm = targetWmm;
+		this.options = options;
+		run();
+	}
 
-    public String getVerdict(){
-        return verdict;
-    }
+	public Graph getGraph() {
+		return graph;
+	}
 
-    private void run(){
-        if(validate()){
-            Context ctx = new Context();
-            Solver s1 = ctx.mkSolver();
-            Solver s2 = ctx.mkSolver();
-            EncodeContext context = new EncodeContext(ctx);
+	public String getVerdict() {
+		return verdict;
+	}
 
-            PorthosResult result = Porthos.testProgram(context, s1, s2, sourceProgram, targetProgram, sourceProgram.getArch(),
-                    targetProgram.getArch(), sourceWmm, targetWmm, options.getSettings());
+	private void run() {
+		if(validate()) {
+			try(EncodeContext context = new EncodeContext()) {
 
-            verdict = "Settings: " + options.getSettings() + "\n"
-                    + "The program is" + (result.getIsPortable() ? " " : " not ") + "state-portable\n"
-                    + "Iterations: " + result.getIterations();
+				PorthosResult result = Porthos.testProgram(context, sourceProgram, targetProgram, sourceProgram.getArch(),
+					targetProgram.getArch(), sourceWmm, targetWmm, options.getSettings());
 
-            if(!result.getIsPortable()){
-                graph = new Graph(context, s1.getModel(), sourceProgram, targetProgram, options.getSettings().getGraphRelations());
-            }
-            ctx.close();
-        }
-    }
+				verdict = "Settings: " + options.getSettings() + "\n"
+					+ "The program is" + (result.getIsPortable() ? " " : " not ") + "state-portable\n"
+					+ "Iterations: " + result.getIterations();
 
-    private boolean validate(){
-        Arch sourceArch = sourceProgram.getArch() == null ? options.getSource() : sourceProgram.getArch();
-        if(sourceArch == null) {
-            Utils.showError("Missing source architecture.");
-            return false;
-        }
-        Arch targetArch = targetProgram.getArch() == null ? options.getTarget() : targetProgram.getArch();
-        if(targetArch == null) {
-            Utils.showError("Missing target architecture.");
-            return false;
-        }
-        sourceProgram.setArch(sourceArch);
-        targetProgram.setArch(targetArch);
-        return true;
-    }
+				if(!result.getIsPortable()) {
+					graph = new Graph(context, context.model().orElseThrow(), sourceProgram, targetProgram, options.getSettings().getGraphRelations());
+				}
+			}
+		}
+	}
+
+	private boolean validate() {
+		Arch sourceArch = sourceProgram.getArch() == null ? options.getSource() : sourceProgram.getArch();
+		if(sourceArch == null) {
+			Utils.showError("Missing source architecture.");
+			return false;
+		}
+		Arch targetArch = targetProgram.getArch() == null ? options.getTarget() : targetProgram.getArch();
+		if(targetArch == null) {
+			Utils.showError("Missing target architecture.");
+			return false;
+		}
+		sourceProgram.setArch(sourceArch);
+		targetProgram.setArch(targetArch);
+		return true;
+	}
 }

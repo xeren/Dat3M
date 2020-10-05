@@ -15,10 +15,6 @@ import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.wmm.relation.base.memory.RelRf;
 import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.dat3m.dartagnan.wmm.utils.alias.Alias;
-import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
-import com.microsoft.z3.Solver;
-import com.microsoft.z3.Status;
 import org.junit.Test;
 
 import java.io.File;
@@ -39,24 +35,26 @@ public class RelRfTest {
 		String programPath = ResourceHelper.TEST_RESOURCE_PATH + "wmm/relation/basic/rf/";
 		String wmmPath = ResourceHelper.CAT_RESOURCE_PATH + "cat/linux-kernel.cat";
 
-		Context ctx = new Context();
-		Solver solver = ctx.mkSolver(ctx.mkTactic(Settings.TACTIC));
 		Program p1 = new ProgramParser().parse(new File(programPath + "C-rf-01.litmus"));
 		Program p2 = new ProgramParser().parse(new File(programPath + "C-rf-02.litmus"));
 
 		Wmm wmm = new ParserCat().parse(new File(wmmPath));
 
 		RelRf.FLAG_USE_SEQ_ENCODING_REL_RF = false;
-		assertEquals(Dartagnan.testProgram(solver, ctx, p1, wmm, p1.getArch(), settings), FAIL);
-		solver.reset();
-		assertEquals(Dartagnan.testProgram(solver, ctx, p2, wmm, p2.getArch(), settings), FAIL);
-		solver.reset();
+		try(EncodeContext context = new EncodeContext(Settings.TACTIC)) {
+			assertEquals(FAIL, Dartagnan.testProgram(context, new ProgramCache(p1), wmm, p1.getArch(), settings));
+		}
+		try(EncodeContext context = new EncodeContext(Settings.TACTIC)) {
+			assertEquals(FAIL, Dartagnan.testProgram(context, new ProgramCache(p2), wmm, p2.getArch(), settings));
+		}
 
 		RelRf.FLAG_USE_SEQ_ENCODING_REL_RF = true;
-		assertEquals(Dartagnan.testProgram(solver, ctx, p1, wmm, p1.getArch(), settings), FAIL);
-		solver.reset();
-		assertEquals(Dartagnan.testProgram(solver, ctx, p2, wmm, p2.getArch(), settings), FAIL);
-		ctx.close();
+		try(EncodeContext context = new EncodeContext(Settings.TACTIC)) {
+			assertEquals(FAIL, Dartagnan.testProgram(context, new ProgramCache(p1), wmm, p1.getArch(), settings));
+		}
+		try(EncodeContext context = new EncodeContext(Settings.TACTIC)) {
+			assertEquals(FAIL, Dartagnan.testProgram(context, new ProgramCache(p2), wmm, p2.getArch(), settings));
+		}
 	}
 
 	@Test
@@ -98,30 +96,25 @@ public class RelRfTest {
 		}};
 		extractEvents(program, events);
 
-		try(Context ctx = new Context()) {
-			Solver solver = ctx.mkSolver(ctx.mkTactic(Settings.TACTIC));
-			EncodeContext context = new EncodeContext(ctx);
+		try(EncodeContext context = new EncodeContext(Settings.TACTIC)) {
 			ProgramCache cache = new ProgramCache(program);
 
-			solver.add(program.getAss().encode(context));
+			context.rule(program.getAss().encode(context));
 			if(program.getAssFilter() != null) {
-				solver.add(program.getAssFilter().encode(context));
+				context.rule(program.getAssFilter().encode(context));
 			}
 			program.encodeCF(context);
 			program.encodeFinalRegisterValues(context);
 			wmm.encode(context, cache, settings);
-			solver.add(context.allRules());
 			// Don't add constraint of MM, they can also forbid illegal edges
 
-			assertEquals(Status.SATISFIABLE, solver.check());
+			assertTrue(context.check());
 
-			BoolExpr edge1 = context.edge("rf", events.get(5), events.get(2));
-			solver.add(edge1);
-			assertEquals(Status.SATISFIABLE, solver.check());
+			context.rule(context.edge("rf", events.get(5), events.get(2)));
+			assertTrue(context.check());
 
-			BoolExpr edge2 = context.edge("rf", events.get(8), events.get(2));
-			solver.add(edge2);
-			assertEquals(Status.UNSATISFIABLE, solver.check());
+			context.rule(context.edge("rf", events.get(8), events.get(2)));
+			assertFalse(context.check());
 		}
 	}
 

@@ -8,7 +8,6 @@ import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.dat3m.dartagnan.wmm.utils.alias.Alias;
-import com.microsoft.z3.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.EnumMap;
@@ -46,24 +45,21 @@ public abstract class Compare
 		EnumMap<Mode,Boolean> result = new EnumMap<>(Mode.class);
 		for(Mode m: Mode.values())
 		{
-			try(Context c = new Context())
+			try(EncodeContext e = new EncodeContext())
 			{
-				EncodeContext e = new EncodeContext(c);
 				Program p = program.get(m);
 				long timeStart = System.nanoTime();
-				Solver s = c.mkSolver();
 				p.encodeCF(e);
 				p.encodeUINonDet(e);
 				p.encodeFinalRegisterValues(e);
 				model.encode(e, new ProgramCache(p), settings.get(m));
 				model.consistent(e);
-				s.add(e.allRules());
 				if(null != p.getAss())
-					s.add(p.getAss().encode(e));
+					e.rule(p.getAss().encode(e));
 				if(null != p.getAssFilter())
-					s.add(p.getAssFilter().encode(e));
+					e.rule(p.getAssFilter().encode(e));
 				long timeEncode = System.nanoTime();
-				result.put(m, (null != p.getAss() && p.getAss().getInvert()) != (Status.SATISFIABLE == s.check()));
+				result.put(m, (null != p.getAss() && p.getAss().getInvert()) != e.check());
 				long timeSolve = System.nanoTime();
 				System.out.printf("%d %d ", timeEncode - timeStart, timeSolve - timeEncode);
 			}

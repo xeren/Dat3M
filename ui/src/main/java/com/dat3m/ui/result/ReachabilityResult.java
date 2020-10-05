@@ -12,61 +12,54 @@ import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.dat3m.ui.utils.UiOptions;
 import com.dat3m.ui.utils.Utils;
-import com.microsoft.z3.Context;
-import com.microsoft.z3.Solver;
 
 public class ReachabilityResult implements Dat3mResult {
 
-    private final Program program;
-    private final Wmm wmm;
-    private final UiOptions options;
+	private final Program program;
+	private final Wmm wmm;
+	private final UiOptions options;
 
-    private Graph graph;
-    private String verdict;
+	private Graph graph;
+	private String verdict;
 
-    public ReachabilityResult(Program program, Wmm wmm, UiOptions options){
-        this.program = program;
-        this.wmm = wmm;
-        this.options = options;
-        run();
-    }
-    
-    public Graph getGraph(){
-        return graph;
-    }
+	public ReachabilityResult(Program program, Wmm wmm, UiOptions options) {
+		this.program = program;
+		this.wmm = wmm;
+		this.options = options;
+		run();
+	}
 
-    public String getVerdict(){
-        return verdict;
-    }
+	public Graph getGraph() {
+		return graph;
+	}
 
-    private void run(){
-        if(validate()){
-            Context ctx = new Context();
-            Solver solver = ctx.mkSolver();
-            EncodeContext context = new EncodeContext(ctx);
-            Result result = Dartagnan.testProgram(context, new ProgramCache(program), solver, wmm, options.getTarget(), options.getSettings());
-            buildVerdict(result);
-            if(options.getSettings().getDrawGraph() && Dartagnan.canDrawGraph(program.getAss(), result == FAIL)){
-                graph = new Graph(context, solver.getModel(), program, options.getSettings().getGraphRelations());
-            }
-            ctx.close();
-        }
-    }
+	public String getVerdict() {
+		return verdict;
+	}
 
-    private void buildVerdict(Result result){
-        StringBuilder sb = new StringBuilder();
-        sb.append("Condition ").append(program.getAss().toStringWithType()).append("\n");			
-        sb.append(result).append("\n");
-        verdict = sb.toString();
-    }
+	private void run() {
+		if(validate()) {
+			try(EncodeContext context = new EncodeContext()) {
+				Result result = Dartagnan.testProgram(context, new ProgramCache(program), wmm, options.getTarget(), options.getSettings());
+				buildVerdict(result);
+				if(options.getSettings().getDrawGraph() && Dartagnan.canDrawGraph(program.getAss(), result == FAIL)) {
+					graph = new Graph(context, context.model().orElseThrow(), program, options.getSettings().getGraphRelations());
+				}
+			}
+		}
+	}
 
-    private boolean validate(){
-        Arch target = program.getArch() == null ? options.getTarget() : program.getArch();
-        if(target == null) {
-            Utils.showError("Missing target architecture.");
-            return false;
-        }
-        program.setArch(target);
-        return true;
-    }
+	private void buildVerdict(Result result) {
+		verdict = "Condition " + program.getAss().toStringWithType() + "\n" + result + "\n";
+	}
+
+	private boolean validate() {
+		Arch target = program.getArch() == null ? options.getTarget() : program.getArch();
+		if(target == null) {
+			Utils.showError("Missing target architecture.");
+			return false;
+		}
+		program.setArch(target);
+		return true;
+	}
 }

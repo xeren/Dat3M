@@ -32,7 +32,7 @@ public abstract class Axiom {
 
     public void encodeRelAndConsistency(EncodeContext context, ProgramCache program, Mode mode) {
         rel.encode(context, program, mode);
-        context.rule(consistent(context));
+        context.track(consistent(context), toString());
     }
     
     public BoolExpr consistent(EncodeContext context) {

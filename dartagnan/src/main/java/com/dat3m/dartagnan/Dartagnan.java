@@ -8,9 +8,8 @@ import static com.dat3m.dartagnan.utils.Result.BPASS;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.utils.EType;
@@ -73,43 +72,37 @@ public class Dartagnan {
 			return;
 		}
 
-		Context ctx = new Context();
-		Solver s = ctx.mkSolver();
 		Settings settings = options.getSettings();
-		EncodeContext context = new EncodeContext(ctx);
+		try(EncodeContext context = new EncodeContext())
+		{
 
-		Result result = cegar != null ? runCegar(context, s, p, mcm, target, cegar, settings) : testProgram(context, new ProgramCache(p), s, mcm, target, settings);
+			ProgramCache cache = new ProgramCache(p);
+			Result result = cegar != null
+				? runCegar(context, cache, mcm, target, cegar, settings)
+				: testProgram(context, cache, mcm, target, settings);
 
-		if(options.getProgramFilePath().endsWith(".litmus")) {
-			System.out.println("Settings: " + options.getSettings());
-			if(p.getAssFilter() != null) {
-				System.out.println("Filter " + (p.getAssFilter()));
+			if(options.getProgramFilePath().endsWith(".litmus")) {
+				System.out.println("Settings: " + options.getSettings());
+				if(p.getAssFilter() != null) {
+					System.out.println("Filter " + (p.getAssFilter()));
+				}
+				System.out.println("Condition " + p.getAss().toStringWithType());
+				System.out.println(result == Result.FAIL ? "Ok" : "No");
+			} else {
+				System.out.println(result);
 			}
-			System.out.println("Condition " + p.getAss().toStringWithType());
-			System.out.println(result == Result.FAIL ? "Ok" : "No");
-		} else {
-			System.out.println(result);
-		}
 
-		if(settings.getDrawGraph() && canDrawGraph(p.getAss(), result.equals(FAIL))) {
-			ctx.setPrintMode(Z3_ast_print_mode.Z3_PRINT_SMTLIB_FULL);
-			drawGraph(new Graph(context, s.getModel(), p, settings.getGraphRelations()), options.getGraphFilePath());
-			System.out.println("Execution graph is written to " + options.getGraphFilePath());
+			if(settings.getDrawGraph() && canDrawGraph(p.getAss(), result.equals(FAIL))) {
+				context.context.setPrintMode(Z3_ast_print_mode.Z3_PRINT_SMTLIB_FULL);
+				drawGraph(new Graph(context, context.model().orElseThrow(), p, settings.getGraphRelations()), options.getGraphFilePath());
+				System.out.println("Execution graph is written to " + options.getGraphFilePath());
+			}
 		}
-
-		ctx.close();
 	}
 
-	public static Result testProgram(Solver s, Context ctx, Program program, Wmm wmm, Arch target, Settings settings) {
-		return testProgram(new EncodeContext(ctx), new ProgramCache(program), s, wmm, target, settings);
-	}
-
-	public static Result testProgram(EncodeContext context, ProgramCache cache, Solver s, Wmm wmm, Arch target, Settings settings) {
-
+	public static Result testProgram(EncodeContext context, ProgramCache cache, Wmm wmm, Arch target, Settings settings) {
 		Program program = cache.program;
-
 		program.unroll(settings.getBound(), 0);
-
 		program.compile(target, 0);
 
 		// AssertionInline depends on compiled events (copies)
@@ -119,51 +112,41 @@ public class Dartagnan {
 			program.setAss(ass);
 			// Due to optimizations, the program might be trivially true
 			// Not returning here might loop forever for cyclic programs
-			if(ass instanceof AssertTrue) {
+			if(ass instanceof AssertTrue)
 				return PASS;
-			}
 		}
 
 		program.encodeUINonDet(context);
 		program.encodeCF(context);
 		program.encodeFinalRegisterValues(context);
-		wmm.encode(context, new ProgramCache(program), settings);
-		wmm.consistent(context);
-		s.add(context.allRules());
+		wmm.encode(context, cache, settings);
+		context.rule(wmm.consistent(context));
 
-		if(program.getAssFilter() != null) {
-			BoolExpr encodeFilter = program.getAssFilter().encode(context);
-			s.add(encodeFilter);
-		}
+		if(program.getAssFilter() != null)
+			context.rule(program.getAssFilter().encode(context));
 
 		Result res;
-		s.push();
-		s.add(program.getAss().encode(context));
-		if(s.check() == Status.SATISFIABLE) {
+		context.push();
+		context.rule(program.getAss().encode(context));
+		if(context.check()) {
 			program.encodeNoBoundEventExec(context);
-			s.add(context.allRules());
-			res = s.check() == Status.SATISFIABLE ? FAIL : BFAIL;
+			res = context.check() ? FAIL : BFAIL;
 		} else {
-			s.pop();
+			context.pop();
 			program.encodeSomeBoundEventExec(context);
-			res = s.check(context.allRules()) == Status.SATISFIABLE ? BPASS : PASS;
+			res = context.check() ? BPASS : PASS;
 		}
 
-		if(program.getAss().getInvert()) {
+		if(program.getAss().getInvert())
 			res = res.invert();
-		}
 		return res;
 	}
 
-	public static Result runCegar(Solver solver, Context ctx, Program program, Wmm wmm, Arch target, Settings settings, int cegar) {
-		return runCegar(new EncodeContext(ctx), solver, program, wmm, target, cegar, settings);
-	}
-
-	public static Result runCegar(EncodeContext context, Solver solver, Program program, Wmm wmm, Arch target, int cegar, Settings settings) {
-		Context ctx = context.context;
-		Map<BoolExpr, BoolExpr> track = new HashMap<>();
+	public static Result runCegar(EncodeContext context, ProgramCache cache, Wmm wmm, Arch target, int cegar, Settings settings) {
+		Program program = cache.program;
 		program.unroll(settings.getBound(), 0);
 		program.compile(target, 0);
+
 		// AssertionInline depends on compiled events (copies)
 		// Thus we need to set the assertion after compilation
 		if(program.getAss() == null) {
@@ -171,92 +154,63 @@ public class Dartagnan {
 			program.setAss(ass);
 			// Due to optimizations, the program might be trivially true
 			// Not returning here might loop forever for cyclic programs
-			if (ass instanceof AssertTrue) {
+			if(ass instanceof AssertTrue)
 				return PASS;
-			}
 		}
 
 		program.encodeUINonDet(context);
 		program.encodeCF(context);
 		program.encodeFinalRegisterValues(context);
-		ProgramCache p = new ProgramCache(program);
-		wmm.encodeBase(context, p, settings);
-		wmm.getAxioms().get(cegar).encodeRelAndConsistency(context, p, settings.getMode());
-		solver.add(context.allRules());
+		wmm.encodeBase(context, cache, settings);
+		wmm.getAxioms().get(cegar).encodeRelAndConsistency(context, cache, settings.getMode());
 
 		if(program.getAssFilter() != null)
-			solver.add(program.getAssFilter().encode(context));
+			context.rule(program.getAssFilter().encode(context));
 
 		// Termination guaranteed because we add a new constraint in each 
 		// iteration and thus the formula will eventually become UNSAT
-		Result res;
-		while(true){
-			solver.push();
+		while(true) {
 			// This needs to be pop for the else branch below
 			// If not the formula will always remain UNSAT
-			solver.add(program.getAss().encode(context));
-			if(solver.check() == Status.SATISFIABLE) {
-				solver.push();
+			context.push();
+			context.rule(program.getAss().encode(context));
+			if(context.check()) {
 				program.encodeNoBoundEventExec(context);
-				solver.add(context.allRules());
-				res = solver.check() == Status.SATISFIABLE ? FAIL : BFAIL;
-				solver.pop();
+				if(program.getAss().getInvert())
+					return context.check() ? PASS : BPASS;
 			} else {
-				solver.pop();
-				solver.push();
+				context.pop();
+				context.push();
 				program.encodeSomeBoundEventExec(context);
-				solver.add(context.allRules());
-				res = solver.check() == Status.SATISFIABLE ? BPASS : PASS;
+				if(!program.getAss().getInvert())
+					return context.check() ? BPASS : PASS;
 			}
-			// We get rid of the formulas added in the above branches
-			solver.pop();
+			context.pop();
 
-			if(program.getAss().getInvert()) {
-				res = res.invert();
-			}
-
-			// If we are not using CEGAR or the formula was UNSAT, we return
-			if(cegar == -1 || res.equals(PASS) || res.equals(BPASS)) {
-				return res;
-			}
-
-			solver.push();
-			solver.add(program.getAss().encode(context));
-			// We need this to get the model below. This check will always succeed
-			// If not we would have returned above
-			solver.check();
-			Model model = solver.getModel();
+			context.push();
+			context.rule(program.getAss().encode(context));
+			Model model = context.model().orElseThrow();
 			List<Event> write = program.getCache().getEvents(FilterBasic.get(EType.WRITE));
 			BoolExpr execution = context.and(program.getCache().getEvents(FilterBasic.get(EType.READ)).stream()
 				.flatMap(r->write.stream()
 					.map(w->context.edge("rf", w, r)))
 				.filter(e->model.getConstInterp(e) != null && model.getConstInterp(e).isTrue()));
-
-			solver.add(execution);
-			wmm.encodeBase(context, new ProgramCache(program), settings);
-			solver.add(context.allRules());
-			for(Axiom ax: wmm.getAxioms()) {
-				ax.encodeRelAndConsistency(context, p, settings.getMode());
-				BoolExpr enc = context.allRules();
-				BoolExpr axVar = ctx.mkBoolConst(ax.toString());
-				solver.assertAndTrack(enc, axVar);
-				track.put(axVar, enc);
-			}
-
-			if(solver.check() == Status.SATISFIABLE) {
+			context.rule(execution);
+			wmm.encodeBase(context, cache, settings);
+			for(Axiom ax: wmm.getAxioms())
+				ax.encodeRelAndConsistency(context, cache, settings.getMode());
+			Optional<BoolExpr[]> unsatCore = context.unsatisfiableCore();
+			if(!unsatCore.isPresent()) {
 				// For CEGAR, the same code above seems to never give BFAIL
 				// Thus we add the constraint here to avoid FAIL when the unrolling was not enough
 				program.encodeNoBoundEventExec(context);
-				solver.add(context.allRules());
-				return solver.check() == Status.SATISFIABLE ? FAIL : BFAIL;
+				return context.check() ? FAIL : BFAIL;
 			}
+			context.pop();
 
-			BoolExpr[] unsatCore = solver.getUnsatCore();
-			solver.pop();
-			for(BoolExpr axVar: unsatCore) {
-				solver.add(track.get(axVar));
-			}
-			solver.add(context.not(execution));
+			for(BoolExpr axVar: unsatCore.get())
+				context.rule(axVar);
+			context.rule(context.not(execution));
 		}
 	}
 
