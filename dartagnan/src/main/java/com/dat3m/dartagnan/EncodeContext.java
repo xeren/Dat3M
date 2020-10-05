@@ -12,7 +12,7 @@ public class EncodeContext {
 	public final Context context;
 	private final Sort sortEvent;
 	private final HashSet<Relation> done = new HashSet<>();
-	private final LinkedList<BoolExpr> rule = new LinkedList<>();
+	private LinkedList<BoolExpr> rule = new LinkedList<>();
 
 	public EncodeContext(Context context) {
 		this.context = context;
@@ -43,8 +43,72 @@ public class EncodeContext {
 		return (a,b)->(BoolExpr)f.apply(a, b);
 	}
 
+	/**
+	 * Adds a proposition to the current conjunction.
+	 * @param assertion
+	 * Rule to assert.
+	 */
 	public void rule(BoolExpr assertion) {
 		rule.add(assertion);
+	}
+
+	/**
+	 * Check if the formula
+	 * Requires no instances of {@link Invert} to be active.
+	 * @return
+	 * There is a model for all current propositions.
+	 * @throws RuntimeException
+	 * The formula could not be decided.
+	 */
+	public boolean check() {
+		Solver s = context.mkSolver();
+		for(BoolExpr x: rule)
+			s.add(x);
+		switch(s.check())
+		{
+			case SATISFIABLE:
+			return true;
+			case UNSATISFIABLE:
+			return false;
+			default:
+			throw new RuntimeException("undecidable");
+		}
+	}
+
+	/**
+	 * Tries to satisfy the formula.
+	 * @return
+	 * A model that satisfies the formula.
+	 */
+	public Optional<Model> model() {
+		Solver s = context.mkSolver();
+		for(BoolExpr x: rule)
+			s.add(x);
+		switch(s.check())
+		{
+			case SATISFIABLE:
+				return Optional.of(s.getModel());
+			case UNSATISFIABLE:
+				return Optional.empty();
+			default:
+				throw new RuntimeException("undecidable");
+		}
+	}
+
+	/**
+	 * Inverts the semantics such that the conjunction of future propositions is asserted to be violated.
+	 */
+	public class Invert implements AutoCloseable {
+		LinkedList<BoolExpr> list;
+		public Invert() {
+			list = rule;
+			rule = new LinkedList<>();
+		}
+		@Override
+		public void close() {
+			list.add(context.mkNot(context.mkAnd(rule.toArray(new BoolExpr[0]))));
+			rule = list;
+		}
 	}
 
 	public BoolExpr allRules() {

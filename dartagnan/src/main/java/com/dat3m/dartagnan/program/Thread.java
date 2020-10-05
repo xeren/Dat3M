@@ -4,7 +4,6 @@ import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.utils.ThreadCache;
 import com.dat3m.dartagnan.wmm.utils.Arch;
-import com.microsoft.z3.BoolExpr;
 
 import java.util.*;
 
@@ -128,7 +127,7 @@ public class Thread {
 	// Encoding
 	// -----------------------------------------------------------------------------------------------------------------
 
-	public BoolExpr encodeCF(EncodeContext context) {
-		return entry.encodeCF(context, context.and());
+	public void encodeCF(EncodeContext context) {
+		entry.encodeCF(context, context.and());
 	}
 }

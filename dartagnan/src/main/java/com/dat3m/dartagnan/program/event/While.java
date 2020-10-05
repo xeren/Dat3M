@@ -6,19 +6,20 @@ import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.microsoft.z3.BoolExpr;
+
 import java.util.Set;
 
 public class While extends Event implements RegReaderData {
 
-    private final ExprInterface expr;
+	private final ExprInterface expr;
 	private final Skip exitEvent;
-    private final Set<Register> dataRegs;
+	private final Set<Register> dataRegs;
 
 	public While(ExprInterface expr, Skip exitEvent) {
-		if(expr == null){
+		if(expr == null) {
 			throw new IllegalArgumentException("If event requires non null expression");
 		}
-		if(exitEvent == null){
+		if(exitEvent == null) {
 			throw new IllegalArgumentException("If event requires non null exit event");
 		}
 		this.expr = expr;
@@ -27,16 +28,16 @@ public class While extends Event implements RegReaderData {
 		addFilters(EType.ANY, EType.BRANCH, EType.CMP, EType.REG_READER);
 	}
 
-	public ExprInterface getExpr(){
+	public ExprInterface getExpr() {
 		return expr;
 	}
 
-	public Skip getExitEvent(){
+	public Skip getExitEvent() {
 		return exitEvent;
 	}
 
 	@Override
-	public Set<Register> getDataRegs(){
+	public Set<Register> getDataRegs() {
 		return dataRegs;
 	}
 
@@ -46,15 +47,15 @@ public class While extends Event implements RegReaderData {
 	}
 
 
-    // Unrolling
-    // -----------------------------------------------------------------------------------------------------------------
+	// Unrolling
+	// -----------------------------------------------------------------------------------------------------------------
 
 	@Override
 	public void unroll(int bound, Event predecessor) {
-		if(successor != null){
+		if(successor != null) {
 			int currentBound = bound;
 
-			while(currentBound > 0){
+			while(currentBound > 0) {
 				Skip exitMainBranch = exitEvent.getCopy();
 				Skip exitElseBranch = exitEvent.getCopy();
 				If ifEvent = new If(expr, exitMainBranch, exitElseBranch);
@@ -71,7 +72,7 @@ public class While extends Event implements RegReaderData {
 			}
 
 			predecessor.setSuccessor(exitEvent.getSuccessor());
-			if(predecessor.getSuccessor() != null){
+			if(predecessor.getSuccessor() != null) {
 				predecessor.getSuccessor().unroll(bound, predecessor);
 			}
 			return;
@@ -81,7 +82,7 @@ public class While extends Event implements RegReaderData {
 	}
 
 	@Override
-	public While getCopy(){
+	public While getCopy() {
 		Skip newExit = exitEvent.getCopy();
 		While copy = new While(expr, newExit);
 		copy.setOId(oId);
@@ -90,20 +91,20 @@ public class While extends Event implements RegReaderData {
 		return copy;
 	}
 
-    // Compilation
-    // -----------------------------------------------------------------------------------------------------------------
+	// Compilation
+	// -----------------------------------------------------------------------------------------------------------------
 
-    @Override
-    public int compile(Arch target, int nextId, Event predecessor) {
-        throw new RuntimeException("Event 'while' must be unrolled before compilation");
-    }
+	@Override
+	public int compile(Arch target, int nextId, Event predecessor) {
+		throw new RuntimeException("Event 'while' must be unrolled before compilation");
+	}
 
 
 	// Encoding
 	// -----------------------------------------------------------------------------------------------------------------
 
 	@Override
-	public BoolExpr encodeCF(com.dat3m.dartagnan.EncodeContext ctx, BoolExpr cond) {
+	public void encodeCF(com.dat3m.dartagnan.EncodeContext e, BoolExpr cond) {
 		throw new RuntimeException("While event must be unrolled before encoding");
 	}
 }

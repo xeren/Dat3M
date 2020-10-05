@@ -47,15 +47,15 @@ public class RelRfTest {
 		Wmm wmm = new ParserCat().parse(new File(wmmPath));
 
 		RelRf.FLAG_USE_SEQ_ENCODING_REL_RF = false;
-		assertTrue(Dartagnan.testProgram(solver, ctx, p1, wmm, p1.getArch(), settings).equals(FAIL));
+		assertEquals(Dartagnan.testProgram(solver, ctx, p1, wmm, p1.getArch(), settings), FAIL);
 		solver.reset();
-		assertTrue(Dartagnan.testProgram(solver, ctx, p2, wmm, p2.getArch(), settings).equals(FAIL));
+		assertEquals(Dartagnan.testProgram(solver, ctx, p2, wmm, p2.getArch(), settings), FAIL);
 		solver.reset();
 
 		RelRf.FLAG_USE_SEQ_ENCODING_REL_RF = true;
-		assertTrue(Dartagnan.testProgram(solver, ctx, p1, wmm, p1.getArch(), settings).equals(FAIL));
+		assertEquals(Dartagnan.testProgram(solver, ctx, p1, wmm, p1.getArch(), settings), FAIL);
 		solver.reset();
-		assertTrue(Dartagnan.testProgram(solver, ctx, p2, wmm, p2.getArch(), settings).equals(FAIL));
+		assertEquals(Dartagnan.testProgram(solver, ctx, p2, wmm, p2.getArch(), settings), FAIL);
 		ctx.close();
 	}
 
@@ -91,7 +91,7 @@ public class RelRfTest {
 		program.unroll(settings.getBound(), 0);
 		program.compile(program.getArch(), 0);
 
-		Map<Integer,Event> events = new HashMap<Integer,Event>() {{
+		Map<Integer,Event> events = new HashMap<>() {{
 			put(2, null);
 			put(5, null);
 			put(8, null);
@@ -107,8 +107,8 @@ public class RelRfTest {
 			if(program.getAssFilter() != null) {
 				solver.add(program.getAssFilter().encode(context));
 			}
-			solver.add(program.encodeCF(context));
-			solver.add(program.encodeFinalRegisterValues(context));
+			program.encodeCF(context);
+			program.encodeFinalRegisterValues(context);
 			wmm.encode(context, cache, settings);
 			solver.add(context.allRules());
 			// Don't add constraint of MM, they can also forbid illegal edges

@@ -14,9 +14,7 @@ import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.program.utils.ThreadCache;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.utils.Arch;
-import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
-import com.microsoft.z3.Model;
 
 import java.util.*;
 import java.util.stream.*;
@@ -166,61 +164,69 @@ public class Program {
 	// Encoding
 	// -----------------------------------------------------------------------------------------------------------------
 
-	public BoolExpr encodeCF(EncodeContext context) {
+	/**
+	 * For all events, determine what conditions must apply for that event to be executed.
+	 * @param context
+	 * Builder of expressions.
+	 */
+	public void encodeCF(EncodeContext context) {
 		for(Event e: getEvents()) {
 			e.initialise(context);
 		}
-		return context.and(memory.encode(context), context.and(threads.stream().map(t->t.encodeCF(context))));
+		memory.encode(context);
+		threads.forEach(t->t.encodeCF(context));
 	}
 
 	/**
 	 * For all registers, specify their final value.
+	 * Proposes that each final register value is the result of the last executed event that writes to it.
 	 * @param context
 	 * Builder of expressions.
-	 * @return
-	 * Proposition that each final register value is the result of the last executed event that writes to it.
 	 */
-	public BoolExpr encodeFinalRegisterValues(EncodeContext context) {
-		return context.and(getCache().getRegWriterMap().entrySet().stream()
+	public void encodeFinalRegisterValues(EncodeContext context) {
+		getCache().getRegWriterMap().entrySet().stream()
 			.flatMap(e->IntStream.range(0, e.getValue().size())
 				.mapToObj(i->context.or(
 					context.not(((Event)e.getValue().get(i)).exec()),
 					context.or(IntStream.range(i, e.getValue().size()).mapToObj(e.getValue()::get).map(Event.class::cast).map(Event::exec)),
-					context.eq(e.getKey().getLastValueExpr(context), e.getValue().get(i).getResultRegisterExpr())))));
+					context.eq(e.getKey().getLastValueExpr(context), e.getValue().get(i).getResultRegisterExpr()))))
+			.forEach(context::rule);
 	}
 
 	/**
+	 * When unrolling a cyclic program, one may consider checking whether or not all executions are contained in the unrolling.
+	 * Proposes that no execution leads to any state exceeding the current unrolling.
 	 * @param context
 	 * Builder of expressions.
-	 * @return
-	 * Proposition that none of the bound events is reached.
 	 */
-	public BoolExpr encodeNoBoundEventExec(EncodeContext context) {
-		return context.not(context.or(getCache().getEvents(FilterBasic.get(EType.BOUND)).stream().map(Event::exec)));
+	public void encodeNoBoundEventExec(EncodeContext context) {
+		getCache().getEvents(FilterBasic.get(EType.BOUND)).stream().map(Event::exec).map(context::not).forEach(context::rule);
 	}
 
 	/**
+	 * When unrolling a cyclic program, one may consider checking whether or not all executions are contained in the unrolling.
+	 * Proposes that executions lead to some state exceeding the current unrolling.
 	 * @param context
 	 * Builder of expressions.
-	 * @return
-	 * Proposition that all values chosen non-deterministically comply to the respective range of values.
 	 */
-	public BoolExpr encodeUINonDet(EncodeContext context) {
+	public void encodeSomeBoundEventExec(EncodeContext context) {
+		context.rule(context.or(getCache().getEvents(FilterBasic.get(EType.BOUND)).stream().map(Event::exec)));
+	}
+
+	/**
+	 * Proposes that all values chosen non-deterministically comply to the respective range of values.
+	 * @param context
+	 * Builder of expressions.
+	 */
+	public void encodeUINonDet(EncodeContext context) {
 		Context ctx = context.context;
-		return context.and(getCache().getEvents(FilterBasic.get(EType.LOCAL)).stream()
+		getCache().getEvents(FilterBasic.get(EType.LOCAL)).stream()
 			.filter(Local.class::isInstance).map(Local.class::cast)
 			.flatMap(e->Stream.of(e.getExpr())
 				.filter(INonDet.class::isInstance).map(INonDet.class::cast)
 				.map(x->context.and(
 					ctx.mkGe(x.toZ3Int(e, context), ctx.mkInt(x.getMin())),
-					ctx.mkLe(x.toZ3Int(e, context), ctx.mkInt(x.getMax()))))));
-	}
-
-	public BoolExpr getRf(EncodeContext context, Model model) {
-		List<Event> write = getCache().getEvents(FilterBasic.get(EType.WRITE));
-		return context.and(getCache().getEvents(FilterBasic.get(EType.READ)).stream()
-			.flatMap(r->write.stream()
-				.map(w->context.edge("rf", w, r)))
-			.filter(e->model.getConstInterp(e) != null && model.getConstInterp(e).isTrue()));
+					ctx.mkLe(x.toZ3Int(e, context), ctx.mkInt(x.getMax())))))
+			.forEach(context::rule);
 	}
 }

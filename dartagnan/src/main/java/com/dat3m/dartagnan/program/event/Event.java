@@ -19,7 +19,6 @@ public abstract class Event implements Comparable<Event> {
 
 	protected transient Event successor;
 
-	protected transient BoolExpr cfEnc;
 	protected transient BoolExpr cfCond;
 
 	protected transient BoolExpr cfVar;
@@ -243,7 +242,7 @@ public abstract class Event implements Comparable<Event> {
 	/**
 	 * Called before encoding.
 	 * Defines constants for execution and control flow inclusion of this event.
-	 * @param ctx
+	 * @param c
 	 * Reasoning context to create predefined constants.
 	 * @throws RuntimeException
 	 * The event has not been assigned a compilation ID.
@@ -299,35 +298,28 @@ public abstract class Event implements Comparable<Event> {
 
 	/**
 	 * Accumulates the conditions previously passed to {@link #addCfCond(EncodeContext, BoolExpr)}.
-	 * Finalizes the conditions: repeated calls will ignore parameters and return the same value.
+	 * States the rule that this event is reached iff any of its preconditions is met.
 	 * @param context
 	 * Manager for expressions.
 	 * @param cond
 	 * Another condition that implies the control flow reaching this event.
-	 * @return
-	 * Proposition that this event is reached iff any of its preconditions is met.
 	 */
-	public BoolExpr encodeCF(EncodeContext context, BoolExpr cond) {
-		if(cfEnc == null){
-			cfCond = cfCond == null ? cond : context.or(cfCond, cond);
-			cfEnc = context.and(
-				context.eq(cfVar, cfCond),
-				encodeExec(context),
-				successor == null ? context.and() : successor.encodeCF(context, cfVar));
-		}
-		return cfEnc;
+	public void encodeCF(EncodeContext context, BoolExpr cond) {
+		context.rule(context.eq(cfVar, null == cfCond ? cond : context.or(cfCond, cond)));
+		encodeExec(context);
+		if(null != successor)
+			successor.encodeCF(context, cfVar);
 	}
 
 	/**
+	 * Proposes that this event is executed iff specific conditions are satisfied.
 	 * Binds conditions to the execution of this event.
 	 * Used in {@link #encodeCF(EncodeContext, BoolExpr)}.
 	 * Usually the control flow suffices.
 	 * @param context
 	 * Reasoning context and expression factory.
-	 * @return
-	 * Proposition that this event is executed iff specific conditions are satisfied.
 	 */
-	protected BoolExpr encodeExec(EncodeContext context){
-		return context.eq(execVar, cfVar);
+	protected void encodeExec(EncodeContext context){
+		context.rule(context.eq(execVar, cfVar));
 	}
 }

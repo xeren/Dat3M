@@ -27,15 +27,14 @@ public class Memory {
 	}
 
 	/**
+	 * Proposes that memory allocations follow these specifications:
 	 * All element addresses in an array are direct successors.
 	 * An address might be known at compile time.
 	 * Allocation never reuses addresses.
 	 * @param context
 	 * Builder of expressions.
-	 * @return
-	 * Proposition that memory allocations follow the above specifications.
 	 */
-	public BoolExpr encode(EncodeContext context) {
+	public void encode(EncodeContext context) {
 		Context ctx = context.context;
 		List<BoolExpr> enc = new LinkedList<>();
 		for(List<Address> array: arrays.values()) {
@@ -47,9 +46,9 @@ public class Memory {
 				e1 = e2;
 			}
 		}
-		return context.and(context.and(enc),
-			context.and(map.keySet().stream().filter(Address::hasConstValue).map(a->context.eq(a.toZ3Int(context), ctx.mkInt(a.getConstValue())))),
-			ctx.mkDistinct(getAllAddresses().stream().map(a->a.toZ3Int(context)).toArray(IntExpr[]::new)));
+		context.rule(context.and(enc));
+		context.rule(context.and(map.keySet().stream().filter(Address::hasConstValue).map(a->context.eq(a.toZ3Int(context), ctx.mkInt(a.getConstValue())))));
+		context.rule(ctx.mkDistinct(getAllAddresses().stream().map(a->a.toZ3Int(context)).toArray(IntExpr[]::new)));
 	}
 
 	public List<Address> malloc(String name, int size) {

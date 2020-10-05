@@ -9,9 +9,14 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.ProgramCache;
+import com.dat3m.dartagnan.wmm.filter.FilterBasic;
+import com.microsoft.z3.*;
 import org.apache.commons.cli.HelpFormatter;
 
 import com.dat3m.dartagnan.asserts.AbstractAssert;
@@ -26,10 +31,6 @@ import com.dat3m.dartagnan.utils.options.DartagnanOptions;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
 import com.dat3m.dartagnan.wmm.utils.Arch;
-import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
-import com.microsoft.z3.Solver;
-import com.microsoft.z3.Status;
 import com.microsoft.z3.enumerations.Z3_ast_print_mode;
 
 /**
@@ -99,13 +100,12 @@ public class Dartagnan {
 		ctx.close();
 	}
 
-	public static Result testProgram(Solver s1, Context ctx, Program program, Wmm wmm, Arch target, Settings settings) {
-		return testProgram(new EncodeContext(ctx), new ProgramCache(program), s1, wmm, target, settings);
+	public static Result testProgram(Solver s, Context ctx, Program program, Wmm wmm, Arch target, Settings settings) {
+		return testProgram(new EncodeContext(ctx), new ProgramCache(program), s, wmm, target, settings);
 	}
 
-	public static Result testProgram(EncodeContext context, ProgramCache cache, Solver s1, Wmm wmm, Arch target, Settings settings) {
+	public static Result testProgram(EncodeContext context, ProgramCache cache, Solver s, Wmm wmm, Arch target, Settings settings) {
 
-		Context ctx = context.context;
 		Program program = cache.program;
 
 		program.unroll(settings.getBound(), 0);
@@ -124,48 +124,29 @@ public class Dartagnan {
 			}
 		}
 
-		// Using two solvers is much faster than using
-		// an incremental solver or check-sat-assuming
-		Solver s2 = ctx.mkSolver();
-
-		BoolExpr encodeUINonDet = program.encodeUINonDet(context);
-		s1.add(encodeUINonDet);
-		s2.add(encodeUINonDet);
-
-		BoolExpr encodeCF = program.encodeCF(context);
-		s1.add(encodeCF);
-		s2.add(encodeCF);
-
-		BoolExpr encodeFinalRegisterValues = program.encodeFinalRegisterValues(context);
-		s1.add(encodeFinalRegisterValues);
-		s2.add(encodeFinalRegisterValues);
-
+		program.encodeUINonDet(context);
+		program.encodeCF(context);
+		program.encodeFinalRegisterValues(context);
 		wmm.encode(context, new ProgramCache(program), settings);
-		BoolExpr encodeWmm = context.allRules();
-		s1.add(encodeWmm);
-		s2.add(encodeWmm);
-
 		wmm.consistent(context);
-		BoolExpr encodeConsistency = context.allRules();
-		s1.add(encodeConsistency);
-		s2.add(encodeConsistency);
+		s.add(context.allRules());
 
-		s1.add(program.getAss().encode(context));
 		if(program.getAssFilter() != null) {
 			BoolExpr encodeFilter = program.getAssFilter().encode(context);
-			s1.add(encodeFilter);
-			s2.add(encodeFilter);
+			s.add(encodeFilter);
 		}
 
-		BoolExpr encodeNoBoundEventExec = program.encodeNoBoundEventExec(context);
-
 		Result res;
-		if(s1.check() == Status.SATISFIABLE) {
-			s1.add(encodeNoBoundEventExec);
-			res = s1.check() == Status.SATISFIABLE ? FAIL : BFAIL;
+		s.push();
+		s.add(program.getAss().encode(context));
+		if(s.check() == Status.SATISFIABLE) {
+			program.encodeNoBoundEventExec(context);
+			s.add(context.allRules());
+			res = s.check() == Status.SATISFIABLE ? FAIL : BFAIL;
 		} else {
-			s2.add(context.not(encodeNoBoundEventExec));
-			res = s2.check() == Status.SATISFIABLE ? BPASS : PASS;
+			s.pop();
+			program.encodeSomeBoundEventExec(context);
+			res = s.check(context.allRules()) == Status.SATISFIABLE ? BPASS : PASS;
 		}
 
 		if(program.getAss().getInvert()) {
@@ -195,9 +176,9 @@ public class Dartagnan {
 			}
 		}
 
-		solver.add(program.encodeUINonDet(context));
-		solver.add(program.encodeCF(context));
-		solver.add(program.encodeFinalRegisterValues(context));
+		program.encodeUINonDet(context);
+		program.encodeCF(context);
+		program.encodeFinalRegisterValues(context);
 		ProgramCache p = new ProgramCache(program);
 		wmm.encodeBase(context, p, settings);
 		wmm.getAxioms().get(cegar).encodeRelAndConsistency(context, p, settings.getMode());
@@ -216,13 +197,15 @@ public class Dartagnan {
 			solver.add(program.getAss().encode(context));
 			if(solver.check() == Status.SATISFIABLE) {
 				solver.push();
-				solver.add(program.encodeNoBoundEventExec(context));
+				program.encodeNoBoundEventExec(context);
+				solver.add(context.allRules());
 				res = solver.check() == Status.SATISFIABLE ? FAIL : BFAIL;
 				solver.pop();
 			} else {
 				solver.pop();
 				solver.push();
-				solver.add(context.not(program.encodeNoBoundEventExec(context)));
+				program.encodeSomeBoundEventExec(context);
+				solver.add(context.allRules());
 				res = solver.check() == Status.SATISFIABLE ? BPASS : PASS;
 			}
 			// We get rid of the formulas added in the above branches
@@ -242,7 +225,13 @@ public class Dartagnan {
 			// We need this to get the model below. This check will always succeed
 			// If not we would have returned above
 			solver.check();
-			BoolExpr execution = program.getRf(context, solver.getModel());
+			Model model = solver.getModel();
+			List<Event> write = program.getCache().getEvents(FilterBasic.get(EType.WRITE));
+			BoolExpr execution = context.and(program.getCache().getEvents(FilterBasic.get(EType.READ)).stream()
+				.flatMap(r->write.stream()
+					.map(w->context.edge("rf", w, r)))
+				.filter(e->model.getConstInterp(e) != null && model.getConstInterp(e).isTrue()));
+
 			solver.add(execution);
 			wmm.encodeBase(context, new ProgramCache(program), settings);
 			solver.add(context.allRules());
@@ -257,7 +246,8 @@ public class Dartagnan {
 			if(solver.check() == Status.SATISFIABLE) {
 				// For CEGAR, the same code above seems to never give BFAIL
 				// Thus we add the constraint here to avoid FAIL when the unrolling was not enough
-				solver.add(program.encodeNoBoundEventExec(context));
+				program.encodeNoBoundEventExec(context);
+				solver.add(context.allRules());
 				return solver.check() == Status.SATISFIABLE ? FAIL : BFAIL;
 			}
 
@@ -283,9 +273,8 @@ public class Dartagnan {
 	}
 
 	public static void drawGraph(Graph graph, String path) throws IOException {
-		File newTextFile = new File(path);
-		FileWriter fw = new FileWriter(newTextFile);
-		fw.write(graph.toString());
-		fw.close();
+		try(FileWriter fw = new FileWriter(path)) {
+			fw.write(graph.toString());
+		}
 	}
 }

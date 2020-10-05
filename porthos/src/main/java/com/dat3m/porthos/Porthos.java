@@ -90,28 +90,24 @@ public class Porthos {
         pTarget.compile(target, nextId);
 
         ProgramCache cCache = new ProgramCache(pSource);
-        BoolExpr sourceCF = pSource.encodeCF(context);
-        BoolExpr sourceFV = pSource.encodeFinalRegisterValues(context);
+        pSource.encodeCF(context);
+        pSource.encodeFinalRegisterValues(context);
         sourceWmm.encode(context, cCache, settings);
-        BoolExpr sourceMM = context.allRules();
+        BoolExpr sourceEncoding = context.allRules();
 
         ProgramCache cTarget = new ProgramCache(pTarget);
-        s1.add(pTarget.encodeCF(context));
-        s1.add(pTarget.encodeFinalRegisterValues(context));
+        pTarget.encodeCF(context);
+        pTarget.encodeFinalRegisterValues(context);
         targetWmm.encode(context, cTarget, settings);
         s1.add(context.allRules());
         s1.add(targetWmm.consistent(context));
 
-        s1.add(sourceCF);
-        s1.add(sourceFV);
-        s1.add(sourceMM);
+        s1.add(sourceEncoding);
         s1.add(sourceWmm.inconsistent(context));
 
         s1.add(encodeCommonExecutions(context, pTarget, pSource));
 
-        s2.add(sourceCF);
-        s2.add(sourceFV);
-        s2.add(sourceMM);
+        s2.add(sourceEncoding);
         s2.add(sourceWmm.consistent(context));
 
         boolean isPortable = true;

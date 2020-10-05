@@ -25,15 +25,16 @@ abstract class BasicRegRelation extends StaticRelation {
 	protected final void encodeApprox(EncodeContext e, ProgramCache p, Atom atom) {
 		for(Event regReader: p.cache(FilterBasic.get(etype))) {
 			for(Register register: getRegisters(regReader)) {
-				List<Event> writers = p.cache(register);
-				if(writers.isEmpty() || writers.get(0).getCId() >= regReader.getCId()) {
+				List<RegWriter> writers = p.cache(register);
+				if(writers.isEmpty() || ((Event)writers.get(0)).getCId() >= regReader.getCId()) {
 					e.rule(e.eq(e.zero(), register.toZ3Int(regReader, e)));
 					continue;
 				}
 
-				ListIterator<Event> writerIt = writers.listIterator();
+				ListIterator<RegWriter> writerIt = writers.listIterator();
 				while(writerIt.hasNext()) {
-					Event regWriter = writerIt.next();
+					RegWriter w = writerIt.next();
+					Event regWriter = (Event)w;
 					if(regWriter.getCId() >= regReader.getCId())
 						break;
 
@@ -44,9 +45,9 @@ abstract class BasicRegRelation extends StaticRelation {
 					BoolExpr edge = atom.of(regWriter, regReader);
 
 					// .. and no other write to the same register is executed in between
-					ListIterator<Event> otherIt = writers.listIterator(writerIt.nextIndex());
+					ListIterator<RegWriter> otherIt = writers.listIterator(writerIt.nextIndex());
 					while(otherIt.hasNext()) {
-						Event other = otherIt.next();
+						Event other = (Event)otherIt.next();
 						if(other.getCId() >= regReader.getCId())
 							break;
 						clause.add(e.not(other.exec()));
@@ -54,7 +55,7 @@ abstract class BasicRegRelation extends StaticRelation {
 
 					// Encode edge and value binding
 					e.rule(e.eq(edge, e.and(clause)));
-					e.rule(e.implies(edge, e.eq(((RegWriter) regWriter).getResultRegisterExpr(), register.toZ3Int(regReader, e))));
+					e.rule(e.implies(edge, e.eq(w.getResultRegisterExpr(), register.toZ3Int(regReader, e))));
 				}
 			}
 		}
@@ -64,10 +65,10 @@ abstract class BasicRegRelation extends StaticRelation {
 	protected void update(ProgramCache p, TupleSet s) {
 		for(Event regReader: p.cache(FilterBasic.get(etype))) {
 			for(Register register: getRegisters(regReader)) {
-				for(Event regWriter: p.cache(register)) {
-					if(regWriter.getCId() >= regReader.getCId())
+				for(RegWriter regWriter: p.cache(register)) {
+					if(((Event)regWriter).getCId() >= regReader.getCId())
 						break;
-					s.add(new Tuple(regWriter, regReader));
+					s.add(new Tuple((Event)regWriter, regReader));
 				}
 			}
 		}

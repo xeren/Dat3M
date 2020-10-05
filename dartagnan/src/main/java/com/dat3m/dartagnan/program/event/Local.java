@@ -6,7 +6,6 @@ import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
 import com.dat3m.dartagnan.program.utils.EType;
-import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.IntExpr;
 import java.util.Set;
 
@@ -63,8 +62,9 @@ public class Local extends Event implements RegWriter, RegReaderData {
 	}
 
 	@Override
-	protected BoolExpr encodeExec(EncodeContext e){
-		return e.and(super.encodeExec(e), e.eq(regResultExpr,  expr.toZ3Int(this, e)));
+	protected void encodeExec(EncodeContext e){
+		super.encodeExec(e);
+		e.rule(e.eq(regResultExpr, expr.toZ3Int(this, e)));
 	}
 
 	// Unrolling

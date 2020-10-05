@@ -7,73 +7,72 @@ import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.microsoft.z3.BoolExpr;
+
 import java.util.Set;
 
 public class CondJump extends Jump implements RegReaderData {
 
-    private final BExpr expr;
-    private final Set<Register> dataRegs;
+	private final BExpr expr;
+	private final Set<Register> dataRegs;
 
-    public CondJump(BExpr expr, Label label){
-        super(label);
-        if(expr == null){
-            throw new IllegalArgumentException("CondJump event requires non null expression");
-        }
-        this.expr = expr;
-        dataRegs = Register.of(expr);
-        addFilters(EType.BRANCH, EType.COND_JUMP, EType.REG_READER);
-    }
+	public CondJump(BExpr expr, Label label) {
+		super(label);
+		if(expr == null) {
+			throw new IllegalArgumentException("CondJump event requires non null expression");
+		}
+		this.expr = expr;
+		dataRegs = Register.of(expr);
+		addFilters(EType.BRANCH, EType.COND_JUMP, EType.REG_READER);
+	}
 
-    protected CondJump(CondJump other) {
+	protected CondJump(CondJump other) {
 		super(other);
 		this.expr = other.expr;
 		this.dataRegs = other.dataRegs;
-    }
-    
-    @Override
-    public Set<Register> getDataRegs(){
-        return dataRegs;
-    }
+	}
 
-    @Override
-    public String toString(){
-        return "if(" + expr + "); then goto " + label;
-    }
+	@Override
+	public Set<Register> getDataRegs() {
+		return dataRegs;
+	}
 
-
-    // Unrolling
-    // -----------------------------------------------------------------------------------------------------------------
-
-    @Override
-    public CondJump getCopy(){
-    	return new CondJump(this);
-    }
-
-    
-    // Compilation
-    // -----------------------------------------------------------------------------------------------------------------
-
-    @Override
-    public int compile(Arch target, int nextId, Event predecessor) {
-        cId = nextId++;
-        if(successor == null){
-            throw new RuntimeException("Malformed CondJump event");
-        }
-        return successor.compile(target, nextId, this);
-    }
+	@Override
+	public String toString() {
+		return "if(" + expr + "); then goto " + label;
+	}
 
 
-    // Encoding
-    // -----------------------------------------------------------------------------------------------------------------
+	// Unrolling
+	// -----------------------------------------------------------------------------------------------------------------
 
-    @Override
-    public BoolExpr encodeCF(EncodeContext e, BoolExpr cond) {
-        if(cfEnc == null){
-            cfCond = (cfCond == null) ? cond : e.or(cfCond, cond);
-            BoolExpr ifCond = expr.toZ3Bool(this, e);
-            label.addCfCond(e, e.and(ifCond, cfVar));
-            cfEnc = e.and(e.eq(cfVar, cfCond), encodeExec(e), successor.encodeCF(e, e.and(e.not(ifCond), cfVar)));
-        }
-        return cfEnc;
-    }
+	@Override
+	public CondJump getCopy() {
+		return new CondJump(this);
+	}
+
+
+	// Compilation
+	// -----------------------------------------------------------------------------------------------------------------
+
+	@Override
+	public int compile(Arch target, int nextId, Event predecessor) {
+		cId = nextId++;
+		if(successor == null) {
+			throw new RuntimeException("Malformed CondJump event");
+		}
+		return successor.compile(target, nextId, this);
+	}
+
+
+	// Encoding
+	// -----------------------------------------------------------------------------------------------------------------
+
+	@Override
+	public void encodeCF(EncodeContext e, BoolExpr cond) {
+		BoolExpr ifCond = expr.toZ3Bool(this, e);
+		label.addCfCond(e, e.and(ifCond, cfVar));
+		e.rule(e.eq(cfVar, null == cfCond ? cond : e.or(cfCond, cond)));
+		encodeExec(e);
+		successor.encodeCF(e, e.and(e.not(ifCond), cfVar));
+	}
 }

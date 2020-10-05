@@ -52,9 +52,9 @@ public abstract class Compare
 				Program p = program.get(m);
 				long timeStart = System.nanoTime();
 				Solver s = c.mkSolver();
-				s.add(p.encodeUINonDet(e),
-					p.encodeCF(e),
-					p.encodeFinalRegisterValues(e));
+				p.encodeCF(e);
+				p.encodeUINonDet(e);
+				p.encodeFinalRegisterValues(e);
 				model.encode(e, new ProgramCache(p), settings.get(m));
 				model.consistent(e);
 				s.add(e.allRules());

@@ -6,8 +6,6 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
 import com.microsoft.z3.BoolExpr;
 
 import java.util.ArrayList;
@@ -57,22 +55,41 @@ public class EdgeTestHelper {
         return result;
     }
 
+    private static final class IntPair
+    {
+        final int first;
+        final int second;
+        IntPair(int f, int s) {
+            first = f;
+            second = s;
+        }
+        @Override
+        public boolean equals(Object other)
+        {
+            return other instanceof IntPair && first == ((IntPair)other).first && second == ((IntPair)other).second;
+        }
+        @Override
+        public int hashCode() {
+            return first << 16 & second;
+        }
+    }
+
     // Convert expected result to a set of tuples
     private Set<Tuple> mkExpectedTuples(Set<Tuple> all, int[] data){
         if(data.length % 2 == 1){
             throw new IllegalArgumentException("Invalid definition of expected edges");
         }
 
-        Multimap<Integer, Integer> map = HashMultimap.create();
+        HashSet<IntPair> map = new HashSet<>();
         for(int i = 0; i < data.length; i += 2){
-            map.put(data[i], data[i + 1]);
+            map.add(new IntPair(data[i], data[i + 1]));
         }
 
         Set<Tuple> result = new HashSet<>();
         for(Tuple tuple : all){
             int id1 = tuple.getFirst().getOId();
             int id2 = tuple.getSecond().getOId();
-            if(map.containsEntry(id1, id2)){
+            if(map.contains(new IntPair(id1, id2))){
                 result.add(tuple);
             }
         }
