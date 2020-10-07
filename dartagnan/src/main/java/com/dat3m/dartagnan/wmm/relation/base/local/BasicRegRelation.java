@@ -40,8 +40,8 @@ abstract class BasicRegRelation extends StaticRelation {
 
 					// RegReader uses the value of RegWriter if it is executed ..
 					LinkedList<BoolExpr> clause = new LinkedList<>();
-					clause.add(regWriter.exec());
-					clause.add(regReader.exec());
+					clause.add(e.exec(regWriter));
+					clause.add(e.exec(regReader));
 					BoolExpr edge = atom.of(regWriter, regReader);
 
 					// .. and no other write to the same register is executed in between
@@ -50,12 +50,12 @@ abstract class BasicRegRelation extends StaticRelation {
 						Event other = (Event)otherIt.next();
 						if(other.getCId() >= regReader.getCId())
 							break;
-						clause.add(e.not(other.exec()));
+						clause.add(e.not(e.exec(other)));
 					}
 
 					// Encode edge and value binding
 					e.rule(e.eq(edge, e.and(clause)));
-					e.rule(e.implies(edge, e.eq(w.getResultRegisterExpr(), register.toZ3Int(regReader, e))));
+					e.rule(e.implies(edge, e.eq(w.getResultRegisterExpr(e), register.toZ3Int(regReader, e))));
 				}
 			}
 		}

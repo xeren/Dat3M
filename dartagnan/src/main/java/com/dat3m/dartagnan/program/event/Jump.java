@@ -89,8 +89,8 @@ public class Jump extends Event {
 
 	@Override
 	public void encodeCF(EncodeContext e, BoolExpr cond) {
-		label.addCfCond(e, cfVar);
-		e.rule(e.eq(cfVar, null == cfCond ? cond : e.or(cfCond, cond)));
+		label.addCfCond(e, e.cf(this));
+		e.rule(e.eq(e.cf(this), null == cfCond ? cond : e.or(cfCond, cond)));
 		encodeExec(e);
 		successor.encodeCF(e, e.or());
 	}

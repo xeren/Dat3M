@@ -27,7 +27,7 @@ public abstract class StaticRelation extends Relation {
 
 	protected void encodeApprox(EncodeContext context, ProgramCache program, Atom atom) {
 		context.rule(context.and(encodeTupleSet.stream()
-			.map(t->context.eq(atom.of(t), context.and(t.getFirst().exec(), t.getSecond().exec())))));
+			.map(t->context.eq(atom.of(t), context.and(context.exec(t.getFirst()), context.exec(t.getSecond()))))));
 	}
 
 	@Override

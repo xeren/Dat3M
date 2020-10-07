@@ -106,21 +106,21 @@ public class RelRMW extends StaticRelation {
 
 						// Encode if load and store form an exclusive pair
 						BoolExpr isPair = e.context.mkBoolConst("excl(" + load.getCId() + "," + store.getCId() + ")");
-						BoolExpr isExecPair = e.and(isPair, store.exec());
+						BoolExpr isExecPair = e.and(isPair, e.exec(store));
 						LinkedList<BoolExpr> pairingCond = new LinkedList<>();
-						pairingCond.add(load.exec());
-						pairingCond.add(store.cf());
+						pairingCond.add(e.exec(load));
+						pairingCond.add(e.cf(store));
 
 						for(Event otherLoad: thread.cache(loadFilter))
 							if(otherLoad.getCId() > load.getCId() && otherLoad.getCId() < store.getCId())
-								pairingCond.add(e.not(otherLoad.exec()));
+								pairingCond.add(e.not(e.exec(otherLoad)));
 						for(Event otherStore: thread.cache(storeFilter))
 							if(otherStore.getCId() > load.getCId() && otherStore.getCId() < store.getCId())
-								pairingCond.add(e.not(otherStore.cf()));
+								pairingCond.add(e.not(e.cf(otherStore)));
 						e.rule(e.eq(isPair, e.and(pairingCond)));
 
 						// If load and store have the same address
-						BoolExpr sameAddress = e.eq(((MemEvent) load).getMemAddressExpr(), (((MemEvent) store).getMemAddressExpr()));
+						BoolExpr sameAddress = e.eq(((MemEvent) load).getAddress().toZ3Int(load, e), (((MemEvent) store).getAddress().toZ3Int(store, e)));
 						unpredictable.add(e.and(isExecPair, e.not(sameAddress)));
 
 						// Relation between exclusive load and store
@@ -132,7 +132,7 @@ public class RelRMW extends StaticRelation {
 						storeExec.add(isPair);
 					}
 				}
-				e.rule(e.implies(store.exec(), e.or(storeExec)));
+				e.rule(e.implies(e.exec(store), e.or(storeExec)));
 			}
 		}
 		e.rule(e.eq(Flag.ARM_UNPREDICTABLE_BEHAVIOUR.repr(e.context), e.or(unpredictable)));

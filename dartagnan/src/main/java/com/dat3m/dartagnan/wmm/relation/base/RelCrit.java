@@ -37,8 +37,8 @@ public class RelCrit extends StaticRelation {
 					if(lock.getCId() < unlock.getCId()) {
 						if(encodeTupleSet.contains(new Tuple(lock, unlock))) {
 							LinkedList<BoolExpr> relation = new LinkedList<>();
-							relation.add(lock.exec());
-							relation.add(unlock.exec());
+							relation.add(e.exec(lock));
+							relation.add(e.exec(unlock));
 							for(Event otherLock: thread.cache(FilterBasic.get(EType.RCU_LOCK)))
 								if(otherLock.getCId() > lock.getCId() && otherLock.getCId() < unlock.getCId())
 									relation.add(e.not(atom.of(otherLock, unlock)));

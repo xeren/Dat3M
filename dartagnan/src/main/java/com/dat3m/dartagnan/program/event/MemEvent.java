@@ -12,9 +12,6 @@ public abstract class MemEvent extends Event {
 
 	protected final IExpr address;
 	protected final String mo;
-
-	protected IntExpr memAddressExpr;
-	protected IntExpr memValueExpr;
 	private Set<Address> maxAddressSet;
 
 	public MemEvent(IExpr address, String mo) {
@@ -29,28 +26,10 @@ public abstract class MemEvent extends Event {
 		super(other);
 		this.address = other.address;
 		this.maxAddressSet = other.maxAddressSet;
-		this.memAddressExpr = other.memAddressExpr;
-		this.memValueExpr = other.memValueExpr;
 		this.mo = other.mo;
 	}
 
-	@Override
-	public void initialise(EncodeContext ctx) {
-		super.initialise(ctx);
-		memAddressExpr = address.toZ3Int(this, ctx);
-	}
-
-	public IntExpr getMemAddressExpr() {
-		if(memAddressExpr != null) {
-			return memAddressExpr;
-		}
-		throw new RuntimeException("Attempt to access not initialised address expression in " + this);
-	}
-
-	public IntExpr getMemValueExpr() {
-		if(memValueExpr != null) {
-			return memValueExpr;
-		}
+	public IntExpr getMemValueExpr(EncodeContext context) {
 		throw new RuntimeException("Attempt to access not initialised value expression in " + this);
 	}
 

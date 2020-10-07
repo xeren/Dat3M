@@ -52,8 +52,8 @@ public class RelRf extends Relation {
 			MemEvent w = (MemEvent) tuple.getFirst();
 			MemEvent r = (MemEvent) tuple.getSecond();
 			BoolExpr edge = e.edge(this, w, r);
-			BoolExpr sameAddress = e.eq(w.getMemAddressExpr(), r.getMemAddressExpr());
-			BoolExpr sameValue = e.eq(w.getMemValueExpr(), r.getMemValueExpr());
+			BoolExpr sameAddress = e.eq(w.getAddress().toZ3Int(w, e), r.getAddress().toZ3Int(r, e));
+			BoolExpr sameValue = e.eq(w.getMemValueExpr(e), r.getMemValueExpr(e));
 
 			edgeMap.putIfAbsent(r, new LinkedList<>());
 			edgeMap.get(r).add(edge);
@@ -61,7 +61,7 @@ public class RelRf extends Relation {
 				memInitMap.putIfAbsent(r, new LinkedList<>());
 				memInitMap.get(r).add(sameAddress);
 			}
-			e.rule(e.implies(edge, e.and(w.exec(), r.exec(), sameAddress, sameValue)));
+			e.rule(e.implies(edge, e.and(e.exec(w), e.exec(r), sameAddress, sameValue)));
 		}
 
 		if(FLAG_USE_SEQ_ENCODING_REL_RF) {
@@ -81,7 +81,7 @@ public class RelRf extends Relation {
 				}
 				BoolExpr atLeastOne = e.or(lastSeqVar, edges.get(edges.size() - 1));
 				e.rule(e.and(atMostOne));
-				e.rule(e.implies(canAccNonInitMem ? e.and(r.exec(), e.or(memInitMap.get(r))) : r.exec(), atLeastOne));
+				e.rule(e.implies(canAccNonInitMem ? e.and(e.exec(r), e.or(memInitMap.get(r))) : e.exec(r), atLeastOne));
 			}
 		} else {
 			for(MemEvent r: edgeMap.keySet()) {
@@ -94,7 +94,7 @@ public class RelRf extends Relation {
 						atMostOne.add(e.or(e.not(edges.get(i)), e.not(edges.get(j))));
 				}
 				e.rule(e.and(atMostOne));
-				e.rule(e.implies(canAccNonInitMem ? e.and(r.exec(), e.or(memInitMap.get(r))) : r.exec(), e.or(atLeastOne)));
+				e.rule(e.implies(canAccNonInitMem ? e.and(e.exec(r), e.or(memInitMap.get(r))) : e.exec(r), e.or(atLeastOne)));
 			}
 		}
 	}
@@ -108,12 +108,16 @@ public class RelRf extends Relation {
 		EncodeContext.RelationPredicate edge = e.of(this);
 		e.rule(e.forall(0, (a,b)->e.implies(edge.of(a, b), e.or(
 				maxTupleSet.stream().map(t->e.and(
-					t.getFirst().exec(),
-					t.getSecond().exec(),
+					e.exec(t.getFirst()),
+					e.exec(t.getSecond()),
 					e.eq(a, e.event(t.getFirst())),
 					e.eq(b, e.event(t.getSecond())),
-					e.eq(((MemEvent) t.getFirst()).getMemAddressExpr(), ((MemEvent) t.getSecond()).getMemAddressExpr()),
-					e.eq(((MemEvent) t.getFirst()).getMemValueExpr(), ((MemEvent) t.getSecond()).getMemValueExpr()))))),
+					e.eq(
+						((MemEvent)t.getFirst()).getAddress().toZ3Int(t.getFirst(), e),
+						((MemEvent)t.getSecond()).getAddress().toZ3Int(t.getSecond(), e)),
+					e.eq(
+						((MemEvent)t.getFirst()).getMemValueExpr(e),
+						((MemEvent) t.getSecond()).getMemValueExpr(e)))))),
 			(a,b)->e.pattern(edge.of(a, b))));
 		e.rule(e.and(p.cache(FilterBasic.get(EType.READ)).stream()
 			.map(r->e.exists(0, w->edge.of(w, e.event(r))))));

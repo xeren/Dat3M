@@ -100,7 +100,7 @@ public class Porthos {
 
 		int iterations = 1;
 		for(Optional<Model> model; (model = context.model()).isPresent();) {
-			BoolExpr reachedState = encodeReachedState(pTarget, model.get(), context.context);
+			BoolExpr reachedState = encodeReachedState(pTarget, model.get(), context);
 			if(s.check(reachedState) == Status.UNSATISFIABLE)
 				return new PorthosResult(false, iterations, pSource, pTarget);
 			context.rule(context.not(reachedState));

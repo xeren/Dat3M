@@ -20,7 +20,7 @@ public class FenceCond extends Fence {
 
     @Override
     protected void encodeExec(EncodeContext e){
-        e.rule(e.eq(execVar, e.and(cfVar, loadEvent.getCond())));
+        e.rule(e.eq(e.exec(this), e.and(e.cf(this), loadEvent.getCond(e))));
     }
 
     // Unrolling

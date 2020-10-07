@@ -58,7 +58,7 @@ public class Location implements ExprInterface {
 	@Override
 	public IntExpr toZ3Int(Event e, EncodeContext c){
 		if(e instanceof MemEvent){
-			return ((MemEvent) e).getMemValueExpr();
+			return ((MemEvent) e).getMemValueExpr(c);
 		}
 		throw new RuntimeException("Attempt to encode memory value for illegal event");
 	}
@@ -66,7 +66,7 @@ public class Location implements ExprInterface {
 	@Override
 	public BoolExpr toZ3Bool(Event e, EncodeContext c){
 		if(e instanceof MemEvent){
-			return c.lt(c.zero(), ((MemEvent) e).getMemValueExpr());
+			return c.lt(c.zero(), ((MemEvent) e).getMemValueExpr(c));
 		}
 		throw new RuntimeException("Attempt to encode memory value for illegal event");
 	}

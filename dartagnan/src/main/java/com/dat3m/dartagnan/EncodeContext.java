@@ -110,7 +110,7 @@ public class EncodeContext implements AutoCloseable {
 	/**
 	 * Tries to satisfy the formula.
 	 * @return
-	 * A model that satisfies the formula.
+	 * A model that satisfies the formula if there is any.
 	 */
 	public Optional<Model> model() {
 		switch(solver.check())
@@ -136,13 +136,30 @@ public class EncodeContext implements AutoCloseable {
 		}
 	}
 
-	@Deprecated
-	public BoolExpr allRules() {
-		return context.mkAnd(solver.getAssertions());
-	}
-
 	public Expr event(Event event) {
 		return context.mkNumeral(event.getCId(), sortEvent);
+	}
+
+	/**
+	 * In a directed acyclic graph, each thread has to choose some path from start to end.
+	 * @param event
+	 * Compiled event.
+	 * @return
+	 * Proposition that {code event} is executed in a modelled execution.
+	 */
+	public BoolExpr exec(Event event) {
+		return context.mkBoolConst("exec " + event.getCId());
+	}
+
+	/**
+	 * The control flow of a program is a graph deciding which statements of the program should be executed.
+	 * @param event
+	 * Compiled event.
+	 * @return
+	 * Proposition that this event is included in the execution's control flow.
+	 */
+	public BoolExpr cf(Event event) {
+		return context.mkBoolConst("cf " + event.getCId());
 	}
 
 	public BoolExpr edge(String name, Event first, Event second) {

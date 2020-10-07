@@ -6,6 +6,7 @@ import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
+import com.microsoft.z3.BoolExpr;
 
 public class RMWReadCondUnless extends RMWReadCond implements RegWriter, RegReaderData {
 
@@ -14,9 +15,8 @@ public class RMWReadCondUnless extends RMWReadCond implements RegWriter, RegRead
     }
 
     @Override
-    public void initialise(EncodeContext c) {
-        super.initialise(c);
-        this.z3Cond = c.not(z3Cond);
+    public BoolExpr getCond(EncodeContext e) {
+        return e.not(e.eq(getMemValueExpr(e), cmp.toZ3Int(this, e)));
     }
 
     @Override

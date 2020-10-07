@@ -24,7 +24,7 @@ public class RMWStoreCond extends RMWStore {
 
 	@Override
 	protected void encodeExec(EncodeContext e) {
-		e.rule(e.eq(execVar, e.and(cfVar, ((RMWReadCond) loadEvent).getCond())));
+		e.rule(e.eq(e.exec(this), e.and(e.cf(this), ((RMWReadCond) loadEvent).getCond(e))));
 	}
 
 	// Unrolling

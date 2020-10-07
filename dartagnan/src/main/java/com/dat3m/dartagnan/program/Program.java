@@ -170,9 +170,6 @@ public class Program {
 	 * Builder of expressions.
 	 */
 	public void encodeCF(EncodeContext context) {
-		for(Event e: getEvents()) {
-			e.initialise(context);
-		}
 		memory.encode(context);
 		threads.forEach(t->t.encodeCF(context));
 	}
@@ -187,9 +184,9 @@ public class Program {
 		getCache().getRegWriterMap().entrySet().stream()
 			.flatMap(e->IntStream.range(0, e.getValue().size())
 				.mapToObj(i->context.or(
-					context.not(((Event)e.getValue().get(i)).exec()),
-					context.or(IntStream.range(i, e.getValue().size()).mapToObj(e.getValue()::get).map(Event.class::cast).map(Event::exec)),
-					context.eq(e.getKey().getLastValueExpr(context), e.getValue().get(i).getResultRegisterExpr()))))
+					context.not(context.exec((Event)e.getValue().get(i))),
+					context.or(IntStream.range(i, e.getValue().size()).mapToObj(e.getValue()::get).map(Event.class::cast).map(context::exec)),
+					context.eq(e.getKey().getLastValueExpr(context), e.getValue().get(i).getResultRegisterExpr(context)))))
 			.forEach(context::rule);
 	}
 
@@ -200,7 +197,7 @@ public class Program {
 	 * Builder of expressions.
 	 */
 	public void encodeNoBoundEventExec(EncodeContext context) {
-		getCache().getEvents(FilterBasic.get(EType.BOUND)).stream().map(Event::exec).map(context::not).forEach(context::rule);
+		getCache().getEvents(FilterBasic.get(EType.BOUND)).stream().map(context::exec).map(context::not).forEach(context::rule);
 	}
 
 	/**
@@ -210,7 +207,7 @@ public class Program {
 	 * Builder of expressions.
 	 */
 	public void encodeSomeBoundEventExec(EncodeContext context) {
-		context.rule(context.or(getCache().getEvents(FilterBasic.get(EType.BOUND)).stream().map(Event::exec)));
+		context.rule(context.or(getCache().getEvents(FilterBasic.get(EType.BOUND)).stream().map(context::exec)));
 	}
 
 	/**

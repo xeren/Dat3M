@@ -31,11 +31,11 @@ public class RelLoc extends Relation {
 	protected void encodeApprox(EncodeContext e, ProgramCache p) {
 		for(Tuple tuple: encodeTupleSet)
 			e.rule(e.eq(e.edge(this, tuple), e.and(
-				tuple.getFirst().exec(),
-				tuple.getSecond().exec(),
+				e.exec(tuple.getFirst()),
+				e.exec(tuple.getSecond()),
 				e.eq(
-					((MemEvent) tuple.getFirst()).getMemAddressExpr(),
-					((MemEvent) tuple.getSecond()).getMemAddressExpr()))));
+					((MemEvent)tuple.getFirst()).getAddress().toZ3Int(tuple.getFirst(), e),
+					((MemEvent)tuple.getSecond()).getAddress().toZ3Int(tuple.getSecond(), e)))));
 	}
 
 	@Override
@@ -48,6 +48,6 @@ public class RelLoc extends Relation {
 			.filter(b->MemEvent.canAddressTheSameLocation(a, b))
 			.map(b->e.eq(
 				edge.of(e.event(a), e.event(b)),
-				e.and(a.exec(), b.exec(), e.eq(a.getMemAddressExpr(), b.getMemAddressExpr())))))));
+				e.and(e.exec(a), e.exec(b), e.eq(a.getAddress().toZ3Int(a, e), b.getAddress().toZ3Int(b, e))))))));
 	}
 }

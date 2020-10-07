@@ -66,7 +66,7 @@ public class RelCo extends Relation {
 		for(Event w: p.cache(FilterBasic.get(EType.WRITE))) {
 			MemEvent w1 = (MemEvent) w;
 			LinkedList<BoolExpr> lastCo = new LinkedList<>();
-			lastCo.add(w1.exec());
+			lastCo.add(e.exec(w1));
 
 			for(Tuple t: maxTupleSet.getByFirst(w1)) {
 				MemEvent w2 = (MemEvent) t.getSecond();
@@ -74,9 +74,9 @@ public class RelCo extends Relation {
 				lastCo.add(e.not(relation));
 
 				e.rule(e.eq(relation, e.and(
-					w1.exec(),
-					w2.exec(),
-					e.eq(w1.getMemAddressExpr(), w2.getMemAddressExpr()),
+					e.exec(w1),
+					e.exec(w2),
+					e.eq(w1.getAddress().toZ3Int(w1, e), w2.getAddress().toZ3Int(w2, e)),
 					e.lt(e.intVar(name, w1), e.intVar(name, w2)))));
 			}
 
@@ -85,8 +85,8 @@ public class RelCo extends Relation {
 
 			for(Address address: w1.getMaxAddressSet()) {
 				e.rule(e.implies(
-					e.and(lastCoExpr, e.eq(w1.getMemAddressExpr(), address.toZ3Int(e))),
-					e.eq(address.getLastMemValueExpr(e), w1.getMemValueExpr())));
+					e.and(lastCoExpr, e.eq(w1.getAddress().toZ3Int(w1, e), address.toZ3Int(e))),
+					e.eq(address.getLastMemValueExpr(e), w1.getMemValueExpr(e))));
 			}
 		}
 	}
@@ -101,17 +101,17 @@ public class RelCo extends Relation {
 			e.and(
 				e.not(edge.of(b, a)),
 				e.or(eventsWrite.stream().map(MemEvent.class::cast).map(v -> e.and(
-					v.exec(),
+					e.exec(v),
 					e.eq(a, e.event(v)),
 					e.or(eventsStore.stream()
 						// already implied by asymmetric, but shortens the formula
 						.filter(w->v.getCId() != w.getCId())
 						.map(MemEvent.class::cast)
 						.map(w->e.and(
-							w.exec(),
+							e.exec(w),
 							e.eq(b, e.event(w)),
 							// pair has same address
-							e.eq(v.getMemAddressExpr(), w.getMemAddressExpr()))))))))),
+							e.eq(v.getAddress().toZ3Int(v, e), w.getAddress().toZ3Int(w, e)))))))))),
 			(a,b)->e.pattern(edge.of(a, b))));
 		e.rule(e.forall(0, (a,b,c)->e.implies(edge.of(a, b), e.implies(edge.of(b, c), edge.of(a, c))),
 			(a,b,c)->e.pattern(edge.of(a, b), edge.of(b, c))));

@@ -26,7 +26,7 @@ public class RMWStoreExclusive extends Store implements RegReaderData {
 
 	@Override
 	protected void encodeExec(EncodeContext e) {
-		e.rule(e.implies(execVar, cfVar));
+		e.rule(e.implies(e.exec(this), e.cf(this)));
 	}
 
 	// Unrolling

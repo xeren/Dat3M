@@ -17,8 +17,6 @@ public abstract class RMWReadCond extends RMWLoad implements RegWriter, RegReade
     protected ExprInterface cmp;
     private Set<Register> dataRegs;
 
-    BoolExpr z3Cond;
-
     RMWReadCond(Register reg, ExprInterface cmp, IExpr address, String atomic) {
         super(reg, address, atomic);
         this.cmp = cmp;
@@ -26,18 +24,7 @@ public abstract class RMWReadCond extends RMWLoad implements RegWriter, RegReade
         addFilters(EType.REG_READER);
     }
 
-    @Override
-    public void initialise(EncodeContext c) {
-        super.initialise(c);
-        z3Cond = c.eq(memValueExpr, cmp.toZ3Int(this, c));
-    }
-
-    public BoolExpr getCond(){
-        if(z3Cond != null){
-            return z3Cond;
-        }
-        throw new RuntimeException("z3Cond is requested before it has been initialised in " + this.getClass().getName());
-    }
+    public abstract BoolExpr getCond(EncodeContext context);
 
     @Override
     public Set<Register> getDataRegs(){

@@ -3,8 +3,6 @@ package com.dat3m.dartagnan.program.event;
 import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
-
 import java.util.*;
 
 public abstract class Event implements Comparable<Event> {
@@ -20,9 +18,6 @@ public abstract class Event implements Comparable<Event> {
 	protected transient Event successor;
 
 	protected transient BoolExpr cfCond;
-
-	protected transient BoolExpr cfVar;
-	protected transient BoolExpr execVar;
 
 	protected transient Set<Event> listeners = new HashSet<>();
 
@@ -240,47 +235,10 @@ public abstract class Event implements Comparable<Event> {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Called before encoding.
-	 * Defines constants for execution and control flow inclusion of this event.
-	 * @param c
-	 * Reasoning context to create predefined constants.
-	 * @throws RuntimeException
-	 * The event has not been assigned a compilation ID.
-	 */
-	public void initialise(EncodeContext c){
-		if(cId < 0){
-			throw new RuntimeException("Event ID is not set in " + this);
-		}
-		Context ctx = c.context;
-		//execVar = ctx.mkBoolConst("exec(" + repr() + ")");
-		//cfVar = ctx.mkBoolConst("cf(" + repr() + ")");
-		execVar = (BoolExpr)ctx.mkFuncDecl("exec", ctx.mkIntSort(), ctx.mkBoolSort()).apply(ctx.mkInt(cId));
-		cfVar = (BoolExpr)ctx.mkFuncDecl("cf", ctx.mkIntSort(), ctx.mkBoolSort()).apply(ctx.mkInt(cId));
-	}
-
-	/**
 	 * Identifies this event in a formula.
 	 */
 	public String repr() {
 		return "E" + cId;
-	}
-
-	/**
-	 * In a directed acyclic graph, each thread has to choose some path from start to end.
-	 * @return
-	 * Proposition that this event contained in a modelled execution.
-	 */
-	public BoolExpr exec(){
-		return execVar;
-	}
-
-	/**
-	 * The control flow of a program is a graph deciding which statements of the program should be executed.
-	 * @return
-	 * Proposition that this event is included in the execution's control flow.
-	 */
-	public BoolExpr cf(){
-		return cfVar;
 	}
 
 	/**
@@ -305,10 +263,10 @@ public abstract class Event implements Comparable<Event> {
 	 * Another condition that implies the control flow reaching this event.
 	 */
 	public void encodeCF(EncodeContext context, BoolExpr cond) {
-		context.rule(context.eq(cfVar, null == cfCond ? cond : context.or(cfCond, cond)));
+		context.rule(context.eq(context.cf(this), null == cfCond ? cond : context.or(cfCond, cond)));
 		encodeExec(context);
 		if(null != successor)
-			successor.encodeCF(context, cfVar);
+			successor.encodeCF(context, context.cf(this));
 	}
 
 	/**
@@ -320,6 +278,6 @@ public abstract class Event implements Comparable<Event> {
 	 * Reasoning context and expression factory.
 	 */
 	protected void encodeExec(EncodeContext context){
-		context.rule(context.eq(execVar, cfVar));
+		context.rule(context.eq(context.exec(this), context.cf(this)));
 	}
 }

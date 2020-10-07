@@ -4,6 +4,7 @@ import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.expression.IConst;
 import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.program.utils.EType;
+import com.microsoft.z3.IntExpr;
 
 public class Init extends MemEvent {
 
@@ -25,9 +26,8 @@ public class Init extends MemEvent {
 	}
 
 	@Override
-	public void initialise(EncodeContext ctx) {
-		super.initialise(ctx);
-		memValueExpr = value.toZ3Int(ctx);
+	public IntExpr getMemValueExpr(EncodeContext e) {
+		return value.toZ3Int(e);
 	}
 
 	@Override

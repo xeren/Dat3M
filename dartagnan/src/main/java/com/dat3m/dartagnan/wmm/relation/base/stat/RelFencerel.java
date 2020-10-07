@@ -67,9 +67,9 @@ public class RelFencerel extends Relation {
 			LinkedList<BoolExpr> orClause = new LinkedList<>();
 			for(Event fence: fences)
 				if(fence.getCId() > e1.getCId() && fence.getCId() < e2.getCId())
-					orClause.add(fence.exec());
+					orClause.add(e.exec(fence));
 
-			e.rule(e.eq(e.edge(this, e1, e2), e.and(e1.exec(), e2.exec(), e.or(orClause))));
+			e.rule(e.eq(e.edge(this, e1, e2), e.and(e.exec(e1), e.exec(e2), e.or(orClause))));
 		}
 	}
 
@@ -78,11 +78,11 @@ public class RelFencerel extends Relation {
 		EncodeContext.RelationPredicate edge = e.of(this);
 		List<Event> fences = p.cache(FilterBasic.get(fenceName));
 		e.rule(e.forall(0,
-			(a, b) -> e.eq(edge.of(a, b), e.or(fences.stream().map(f -> e.and(f.exec(),
+			(a, b) -> e.eq(edge.of(a, b), e.or(fences.stream().map(f -> e.and(e.exec(f),
 				e.lt((ArithExpr) a, (ArithExpr) e.event(f)),
 				e.lt((ArithExpr) e.event(f), (ArithExpr) b)
 			)))),
-			fences.stream().map(f -> (EncodeContext.BinaryPattern) (a, b) -> e.pattern(f.exec(),
+			fences.stream().map(f -> (EncodeContext.BinaryPattern) (a, b) -> e.pattern(e.exec(f),
 				e.lt((ArithExpr) a, (ArithExpr) e.event(f)),
 				e.lt((ArithExpr) e.event(f), (ArithExpr) b)
 			)).toArray(EncodeContext.BinaryPattern[]::new)));

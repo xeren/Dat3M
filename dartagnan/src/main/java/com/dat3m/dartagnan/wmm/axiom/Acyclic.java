@@ -60,7 +60,7 @@ public class Acyclic extends Axiom {
 				IntExpr i1 = e.intVar(name, e1);
 				IntExpr i2 = e.intVar(name, e2);
 				return e.and(
-					e.implies(e1.exec(), e.lt(e.zero(), i1)),
+					e.implies(e.exec(e1), e.lt(e.zero(), i1)),
 					e.implies(e.edge(name, e1, e2), e.lt(i1, i2)));
 			}));
 	}
@@ -80,8 +80,8 @@ public class Acyclic extends Axiom {
 				.map(t->e.implies(
 					e.edge(cycleName, t),
 					e.and(
-						t.getFirst().exec(),
-						t.getSecond().exec(),
+						e.exec(t.getFirst()),
+						e.exec(t.getSecond()),
 						e.edge(name, t),
 						cycleVar.of(t.getFirst()),
 						cycleVar.of(t.getSecond()))))),
