@@ -11,7 +11,6 @@ public class RMWStoreExclusiveStatus extends Event implements RegWriter {
 
 	private final Register register;
 	private final RMWStoreExclusive storeEvent;
-	private IntExpr regResultExpr;
 
 	RMWStoreExclusiveStatus(Register register, RMWStoreExclusive storeEvent) {
 		this.register = register;
@@ -38,7 +37,7 @@ public class RMWStoreExclusiveStatus extends Event implements RegWriter {
 	protected void encodeExec(EncodeContext e) {
 		super.encodeExec(e);
 		e.rule(e.implies(e.exec(storeEvent), e.eq(register.toZ3IntResult(this, e), e.zero())));
-		e.rule(e.or(e.exec(storeEvent), e.eq(register.toZ3IntResult(this, e), e.context.mkInt(1))));
+		e.rule(e.or(e.exec(storeEvent), e.eq(register.toZ3IntResult(this, e), e.one())));
 	}
 
 	// Unrolling

@@ -1,7 +1,7 @@
 package com.dat3m.dartagnan.wmm.relation.base.local;
 
+import com.dat3m.dartagnan.Event;
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import static com.dat3m.dartagnan.program.utils.EType.REG_READER;
 import java.util.Collection;

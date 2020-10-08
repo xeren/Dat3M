@@ -1,19 +1,18 @@
 package com.dat3m.dartagnan.wmm.relation.base.memory;
 
+import com.dat3m.dartagnan.EncodeContext;
+import com.dat3m.dartagnan.Event;
+import com.dat3m.dartagnan.program.event.MemEvent;
+import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.filter.FilterMinus;
-import com.dat3m.dartagnan.EncodeContext;
-import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.IntExpr;
-import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.MemEvent;
-import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
-
+import com.microsoft.z3.BoolExpr;
+import com.microsoft.z3.IntExpr;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -80,7 +79,7 @@ public class RelCo extends Relation {
 					e.lt(e.intVar(name, w1), e.intVar(name, w2)))));
 			}
 
-			BoolExpr lastCoExpr = e.context.mkBoolConst("co_last(" + w1.repr() + ")");
+			BoolExpr lastCoExpr = e.context.mkBoolConst("co_last(" + w1.getCId() + ")");
 			e.rule(e.eq(lastCoExpr, e.and(lastCo)));
 
 			for(Address address: w1.getMaxAddressSet()) {

@@ -1,6 +1,6 @@
 package com.dat3m.dartagnan.wmm.filter;
 
-import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.Event;
 
 import java.util.HashMap;
 import java.util.Map;

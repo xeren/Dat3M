@@ -1,12 +1,11 @@
 package com.dat3m.dartagnan.wmm.relation.unary;
 
-import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.EncodeContext;
+import com.dat3m.dartagnan.Event;
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
-
 import java.util.HashSet;
 import java.util.Set;
 

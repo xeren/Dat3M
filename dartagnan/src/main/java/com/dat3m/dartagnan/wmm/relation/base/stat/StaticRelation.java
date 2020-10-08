@@ -1,6 +1,6 @@
 package com.dat3m.dartagnan.wmm.relation.base.stat;
 
-import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.Event;
 import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.EncodeContext;
 import com.microsoft.z3.BoolExpr;

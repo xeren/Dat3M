@@ -5,7 +5,7 @@ import com.dat3m.dartagnan.program.event.Load;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
-import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.Event;
 import com.dat3m.dartagnan.program.event.Init;
 import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.program.memory.Location;
@@ -116,12 +116,12 @@ public class Graph {
 				Init e = (Init) firstEvent;
 				Location location = mapAddressLocation.get(e.getAddress().getIntValue(e, context, model));
 				String label = e.label() + " " + location.getName() + " = " + e.getValue();
-				sb.append(L3).append(e.repr()).append(" ").append(getEventDef(label)).append(";\n");
+				sb.append(L3).append("E").append(e.getCId()).append(" ").append(getEventDef(label)).append(";\n");
 			} else {
 				sb.append(L2).append("subgraph cluster_Thread_").append(t.getId()).append(" { ").append(getThreadDef(tId++)).append("\n");
 				for(Event e: t.getCache().getEvents(FilterBasic.get(EType.VISIBLE))) {
 					if(model.getConstInterp(context.exec(e)).isTrue()) {
-						String label = e.label();
+						String label = ((com.dat3m.dartagnan.program.event.Event)e).label();
 						if(e instanceof MemEvent) {
 							Location location = mapAddressLocation.get(((MemEvent) e).getAddress().getIntValue(e, context, model));
 							int value;
@@ -133,7 +133,7 @@ public class Graph {
 							}
 							label += " " + location + " = " + value;
 						}
-						sb.append(L3).append(e.repr()).append(" ").append(getEventDef(label, t.getId())).append(";\n");
+						sb.append(L3).append("E").append(e.getCId()).append(" ").append(getEventDef(label, t.getId())).append(";\n");
 					}
 				}
 				sb.append(L2).append("}\n");
@@ -157,7 +157,7 @@ public class Graph {
 			for(int i = 1; i < events.size(); i++) {
 				Event e1 = events.get(i - 1);
 				Event e2 = events.get(i);
-				sb.append(L3).append(e1.repr()).append(" -> ").append(e2.repr()).append(edge);
+				sb.append(L3).append("E").append(e1.getCId()).append(" -> E").append(e2.getCId()).append(edge);
 			}
 		}
 		return sb;
@@ -194,7 +194,7 @@ public class Graph {
 			for(int i = 1; i < list.size(); i++) {
 				Event e1 = list.get(i - 1).getKey();
 				Event e2 = list.get(i).getKey();
-				sb.append("      ").append(e1.repr()).append(" -> ").append(e2.repr()).append(edge);
+				sb.append("      E").append(e1.getCId()).append(" -> E").append(e2.getCId()).append(edge);
 			}
 		}
 		return sb;
@@ -215,7 +215,7 @@ public class Graph {
 				for(Event e2: events) {
 					Expr expr = model.getConstInterp(context.edge(relName, e1, e2));
 					if(expr != null && expr.isTrue()) {
-						sb.append("      ").append(e1.repr()).append(" -> ").append(e2.repr()).append(edge);
+						sb.append("      E").append(e1.getCId()).append(" -> E").append(e2.getCId()).append(edge);
 					}
 				}
 			}

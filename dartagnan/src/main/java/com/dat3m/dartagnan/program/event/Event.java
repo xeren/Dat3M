@@ -5,7 +5,7 @@ import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.microsoft.z3.BoolExpr;
 import java.util.*;
 
-public abstract class Event implements Comparable<Event> {
+public abstract class Event implements Comparable<Event>, com.dat3m.dartagnan.Event{
 
 	public static final int PRINT_PAD_EXTRA = 50;
 
@@ -40,6 +40,7 @@ public abstract class Event implements Comparable<Event> {
 		return uId;
 	}
 
+	@Override
 	public int getCId() {
 		return cId;
 	}
@@ -78,9 +79,10 @@ public abstract class Event implements Comparable<Event> {
 	 * Caption as to display in a counter example graph.
 	 */
 	public String label(){
-		return repr() + " " + getClass().getSimpleName();
+		return "E" + cId + " " + getClass().getSimpleName();
 	}
 
+	@Override
 	public boolean is(String param){
 		return param != null && (filter.contains(param));
 	}
@@ -225,13 +227,6 @@ public abstract class Event implements Comparable<Event> {
 
 	// Encoding
 	// -----------------------------------------------------------------------------------------------------------------
-
-	/**
-	 * Identifies this event in a formula.
-	 */
-	public String repr() {
-		return "E" + cId;
-	}
 
 	/**
 	 * States the rule that this event is reached iff any of its preconditions is met.

@@ -1,9 +1,9 @@
 package com.dat3m.dartagnan.expression;
 
 import com.dat3m.dartagnan.EncodeContext;
+import com.dat3m.dartagnan.Event;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Model;
-import com.dat3m.dartagnan.program.event.Event;
 
 public abstract class IExpr implements ExprInterface {
 

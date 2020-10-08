@@ -4,7 +4,10 @@ import com.dat3m.dartagnan.EncodeContext;
 import com.microsoft.z3.IntExpr;
 import com.dat3m.dartagnan.program.Register;
 
-public interface RegWriter {
+/**
+ * Subclass of events that modify a local register.
+ */
+public interface RegWriter extends com.dat3m.dartagnan.Event {
 
     Register getResultRegister();
 

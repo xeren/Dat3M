@@ -1,10 +1,10 @@
 package com.dat3m.dartagnan.program;
 
 import com.dat3m.dartagnan.EncodeContext;
+import com.dat3m.dartagnan.Event;
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IConst;
 import com.dat3m.dartagnan.expression.IExpr;
-import com.dat3m.dartagnan.program.event.Event;
 import com.microsoft.z3.IntExpr;
 import com.microsoft.z3.Model;
 import java.util.Set;
@@ -58,11 +58,11 @@ public class Register extends IExpr implements ExprInterface {
 
 	@Override
 	public IntExpr toZ3Int(Event e, EncodeContext c) {
-		return c.context.mkIntConst(getName() + "(" + e.repr() + ")");
+		return c.context.mkIntConst(getName() + "(" + e.getCId() + ")");
 	}
 
 	public IntExpr toZ3IntResult(Event e, EncodeContext c) {
-		return c.context.mkIntConst(getName() + "(" + e.repr() + "_result)");
+		return c.context.mkIntConst(getName() + "(" + e.getCId() + "_result)");
 	}
 
 	/**

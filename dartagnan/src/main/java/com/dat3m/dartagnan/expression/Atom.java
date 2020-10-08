@@ -1,8 +1,8 @@
 package com.dat3m.dartagnan.expression;
 
 import com.dat3m.dartagnan.EncodeContext;
+import com.dat3m.dartagnan.Event;
 import com.dat3m.dartagnan.expression.op.COpBin;
-import com.dat3m.dartagnan.program.event.Event;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.IntExpr;
 import com.microsoft.z3.Model;

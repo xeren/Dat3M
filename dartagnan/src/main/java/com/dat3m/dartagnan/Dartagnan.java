@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
-import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;

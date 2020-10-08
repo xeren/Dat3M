@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan.wmm.utils;
 
-import com.dat3m.dartagnan.program.event.Event;
-
+import com.dat3m.dartagnan.Event;
 import java.util.*;
 
 public class TupleSet implements Set<Tuple>{

@@ -1,6 +1,5 @@
 package com.dat3m.dartagnan;
 
-import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.microsoft.z3.*;
@@ -180,7 +179,7 @@ public class EncodeContext implements AutoCloseable {
 	}
 
 	public BoolExpr edge(String name, Event first, Event second) {
-		return context.mkBoolConst(name + "(" + first.repr() + "," + second.repr() + ")");
+		return context.mkBoolConst(name + "(" + first.getCId() + "," + second.getCId() + ")");
 	}
 
 	public BoolExpr edge(String name, Tuple tuple) {
@@ -262,11 +261,11 @@ public class EncodeContext implements AutoCloseable {
 	 * Integer equally ordered with respect to other events.
 	 */
 	public IntExpr intVar(String name, Event event) {
-		return context.mkIntConst(name + "(" + event.repr() + ")");
+		return context.mkIntConst(name + "(" + event.getCId() + ")");
 	}
 
 	public IntExpr intCount(String name, Event first, Event second) {
-		return context.mkIntConst(name + "(" + first.repr() + "," + second.repr() + ")");
+		return context.mkIntConst(name + "(" + first.getCId() + "," + second.getCId() + ")");
 	}
 
 	/**

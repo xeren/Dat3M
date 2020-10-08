@@ -1,11 +1,16 @@
 package com.dat3m.dartagnan.wmm.utils.alias;
 
+import com.dat3m.dartagnan.Event;
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.event.*;
+import com.dat3m.dartagnan.program.event.If;
+import com.dat3m.dartagnan.program.event.Init;
+import com.dat3m.dartagnan.program.event.Local;
+import com.dat3m.dartagnan.program.event.MemEvent;
+import com.dat3m.dartagnan.program.event.Store;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
 import com.dat3m.dartagnan.program.memory.Address;
@@ -294,7 +299,7 @@ public class AliasAnalysis {
 
 
     private void mkSsaIndices(
-            List<Event> events,
+            List<?extends Event> events,
             Map<Register, Map<Event, Integer>> ssaMap,
             Map<Register, Integer> indexMap
     ){
@@ -325,8 +330,8 @@ public class AliasAnalysis {
 
             if(e instanceof If){
                 Map<Register, Integer> indexMapClone = new HashMap<>(indexMap);
-                List<Event> t1Events = ((If)e).getMainBranchEvents();
-                List<Event> t2Events = ((If)e).getElseBranchEvents();
+                List<?extends Event> t1Events = ((If)e).getMainBranchEvents();
+                List<?extends Event> t2Events = ((If)e).getElseBranchEvents();
                 mkSsaIndices(t1Events, ssaMap, indexMap);
                 mkSsaIndices(t2Events, ssaMap, indexMapClone);
 

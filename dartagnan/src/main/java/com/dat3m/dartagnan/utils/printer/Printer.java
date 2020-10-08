@@ -1,8 +1,12 @@
 package com.dat3m.dartagnan.utils.printer;
 
+import com.dat3m.dartagnan.Event;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
-import com.dat3m.dartagnan.program.event.*;
+import com.dat3m.dartagnan.program.event.If;
+import com.dat3m.dartagnan.program.event.Init;
+import com.dat3m.dartagnan.program.event.Skip;
+import com.dat3m.dartagnan.program.event.While;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 

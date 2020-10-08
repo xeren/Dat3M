@@ -1,14 +1,13 @@
 package com.dat3m.dartagnan.wmm.axiom;
 
-import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.EncodeContext;
+import com.dat3m.dartagnan.Event;
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.IntExpr;
-
 import java.util.Map;
 import java.util.Set;
 
@@ -74,7 +73,7 @@ public class Acyclic extends Axiom {
 	protected BoolExpr _inconsistent(EncodeContext e) {
 		String name = rel.getName();
 		String cycleName = "Cycle:" + name;
-		CycleVar cycleVar = event->e.context.mkBoolConst("Cycle(" + event.repr() + ")(" + name + ")");
+		CycleVar cycleVar = event->e.context.mkBoolConst("Cycle(" + event.getCId() + ")(" + name + ")");
 		return e.and(
 			e.and(rel.getEncodeTupleSet().stream()
 				.map(t->e.implies(

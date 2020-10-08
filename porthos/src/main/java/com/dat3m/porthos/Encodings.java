@@ -1,18 +1,18 @@
 package com.dat3m.porthos;
 
-import com.dat3m.dartagnan.program.utils.EType;
-import com.dat3m.dartagnan.wmm.filter.FilterBasic;
-import com.dat3m.dartagnan.wmm.filter.FilterUnion;
 import com.dat3m.dartagnan.EncodeContext;
-import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Model;
+import com.dat3m.dartagnan.Event;
 import com.dat3m.dartagnan.program.Program;
-import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Load;
 import com.dat3m.dartagnan.program.event.Store;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
+import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.wmm.filter.FilterBasic;
+import com.dat3m.dartagnan.wmm.filter.FilterUnion;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import com.microsoft.z3.BoolExpr;
+import com.microsoft.z3.Model;
 import java.util.*;
 import static java.util.stream.Stream.concat;
 

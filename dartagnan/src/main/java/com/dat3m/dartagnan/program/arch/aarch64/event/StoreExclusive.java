@@ -10,10 +10,13 @@ import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.microsoft.z3.BoolExpr;
-
 import java.util.Arrays;
 import java.util.LinkedList;
 
+/**
+ * ARM-specific instruction that stores only if the Processing Element has exclusive access to the memory address.
+ * @see <a href="https://developer.arm.com/docs/ddi0602/f/base-instructions-alphabetic-order/stxp-store-exclusive-pair-of-registers">STXP</a>
+ */
 public class StoreExclusive extends Store implements RegWriter, RegReaderData {
 
 	private final Register register;
