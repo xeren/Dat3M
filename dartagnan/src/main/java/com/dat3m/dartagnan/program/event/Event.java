@@ -17,10 +17,6 @@ public abstract class Event implements Comparable<Event> {
 
 	protected transient Event successor;
 
-	protected transient BoolExpr cfCond;
-
-	protected transient Set<Event> listeners = new HashSet<>();
-
 	protected Event(){
 		filter = new HashSet<>();
 	}
@@ -103,10 +99,6 @@ public abstract class Event implements Comparable<Event> {
 			}
 		}
 		return result;
-	}
-
-	public void addListener(Event e) {
-		listeners.add(e);
 	}
 
 	public void notify(Event e) {
@@ -242,20 +234,6 @@ public abstract class Event implements Comparable<Event> {
 	}
 
 	/**
-	 * The control flow graph can join in any point.
-	 * It must reach a predecessor for which there may be several candidates.
-	 * @param context
-	 * Manager for expressions.
-	 * @param cond
-	 * Another condition that implies the control flow reaching this event.
-	 * @see #encodeCF(EncodeContext, BoolExpr)
-	 */
-	public void addCfCond(EncodeContext context, BoolExpr cond){
-		cfCond = cfCond == null ? cond : context.or(cfCond, cond);
-	}
-
-	/**
-	 * Accumulates the conditions previously passed to {@link #addCfCond(EncodeContext, BoolExpr)}.
 	 * States the rule that this event is reached iff any of its preconditions is met.
 	 * @param context
 	 * Manager for expressions.
@@ -263,7 +241,7 @@ public abstract class Event implements Comparable<Event> {
 	 * Another condition that implies the control flow reaching this event.
 	 */
 	public void encodeCF(EncodeContext context, BoolExpr cond) {
-		context.rule(context.eq(context.cf(this), null == cfCond ? cond : context.or(cfCond, cond)));
+		context.rule(context.eq(context.cf(this), context.condition(this)));
 		encodeExec(context);
 		if(null != successor)
 			successor.encodeCF(context, context.cf(this));

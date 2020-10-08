@@ -132,11 +132,11 @@ public class If extends Event implements RegReaderData {
 	@Override
 	public void encodeCF(EncodeContext e, BoolExpr cond) {
 		BoolExpr ifCond = expr.toZ3Bool(this, e);
-		e.rule(e.eq(e.cf(this), null == cfCond ? cond : e.or(cfCond, cond)));
+		e.rule(e.eq(e.cf(this), e.condition(this)));
 		encodeExec(e);
 		successorMain.encodeCF(e, e.and(ifCond, e.cf(this)));
 		successorElse.encodeCF(e, e.and(e.not(ifCond), e.cf(this)));
 		if(null != successor)
-			successor.encodeCF(e, e.or(exitMainBranch.cfCond, exitElseBranch.cfCond));
+			successor.encodeCF(e, e.or(e.condition(exitMainBranch), e.condition(exitElseBranch)));
 	}
 }

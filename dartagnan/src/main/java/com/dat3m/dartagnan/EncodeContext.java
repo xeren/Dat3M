@@ -15,6 +15,7 @@ public class EncodeContext implements AutoCloseable {
 	private final HashSet<Relation> done = new HashSet<>();
 	private final Solver solver;
 	private final HashMap<BoolExpr,BoolExpr> track = new HashMap<>();
+	private final HashMap<Integer,LinkedList<BoolExpr>> condition = new HashMap<>();
 
 	public EncodeContext() {
 		tactic = null;
@@ -160,6 +161,22 @@ public class EncodeContext implements AutoCloseable {
 	 */
 	public BoolExpr cf(Event event) {
 		return context.mkBoolConst("cf " + event.getCId());
+	}
+
+	/**
+	 * The control flow graph can join in any point.
+	 * It must reach a predecessor for which there may be several candidates.
+	 * @param target
+	 * Event to add a condition.
+	 * @param condition
+	 * Proposition implying the control flow reaching this event.
+	 */
+	public void condition(Event target, BoolExpr condition) {
+		this.condition.compute(target.getCId(), (k,v)->{if(null==v)v = new LinkedList<>();v.add(condition);return v;});
+	}
+
+	public BoolExpr condition(Event target) {
+		return or(condition.getOrDefault(target.getCId(), new LinkedList<>()));
 	}
 
 	public BoolExpr edge(String name, Event first, Event second) {

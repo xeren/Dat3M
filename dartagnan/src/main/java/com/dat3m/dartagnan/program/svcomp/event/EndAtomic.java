@@ -10,52 +10,52 @@ public class EndAtomic extends Event {
 
 	protected BeginAtomic begin;
 
-    public EndAtomic(BeginAtomic begin) {
-        this.begin = begin;
-    	this.begin.addListener(this);
-        addFilters(EType.RMW, EType.ATOMIC);
-    	Event next = begin.getSuccessor();
-    	while(next != null && next != this) {
-    		next.addFilters(EType.RMW);
-    		next = next.getSuccessor();
-    	}
-    }
-
-    protected EndAtomic(EndAtomic other){
-		super(other);
-		this.begin = other.getBegin();
-		this.begin.addListener(this);
+	public EndAtomic(BeginAtomic begin) {
+		this.begin = begin;
+		this.begin.listeners.add(this);
+		addFilters(EType.RMW, EType.ATOMIC);
+		Event next = begin.getSuccessor();
+		while(next != null && next != this) {
+			next.addFilters(EType.RMW);
+			next = next.getSuccessor();
+		}
 	}
 
-    public BeginAtomic getBegin(){
-    	return begin;
-    }
-    
-    public List<Event> getBlock(){
-    	List<Event> block = new ArrayList<Event>();
-    	Event next = begin;
-    	while(next != null && next != this) {
-    		block.add(next);
-    		next = next.getSuccessor();	
-    	}
-        return block;
-    }
+	protected EndAtomic(EndAtomic other) {
+		super(other);
+		begin = other.getBegin();
+		begin.listeners.add(this);
+	}
 
-    @Override
-    public String toString() {
-    	return "end_atomic()";
-    }
-    
-    @Override
-    public void notify(Event begin) {
-    	this.begin = (BeginAtomic)begin;
-    }
+	public BeginAtomic getBegin() {
+		return begin;
+	}
 
-    // Unrolling
-    // -----------------------------------------------------------------------------------------------------------------
+	public List<Event> getBlock() {
+		List<Event> block = new ArrayList<>();
+		Event next = begin;
+		while(next != null && next != this) {
+			block.add(next);
+			next = next.getSuccessor();
+		}
+		return block;
+	}
 
-    @Override
-	public EndAtomic getCopy(){
+	@Override
+	public String toString() {
+		return "end_atomic()";
+	}
+
+	@Override
+	public void notify(Event begin) {
+		this.begin = (BeginAtomic) begin;
+	}
+
+	// Unrolling
+	// -----------------------------------------------------------------------------------------------------------------
+
+	@Override
+	public EndAtomic getCopy() {
 		return new EndAtomic(this);
 	}
 }

@@ -70,8 +70,8 @@ public class CondJump extends Jump implements RegReaderData {
 	@Override
 	public void encodeCF(EncodeContext e, BoolExpr cond) {
 		BoolExpr ifCond = expr.toZ3Bool(this, e);
-		label.addCfCond(e, e.and(ifCond, e.cf(this)));
-		e.rule(e.eq(e.cf(this), null == cfCond ? cond : e.or(cfCond, cond)));
+		e.condition(label, e.and(ifCond, e.cf(this)));
+		e.rule(e.eq(e.cf(this), e.condition(this)));
 		encodeExec(e);
 		successor.encodeCF(e, e.and(e.not(ifCond), e.cf(this)));
 	}
