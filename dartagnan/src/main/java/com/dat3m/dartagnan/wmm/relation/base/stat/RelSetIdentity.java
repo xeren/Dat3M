@@ -1,10 +1,12 @@
 package com.dat3m.dartagnan.wmm.relation.base.stat;
 
 import com.dat3m.dartagnan.Event;
+import com.dat3m.dartagnan.wmm.Clause;
 import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import java.util.stream.Stream;
 
 public class RelSetIdentity extends StaticRelation {
 
@@ -29,5 +31,11 @@ public class RelSetIdentity extends StaticRelation {
 	public void update(ProgramCache p, TupleSet s) {
 		for(Event x: p.cache(filter))
 			s.add(new Tuple(x, x));
+	}
+
+	@Override
+	protected Stream<Clause> termFO(Counter t, int a, int b) {
+		Clause eq = Clause.eq(a, b);
+		return filter.nameFO(a).map(eq::combine);
 	}
 }

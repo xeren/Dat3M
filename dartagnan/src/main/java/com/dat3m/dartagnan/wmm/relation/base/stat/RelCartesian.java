@@ -1,12 +1,15 @@
 package com.dat3m.dartagnan.wmm.relation.base.stat;
 
+import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.Event;
+import com.dat3m.dartagnan.wmm.Clause;
 import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
-
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Stream;
 
 public class RelCartesian extends StaticRelation {
 	private final FilterAbstract filter1;
@@ -36,5 +39,18 @@ public class RelCartesian extends StaticRelation {
 		for(Event e1: l1)
 			for(Event e2: l2)
 				s.add(new Tuple(e1, e2));
+	}
+
+	@Override
+	public void encodeFirstOrder(EncodeContext e, ProgramCache p) {
+		super.encodeFirstOrder(e, p);
+		filter1.encodeFO(e, p);
+		filter2.encodeFO(e, p);
+	}
+
+	@Override
+	public Stream<Clause> termFO(Counter t, int a, int b) {
+		Clause[] c1 = filter1.nameFO(a).toArray(Clause[]::new);
+		return filter2.nameFO(b).flatMap(c2->Arrays.stream(c1).map(c2::combine));
 	}
 }

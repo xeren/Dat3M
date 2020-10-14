@@ -4,14 +4,16 @@ import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.Event;
 import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.wmm.Clause;
 import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
-import com.dat3m.dartagnan.wmm.filter.FilterMinus;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.BoolExpr;
+import com.microsoft.z3.Expr;
 import java.util.*;
+import java.util.stream.Stream;
 
 public class RelRf extends Relation {
 
@@ -27,15 +29,7 @@ public class RelRf extends Relation {
 	@Override
 	public void update(ProgramCache p, TupleSet s){
 		List<Event> eventsLoad = p.cache(FilterBasic.get(EType.READ));
-		List<Event> eventsInit = p.cache(FilterBasic.get(EType.INIT));
-		List<Event> eventsStore = p.cache(FilterMinus.get(FilterBasic.get(EType.WRITE), FilterBasic.get(EType.INIT)));
-
-		for(Event e1: eventsInit)
-			for(Event e2: eventsLoad)
-				if(MemEvent.canAddressTheSameLocation((MemEvent) e1, (MemEvent) e2))
-					s.add(new Tuple(e1, e2));
-
-		for(Event e1: eventsStore)
+		for(Event e1: p.cache(FilterBasic.get(EType.WRITE)))
 			for(Event e2: eventsLoad)
 				if(MemEvent.canAddressTheSameLocation((MemEvent) e1, (MemEvent) e2))
 					s.add(new Tuple(e1, e2));
@@ -105,23 +99,38 @@ public class RelRf extends Relation {
 
 	@Override
 	protected void encodeFirstOrder(EncodeContext e, ProgramCache p) {
-		EncodeContext.RelationPredicate edge = e.of(this);
-		e.rule(e.forall(0, (a,b)->e.implies(edge.of(a, b), e.or(
-				maxTupleSet.stream().map(t->e.and(
-					e.exec(t.getFirst()),
-					e.exec(t.getSecond()),
-					e.eq(a, e.event(t.getFirst())),
-					e.eq(b, e.event(t.getSecond())),
-					e.eq(
-						((MemEvent)t.getFirst()).getAddress().toZ3Int(t.getFirst(), e),
-						((MemEvent)t.getSecond()).getAddress().toZ3Int(t.getSecond(), e)),
-					e.eq(
-						((MemEvent)t.getFirst()).getMemValueExpr(e),
-						((MemEvent) t.getSecond()).getMemValueExpr(e)))))),
-			(a,b)->e.pattern(edge.of(a, b))));
-		e.rule(e.and(p.cache(FilterBasic.get(EType.READ)).stream()
-			.map(r->e.exists(0, w->edge.of(w, e.event(r))))));
-		e.rule(e.forall(0, (a,b,c)->e.implies(e.and(edge.of(a, c), edge.of(b, c)), e.eq(a, b)),
-			(a,b,c)->e.pattern(edge.of(a, c), edge.of(b, c))));
+		FilterBasic read = FilterBasic.get(EType.READ);
+		FilterBasic write = FilterBasic.get(EType.WRITE);
+		read.encodeFO(e, p);
+		write.encodeFO(e, p);
+
+		List<Event> eventsLoad = p.cache(read);
+		EncodeContext.BinaryPredicate edge = e.binary(getName());
+		Expr a = e.bind(0);
+		Expr b = e.bind(1);
+		Expr c = e.bind(2);
+
+		// match
+		e.ruleForall(List.of(a, b), List.of(edge.of(a, b)),
+			e.or(p.cache(write).stream().map(MemEvent.class::cast)
+				.map(w->e.and(
+					e.exec(w),
+					e.eq(a, e.event(w)),
+					e.or(eventsLoad.stream().map(MemEvent.class::cast)
+						.map(r->e.and(
+							e.exec(r),
+							e.eq(b, e.event(r)),
+							e.eq(w.getAddress().toZ3Int(w, e), r.getAddress().toZ3Int(r, e)),
+							e.eq(w.getMemValueExpr(e), r.getMemValueExpr(e)))))))));
+
+		// TODO satisfaction
+
+		// singleness
+		e.ruleForall(List.of(a, b, c), List.of(edge.of(a, c), edge.of(b, c)), e.eq(a, b));
+	}
+
+	@Override
+	protected Stream<Clause> termFO(Counter t, int a, int b) {
+		return Stream.of(Clause.edge(term, a, b));
 	}
 }

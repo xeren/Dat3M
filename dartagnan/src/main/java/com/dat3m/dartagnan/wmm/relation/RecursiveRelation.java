@@ -1,10 +1,12 @@
 package com.dat3m.dartagnan.wmm.relation;
 
 import com.dat3m.dartagnan.EncodeContext;
+import com.dat3m.dartagnan.wmm.Clause;
 import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import java.util.stream.Stream;
 
 /**
  * @author Florian Furbach
@@ -92,6 +94,11 @@ public class RecursiveRelation extends Relation {
 	}
 
 	@Override
+	protected Stream<Clause> termFO(Counter t, int a, int b) {
+		return r1.nameFO(t, a, b);
+	}
+
+	@Override
 	protected void encodeApprox(EncodeContext e, ProgramCache p) {
 		r1.encodeApprox(e, p);
 	}
@@ -104,10 +111,5 @@ public class RecursiveRelation extends Relation {
 		for(Tuple tuple: encodeTupleSet) {
 			e.rule(e.eq(e.edge(this, tuple), e.edge(this, iteration, tuple)));
 		}
-	}
-
-	@Override
-	protected void encodeFirstOrder(EncodeContext e, ProgramCache p) {
-		r1.encodeFirstOrder(e, p);
 	}
 }

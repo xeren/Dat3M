@@ -2,12 +2,14 @@ package com.dat3m.dartagnan.wmm.relation.binary;
 
 import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.Event;
+import com.dat3m.dartagnan.wmm.Clause;
 import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.BoolExpr;
 import java.util.*;
+import java.util.stream.Stream;
 
 /**
  * @author Florian Furbach
@@ -209,13 +211,10 @@ public class RelComposition extends BinaryRelation {
 	}
 
 	@Override
-	protected void encodeFirstOrder(EncodeContext e, ProgramCache p) {
-		EncodeContext.RelationPredicate edge = e.of(this);
-		EncodeContext.RelationPredicate edge1 = e.of(r1);
-		EncodeContext.RelationPredicate edge2 = e.of(r2);
-		e.rule(e.forall(0, (a,c)->e.eq(edge.of(a, c),
-				e.exists(2, b->e.and(edge1.of(a, b), edge2.of(b, c)),
-					b->e.pattern(edge1.of(a, b), edge2.of(b, c)))),
-			(a,c)->e.pattern(edge.of(a, c))));
+	protected Stream<Clause> termFO(Counter t, int a, int c) {
+		int b = t.next();
+		Clause free = Clause.free(b);
+		Clause[] c1 = r1.nameFO(t, a, b).toArray(Clause[]::new);
+		return r2.nameFO(t, b, c).flatMap(c2->Arrays.stream(c1.clone()).map(c2::combine)).map(free::combine);
 	}
 }

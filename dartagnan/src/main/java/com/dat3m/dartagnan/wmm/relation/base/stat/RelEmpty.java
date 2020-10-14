@@ -1,9 +1,11 @@
 package com.dat3m.dartagnan.wmm.relation.base.stat;
 
+import com.dat3m.dartagnan.wmm.Clause;
 import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import java.util.stream.Stream;
 
 public class RelEmpty extends Relation {
 
@@ -21,9 +23,7 @@ public class RelEmpty extends Relation {
 	}
 
 	@Override
-	protected void encodeFirstOrder(EncodeContext e, ProgramCache p) {
-		EncodeContext.RelationPredicate edge = e.of(this);
-		e.rule(e.forall(0, (a,b)->e.not(edge.of(a, b)),
-			(a,b)->e.pattern(edge.of(a, b))));
+	protected Stream<Clause> termFO(Counter t, int a, int b) {
+		return Stream.empty();
 	}
 }

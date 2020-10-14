@@ -4,12 +4,14 @@ import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.Event;
 import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.wmm.Clause;
 import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import java.util.List;
+import java.util.stream.Stream;
 
 public class RelLoc extends Relation {
 
@@ -40,13 +42,20 @@ public class RelLoc extends Relation {
 	@Override
 	protected void encodeFirstOrder(EncodeContext e, ProgramCache p) {
 		//TODO restrict to M*M
-		EncodeContext.RelationPredicate edge = e.of(this);
+		EncodeContext.BinaryPredicate edge = e.binary(getName());
 		List<Event> events = p.cache(FilterBasic.get(EType.MEMORY));
-		e.rule(e.and(events.stream().map(MemEvent.class::cast).flatMap(a->events.stream().map(MemEvent.class::cast)
-			.filter(b->a.getCId() != b.getCId())
-			.filter(b->MemEvent.canAddressTheSameLocation(a, b))
-			.map(b->e.eq(
-				edge.of(e.event(a), e.event(b)),
-				e.and(e.exec(a), e.exec(b), e.eq(a.getAddress().toZ3Int(a, e), b.getAddress().toZ3Int(b, e))))))));
+		events.stream().map(MemEvent.class::cast)
+			.flatMap(a->events.stream().map(MemEvent.class::cast)
+				.filter(b->a.getCId() != b.getCId())
+				.filter(b->MemEvent.canAddressTheSameLocation(a, b))
+				.map(b->e.eq(
+					edge.of(e.event(a), e.event(b)),
+					e.and(e.exec(a), e.exec(b), e.eq(a.getAddress().toZ3Int(a, e), b.getAddress().toZ3Int(b, e))))))
+			.forEach(e::rule);
+	}
+
+	@Override
+	protected Stream<Clause> termFO(Counter t, int a, int b) {
+		return Stream.of(Clause.edge(term, a, b));
 	}
 }

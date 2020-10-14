@@ -2,13 +2,16 @@ package com.dat3m.dartagnan.wmm.relation.unary;
 
 import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.Event;
+import com.dat3m.dartagnan.wmm.Clause;
 import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.BoolExpr;
+import com.microsoft.z3.Expr;
 import com.microsoft.z3.IntExpr;
 import java.util.*;
+import java.util.stream.Stream;
 
 /**
  * @author Florian Furbach
@@ -191,15 +194,23 @@ public class RelTrans extends UnaryRelation {
 
 	@Override
 	protected void encodeFirstOrder(EncodeContext e, ProgramCache p) {
-		EncodeContext.RelationPredicate edge = e.of(this);
-		EncodeContext.RelationPredicate edge1 = e.of(r1);
-		e.rule(e.forall(0, (a,c)->e.or(e.not(edge.of(a, c)), edge1.of(a, c),
-				e.exists(2, b->e.and(edge.of(a, b), edge.of(b, c)),
-					b->e.pattern(edge.of(a, b), edge.of(b, c)))),
-			(a,c)->e.pattern(edge.of(a, c))));
-		e.rule(e.forall(0, (a,c)->e.implies(edge1.of(a, c), edge.of(a, c)),
-			(a,c)->e.pattern(edge1.of(a, c))));
-		e.rule(e.forall(0, (a,b,c)->e.implies(e.and(edge.of(a, b), edge.of(b, c)), edge.of(a, c)),
-			(a,b,c)->e.pattern(edge.of(a, b), edge.of(a, c))));
+		// enables name
+		super.encodeFirstOrder(e, p);
+
+		// atomic
+		int[] counter = new int[]{2};
+		r1.nameFO(()->counter[0]++, 0, 1).forEach(c->consumeFO(e, e.binary(term), counter[0], c));
+
+		// transitivity
+		Expr a = e.bind(0);
+		Expr b = e.bind(1);
+		Expr c = e.bind(2);
+		EncodeContext.BinaryPredicate edge = e.binary(term);
+		e.ruleForall(List.of(a, b, c), List.of(edge.of(a, b), edge.of(b, c)), edge.of(a, c));
+	}
+
+	@Override
+	protected Stream<Clause> termFO(Counter t, int a, int b) {
+		return Stream.of(Clause.edge(term, a, b));
 	}
 }

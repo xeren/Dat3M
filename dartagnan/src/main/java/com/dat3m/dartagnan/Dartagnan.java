@@ -199,7 +199,7 @@ public class Dartagnan {
 			for(Axiom ax: wmm.getAxioms())
 				ax.encodeRelAndConsistency(context, cache, settings.getMode());
 			Optional<BoolExpr[]> unsatCore = context.unsatisfiableCore();
-			if(!unsatCore.isPresent()) {
+			if(unsatCore.isEmpty()) {
 				// For CEGAR, the same code above seems to never give BFAIL
 				// Thus we add the constraint here to avoid FAIL when the unrolling was not enough
 				program.encodeNoBoundEventExec(context);

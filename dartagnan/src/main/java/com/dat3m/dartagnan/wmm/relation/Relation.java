@@ -1,12 +1,17 @@
 package com.dat3m.dartagnan.wmm.relation;
 
 import com.dat3m.dartagnan.EncodeContext;
+import com.dat3m.dartagnan.wmm.Clause;
 import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import com.microsoft.z3.BoolExpr;
+import com.microsoft.z3.Expr;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  * Symbolic relation over events in an execution of a program.
@@ -192,6 +197,10 @@ public abstract class Relation {
 		encodeApprox(context, cache);
 	}
 
+	protected interface Counter {
+		int next();
+	}
+
 	/**
 	 * Describes this relation's contents using first order logic.
 	 * Proposes that this relation contains only those tuples according to its semantics.
@@ -200,7 +209,57 @@ public abstract class Relation {
 	 * @param cache
 	 * Representation of the acyclic program in question.
 	 */
-	protected abstract void encodeFirstOrder(EncodeContext context, ProgramCache cache);
+	protected void encodeFirstOrder(EncodeContext context, ProgramCache cache) {
+		if(null == name)
+			return;
+
+		int[] counter = new int[]{2};
+		termFO(()->counter[0]++, 0, 1).forEach(c->consumeFO(context, context.binary(name), counter[0], c));
+	}
+
+	protected static void consumeFO(EncodeContext context, EncodeContext.BinaryPredicate name, int counter, Clause c) {
+		// formulate equivalence classes
+		int[] f = new int[counter];
+		f[1] = 1;
+		c.free(i->f[i] = i);
+		// invariant forall i < f.length: f[i] == i || f[i] < i && f[f[i]] == f[i]
+		c.eq((left,right)->{
+			int f0 = f[left];
+			int f1 = f[right];
+			if(f0 < f1) {
+				for(int i = f1; i < counter; ++i)
+					if(f1 == f[i])
+						f[i] = f0;
+			} else if(f1 < f0) {
+				for(int i = f0; i < counter; ++i)
+					if(f0 == f[i])
+						f[i] = f1;
+			}
+		});
+
+		LinkedList<Expr> bound = new LinkedList<>();
+		Expr[] b = new Expr[counter];
+		int x = 0;
+		for(int i = 0; i < counter; ++i)
+			if(i == f[i])
+				bound.add(b[i] = context.bind(x++));
+		for(int i = 0; i < counter; ++i)
+			if(0 <= f[i])
+				b[i] = b[f[i]];
+		LinkedList<BoolExpr> enc = new LinkedList<>();
+		c.edge((n,d,r)->enc.add(context.binary(n).of(b[d], b[r])));
+		c.set((n,m)->enc.add(context.unary(n).of(b[m])));
+
+		context.ruleForall(bound, enc, name.of(b[0], b[1]));
+	}
+
+	public Stream<Clause> nameFO(Counter counter, int domain, int range) {
+		if(null == name)
+			return termFO(counter, domain, range);
+		return Stream.of(Clause.edge(name, domain, range));
+	}
+
+	protected abstract Stream<Clause> termFO(Counter counter, int domain, int range);
 
 	/**
 	 * Naive description of this relation's contents.
@@ -227,15 +286,16 @@ public abstract class Relation {
 	}
 
 	protected void doEncode(EncodeContext context, ProgramCache cache, Mode mode) {
+		if(mode == Mode.FO) {
+			encodeFirstOrder(context, cache);
+			return;
+		}
 		// all pairs to be encoded that fall from the over-approximation
-		java.util.function.Function<Tuple,com.microsoft.z3.BoolExpr> atom = mode == Mode.FO
-			? t->context.of(this).of(context.event(t.getFirst()), context.event(t.getSecond()))
-			: t->context.edge(this, t);
 		if(!encodeTupleSet.isEmpty()) {
 			Set<Tuple> negations = new HashSet<>(encodeTupleSet);
 			negations.removeAll(maxTupleSet);
 			for(Tuple tuple: negations)
-				context.rule(context.not(atom.apply(tuple)));
+				context.rule(context.not(context.edge(this, tuple)));
 			encodeTupleSet.removeAll(negations);
 		}
 		if(encodeTupleSet.isEmpty() && !forceDoEncode)
@@ -247,12 +307,10 @@ public abstract class Relation {
 			case IDL:
 				encodeIDL(context, cache);
 				break;
-			case FO:
-				encodeFirstOrder(context, cache);
-				break;
 			default:
 				encodeApprox(context, cache);
 		}
 	}
+
 
 }

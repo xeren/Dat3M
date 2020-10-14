@@ -3,16 +3,15 @@ package com.dat3m.dartagnan.wmm.relation.base.stat;
 import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.Event;
 import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.wmm.Clause;
 import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
-import com.microsoft.z3.ArithExpr;
-import com.microsoft.z3.BoolExpr;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.stream.Stream;
 
 public class RelFencerel extends Relation {
 
@@ -63,28 +62,34 @@ public class RelFencerel extends Relation {
 		for(Tuple tuple: encodeTupleSet) {
 			Event e1 = tuple.getFirst();
 			Event e2 = tuple.getSecond();
-
-			LinkedList<BoolExpr> orClause = new LinkedList<>();
-			for(Event fence: fences)
-				if(fence.getCId() > e1.getCId() && fence.getCId() < e2.getCId())
-					orClause.add(e.exec(fence));
-
-			e.rule(e.eq(e.edge(this, e1, e2), e.and(e.exec(e1), e.exec(e2), e.or(orClause))));
+			int c1 = e1.getCId();
+			int c2 = e2.getCId();
+			e.rule(e.eq(e.edge(this, e1, e2), e.and(
+				e.exec(e1),
+				e.exec(e2),
+				e.or(fences.stream().filter(f->f.getCId() > c1 && f.getCId() < c2).map(e::exec)))));
 		}
 	}
 
 	@Override
 	protected void encodeFirstOrder(EncodeContext e, ProgramCache p) {
-		EncodeContext.RelationPredicate edge = e.of(this);
+		//TODO avoid encodeTupleSet
+		EncodeContext.BinaryPredicate edge = e.binary(getName());
 		List<Event> fences = p.cache(FilterBasic.get(fenceName));
-		e.rule(e.forall(0,
-			(a, b) -> e.eq(edge.of(a, b), e.or(fences.stream().map(f -> e.and(e.exec(f),
-				e.lt((ArithExpr) a, (ArithExpr) e.event(f)),
-				e.lt((ArithExpr) e.event(f), (ArithExpr) b)
-			)))),
-			fences.stream().map(f -> (EncodeContext.BinaryPattern) (a, b) -> e.pattern(e.exec(f),
-				e.lt((ArithExpr) a, (ArithExpr) e.event(f)),
-				e.lt((ArithExpr) e.event(f), (ArithExpr) b)
-			)).toArray(EncodeContext.BinaryPattern[]::new)));
+		for(Tuple tuple: encodeTupleSet) {
+			Event e1 = tuple.getFirst();
+			Event e2 = tuple.getSecond();
+			int c1 = e1.getCId();
+			int c2 = e2.getCId();
+			e.rule(e.eq(edge.of(e.event(e1), e.event(e2)), e.and(
+				e.exec(e1),
+				e.exec(e2),
+				e.or(fences.stream().filter(f->f.getCId() > c1 && f.getCId() < c2).map(e::exec)))));
+		}
+	}
+
+	@Override
+	protected Stream<Clause> termFO(Counter t, int a, int b) {
+		return Stream.of(Clause.edge(term, a, b));
 	}
 }

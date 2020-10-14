@@ -1,11 +1,14 @@
 package com.dat3m.dartagnan.wmm.relation.base.stat;
 
 import com.dat3m.dartagnan.Event;
+import com.dat3m.dartagnan.wmm.Clause;
 import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.EncodeContext;
 import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
+
+import java.util.stream.Stream;
 
 public abstract class StaticRelation extends Relation {
 
@@ -37,7 +40,12 @@ public abstract class StaticRelation extends Relation {
 
 	@Override
 	protected void encodeFirstOrder(EncodeContext e, ProgramCache p) {
-		EncodeContext.RelationPredicate edge = e.of(this);
+		EncodeContext.BinaryPredicate edge = e.binary(getName());
 		encodeApprox(e, p, (a,b)->edge.of(e.event(a), e.event(b)));
+	}
+
+	@Override
+	protected Stream<Clause> termFO(Counter c, int x, int y) {
+		return Stream.of(Clause.edge(getName(), x, y));
 	}
 }

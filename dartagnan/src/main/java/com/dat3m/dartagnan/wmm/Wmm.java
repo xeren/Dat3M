@@ -72,10 +72,6 @@ public class Wmm {
             ax.getRel().updateRecursiveGroupId(ax.getRel().getRecursiveGroupId());
         }
 
-        for(FilterAbstract filter : filters.values()){
-            filter.initialise();
-        }
-
         for(Relation relation : relationRepository.getRelations()){
             relation.initialise();
         }

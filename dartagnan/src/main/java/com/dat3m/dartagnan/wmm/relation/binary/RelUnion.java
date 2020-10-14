@@ -1,11 +1,13 @@
 package com.dat3m.dartagnan.wmm.relation.binary;
 
-import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.EncodeContext;
-import com.microsoft.z3.BoolExpr;
+import com.dat3m.dartagnan.wmm.Clause;
+import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import com.microsoft.z3.BoolExpr;
+import java.util.stream.Stream;
 
 /**
  * @author Florian Furbach
@@ -92,13 +94,7 @@ public class RelUnion extends BinaryRelation {
 	}
 
 	@Override
-	protected void encodeFirstOrder(EncodeContext e, ProgramCache p) {
-		EncodeContext.RelationPredicate edge = e.of(this);
-		EncodeContext.RelationPredicate edge1 = e.of(r1);
-		EncodeContext.RelationPredicate edge2 = e.of(r2);
-		e.rule(e.forall(0, (a,b)->e.eq(edge.of(a, b), e.or(edge1.of(a, b), edge2.of(a, b))),
-			(a,b)->e.pattern(edge.of(a, b)),
-			(a,b)->e.pattern(edge1.of(a, b)),
-			(a,b)->e.pattern(edge2.of(a, b))));
+	protected Stream<Clause> termFO(Counter t, int a, int b) {
+		return Stream.concat(r1.nameFO(t, a, b), r2.nameFO(t, a, b));
 	}
 }

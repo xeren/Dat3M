@@ -2,13 +2,14 @@ package com.dat3m.dartagnan.wmm.relation.unary;
 
 import com.dat3m.dartagnan.EncodeContext;
 import com.dat3m.dartagnan.Event;
+import com.dat3m.dartagnan.wmm.Clause;
 import com.dat3m.dartagnan.wmm.ProgramCache;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
-
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Stream;
 
 public class RelRangeIdentity extends UnaryRelation {
 
@@ -56,14 +57,10 @@ public class RelRangeIdentity extends UnaryRelation {
 	}
 
 	@Override
-	protected void encodeFirstOrder(EncodeContext e, ProgramCache p) {
-		EncodeContext.RelationPredicate edge = e.of(this);
-		EncodeContext.RelationPredicate edge1 = e.of(r1);
-		e.rule(e.forall(0, (a, b)->e.eq(edge.of(a, b), e.and(
-				e.eq(a, b),
-				e.exists(2, c->edge1.of(c, b), c->e.pattern(edge1.of(c, b))))),
-			(a,b)->e.pattern(edge.of(a, b))));
-		e.rule(e.forall(0, (a,b)->e.implies(edge1.of(a, b), edge.of(b, b)),
-			(a,b)->e.pattern(edge1.of(a, b))));
+	protected Stream<Clause> termFO(Counter t, int a, int b) {
+		int c = t.next();
+		Clause free = Clause.free(c);
+		Clause eq = Clause.eq(a, b);
+		return r1.nameFO(t, c, a).map(eq::combine).map(free::combine);
 	}
 }

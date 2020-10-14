@@ -6,12 +6,24 @@ import com.microsoft.z3.*;
 import java.util.*;
 import java.util.stream.Stream;
 
+/**
+ * Used to logically formulate the problem of finding a consistent execution.
+ * <p>
+ * It implements several interfaces:
+ * <ul>
+ * <li>Monotone collection of encoded objects ({@link #add})
+ * <li>Incremental collection of assertions ({@link #rule}, {@link #push}, {@link #pop})
+ * <li>Solving satisfiability of named assertions ({@link #check}, {@link #model}, etc.)
+ * <li>Factory for logical expressions
+ * </ul>
+ * @author r.maseli@tu-bs.de
+ */
 public class EncodeContext implements AutoCloseable {
 
 	public final Context context = new Context();
 	private final Tactic tactic;
 	private final Sort sortEvent;
-	private final HashSet<Relation> done = new HashSet<>();
+	private final HashSet<Object> done = new HashSet<>();
 	private final Solver solver;
 	private final HashMap<BoolExpr,BoolExpr> track = new HashMap<>();
 	private final HashMap<Integer,LinkedList<BoolExpr>> condition = new HashMap<>();
@@ -28,34 +40,29 @@ public class EncodeContext implements AutoCloseable {
 		solver = context.mkSolver(tactic);
 	}
 
-	public boolean add(Relation self) {
+	/**
+	 * Used to avoid repeating encoding.
+	 * @param self
+	 * Object that is about to be encoded.
+	 * @return
+	 * {@code self} has already been encoded in this context.
+	 */
+	public boolean add(Object self) {
 		return done.add(self);
 	}
 
-	@FunctionalInterface
-	public interface RelationPredicate {
-		/**
-		 * Creates an atomic formula for a relationship.
-		 * Used by the First-Order/Free variant for recursion evaluation.
-		 * @param first
-		 * Event in this domain set.
-		 * @param second
-		 * Event in this range set.
-		 * @return
-		 * Proposition that the pair is contained by this relation.
-		 */
-		BoolExpr of(Expr first, Expr second);
-	}
-
-	public RelationPredicate of(Relation relation) {
-		FuncDecl f = context.mkFuncDecl(relation.getName(), new Sort[]{sortEvent, sortEvent}, context.mkBoolSort());
-		return (a,b)->(BoolExpr)f.apply(a, b);
-	}
-
+	/**
+	 * Begins a new layer for assertions.
+	 * All current assertions are kept.
+	 */
 	public void push() {
 		solver.push();
 	}
 
+	/**
+	 * Removes all assertions added to the topmost layer.
+	 * Assumes that there is some layer beneath.
+	 */
 	public void pop() {
 		solver.pop();
 	}
@@ -341,68 +348,63 @@ public class EncodeContext implements AutoCloseable {
 	}
 
 	@FunctionalInterface
-	public interface UnaryBody {
-		BoolExpr of(Expr event);
+	public interface UnaryPredicate {
+		BoolExpr of(Expr first);
+	}
+
+	public UnaryPredicate unary(String name) {
+		FuncDecl f = context.mkFuncDecl(name, sortEvent, context.mkBoolSort());
+		return a->(BoolExpr)f.apply(a);
 	}
 
 	@FunctionalInterface
-	public interface UnaryPattern {
-		Pattern of(Expr event);
-	}
-
-	public final BoolExpr exists(int depth, UnaryBody body, UnaryPattern... pattern) {
-		Expr a = context.mkConst("x" + depth, sortEvent);
-		return context.mkExists(new Expr[]{a}, body.of(a), 0,
-			Arrays.stream(pattern).map(p->p.of(a)).toArray(Pattern[]::new),
-			null, null, null);
-	}
-
-	public final BoolExpr forall(int depth, UnaryBody body, UnaryPattern... pattern) {
-		Expr a = context.mkConst("x" + depth, sortEvent);
-		return context.mkForall(new Expr[]{a}, body.of(a), 0,
-			Arrays.stream(pattern).map(p->p.of(a)).toArray(Pattern[]::new),
-			null, null, null);
-	}
-
-	@FunctionalInterface
-	public interface BinaryBody {
+	public interface BinaryPredicate {
+		/**
+		 * Creates an atomic formula for a relationship.
+		 * Used by the First-Order/Free variant for recursion evaluation.
+		 * @param first
+		 * Event in this domain set.
+		 * @param second
+		 * Event in this range set.
+		 * @return
+		 * Proposition that the pair is contained by this relation.
+		 */
 		BoolExpr of(Expr first, Expr second);
 	}
 
-	@FunctionalInterface
-	public interface BinaryPattern {
-		Pattern of(Expr first, Expr second);
+	public BinaryPredicate binary(String name) {
+		FuncDecl f = context.mkFuncDecl(name, new Sort[]{sortEvent, sortEvent}, context.mkBoolSort());
+		return (a,b)->(BoolExpr)f.apply(a, b);
 	}
 
-	public final BoolExpr forall(int depth, BinaryBody body, BinaryPattern... pattern) {
-		Expr a = context.mkConst("x" + depth, sortEvent);
-		Expr b = context.mkConst("x" + (depth + 1), sortEvent);
-		return context.mkForall(new Expr[]{a, b}, body.of(a, b), 0,
-			Arrays.stream(pattern).map(p->p.of(a, b)).toArray(Pattern[]::new),
-			null, null, null);
+	public BinaryPredicate binaryNot(String name) {
+		FuncDecl f = context.mkFuncDecl(name, new Sort[]{sortEvent, sortEvent}, context.mkBoolSort());
+		return (a,b)->context.mkNot((BoolExpr)f.apply(a, b));
 	}
 
-	@FunctionalInterface
-	public interface TernaryBody {
-		BoolExpr of(Expr first, Expr second, Expr third);
+	/**
+	 * Exposes a bound variable.
+	 * @param index
+	 * Identifier of the variable.
+	 * @return
+	 * Identified variable.
+	 */
+	public Expr bind(int index) {
+		return context.mkConst("x" + index, sortEvent);
 	}
 
-	@FunctionalInterface
-	public interface TernaryPattern {
-		Pattern of(Expr first, Expr second, Expr third);
-	}
-
-	public final BoolExpr forall(int depth, TernaryBody body, TernaryPattern... pattern) {
-		Expr a = context.mkConst("x" + depth, sortEvent);
-		Expr b = context.mkConst("x" + (depth + 1), sortEvent);
-		Expr c = context.mkConst("x" + (depth + 2), sortEvent);
-		return context.mkForall(new Expr[]{a, b, c}, body.of(a, b, c), 0,
-			Arrays.stream(pattern).map(p->p.of(a, b, c)).toArray(Pattern[]::new),
-			null, null, null);
-	}
-
-	public Pattern pattern(Expr... part) {
-		return context.mkPattern(part);
+	/**
+	 * Assumes that for all occurrences of bound events, an implication holds.
+	 * @param bound
+	 * Collection of variables to be bound in this proposition.
+	 * @param premise
+	 * Collection of propositions, the combination of all supposedly implying {@code conclusion}.
+	 * @param conclusion
+	 * Proposition to be deduced from the combination of {@code premise}.
+	 */
+	public void ruleForall(Collection<Expr> bound, Collection<BoolExpr> premise, BoolExpr conclusion) {
+		rule(context.mkForall(bound.toArray(Expr[]::new), or(Stream.concat(premise.stream().map(context::mkNot), Stream.of(conclusion))), 0,
+			new Pattern[]{context.mkPattern(premise.toArray(Expr[]::new))}, null, null, null));
 	}
 
 	@Override
