@@ -1,8 +1,8 @@
 package com.dat3m.dartagnan.program.event;
 
+import com.dat3m.dartagnan.utils.Encoder;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 
 import java.util.*;
 
@@ -181,12 +181,12 @@ public abstract class Event implements Comparable<Event> {
 	// Encoding
 	// -----------------------------------------------------------------------------------------------------------------
 
-	public void initialise(Context ctx){
+	public void initialise(Encoder ctx){
 		if(cId < 0){
 			throw new RuntimeException("Event ID is not set in " + this);
 		}
-		execVar = ctx.mkBoolConst("exec(" + repr() + ")");
-		cfVar = ctx.mkBoolConst("cf(" + repr() + ")");
+		execVar = ctx.exec(this);
+		cfVar = ctx.cf(this);
 	}
 
 	public String repr() {
@@ -201,11 +201,11 @@ public abstract class Event implements Comparable<Event> {
 		return cfVar;
 	}
 
-	public void addCfCond(Context ctx, BoolExpr cond){
+	public void addCfCond(Encoder ctx, BoolExpr cond){
 		cfCond = (cfCond == null) ? cond : ctx.mkOr(cfCond, cond);
 	}
 
-	public BoolExpr encodeCF(Context ctx, BoolExpr cond) {
+	public BoolExpr encodeCF(Encoder ctx, BoolExpr cond) {
 		if(cfEnc == null){
 			cfCond = (cfCond == null) ? cond : ctx.mkOr(cfCond, cond);
 			cfEnc = ctx.mkEq(cfVar, cfCond);
@@ -217,7 +217,7 @@ public abstract class Event implements Comparable<Event> {
 		return cfEnc;
 	}
 
-	protected BoolExpr encodeExec(Context ctx){
+	protected BoolExpr encodeExec(Encoder ctx){
 		return ctx.mkEq(execVar, cfVar);
 	}
 }

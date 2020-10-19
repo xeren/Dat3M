@@ -1,7 +1,7 @@
 package com.dat3m.dartagnan.expression.op;
 
+import com.dat3m.dartagnan.utils.Encoder;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 
 public enum BOpBin {
     AND, OR;
@@ -17,7 +17,7 @@ public enum BOpBin {
         return super.toString();
     }
 
-    public BoolExpr encode(BoolExpr e1, BoolExpr e2, Context ctx) {
+    public BoolExpr encode(BoolExpr e1, BoolExpr e2, Encoder ctx) {
         switch(this) {
             case AND:
                 return ctx.mkAnd(e1, e2);

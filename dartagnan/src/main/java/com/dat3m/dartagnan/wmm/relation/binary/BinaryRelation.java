@@ -1,8 +1,8 @@
 package com.dat3m.dartagnan.wmm.relation.binary;
 
+import com.dat3m.dartagnan.utils.Encoder;
 import com.dat3m.dartagnan.utils.Settings;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -41,7 +41,7 @@ public abstract class BinaryRelation extends Relation {
     }
 
     @Override
-    public void initialise(Program program, Context ctx, Settings settings){
+    public void initialise(Program program, Encoder ctx, Settings settings){
         super.initialise(program, ctx, settings);
         lastEncodedIteration = -1;
     }

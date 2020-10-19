@@ -1,8 +1,8 @@
 package com.dat3m.dartagnan.wmm.relation.unary;
 
+import com.dat3m.dartagnan.utils.Encoder;
 import com.dat3m.dartagnan.utils.Settings;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 
@@ -34,7 +34,7 @@ public abstract class UnaryRelation extends Relation {
     }
 
     @Override
-    public void initialise(Program program, Context ctx, Settings settings){
+    public void initialise(Program program, Encoder ctx, Settings settings){
         super.initialise(program, ctx, settings);
         if(recursiveGroupId > 0){
             throw new RuntimeException("Recursion is not implemented for " + this.getClass().getName());

@@ -1,6 +1,6 @@
 package com.dat3m.dartagnan.expression.op;
 
-import com.microsoft.z3.Context;
+import com.dat3m.dartagnan.utils.Encoder;
 import com.microsoft.z3.IntExpr;
 
 public enum IOpBin {
@@ -52,18 +52,18 @@ public enum IOpBin {
         }
     }
 
-    public IntExpr encode(IntExpr e1, IntExpr e2, Context ctx){
+    public IntExpr encode(IntExpr e1, IntExpr e2, Encoder ctx){
         switch(this){
             case PLUS:
-                return (IntExpr)ctx.mkAdd(e1, e2);
+                return ctx.mkAdd(e1, e2);
             case MINUS:
-                return (IntExpr)ctx.mkSub(e1, e2);
+                return ctx.mkSub(e1, e2);
             case MULT:
-                return (IntExpr)ctx.mkMul(e1, e2);
+                return ctx.mkMul(e1, e2);
             case DIV:
-                return (IntExpr)ctx.mkDiv(e1, e2);
+                return ctx.mkDiv(e1, e2);
             case MOD:
-                return (IntExpr)ctx.mkMod(e1, e2);
+                return ctx.mkMod(e1, e2);
             case AND:
             	return ctx.mkBV2Int(ctx.mkBVAND(ctx.mkInt2BV(32, e1), ctx.mkInt2BV(32, e2)), false);	
             case OR:

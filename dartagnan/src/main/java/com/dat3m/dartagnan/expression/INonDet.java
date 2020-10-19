@@ -1,6 +1,6 @@
 package com.dat3m.dartagnan.expression;
 
-import com.microsoft.z3.Context;
+import com.dat3m.dartagnan.utils.Encoder;
 import com.microsoft.z3.IntExpr;
 import com.microsoft.z3.Model;
 import com.dat3m.dartagnan.program.Register;
@@ -23,17 +23,17 @@ public class INonDet extends IExpr implements ExprInterface {
 	}
 
 	@Override
-	public IntExpr toZ3Int(Event e, Context ctx) {
-		return ctx.mkIntConst(Integer.toString(hashCode()));
+	public IntExpr toZ3Int(Event e, Encoder ctx) {
+		return ctx.someInt();
 	}
 
 	@Override
-	public IntExpr getLastValueExpr(Context ctx) {
-		return ctx.mkIntConst(Integer.toString(hashCode()));
+	public IntExpr getLastValueExpr(Encoder ctx) {
+		throw new UnsupportedOperationException("getLastValueExpr not supported for " + this);
 	}
 
 	@Override
-	public int getIntValue(Event e, Context ctx, Model model) {
+	public int getIntValue(Event e, Encoder ctx, Model model) {
 		return Integer.parseInt(model.getConstInterp(toZ3Int(e, ctx)).toString());
 	}
 

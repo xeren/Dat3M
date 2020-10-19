@@ -13,8 +13,6 @@ import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 import java.util.*;
 
-import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
-
 public class RelRf extends Relation {
 
     public RelRf(){
@@ -65,7 +63,7 @@ public class RelRf extends Relation {
         for(Tuple tuple : maxTupleSet){
             MemEvent w = (MemEvent) tuple.getFirst();
             MemEvent r = (MemEvent) tuple.getSecond();
-            BoolExpr edge = edge(term, w, r, ctx);
+            BoolExpr edge = ctx.edge(term, w, r);
             BoolExpr sameAddress = ctx.mkEq(w.getMemAddressExpr(), r.getMemAddressExpr());
             BoolExpr sameValue = ctx.mkEq(w.getMemValueExpr(), r.getMemValueExpr());
 
@@ -105,13 +103,12 @@ public class RelRf extends Relation {
 
     private BoolExpr encodeEdgeSeq(Event read, BoolExpr isMemInit, List<BoolExpr> edges){
         int num = edges.size();
-        int readId = read.getCId();
-        BoolExpr lastSeqVar = mkSeqVar(readId, 0);
+        BoolExpr lastSeqVar = ctx.mkSeqVar(read, 0);
         BoolExpr newSeqVar = lastSeqVar;
         BoolExpr atMostOne = ctx.mkEq(lastSeqVar, edges.get(0));
 
         for(int i = 1; i < num; i++){
-            newSeqVar = mkSeqVar(readId, i);
+            newSeqVar = ctx.mkSeqVar(read, i);
             atMostOne = ctx.mkAnd(atMostOne, ctx.mkEq(newSeqVar, ctx.mkOr(lastSeqVar, edges.get(i))));
             atMostOne = ctx.mkAnd(atMostOne, ctx.mkNot(ctx.mkAnd(edges.get(i), lastSeqVar)));
             lastSeqVar = newSeqVar;
@@ -124,9 +121,5 @@ public class RelRf extends Relation {
             atLeastOne = ctx.mkImplies(read.exec(), atLeastOne);
         }
         return ctx.mkAnd(atMostOne, atLeastOne);
-    }
-
-    private BoolExpr mkSeqVar(int readId, int i) {
-        return (BoolExpr) ctx.mkConst("s(" + term + ",E" + readId + "," + i + ")", ctx.mkBoolSort());
     }
 }

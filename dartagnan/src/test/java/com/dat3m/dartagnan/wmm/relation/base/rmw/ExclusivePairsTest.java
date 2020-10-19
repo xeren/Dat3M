@@ -5,6 +5,7 @@ import com.dat3m.dartagnan.parsers.cat.ParserCat;
 import com.dat3m.dartagnan.parsers.program.ProgramParser;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.arch.aarch64.utils.EType;
+import com.dat3m.dartagnan.utils.Encoder;
 import com.dat3m.dartagnan.utils.ResourceHelper;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.utils.Settings;
@@ -90,7 +91,7 @@ public class ExclusivePairsTest {
                         FilterIntersection.get(FilterBasic.get(EType.EXCL), FilterBasic.get(EType.READ)),
                         FilterIntersection.get(FilterBasic.get(EType.EXCL), FilterBasic.get(EType.WRITE))
                 );
-                solver.add(helper.encodeIllegalEdges(expectedEdges, ctx));
+                solver.add(helper.encodeIllegalEdges(expectedEdges, new Encoder(ctx)));
                 assertSame(Status.UNSATISFIABLE, solver.check());
             }
 
@@ -111,13 +112,14 @@ public class ExclusivePairsTest {
             // Add program without assertions
             program.unroll(1, 0);
             program.compile(program.getArch(), 0);
-            solver.add(program.encodeCF(ctx));
-            solver.add(program.encodeFinalRegisterValues(ctx));
-            solver.add(wmm.encode(program, ctx, settings));
-            solver.add(wmm.consistent(program, ctx));
+            Encoder encoder = new Encoder(ctx);
+            solver.add(program.encodeCF(encoder));
+            solver.add(program.encodeFinalRegisterValues(encoder));
+            solver.add(wmm.encode(program, encoder, settings));
+            solver.add(wmm.consistent(program, encoder));
 
             // Check flag
-            solver.add(ctx.mkEq(Flag.ARM_UNPREDICTABLE_BEHAVIOUR.repr(ctx), ctx.mkTrue()));
+            solver.add(encoder.mkEq(Flag.ARM_UNPREDICTABLE_BEHAVIOUR.repr(ctx), encoder.mkTrue()));
             assertEquals(expectedFlag, solver.check() == Status.SATISFIABLE);
             ctx.close();
 

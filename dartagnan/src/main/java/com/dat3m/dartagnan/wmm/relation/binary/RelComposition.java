@@ -2,7 +2,6 @@ package com.dat3m.dartagnan.wmm.relation.binary;
 
 import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -124,14 +123,14 @@ public class RelComposition extends BinaryRelation {
                 int id = Tuple.toHashCode(e1.getCId(), e2.getCId());
                 if(exprMap.containsKey(id)){
                     BoolExpr e = exprMap.get(id);
-                    e = ctx.mkOr(e, ctx.mkAnd(Utils.edge(r1.getName(), e1, e3, ctx), Utils.edge(r2.getName(), e3, e2, ctx)));
+                    e = ctx.mkOr(e, ctx.mkAnd(ctx.edge(r1.getName(), e1, e3), ctx.edge(r2.getName(), e3, e2)));
                     exprMap.put(id, e);
                 }
             }
         }
 
         for(Tuple tuple : encodeTupleSet){
-            enc = ctx.mkAnd(enc, ctx.mkEq(Utils.edge(this.getName(), tuple.getFirst(), tuple.getSecond(), ctx), exprMap.get(tuple.hashCode())));
+            enc = ctx.mkAnd(enc, ctx.mkEq(ctx.edge(getName(), tuple.getFirst(), tuple.getSecond()), exprMap.get(tuple.hashCode())));
         }
 
         return enc;
@@ -170,15 +169,15 @@ public class RelComposition extends BinaryRelation {
                 Event e2 = tuple2.getSecond();
                 int id = Tuple.toHashCode(e1.getCId(), e2.getCId());
                 if(orClauseMap.containsKey(id)){
-                    BoolExpr opt1 = Utils.edge(r1.getName(), e1, e3, ctx);
-                    BoolExpr opt2 = Utils.edge(r2.getName(), e3, e2, ctx);
+                    BoolExpr opt1 = ctx.edge(r1.getName(), e1, e3);
+                    BoolExpr opt2 = ctx.edge(r2.getName(), e3, e2);
                     orClauseMap.put(id, ctx.mkOr(orClauseMap.get(id), ctx.mkAnd(opt1, opt2)));
 
                     if(recurseInR1){
-                        opt1 = ctx.mkAnd(opt1, ctx.mkGt(Utils.intCount(this.getName(), e1, e2, ctx), Utils.intCount(r1.getName(), e1, e3, ctx)));
+                        opt1 = ctx.mkAnd(opt1, ctx.mkGt(ctx.intCount(this.getName(), e1, e2), ctx.intCount(r1.getName(), e1, e3)));
                     }
                     if(recurseInR2){
-                        opt2 = ctx.mkAnd(opt2, ctx.mkGt(Utils.intCount(this.getName(), e1, e2, ctx), Utils.intCount(r1.getName(), e3, e2, ctx)));
+                        opt2 = ctx.mkAnd(opt2, ctx.mkGt(ctx.intCount(this.getName(), e1, e2), ctx.intCount(r1.getName(), e3, e2)));
                     }
                     idlClauseMap.put(id, ctx.mkOr(idlClauseMap.get(id), ctx.mkAnd(opt1, opt2)));
                 }
@@ -186,8 +185,8 @@ public class RelComposition extends BinaryRelation {
         }
 
         for(Tuple tuple : encodeTupleSet){
-            enc = ctx.mkAnd(enc, ctx.mkEq(Utils.edge(this.getName(), tuple.getFirst(), tuple.getSecond(), ctx), orClauseMap.get(tuple.hashCode())));
-            enc = ctx.mkAnd(enc, ctx.mkEq(Utils.edge(this.getName(), tuple.getFirst(), tuple.getSecond(), ctx), idlClauseMap.get(tuple.hashCode())));
+            enc = ctx.mkAnd(enc, ctx.mkEq(ctx.edge(this.getName(), tuple.getFirst(), tuple.getSecond()), orClauseMap.get(tuple.hashCode())));
+            enc = ctx.mkAnd(enc, ctx.mkEq(ctx.edge(this.getName(), tuple.getFirst(), tuple.getSecond()), idlClauseMap.get(tuple.hashCode())));
         }
 
         return enc;
@@ -203,7 +202,7 @@ public class RelComposition extends BinaryRelation {
 
             if(iteration == 0 && isRecursive){
                 for(Tuple tuple : encodeTupleSet){
-                    enc = ctx.mkAnd(ctx.mkNot(Utils.edge(name, tuple.getFirst(), tuple.getSecond(), ctx)));
+                    enc = ctx.mkAnd(ctx.mkNot(ctx.edge(name, tuple.getFirst(), tuple.getSecond())));
                 }
             } else {
                 int childIteration = isRecursive ? iteration - 1 : iteration;
@@ -235,14 +234,14 @@ public class RelComposition extends BinaryRelation {
                         int id = Tuple.toHashCode(e1.getCId(), e2.getCId());
                         if(exprMap.containsKey(id)){
                             BoolExpr e = exprMap.get(id);
-                            e = ctx.mkOr(e, ctx.mkAnd(Utils.edge(r1Name, e1, e3, ctx), Utils.edge(r2Name, e3, e2, ctx)));
+                            e = ctx.mkOr(e, ctx.mkAnd(ctx.edge(r1Name, e1, e3), ctx.edge(r2Name, e3, e2)));
                             exprMap.put(id, e);
                         }
                     }
                 }
 
                 for(Tuple tuple : encodeTupleSet){
-                    enc = ctx.mkAnd(enc, ctx.mkEq(Utils.edge(name, tuple.getFirst(), tuple.getSecond(), ctx), exprMap.get(tuple.hashCode())));
+                    enc = ctx.mkAnd(enc, ctx.mkEq(ctx.edge(name, tuple.getFirst(), tuple.getSecond()), exprMap.get(tuple.hashCode())));
                 }
 
                 if(recurseInR1){

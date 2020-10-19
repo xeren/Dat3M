@@ -2,9 +2,9 @@ package com.dat3m.dartagnan.expression;
 
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.utils.Encoder;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.microsoft.z3.IntExpr;
 import com.microsoft.z3.Model;
 
@@ -21,29 +21,29 @@ public class IfExpr implements ExprInterface {
 	}
 
 	@Override
-	public IntExpr toZ3Int(Event e, Context ctx) {
-		return (IntExpr)ctx.mkITE(guard.toZ3Bool(e, ctx), tbranch.toZ3Int(e, ctx), fbranch.toZ3Int(e, ctx));
+	public IntExpr toZ3Int(Event e, Encoder ctx) {
+		return ctx.mkITE(guard.toZ3Bool(e, ctx), tbranch.toZ3Int(e, ctx), fbranch.toZ3Int(e, ctx));
 	}
 
 	@Override
-	public BoolExpr toZ3Bool(Event e, Context ctx) {
-		return (BoolExpr)ctx.mkITE(guard.toZ3Bool(e, ctx), tbranch.toZ3Bool(e, ctx), fbranch.toZ3Bool(e, ctx));
+	public BoolExpr toZ3Bool(Event e, Encoder ctx) {
+		return ctx.mkITE(guard.toZ3Bool(e, ctx), tbranch.toZ3Bool(e, ctx), fbranch.toZ3Bool(e, ctx));
 	}
 
 	@Override
-	public IntExpr getLastValueExpr(Context ctx) {
+	public IntExpr getLastValueExpr(Encoder ctx) {
 		// In principle this method is only called by assertions 
 		// and thus it should never be called for this class
         throw new RuntimeException("Problem with getLastValueExpr in " + this.toString());
 	}
 
 	@Override
-	public int getIntValue(Event e, Context ctx, Model model) {
+	public int getIntValue(Event e, Encoder ctx, Model model) {
 		return guard.getBoolValue(e, ctx, model) ? tbranch.getIntValue(e, ctx, model) : fbranch.getIntValue(e, ctx, model);
 	}
 
 	@Override
-	public boolean getBoolValue(Event e, Context ctx, Model model) {
+	public boolean getBoolValue(Event e, Encoder ctx, Model model) {
 		return guard.getBoolValue(e, ctx, model)? tbranch.getBoolValue(e, ctx, model) : fbranch.getBoolValue(e, ctx, model);
 	}
 

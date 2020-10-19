@@ -1,6 +1,7 @@
 package com.dat3m.porthos;
 
 import com.dat3m.dartagnan.Dartagnan;
+import com.dat3m.dartagnan.utils.Encoder;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.porthos.utils.options.PorthosOptions;
 import com.microsoft.z3.*;
@@ -63,7 +64,7 @@ public class Porthos {
             System.out.println("Iterations: " + result.getIterations());
             if(settings.getDrawGraph()) {
                 ctx.setPrintMode(Z3_ast_print_mode.Z3_PRINT_SMTLIB_FULL);
-                Dartagnan.drawGraph(new Graph(s1.getModel(), ctx, pSource, pTarget, settings.getGraphRelations()), options.getGraphFilePath());
+                Dartagnan.drawGraph(new Graph(s1.getModel(), new Encoder(ctx), pSource, pTarget, settings.getGraphRelations()), options.getGraphFilePath());
                 System.out.println("Execution graph is written to " + options.getGraphFilePath());
             }
         }
@@ -71,11 +72,12 @@ public class Porthos {
         ctx.close();
     }
 
-    public static PorthosResult testProgram(Solver s1, Solver s2, Context ctx, Program pSource, Program pTarget, Arch source, Arch target,
+    public static PorthosResult testProgram(Solver s1, Solver s2, Context c, Program pSource, Program pTarget, Arch source, Arch target,
                                      Wmm sourceWmm, Wmm targetWmm, Settings settings){
 
         pSource.unroll(settings.getBound(), 0);
         pTarget.unroll(settings.getBound(), 0);
+        Encoder ctx = new Encoder(c);
 
         int nextId = pSource.compile(source, 0);
         pTarget.compile(target, nextId);

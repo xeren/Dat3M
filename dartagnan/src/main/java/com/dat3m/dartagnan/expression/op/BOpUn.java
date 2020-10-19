@@ -1,7 +1,7 @@
 package com.dat3m.dartagnan.expression.op;
 
+import com.dat3m.dartagnan.utils.Encoder;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 
 public enum BOpUn {
     NOT;
@@ -11,7 +11,7 @@ public enum BOpUn {
        	return "!";
     }
 
-    public BoolExpr encode(BoolExpr e, Context ctx) {
+    public BoolExpr encode(BoolExpr e, Encoder ctx) {
        	return ctx.mkNot(e);
     }
 

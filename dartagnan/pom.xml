@@ -17,11 +17,6 @@
 
   <dependencies>
     <dependency>
-      <groupId>com.microsoft</groupId>
-      <artifactId>z3</artifactId>
-      <version>4.3.2</version>
-    </dependency>
-    <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
       <version>27.0.1-jre</version>
@@ -29,7 +24,7 @@
     <dependency>
       <groupId>org.antlr</groupId>
       <artifactId>antlr4-runtime</artifactId>
-      <version>4.7.2</version>
+      <version>4.8</version>
     </dependency>
     <dependency>
       <groupId>commons-cli</groupId>

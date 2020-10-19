@@ -1,10 +1,11 @@
 package com.dat3m.porthos;
 
 import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.utils.Encoder;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.filter.FilterUnion;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
+import com.microsoft.z3.IntExpr;
 import com.microsoft.z3.Model;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Register;
@@ -13,7 +14,6 @@ import com.dat3m.dartagnan.program.event.Load;
 import com.dat3m.dartagnan.program.event.Store;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
 import com.dat3m.dartagnan.program.memory.Location;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 
 class Encodings {
 
-	static BoolExpr encodeCommonExecutions(Program p1, Program p2, Context ctx) {
+	static BoolExpr encodeCommonExecutions(Program p1, Program p2, Encoder ctx) {
 		List<Event> p1Events = p1.getCache().getEvents(FilterUnion.get(
                 FilterBasic.get(EType.MEMORY),
                 FilterBasic.get(EType.LOCAL)
@@ -63,8 +63,8 @@ class Encodings {
             Event r2 = rTuple.getSecond();
             for(Tuple wTuple : wTuples){
                 enc = ctx.mkAnd(enc, ctx.mkEq(
-                        Utils.edge("rf", wTuple.getFirst(), r1, ctx),
-                        Utils.edge("rf", wTuple.getSecond(), r2, ctx)
+                        ctx.edge("rf", wTuple.getFirst(), r1),
+                        ctx.edge("rf", wTuple.getSecond(), r2)
                 ));
             }
         }
@@ -75,8 +75,8 @@ class Encodings {
             for(Tuple wTupleTo : wTuples){
                 if(w1From.getCId() != wTupleTo.getFirst().getCId()){
                     enc = ctx.mkAnd(enc, ctx.mkEq(
-                            Utils.edge("co", w1From, wTupleTo.getFirst(), ctx),
-                            Utils.edge("co", w2From, wTupleTo.getSecond(), ctx)
+                            ctx.edge("co", w1From, wTupleTo.getFirst()),
+                            ctx.edge("co", w2From, wTupleTo.getSecond())
                     ));
                 }
             }
@@ -84,10 +84,10 @@ class Encodings {
 		return enc;
 	}
 	
-	static BoolExpr encodeReachedState(Program p, Model model, Context ctx) {
+	static BoolExpr encodeReachedState(Program p, Model model, Encoder ctx) {
 		BoolExpr reachedState = ctx.mkTrue();
 		for(Location loc : p.getLocations()) {
-			reachedState = ctx.mkAnd(reachedState, ctx.mkEq(loc.getLastValueExpr(ctx), model.getConstInterp(loc.getLastValueExpr(ctx))));
+			reachedState = ctx.mkAnd(reachedState, ctx.mkEq(loc.getLastValueExpr(ctx), (IntExpr)model.getConstInterp(loc.getLastValueExpr(ctx))));
 		}
 		Set<RegWriter> executedEvents = p.getCache().getEvents(FilterBasic.get(EType.ANY)).stream()
                 .filter(e -> model.getConstInterp(e.exec()).isTrue())
@@ -99,7 +99,7 @@ class Encodings {
 			regs.add(e.getResultRegister());
 		}
 		for(Register reg : regs) {
-			reachedState = ctx.mkAnd(reachedState, ctx.mkEq(reg.getLastValueExpr(ctx), model.getConstInterp(reg.getLastValueExpr(ctx))));
+			reachedState = ctx.mkAnd(reachedState, ctx.mkEq(reg.getLastValueExpr(ctx), (IntExpr)model.getConstInterp(reg.getLastValueExpr(ctx))));
 		}
 		return reachedState;
 	}

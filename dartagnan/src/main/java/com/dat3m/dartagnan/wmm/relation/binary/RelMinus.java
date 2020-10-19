@@ -1,11 +1,10 @@
 package com.dat3m.dartagnan.wmm.relation.binary;
 
+import com.dat3m.dartagnan.utils.Encoder;
 import com.dat3m.dartagnan.utils.Settings;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -31,7 +30,7 @@ public class RelMinus extends BinaryRelation {
     }
 
     @Override
-    public void initialise(Program program, Context ctx, Settings settings){
+    public void initialise(Program program, Encoder ctx, Settings settings){
         super.initialise(program, ctx, settings);
         if(r2.getRecursiveGroupId() > 0){
             throw new RuntimeException("Relation " + r2.getName() + " cannot be recursive since it occurs in a set minus.");
@@ -64,12 +63,12 @@ public class RelMinus extends BinaryRelation {
             Event e1 = tuple.getFirst();
             Event e2 = tuple.getSecond();
 
-            BoolExpr opt1 = Utils.edge(r1.getName(), e1, e2, ctx);
-            BoolExpr opt2 = ctx.mkNot(Utils.edge(r2.getName(), e1, e2, ctx));
+            BoolExpr opt1 = ctx.edge(r1.getName(), e1, e2);
+            BoolExpr opt2 = ctx.mkNot(ctx.edge(r2.getName(), e1, e2));
             if (Relation.PostFixApprox) {
-                enc = ctx.mkAnd(enc, ctx.mkImplies(ctx.mkAnd(opt1, opt2), Utils.edge(this.getName(), e1, e2, ctx)));
+                enc = ctx.mkAnd(enc, ctx.mkImplies(ctx.mkAnd(opt1, opt2), ctx.edge(getName(), e1, e2)));
             } else {
-                enc = ctx.mkAnd(enc, ctx.mkEq(Utils.edge(this.getName(), e1, e2, ctx), ctx.mkAnd(opt1, opt2)));
+                enc = ctx.mkAnd(enc, ctx.mkEq(ctx.edge(getName(), e1, e2), ctx.mkAnd(opt1, opt2)));
             }
         }
         return enc;
@@ -87,12 +86,12 @@ public class RelMinus extends BinaryRelation {
             Event e1 = tuple.getFirst();
             Event e2 = tuple.getSecond();
 
-            BoolExpr opt1 = Utils.edge(r1.getName(), e1, e2, ctx);
-            BoolExpr opt2 = ctx.mkNot(Utils.edge(r2.getName(), e1, e2, ctx));
-            enc = ctx.mkAnd(enc, ctx.mkEq(Utils.edge(this.getName(), e1, e2, ctx), ctx.mkAnd(opt1, opt2)));
+            BoolExpr opt1 = ctx.edge(r1.getName(), e1, e2);
+            BoolExpr opt2 = ctx.mkNot(ctx.edge(r2.getName(), e1, e2));
+            enc = ctx.mkAnd(enc, ctx.mkEq(ctx.edge(getName(), e1, e2), ctx.mkAnd(opt1, opt2)));
 
-            opt1 = ctx.mkAnd(opt1, ctx.mkGt(Utils.intCount(this.getName(), e1, e2, ctx), Utils.intCount(r1.getName(), e1, e2, ctx)));
-            enc = ctx.mkAnd(enc, ctx.mkEq(Utils.edge(this.getName(), e1, e2, ctx), ctx.mkAnd(opt1, opt2)));
+            opt1 = ctx.mkAnd(opt1, ctx.mkGt(ctx.intCount(getName(), e1, e2), ctx.intCount(r1.getName(), e1, e2)));
+            enc = ctx.mkAnd(enc, ctx.mkEq(ctx.edge(getName(), e1, e2), ctx.mkAnd(opt1, opt2)));
         }
         return enc;
     }
@@ -108,7 +107,7 @@ public class RelMinus extends BinaryRelation {
 
             if(iteration == 0 && isRecursive){
                 for(Tuple tuple : encodeTupleSet){
-                    enc = ctx.mkAnd(ctx.mkNot(Utils.edge(name, tuple.getFirst(), tuple.getSecond(), ctx)));
+                    enc = ctx.mkAnd(ctx.mkNot(ctx.edge(name, tuple.getFirst(), tuple.getSecond())));
                 }
             } else {
                 int childIteration = isRecursive ? iteration - 1 : iteration;
@@ -118,9 +117,9 @@ public class RelMinus extends BinaryRelation {
                 String r2Name = r2.getName();
 
                 for(Tuple tuple : encodeTupleSet){
-                    BoolExpr edge = Utils.edge(name, tuple.getFirst(), tuple.getSecond(), ctx);
-                    BoolExpr opt1 = Utils.edge(r1Name, tuple.getFirst(), tuple.getSecond(), ctx);
-                    BoolExpr opt2 = ctx.mkNot(Utils.edge(r2Name, tuple.getFirst(), tuple.getSecond(), ctx));
+                    BoolExpr edge = ctx.edge(name, tuple.getFirst(), tuple.getSecond());
+                    BoolExpr opt1 = ctx.edge(r1Name, tuple.getFirst(), tuple.getSecond());
+                    BoolExpr opt2 = ctx.mkNot(ctx.edge(r2Name, tuple.getFirst(), tuple.getSecond()));
                     enc = ctx.mkAnd(enc, ctx.mkEq(edge, ctx.mkAnd(opt1, opt2)));
                 }
 

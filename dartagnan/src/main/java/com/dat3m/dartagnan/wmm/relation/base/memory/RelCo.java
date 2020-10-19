@@ -8,16 +8,12 @@ import com.microsoft.z3.IntExpr;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.program.memory.Address;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
-import static com.dat3m.dartagnan.wmm.utils.Utils.intVar;
 
 public class RelCo extends Relation {
 
@@ -66,12 +62,12 @@ public class RelCo extends Relation {
         ));
 
         for(Event e : eventsInit) {
-            enc = ctx.mkAnd(enc, ctx.mkEq(intVar("co", e, ctx), ctx.mkInt(0)));
+            enc = ctx.mkAnd(enc, ctx.mkEq(ctx.intVar("co", e), ctx.mkInt(0)));
         }
 
         List<IntExpr> intVars = new ArrayList<>();
         for(Event w : eventsStore) {
-            IntExpr coVar = intVar("co", w, ctx);
+            IntExpr coVar = ctx.intVar("co", w);
             enc = ctx.mkAnd(enc, ctx.mkGt(coVar, ctx.mkInt(0)));
             intVars.add(coVar);
         }
@@ -83,22 +79,22 @@ public class RelCo extends Relation {
 
             for(Tuple t : maxTupleSet.getByFirst(w1)){
                 MemEvent w2 = (MemEvent)t.getSecond();
-                BoolExpr relation = edge("co", w1, w2, ctx);
-                lastCo = ctx.mkAnd(lastCo, ctx.mkNot(edge("co", w1, w2, ctx)));
+                BoolExpr relation = ctx.edge("co", w1, w2);
+                lastCo = ctx.mkAnd(lastCo, ctx.mkNot(ctx.edge("co", w1, w2)));
 
                 enc = ctx.mkAnd(enc, ctx.mkEq(relation, ctx.mkAnd(
                         ctx.mkAnd(ctx.mkAnd(w1.exec(), w2.exec()), ctx.mkEq(w1.getMemAddressExpr(), w2.getMemAddressExpr())),
-                        ctx.mkLt(Utils.intVar("co", w1, ctx), Utils.intVar("co", w2, ctx))
+                        ctx.mkLt(ctx.intVar("co", w1), ctx.intVar("co", w2))
                 )));
             }
 
-            BoolExpr lastCoExpr = ctx.mkBoolConst("co_last(" + w1.repr() + ")");
+            BoolExpr lastCoExpr = ctx.finalWriter(w1);
             enc = ctx.mkAnd(enc, ctx.mkEq(lastCoExpr, lastCo));
 
             for(Address address : w1.getMaxAddressSet()){
                 enc = ctx.mkAnd(enc, ctx.mkImplies(
                         ctx.mkAnd(lastCoExpr, ctx.mkEq(w1.getMemAddressExpr(), address.toZ3Int(ctx))),
-                        ctx.mkEq(address.getLastMemValueExpr(ctx), w1.getMemValueExpr())
+                        ctx.mkEq(ctx.finalValue(address), w1.getMemValueExpr())
                 ));
             }
         }

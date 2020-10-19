@@ -1,10 +1,9 @@
 package com.dat3m.dartagnan.wmm.relation;
 
+import com.dat3m.dartagnan.utils.Encoder;
 import com.dat3m.dartagnan.utils.Settings;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.Program;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
@@ -26,7 +25,7 @@ public class RecursiveRelation extends Relation {
         return name;
     }
 
-    public void initialise(Program program, Context ctx, Settings settings){
+    public void initialise(Program program, Encoder ctx, Settings settings){
         if(doRecurse){
             doRecurse = false;
             super.initialise(program, ctx, settings);
@@ -132,8 +131,8 @@ public class RecursiveRelation extends Relation {
         BoolExpr enc = ctx.mkTrue();
         for(Tuple tuple : encodeTupleSet){
             enc = ctx.mkAnd(enc, ctx.mkEq(
-                    Utils.edge(getName(), tuple.getFirst(), tuple.getSecond(), ctx),
-                    Utils.edge(getName() + "_" + iteration, tuple.getFirst(), tuple.getSecond(), ctx)
+                    ctx.edge(getName(), tuple.getFirst(), tuple.getSecond()),
+                    ctx.edge(getName() + "_" + iteration, tuple.getFirst(), tuple.getSecond())
             ));
         }
         return enc;

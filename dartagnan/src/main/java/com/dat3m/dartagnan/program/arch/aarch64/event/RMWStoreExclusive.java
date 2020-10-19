@@ -2,8 +2,8 @@ package com.dat3m.dartagnan.program.arch.aarch64.event;
 
 import com.dat3m.dartagnan.program.arch.aarch64.utils.EType;
 import com.dat3m.dartagnan.program.event.Store;
+import com.dat3m.dartagnan.utils.Encoder;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.event.Event;
@@ -26,7 +26,7 @@ public class RMWStoreExclusive extends Store implements RegReaderData {
     }
 
     @Override
-    protected BoolExpr encodeExec(Context ctx){
+    protected BoolExpr encodeExec(Encoder ctx){
         return ctx.mkImplies(execVar, cfVar);
     }
 

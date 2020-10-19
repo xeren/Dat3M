@@ -2,7 +2,6 @@ package com.dat3m.dartagnan.wmm.relation.base.local;
 
 import com.dat3m.dartagnan.expression.IConst;
 import com.dat3m.dartagnan.wmm.relation.base.stat.StaticRelation;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.google.common.collect.ImmutableList;
@@ -53,7 +52,7 @@ abstract class BasicRegRelation extends StaticRelation {
 
                         // RegReader uses the value of RegWriter if it is executed ..
                         BoolExpr clause = ctx.mkAnd(regWriter.exec(), regReader.exec());
-                        BoolExpr edge = Utils.edge(this.getName(), regWriter, regReader, ctx);
+                        BoolExpr edge = ctx.edge(getName(), regWriter, regReader);
 
                         // .. and no other write to the same register is executed in between
                         ListIterator<Event> otherIt = writers.listIterator(writerIt.nextIndex());

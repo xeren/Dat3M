@@ -2,7 +2,6 @@ package com.dat3m.dartagnan.wmm.relation.unary;
 
 import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -61,8 +60,8 @@ public class RelInverse extends UnaryRelation {
         for(Tuple tuple : encodeTupleSet){
             Event e1 = tuple.getFirst();
             Event e2 = tuple.getSecond();
-            BoolExpr opt = Utils.edge(r1.getName(), e2, e1, ctx);
-            enc = ctx.mkAnd(enc, ctx.mkEq(Utils.edge(this.getName(), e1, e2, ctx), opt));
+            BoolExpr opt = ctx.edge(r1.getName(), e2, e1);
+            enc = ctx.mkAnd(enc, ctx.mkEq(ctx.edge(getName(), e1, e2), opt));
         }
         return enc;
     }

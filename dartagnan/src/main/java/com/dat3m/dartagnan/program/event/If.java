@@ -1,13 +1,13 @@
 package com.dat3m.dartagnan.program.event;
 
 import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.utils.Encoder;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.google.common.collect.ImmutableSet;
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 
 import java.util.*;
 
@@ -129,7 +129,7 @@ public class If extends Event implements RegReaderData {
     // -----------------------------------------------------------------------------------------------------------------
 
     @Override
-    public BoolExpr encodeCF(Context ctx, BoolExpr cond) {
+    public BoolExpr encodeCF(Encoder ctx, BoolExpr cond) {
         if(cfEnc == null){
             cfCond = (cfCond == null) ? cond : ctx.mkOr(cfCond, cond);
             BoolExpr ifCond = expr.toZ3Bool(this, ctx);

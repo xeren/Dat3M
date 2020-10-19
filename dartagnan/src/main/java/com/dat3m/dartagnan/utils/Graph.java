@@ -4,7 +4,6 @@ import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Load;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.microsoft.z3.*;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
@@ -34,7 +33,7 @@ public class Graph {
     }
 
     private Model model;
-    private Context ctx;
+    private Encoder ctx;
 
     private StringBuilder buffer;
     private Map<Integer, Location> mapAddressLocation;
@@ -49,17 +48,17 @@ public class Graph {
 
     private final String DEFAULT_EDGE_COLOR = "indigo";
 
-    public Graph(Model model, Context ctx, Program program, Collection<String> relations){
+    public Graph(Model model, Encoder ctx, Program program, Collection<String> relations){
         this(model, ctx, relations);
         build(program);
     }
 
-    public Graph(Model model, Context ctx, Program pSource, Program pTarget, Collection<String> relations){
+    public Graph(Model model, Encoder ctx, Program pSource, Program pTarget, Collection<String> relations){
         this(model, ctx, relations);
         build(pSource, pTarget);
     }
 
-    private Graph(Model model, Context ctx, Collection<String> relations){
+    private Graph(Model model, Encoder ctx, Collection<String> relations){
         this.model = model;
         this.ctx = ctx;
         this.relations.addAll(relations);
@@ -127,7 +126,7 @@ public class Graph {
                             int value = 0;
                             if(e instanceof Load){
                                 Register r = ((Load) e).getResultRegister();
-                                value = Integer.parseInt(model.getConstInterp(r.toZ3IntResult(e, ctx)).toString());
+                                value = Integer.parseInt(model.getConstInterp(ctx.result(r, e)).toString());
                             } else {
                                 value = ((MemEvent) e).getMemValue().getIntValue(e, ctx, model);
                             }
@@ -181,7 +180,7 @@ public class Graph {
             for(Event e2 : mapAddressEvent.get(address)){
                 map.put(e2, 0);
                 for(Event e1 : mapAddressEvent.get(address)){
-                    Expr expr = model.getConstInterp(Utils.edge("co", e1, e2, ctx));
+                    Expr expr = model.getConstInterp(ctx.edge("co", e1, e2));
                     if(expr != null && expr.isTrue()){
                         map.put(e2, map.get(e2) + 1);
                     }
@@ -213,7 +212,7 @@ public class Graph {
             String edge = " " + getEdgeDef(relName) + ";\n";
             for(Event e1 : events) {
                 for(Event e2 : events) {
-                    Expr expr = model.getConstInterp(Utils.edge(relName, e1, e2, ctx));
+                    Expr expr = model.getConstInterp(ctx.edge(relName, e1, e2));
                     if(expr != null && expr.isTrue()){
                         sb.append("      ").append(e1.repr()).append(" -> ").append(e2.repr()).append(edge);
                     }

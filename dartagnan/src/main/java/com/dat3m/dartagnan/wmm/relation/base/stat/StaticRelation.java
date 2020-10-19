@@ -4,8 +4,6 @@ import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 
-import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
-
 public abstract class StaticRelation extends Relation {
 
     public StaticRelation() {
@@ -20,7 +18,7 @@ public abstract class StaticRelation extends Relation {
     protected BoolExpr encodeApprox() {
         BoolExpr enc = ctx.mkTrue();
         for(Tuple tuple : encodeTupleSet) {
-            BoolExpr rel = edge(this.getName(), tuple.getFirst(), tuple.getSecond(), ctx);
+            BoolExpr rel = ctx.edge(getName(), tuple.getFirst(), tuple.getSecond());
             enc = ctx.mkAnd(enc, ctx.mkEq(rel, ctx.mkAnd(tuple.getFirst().exec(), tuple.getSecond().exec())));
         }
         return enc;

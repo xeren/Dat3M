@@ -1,7 +1,7 @@
 package com.dat3m.dartagnan.expression;
 
+import com.dat3m.dartagnan.utils.Encoder;
 import com.google.common.collect.ImmutableSet;
-import com.microsoft.z3.Context;
 import com.microsoft.z3.IntExpr;
 import com.microsoft.z3.Model;
 import com.dat3m.dartagnan.expression.op.IOpUn;
@@ -19,17 +19,17 @@ public class IExprUn extends IExpr {
     }
 
 	@Override
-	public IntExpr toZ3Int(Event e, Context ctx) {
+	public IntExpr toZ3Int(Event e, Encoder ctx) {
 		return op.encode(b.toZ3Int(e, ctx), ctx);
 	}
 
 	@Override
-	public IntExpr getLastValueExpr(Context ctx) {
+	public IntExpr getLastValueExpr(Encoder ctx) {
         return op.encode(b.getLastValueExpr(ctx), ctx);
 	}
 
 	@Override
-	public int getIntValue(Event e, Context ctx, Model model) {
+	public int getIntValue(Event e, Encoder ctx, Model model) {
         return -(b.getIntValue(e, ctx, model));
 	}
 

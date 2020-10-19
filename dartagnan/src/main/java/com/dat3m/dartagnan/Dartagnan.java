@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.dat3m.dartagnan.utils.Encoder;
 import org.apache.commons.cli.HelpFormatter;
 
 import com.dat3m.dartagnan.asserts.AbstractAssert;
@@ -87,14 +88,14 @@ public class Dartagnan {
 
         if(settings.getDrawGraph() && canDrawGraph(p.getAss(), result.equals(FAIL))) {
             ctx.setPrintMode(Z3_ast_print_mode.Z3_PRINT_SMTLIB_FULL);
-            drawGraph(new Graph(s.getModel(), ctx, p, settings.getGraphRelations()), options.getGraphFilePath());
+            drawGraph(new Graph(s.getModel(), new Encoder(ctx), p, settings.getGraphRelations()), options.getGraphFilePath());
             System.out.println("Execution graph is written to " + options.getGraphFilePath());
         }
 
         ctx.close();
     }
 
-    public static Result testProgram(Solver s1, Context ctx, Program program, Wmm wmm, Arch target, Settings settings) {
+    public static Result testProgram(Solver s1, Context c, Program program, Wmm wmm, Arch target, Settings settings) {
     	program.unroll(settings.getBound(), 0);
         program.compile(target, 0);
         // AssertionInline depends on compiled events (copies)
@@ -108,10 +109,11 @@ public class Dartagnan {
         		return PASS;
         	}
         }
+			Encoder ctx = new Encoder(c);
         
         // Using two solvers is much faster than using
         // an incremental solver or check-sat-assuming
-        Solver s2 = ctx.mkSolver();
+        Solver s2 = c.mkSolver();
 
         BoolExpr encodeUINonDet = program.encodeUINonDet(ctx);
 		s1.add(encodeUINonDet);
@@ -157,7 +159,7 @@ public class Dartagnan {
 		return res;
     }
     
-    public static Result runCegar(Solver solver, Context ctx, Program program, Wmm wmm, Arch target, Settings settings, int cegar) {
+    public static Result runCegar(Solver solver, Context c, Program program, Wmm wmm, Arch target, Settings settings, int cegar) {
     	Map<BoolExpr, BoolExpr> track = new HashMap<>();
     	program.unroll(settings.getBound(), 0);
         program.compile(target, 0);
@@ -172,6 +174,7 @@ public class Dartagnan {
         		return PASS;
         	}
         }
+        Encoder ctx = new Encoder(c);
 
         solver.add(program.encodeUINonDet(ctx));
         solver.add(program.encodeCF(ctx));
@@ -224,7 +227,7 @@ public class Dartagnan {
     		solver.add(wmm.encodeBase(program, ctx, settings));
         	for(Axiom ax : wmm.getAxioms()) {
         		BoolExpr enc = ax.encodeRelAndConsistency(ctx);
-        		BoolExpr axVar = ctx.mkBoolConst(ax.toString());
+        		BoolExpr axVar = c.mkBoolConst(ax.toString());
         		solver.assertAndTrack(enc, axVar);
         		track.put(axVar, enc);
         	}

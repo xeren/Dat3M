@@ -1,8 +1,8 @@
 package com.dat3m.dartagnan.program.memory;
 
+import com.dat3m.dartagnan.utils.Encoder;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.microsoft.z3.IntExpr;
 import com.microsoft.z3.Model;
 import com.dat3m.dartagnan.expression.ExprInterface;
@@ -26,21 +26,17 @@ public class Address extends IConst implements ExprInterface {
     }
 
     @Override
-    public IntExpr toZ3Int(Event e, Context ctx){
+    public IntExpr toZ3Int(Event e, Encoder ctx){
         return toZ3Int(ctx);
     }
 
     @Override
-    public IntExpr getLastValueExpr(Context ctx){
+    public IntExpr getLastValueExpr(Encoder ctx){
         return toZ3Int(ctx);
     }
 
-    public IntExpr getLastMemValueExpr(Context ctx){
-        return ctx.mkIntConst("last_val_at_memory_" + index);
-    }
-
     @Override
-    public BoolExpr toZ3Bool(Event e, Context ctx){
+    public BoolExpr toZ3Bool(Event e, Encoder ctx){
         return ctx.mkTrue();
     }
 
@@ -66,12 +62,12 @@ public class Address extends IConst implements ExprInterface {
     }
 
     @Override
-    public IntExpr toZ3Int(Context ctx){
-        return ctx.mkIntConst("memory_" + index);
+    public IntExpr toZ3Int(Encoder ctx){
+        return ctx.memory(this);
     }
 
     @Override
-    public int getIntValue(Event e, Context ctx, Model model){
+    public int getIntValue(Event e, Encoder ctx, Model model){
         return Integer.parseInt(model.getConstInterp(toZ3Int(ctx)).toString());
     }
     

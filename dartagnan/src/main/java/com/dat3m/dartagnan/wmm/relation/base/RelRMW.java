@@ -8,18 +8,15 @@ import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.program.svcomp.event.EndAtomic;
 import com.dat3m.dartagnan.program.event.rmw.RMWStore;
 import com.dat3m.dartagnan.program.arch.aarch64.utils.EType;
+import com.dat3m.dartagnan.utils.Encoder;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.filter.FilterIntersection;
 import com.dat3m.dartagnan.wmm.relation.base.stat.StaticRelation;
-import com.dat3m.dartagnan.wmm.utils.Flag;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
-
-import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 
 public class RelRMW extends StaticRelation {
 
@@ -42,7 +39,7 @@ public class RelRMW extends StaticRelation {
     }
 
     @Override
-    public void initialise(Program program, Context ctx, Settings settings){
+    public void initialise(Program program, Encoder ctx, Settings settings){
         super.initialise(program, ctx, settings);
         this.baseMaxTupleSet = null;
     }
@@ -120,7 +117,7 @@ public class RelRMW extends StaticRelation {
                     if (load.getCId() < store.getCId()) {
 
                         // Encode if load and store form an exclusive pair
-                        BoolExpr isPair = exclPair(load, store, ctx);
+                        BoolExpr isPair = ctx.exclusivePair(load, store);
                         BoolExpr isExecPair = ctx.mkAnd(isPair, store.exec());
                         enc = ctx.mkAnd(enc, ctx.mkEq(isPair, pairingCond(thread, load, store)));
 
@@ -129,7 +126,7 @@ public class RelRMW extends StaticRelation {
                         unpredictable = ctx.mkOr(unpredictable, ctx.mkAnd(isExecPair, ctx.mkNot(sameAddress)));
 
                         // Relation between exclusive load and store
-                        enc = ctx.mkAnd(enc, ctx.mkEq(edge("rmw", load, store, ctx), ctx.mkAnd(isExecPair, sameAddress)));
+                        enc = ctx.mkAnd(enc, ctx.mkEq(ctx.edge("rmw", load, store), ctx.mkAnd(isExecPair, sameAddress)));
 
                         // Can be executed if addresses mismatch, but behaviour is "constrained unpredictable"
                         // The implementation does not include all possible unpredictable cases: in case of address
@@ -140,7 +137,7 @@ public class RelRMW extends StaticRelation {
                 enc = ctx.mkAnd(enc, ctx.mkImplies(store.exec(), storeExec));
             }
         }
-        return ctx.mkAnd(enc, ctx.mkEq(Flag.ARM_UNPREDICTABLE_BEHAVIOUR.repr(ctx), unpredictable));
+        return ctx.mkAnd(enc, ctx.mkEq(ctx.armUnpredictableBehavior(), unpredictable));
     }
 
     private BoolExpr pairingCond(Thread thread, Event load, Event store){
@@ -157,9 +154,5 @@ public class RelRMW extends StaticRelation {
             }
         }
         return pairingCond;
-    }
-
-    private BoolExpr exclPair(Event load, Event store, Context ctx){
-        return ctx.mkBoolConst("excl(" + load.getCId() + "," + store.getCId() + ")");
     }
 }

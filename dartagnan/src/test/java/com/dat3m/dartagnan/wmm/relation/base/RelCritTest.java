@@ -5,6 +5,7 @@ import com.dat3m.dartagnan.parsers.cat.ParserCat;
 import com.dat3m.dartagnan.parsers.program.ProgramParser;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.arch.linux.utils.EType;
+import com.dat3m.dartagnan.utils.Encoder;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.relation.EdgeTestHelper;
@@ -75,7 +76,7 @@ public class RelCritTest {
                     FilterBasic.get(EType.RCU_LOCK),
                     FilterBasic.get(EType.RCU_UNLOCK)
             );
-            solver.add(helper.encodeIllegalEdges(expectedEdges, ctx));
+            solver.add(helper.encodeIllegalEdges(expectedEdges, new Encoder(ctx)));
             assertSame(Status.UNSATISFIABLE, solver.check());
 
             ctx.close();

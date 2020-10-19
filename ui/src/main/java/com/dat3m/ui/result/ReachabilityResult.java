@@ -4,6 +4,7 @@ import static com.dat3m.dartagnan.utils.Result.FAIL;
 
 import com.dat3m.dartagnan.Dartagnan;
 import com.dat3m.dartagnan.program.Program;
+import com.dat3m.dartagnan.utils.Encoder;
 import com.dat3m.dartagnan.utils.Graph;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.wmm.Wmm;
@@ -44,7 +45,7 @@ public class ReachabilityResult implements Dat3mResult {
             Result result = Dartagnan.testProgram(solver, ctx, program, wmm, options.getTarget(), options.getSettings());
             buildVerdict(result);
             if(options.getSettings().getDrawGraph() && Dartagnan.canDrawGraph(program.getAss(), result == FAIL)){
-                graph = new Graph(solver.getModel(), ctx, program, options.getSettings().getGraphRelations());
+                graph = new Graph(solver.getModel(), new Encoder(ctx), program, options.getSettings().getGraphRelations());
             }
             ctx.close();
         }

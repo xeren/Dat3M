@@ -6,12 +6,12 @@ import com.dat3m.dartagnan.parsers.program.ProgramParser;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.utils.Encoder;
 import com.dat3m.dartagnan.utils.ResourceHelper;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.utils.Mode;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.utils.alias.Alias;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
@@ -94,9 +94,10 @@ public class RelRfTest {
         }};
         extractEvents(program, events);
 
-        Context ctx = new Context();
-        Solver solver = ctx.mkSolver(ctx.mkTactic(Settings.TACTIC));
+        Context c = new Context();
+        Solver solver = c.mkSolver(c.mkTactic(Settings.TACTIC));
 
+        Encoder ctx = new Encoder(c);
         solver.add(program.getAss().encode(ctx));
         if(program.getAssFilter() != null){
             solver.add(program.getAssFilter().encode(ctx));
@@ -108,15 +109,15 @@ public class RelRfTest {
 
         assertEquals(Status.SATISFIABLE, solver.check());
 
-        BoolExpr edge1 = Utils.edge("rf", events.get(5), events.get(2), ctx);
+        BoolExpr edge1 = ctx.edge("rf", events.get(5), events.get(2));
         solver.add(edge1);
         assertEquals(Status.SATISFIABLE, solver.check());
 
-        BoolExpr edge2 = Utils.edge("rf", events.get(8), events.get(2), ctx);
+        BoolExpr edge2 = ctx.edge("rf", events.get(8), events.get(2));
         solver.add(edge2);
         assertEquals(Status.UNSATISFIABLE, solver.check());
 
-        ctx.close();
+        c.close();
     }
 
     private void extractEvents(Program program, Map<Integer, Event> events){

@@ -1,7 +1,7 @@
 package com.dat3m.dartagnan.wmm.utils;
 
+import com.dat3m.dartagnan.utils.Encoder;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.wmm.relation.RecursiveRelation;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 
@@ -32,7 +32,7 @@ public class RecursiveGroup {
         }
     }
 
-    public BoolExpr encode(Context ctx){
+    public BoolExpr encode(Encoder ctx){
         BoolExpr enc = ctx.mkTrue();
         for(int i = 0; i < encodeIterations; i++){
             for(RecursiveRelation relation : relations){

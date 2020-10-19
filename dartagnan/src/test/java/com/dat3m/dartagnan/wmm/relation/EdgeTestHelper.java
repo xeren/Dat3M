@@ -2,13 +2,12 @@ package com.dat3m.dartagnan.wmm.relation;
 
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.wmm.utils.Utils;
+import com.dat3m.dartagnan.utils.Encoder;
 import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -28,14 +27,14 @@ public class EdgeTestHelper {
     }
 
     // Encode violation of expected event pairs in the relation
-    public BoolExpr encodeIllegalEdges(int[] data, Context ctx){
+    public BoolExpr encodeIllegalEdges(int[] data, Encoder ctx){
         Set<Tuple> all = mkAllTuples();
         Set<Tuple> max = relation.getMaxTupleSet();
         Set<Tuple> expected = mkExpectedTuples(all, data);
         BoolExpr enc = ctx.mkFalse();
 
         for(Tuple tuple : all){
-            BoolExpr edge = Utils.edge(relation.getName(), tuple.getFirst(), tuple.getSecond(), ctx);
+            BoolExpr edge = ctx.edge(relation.getName(), tuple.getFirst(), tuple.getSecond());
             if(expected.contains(tuple)){
                 enc = ctx.mkOr(enc, ctx.mkNot(edge));
             } else if(max.contains(tuple)){

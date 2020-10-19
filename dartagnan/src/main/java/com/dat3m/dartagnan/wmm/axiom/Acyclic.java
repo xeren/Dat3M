@@ -1,9 +1,8 @@
 package com.dat3m.dartagnan.wmm.axiom;
 
+import com.dat3m.dartagnan.utils.Encoder;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -11,8 +10,6 @@ import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
-import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 
 /**
  *
@@ -54,19 +51,19 @@ public class Acyclic extends Axiom {
     }
 
     @Override
-    protected BoolExpr _consistent(Context ctx) {
+    protected BoolExpr _consistent(Encoder ctx) {
         BoolExpr enc = ctx.mkTrue();
         for(Tuple tuple : rel.getEncodeTupleSet()){
             Event e1 = tuple.getFirst();
             Event e2 = tuple.getSecond();
-            enc = ctx.mkAnd(enc, ctx.mkImplies(e1.exec(), ctx.mkGt(Utils.intVar(rel.getName(), e1, ctx), ctx.mkInt(0))));
-            enc = ctx.mkAnd(enc, ctx.mkImplies(Utils.edge(rel.getName(), e1, e2, ctx), ctx.mkLt(Utils.intVar(rel.getName(), e1, ctx), Utils.intVar(rel.getName(), e2, ctx))));
+            enc = ctx.mkAnd(enc, ctx.mkImplies(e1.exec(), ctx.mkGt(ctx.intVar(rel.getName(), e1), ctx.mkInt(0))));
+            enc = ctx.mkAnd(enc, ctx.mkImplies(ctx.edge(rel.getName(), e1, e2), ctx.mkLt(ctx.intVar(rel.getName(), e1), ctx.intVar(rel.getName(), e2))));
         }
         return enc;
     }
 
     @Override
-    protected BoolExpr _inconsistent(Context ctx) {
+    protected BoolExpr _inconsistent(Encoder ctx) {
         return ctx.mkAnd(satCycleDef(ctx), satCycle(ctx));
     }
 
@@ -75,7 +72,7 @@ public class Acyclic extends Axiom {
         return "acyclic " + rel.getName();
     }
 
-    private BoolExpr satCycle(Context ctx) {
+    private BoolExpr satCycle(Encoder ctx) {
         Set<Event> cycleEvents = new HashSet<>();
         for(Tuple tuple : rel.getEncodeTupleSet()){
             cycleEvents.add(tuple.getFirst());
@@ -83,13 +80,13 @@ public class Acyclic extends Axiom {
 
         BoolExpr cycle = ctx.mkFalse();
         for(Event e : cycleEvents){
-            cycle = ctx.mkOr(cycle, cycleVar(rel.getName(), e, ctx));
+            cycle = ctx.mkOr(cycle, ctx.cycleVar(rel.getName(), e));
         }
 
         return cycle;
     }
 
-    private BoolExpr satCycleDef(Context ctx){
+    private BoolExpr satCycleDef(Encoder ctx){
         BoolExpr enc = ctx.mkTrue();
         Set<Event> encoded = new HashSet<>();
         String name = rel.getName();
@@ -99,13 +96,13 @@ public class Acyclic extends Axiom {
             Event e2 = t.getSecond();
 
             enc = ctx.mkAnd(enc, ctx.mkImplies(
-                    cycleEdge(name, e1, e2, ctx),
+                    ctx.cycleEdge(name, e1, e2),
                     ctx.mkAnd(
                             e1.exec(),
                             e2.exec(),
-                            edge(name, e1, e2, ctx),
-                            cycleVar(name, e1, ctx),
-                            cycleVar(name, e2, ctx)
+                            ctx.edge(name, e1, e2),
+                            ctx.cycleVar(name, e1),
+                            ctx.cycleVar(name, e2)
             )));
 
             if(!encoded.contains(e1)){
@@ -113,10 +110,10 @@ public class Acyclic extends Axiom {
 
                 BoolExpr source = ctx.mkFalse();
                 for(Tuple tuple1 : rel.getEncodeTupleSet().getByFirst(e1)){
-                    BoolExpr opt = cycleEdge(name, e1, tuple1.getSecond(), ctx);
+                    BoolExpr opt = ctx.cycleEdge(name, e1, tuple1.getSecond());
                     for(Tuple tuple2 : rel.getEncodeTupleSet().getByFirst(e1)){
                         if(tuple1.getSecond().getCId() != tuple2.getSecond().getCId()){
-                            opt = ctx.mkAnd(opt, ctx.mkNot(cycleEdge(name, e1, tuple2.getSecond(), ctx)));
+                            opt = ctx.mkAnd(opt, ctx.mkNot(ctx.cycleEdge(name, e1, tuple2.getSecond())));
                         }
                     }
                     source = ctx.mkOr(source, opt);
@@ -124,27 +121,19 @@ public class Acyclic extends Axiom {
 
                 BoolExpr target = ctx.mkFalse();
                 for(Tuple tuple1 : rel.getEncodeTupleSet().getBySecond(e1)){
-                    BoolExpr opt = cycleEdge(name, tuple1.getFirst(), e1, ctx);
+                    BoolExpr opt = ctx.cycleEdge(name, tuple1.getFirst(), e1);
                     for(Tuple tuple2 : rel.getEncodeTupleSet().getBySecond(e1)){
                         if(tuple1.getFirst().getCId() != tuple2.getFirst().getCId()){
-                            opt = ctx.mkAnd(opt, ctx.mkNot(cycleEdge(name, tuple2.getFirst(), e1, ctx)));
+                            opt = ctx.mkAnd(opt, ctx.mkNot(ctx.cycleEdge(name, tuple2.getFirst(), e1)));
                         }
                     }
                     target = ctx.mkOr(target, opt);
                 }
 
-                enc = ctx.mkAnd(enc, ctx.mkImplies(cycleVar(name, e1, ctx), ctx.mkAnd(source, target)));
+                enc = ctx.mkAnd(enc, ctx.mkImplies(ctx.cycleVar(name, e1), ctx.mkAnd(source, target)));
             }
         }
 
         return enc;
-    }
-
-    private BoolExpr cycleVar(String relName, Event e, Context ctx) {
-        return ctx.mkBoolConst("Cycle(" + e.repr() + ")(" + relName + ")");
-    }
-
-    private BoolExpr cycleEdge(String relName, Event e1, Event e2, Context ctx) {
-        return ctx.mkBoolConst("Cycle:" + relName + "(" + e1.repr() + "," + e2.repr() + ")");
     }
 }

@@ -1,17 +1,15 @@
 package com.dat3m.dartagnan.wmm.relation;
 
+import com.dat3m.dartagnan.utils.Encoder;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 import java.util.HashSet;
 import java.util.Set;
-
-import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 
 /**
  *
@@ -26,7 +24,7 @@ public abstract class Relation {
 
     protected Settings settings;
     protected Program program;
-    protected Context ctx;
+    protected Encoder ctx;
 
     protected boolean isEncoded;
 
@@ -57,7 +55,7 @@ public abstract class Relation {
         return recursiveGroupId;
     }
 
-    public void initialise(Program program, Context ctx, Settings settings){
+    public void initialise(Program program, Encoder ctx, Settings settings){
         this.program = program;
         this.ctx = ctx;
         this.settings = settings;
@@ -165,7 +163,7 @@ public abstract class Relation {
             Set<Tuple> negations = new HashSet<>(encodeTupleSet);
             negations.removeAll(maxTupleSet);
             for(Tuple tuple : negations){
-                enc = ctx.mkAnd(enc, ctx.mkNot(edge(this.getName(), tuple.getFirst(), tuple.getSecond(), ctx)));
+                enc = ctx.mkAnd(enc, ctx.mkNot(ctx.edge(getName(), tuple.getFirst(), tuple.getSecond())));
             }
             encodeTupleSet.removeAll(negations);
         }

@@ -1,8 +1,8 @@
 package com.dat3m.dartagnan.expression.op;
 
-import com.microsoft.z3.ArithExpr;
+import com.dat3m.dartagnan.utils.Encoder;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
+import com.microsoft.z3.IntExpr;
 
 public enum COpBin {
     EQ, NEQ, GTE, LTE, GT, LT;
@@ -26,7 +26,7 @@ public enum COpBin {
         return super.toString();
     }
 
-    public BoolExpr encode(ArithExpr e1, ArithExpr e2, Context ctx) {
+    public BoolExpr encode(IntExpr e1, IntExpr e2, Encoder ctx) {
         switch(this) {
             case EQ:
                 return ctx.mkEq(e1, e2);

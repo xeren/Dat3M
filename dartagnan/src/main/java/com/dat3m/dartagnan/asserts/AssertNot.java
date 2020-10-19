@@ -1,7 +1,7 @@
 package com.dat3m.dartagnan.asserts;
 
+import com.dat3m.dartagnan.utils.Encoder;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 
 public class AssertNot extends AbstractAssert {
 
@@ -16,7 +16,7 @@ public class AssertNot extends AbstractAssert {
     }
 
     @Override
-    public BoolExpr encode(Context ctx) {
+    public BoolExpr encode(Encoder ctx) {
         if(child != null){
             return ctx.mkNot(child.encode(ctx));
         }

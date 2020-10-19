@@ -2,11 +2,11 @@ package com.dat3m.dartagnan.program;
 
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.program.utils.ThreadCache;
+import com.dat3m.dartagnan.utils.Encoder;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.microsoft.z3.Model;
 import com.dat3m.dartagnan.asserts.AbstractAssert;
 import com.dat3m.dartagnan.asserts.AssertCompositeOr;
@@ -19,8 +19,6 @@ import com.dat3m.dartagnan.program.event.Local;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
 import com.dat3m.dartagnan.program.memory.Location;
 import com.dat3m.dartagnan.program.memory.Memory;
-
-import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 
 import java.util.*;
 
@@ -169,7 +167,7 @@ public class Program {
     // Encoding
     // -----------------------------------------------------------------------------------------------------------------
 
-    public BoolExpr encodeCF(Context ctx) {
+    public BoolExpr encodeCF(Encoder ctx) {
         for(Event e : getEvents()){
             e.initialise(ctx);
         }
@@ -180,7 +178,7 @@ public class Program {
         return enc;
     }
 
-    public BoolExpr encodeFinalRegisterValues(Context ctx){
+    public BoolExpr encodeFinalRegisterValues(Encoder ctx){
         Map<Register, List<Event>> eMap = new HashMap<>();
         for(Event e : getCache().getEvents(FilterBasic.get(EType.REG_WRITER))){
             Register reg = ((RegWriter)e).getResultRegister();
@@ -204,7 +202,7 @@ public class Program {
         return enc;
     }
     
-    public BoolExpr encodeNoBoundEventExec(Context ctx){
+    public BoolExpr encodeNoBoundEventExec(Encoder ctx){
     	BoolExpr enc = ctx.mkTrue();
         for(Event e : getCache().getEvents(FilterBasic.get(EType.BOUND))){
         	enc = ctx.mkAnd(enc, ctx.mkNot(e.exec()));
@@ -212,7 +210,7 @@ public class Program {
         return enc;
     }
     
-    public BoolExpr encodeUINonDet(Context ctx) {
+    public BoolExpr encodeUINonDet(Encoder ctx) {
     	BoolExpr enc = ctx.mkTrue();
         for(Event e : getCache().getEvents(FilterBasic.get(EType.LOCAL))){
         	if(!(e instanceof Local)) {
@@ -227,12 +225,12 @@ public class Program {
         return enc;  	
     }
 
-    public BoolExpr getRf(Context ctx, Model m) {
+    public BoolExpr getRf(Encoder ctx, Model m) {
     	BoolExpr enc = ctx.mkTrue();
         for(Event r : getCache().getEvents(FilterBasic.get(EType.READ))){
             for(Event w : getCache().getEvents(FilterBasic.get(EType.WRITE))){
-        		if(m.getConstInterp(edge("rf", w, r, ctx)) != null && m.getConstInterp(edge("rf", w, r, ctx)).isTrue()) {
-        			enc = ctx.mkAnd(enc, edge("rf", w, r, ctx));
+        		if(m.getConstInterp(ctx.edge("rf", w, r)) != null && m.getConstInterp(ctx.edge("rf", w, r)).isTrue()) {
+        			enc = ctx.mkAnd(enc, ctx.edge("rf", w, r));
         		}
         	}
         }

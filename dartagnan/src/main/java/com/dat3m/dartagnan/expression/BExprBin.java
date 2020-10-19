@@ -1,8 +1,8 @@
 package com.dat3m.dartagnan.expression;
 
+import com.dat3m.dartagnan.utils.Encoder;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.microsoft.z3.IntExpr;
 import com.microsoft.z3.Model;
 
@@ -23,12 +23,12 @@ public class BExprBin extends BExpr {
     }
 
     @Override
-    public BoolExpr toZ3Bool(Event e, Context ctx) {
+    public BoolExpr toZ3Bool(Event e, Encoder ctx) {
         return op.encode(b1.toZ3Bool(e, ctx), b2.toZ3Bool(e, ctx), ctx);
     }
 
     @Override
-    public IntExpr getLastValueExpr(Context ctx){
+    public IntExpr getLastValueExpr(Encoder ctx){
         BoolExpr expr1 = ctx.mkGt(b1.getLastValueExpr(ctx), ctx.mkInt(1));
         BoolExpr expr2 = ctx.mkGt(b2.getLastValueExpr(ctx), ctx.mkInt(1));
         return (IntExpr)ctx.mkITE(op.encode(expr1, expr2, ctx), ctx.mkInt(1), ctx.mkInt(0));
@@ -45,7 +45,7 @@ public class BExprBin extends BExpr {
     }
 
     @Override
-    public boolean getBoolValue(Event e, Context ctx, Model model){
+    public boolean getBoolValue(Event e, Encoder ctx, Model model){
         return op.combine(b1.getBoolValue(e, ctx, model), b2.getBoolValue(e, ctx, model));
     }
 

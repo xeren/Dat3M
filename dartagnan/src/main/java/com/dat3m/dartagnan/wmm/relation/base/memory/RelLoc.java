@@ -11,8 +11,6 @@ import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 import java.util.Collection;
 
-import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
-
 public class RelLoc extends Relation {
 
     public RelLoc(){
@@ -39,7 +37,7 @@ public class RelLoc extends Relation {
     protected BoolExpr encodeApprox() {
         BoolExpr enc = ctx.mkTrue();
         for(Tuple tuple : encodeTupleSet) {
-            BoolExpr rel = edge(this.getName(), tuple.getFirst(), tuple.getSecond(), ctx);
+            BoolExpr rel = ctx.edge(getName(), tuple.getFirst(), tuple.getSecond());
             enc = ctx.mkAnd(enc, ctx.mkEq(rel, ctx.mkAnd(
                     ctx.mkAnd(tuple.getFirst().exec(), tuple.getSecond().exec()),
                     ctx.mkEq(((MemEvent)tuple.getFirst()).getMemAddressExpr(), ((MemEvent)tuple.getSecond()).getMemAddressExpr())

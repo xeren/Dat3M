@@ -1,8 +1,7 @@
 package com.dat3m.dartagnan.wmm.axiom;
 
+import com.dat3m.dartagnan.utils.Encoder;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -23,19 +22,19 @@ public class Empty extends Axiom {
     }
 
     @Override
-    protected BoolExpr _consistent(Context ctx) {
+    protected BoolExpr _consistent(Encoder ctx) {
         BoolExpr enc = ctx.mkTrue();
         for(Tuple tuple : rel.getEncodeTupleSet()){
-            enc = ctx.mkAnd(enc, ctx.mkNot(Utils.edge(rel.getName(), tuple.getFirst(), tuple.getSecond(), ctx)));
+            enc = ctx.mkAnd(enc, ctx.mkNot(ctx.edge(rel.getName(), tuple.getFirst(), tuple.getSecond())));
         }
         return enc;
     }
 
     @Override
-    protected BoolExpr _inconsistent(Context ctx) {
+    protected BoolExpr _inconsistent(Encoder ctx) {
         BoolExpr enc = ctx.mkFalse();
         for(Tuple tuple : rel.getEncodeTupleSet()){
-            enc = ctx.mkOr(enc, Utils.edge(rel.getName(), tuple.getFirst(), tuple.getSecond(), ctx));
+            enc = ctx.mkOr(enc, ctx.edge(rel.getName(), tuple.getFirst(), tuple.getSecond()));
         }
         return enc;
     }

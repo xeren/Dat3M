@@ -1,11 +1,10 @@
 package com.dat3m.dartagnan.wmm.relation.unary;
 
+import com.dat3m.dartagnan.utils.Encoder;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.program.Program;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -14,9 +13,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
-import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
-import static com.dat3m.dartagnan.wmm.utils.Utils.intCount;
 
 /**
  *
@@ -42,7 +38,7 @@ public class RelTrans extends UnaryRelation {
     }
 
     @Override
-    public void initialise(Program program, Context ctx, Settings settings){
+    public void initialise(Program program, Encoder ctx, Settings settings){
         super.initialise(program, ctx, settings);
         fullEncodeTupleSet = new TupleSet();
         transitiveReachabilityMap = null;
@@ -88,19 +84,19 @@ public class RelTrans extends UnaryRelation {
             Event e2 = tuple.getSecond();
 
             if(r1.getMaxTupleSet().contains(new Tuple(e1, e2))){
-                orClause = ctx.mkOr(orClause, Utils.edge(r1.getName(), e1, e2, ctx));
+                orClause = ctx.mkOr(orClause, ctx.edge(r1.getName(), e1, e2));
             }
 
             for(Event e3 : transitiveReachabilityMap.get(e1)){
                 if(e3.getCId() != e1.getCId() && e3.getCId() != e2.getCId() && transitiveReachabilityMap.get(e3).contains(e2)){
-                    orClause = ctx.mkOr(orClause, ctx.mkAnd(Utils.edge(this.getName(), e1, e3, ctx), Utils.edge(this.getName(), e3, e2, ctx)));
+                    orClause = ctx.mkOr(orClause, ctx.mkAnd(ctx.edge(getName(), e1, e3), ctx.edge(getName(), e3, e2)));
                 }
             }
 
             if(Relation.PostFixApprox) {
-                enc = ctx.mkAnd(enc, ctx.mkImplies(orClause, Utils.edge(this.getName(), e1, e2, ctx)));
+                enc = ctx.mkAnd(enc, ctx.mkImplies(orClause, ctx.edge(getName(), e1, e2)));
             } else {
-                enc = ctx.mkAnd(enc, ctx.mkEq(Utils.edge(this.getName(), e1, e2, ctx), orClause));
+                enc = ctx.mkAnd(enc, ctx.mkEq(ctx.edge(getName(), e1, e2), orClause));
             }
         }
 
@@ -121,15 +117,15 @@ public class RelTrans extends UnaryRelation {
                     Event e3 = tuple2.getSecond();
                     if (transitiveReachabilityMap.get(e3).contains(e2)) {
                         orClause = ctx.mkOr(orClause, ctx.mkAnd(
-                                edge(this.getName(), e1, e3, ctx),
-                                edge(this.getName(), e3, e2, ctx),
-                                ctx.mkGt(intCount(this.idlConcatName(), e1, e2, ctx), intCount(this.getName(), e1, e3, ctx)),
-                                ctx.mkGt(intCount(this.idlConcatName(), e1, e2, ctx), intCount(this.getName(), e3, e2, ctx))));
+                                ctx.edge(getName(), e1, e3),
+                                ctx.edge(getName(), e3, e2),
+                                ctx.mkGt(ctx.intCount(idlConcatName(), e1, e2), ctx.intCount(getName(), e1, e3)),
+                                ctx.mkGt(ctx.intCount(idlConcatName(), e1, e2), ctx.intCount(getName(), e3, e2))));
                     }
                 }
             }
 
-            enc = ctx.mkAnd(enc, ctx.mkEq(edge(this.idlConcatName(), e1, e2, ctx), orClause));
+            enc = ctx.mkAnd(enc, ctx.mkEq(ctx.edge(idlConcatName(), e1, e2), orClause));
 
             orClause = ctx.mkFalse();
             for(Tuple tuple2 : fullEncodeTupleSet.getByFirst(e1)){
@@ -137,22 +133,22 @@ public class RelTrans extends UnaryRelation {
                     Event e3 = tuple2.getSecond();
                     if (transitiveReachabilityMap.get(e3).contains(e2)) {
                         orClause = ctx.mkOr(orClause, ctx.mkAnd(
-                                edge(this.getName(), e1, e3, ctx),
-                                edge(this.getName(), e3, e2, ctx)));
+                                ctx.edge(getName(), e1, e3),
+                                ctx.edge(getName(), e3, e2)));
                     }
                 }
             }
 
-            enc = ctx.mkAnd(enc, ctx.mkEq(edge(this.idlConcatName(), e1, e2, ctx), orClause));
+            enc = ctx.mkAnd(enc, ctx.mkEq(ctx.edge(idlConcatName(), e1, e2), orClause));
 
-            enc = ctx.mkAnd(enc, ctx.mkEq(edge(this.getName(), e1, e2, ctx), ctx.mkOr(
-                    edge(r1.getName(), e1,e2, ctx),
-                    ctx.mkAnd(edge(this.idlConcatName(), e1, e2, ctx), ctx.mkGt(intCount(this.getName(), e1, e2, ctx), intCount(this.idlConcatName(), e1, e2, ctx)))
+            enc = ctx.mkAnd(enc, ctx.mkEq(ctx.edge(getName(), e1, e2), ctx.mkOr(
+                    ctx.edge(r1.getName(), e1, e2),
+                    ctx.mkAnd(ctx.edge(idlConcatName(), e1, e2), ctx.mkGt(ctx.intCount(getName(), e1, e2), ctx.intCount(idlConcatName(), e1, e2)))
             )));
 
-            enc = ctx.mkAnd(enc, ctx.mkEq(edge(this.getName(),e1,e2, ctx), ctx.mkOr(
-                    edge(r1.getName(), e1,e2, ctx),
-                    edge(this.idlConcatName(), e1, e2, ctx)
+            enc = ctx.mkAnd(enc, ctx.mkEq(ctx.edge(getName(), e1, e2), ctx.mkOr(
+                    ctx.edge(r1.getName(), e1, e2),
+                    ctx.edge(idlConcatName(), e1, e2)
             )));
         }
 
@@ -168,8 +164,8 @@ public class RelTrans extends UnaryRelation {
         Set<Tuple> currentTupleSet = new HashSet<>(r1.getEncodeTupleSet());
         for(Tuple tuple : currentTupleSet){
             enc = ctx.mkAnd(enc, ctx.mkEq(
-                    Utils.edge(r1.getName() + "_" + iteration, tuple.getFirst(), tuple.getSecond(), ctx),
-                    Utils.edge(r1.getName(), tuple.getFirst(), tuple.getSecond(), ctx)
+                    ctx.edge(r1.getName() + "_" + iteration, tuple.getFirst(), tuple.getSecond()),
+                    ctx.edge(r1.getName(), tuple.getFirst(), tuple.getSecond())
             ));
         }
 
@@ -181,7 +177,7 @@ public class RelTrans extends UnaryRelation {
             for(Tuple tuple : currentTupleSet){
                 currentTupleMap.putIfAbsent(tuple, new HashSet<>());
                 currentTupleMap.get(tuple).add(
-                        Utils.edge(r1.getName() + "_" + iteration, tuple.getFirst(), tuple.getSecond(), ctx)
+                        ctx.edge(r1.getName() + "_" + iteration, tuple.getFirst(), tuple.getSecond())
                 );
             }
 
@@ -195,8 +191,8 @@ public class RelTrans extends UnaryRelation {
                         Tuple newTuple = new Tuple(e1, e2);
                         currentTupleMap.putIfAbsent(newTuple, new HashSet<>());
                         currentTupleMap.get(newTuple).add(ctx.mkAnd(
-                                Utils.edge(r1.getName() + "_" + iteration, e1, e3, ctx),
-                                Utils.edge(r1.getName() + "_" + iteration, e3, e2, ctx)
+                                ctx.edge(r1.getName() + "_" + iteration, e1, e3),
+                                ctx.edge(r1.getName() + "_" + iteration, e3, e2)
                         ));
 
                         if(newTuple.getFirst().getCId() != newTuple.getSecond().getCId()){
@@ -215,7 +211,7 @@ public class RelTrans extends UnaryRelation {
                     orClause = ctx.mkOr(orClause, expr);
                 }
 
-                BoolExpr edge = Utils.edge(r1.getName() + "_" + iteration, tuple.getFirst(), tuple.getSecond(), ctx);
+                BoolExpr edge = ctx.edge(r1.getName() + "_" + iteration, tuple.getFirst(), tuple.getSecond());
                 enc = ctx.mkAnd(enc, ctx.mkEq(edge, orClause));
             }
 
@@ -227,8 +223,8 @@ public class RelTrans extends UnaryRelation {
         // Encode that transitive relation equals the relation at the last iteration
         for(Tuple tuple : encodeTupleSet){
             enc = ctx.mkAnd(enc, ctx.mkEq(
-                    Utils.edge(getName(), tuple.getFirst(), tuple.getSecond(), ctx),
-                    Utils.edge(r1.getName() + "_" + iteration, tuple.getFirst(), tuple.getSecond(), ctx)
+                    ctx.edge(getName(), tuple.getFirst(), tuple.getSecond()),
+                    ctx.edge(r1.getName() + "_" + iteration, tuple.getFirst(), tuple.getSecond())
             ));
         }
 

@@ -1,8 +1,8 @@
 package com.dat3m.dartagnan.program.event;
 
+import com.dat3m.dartagnan.utils.Encoder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import com.microsoft.z3.Context;
 import com.microsoft.z3.IntExpr;
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IExpr;
@@ -35,7 +35,7 @@ public abstract class MemEvent extends Event {
     }
 
     @Override
-    public void initialise(Context ctx) {
+    public void initialise(Encoder ctx) {
         super.initialise(ctx);
         memAddressExpr = address.toZ3Int(this, ctx);
     }

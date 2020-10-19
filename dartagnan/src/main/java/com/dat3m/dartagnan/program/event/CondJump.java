@@ -4,10 +4,10 @@ import com.dat3m.dartagnan.expression.BExpr;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.utils.Encoder;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 
 public class CondJump extends Jump implements RegReaderData {
 
@@ -67,7 +67,7 @@ public class CondJump extends Jump implements RegReaderData {
     // -----------------------------------------------------------------------------------------------------------------
 
     @Override
-    public BoolExpr encodeCF(Context ctx, BoolExpr cond) {
+    public BoolExpr encodeCF(Encoder ctx, BoolExpr cond) {
         if(cfEnc == null){
             cfCond = (cfCond == null) ? cond : ctx.mkOr(cfCond, cond);
             BoolExpr ifCond = expr.toZ3Bool(this, ctx);

@@ -1,11 +1,11 @@
 package com.dat3m.dartagnan.wmm;
 
+import com.dat3m.dartagnan.utils.Encoder;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.utils.*;
 import com.dat3m.dartagnan.wmm.utils.alias.AliasAnalysis;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
 import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
@@ -66,7 +66,7 @@ public class Wmm {
         recursiveGroups.add(new RecursiveGroup(id, recursiveGroup));
     }
 
-    public BoolExpr encodeBase(Program program, Context ctx, Settings settings) {
+    public BoolExpr encodeBase(Program program, Encoder ctx, Settings settings) {
         this.program = program;
         new AliasAnalysis().calculateLocationSets(this.program, settings.getAlias());
 
@@ -134,7 +134,7 @@ public class Wmm {
         return enc;
     }
 
-    public BoolExpr encode(Program program, Context ctx, Settings settings) {
+    public BoolExpr encode(Program program, Encoder ctx, Settings settings) {
         BoolExpr enc = encodeBase(program, ctx, settings);
         for (Axiom ax : axioms) {
             enc = ctx.mkAnd(enc, ax.getRel().encode());
@@ -142,7 +142,7 @@ public class Wmm {
         return enc;
     }
 
-    public BoolExpr consistent(Program program, Context ctx) {
+    public BoolExpr consistent(Program program, Encoder ctx) {
         if(this.program != program){
             throw new RuntimeException("Wmm relations must be encoded before consistency predicate");
         }
@@ -153,7 +153,7 @@ public class Wmm {
         return expr;
     }
 
-    public BoolExpr inconsistent(Program program, Context ctx) {
+    public BoolExpr inconsistent(Program program, Encoder ctx) {
         if(this.program != program){
             throw new RuntimeException("Wmm relations must be encoded before inconsistency predicate");
         }
