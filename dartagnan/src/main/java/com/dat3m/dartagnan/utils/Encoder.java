@@ -8,7 +8,7 @@ import com.microsoft.z3.*;
 
 public class Encoder {
 
-	private final Context context;
+	protected final Context context;
 
 	private int counterNondet = 0;
 
