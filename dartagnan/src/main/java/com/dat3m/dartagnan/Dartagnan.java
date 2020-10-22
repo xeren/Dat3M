@@ -11,7 +11,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.dat3m.dartagnan.utils.Encoder;
+import com.dat3m.dartagnan.utils.*;
+import com.dat3m.dartagnan.wmm.utils.Mode;
 import org.apache.commons.cli.HelpFormatter;
 
 import com.dat3m.dartagnan.asserts.AbstractAssert;
@@ -19,9 +20,6 @@ import com.dat3m.dartagnan.asserts.AssertTrue;
 import com.dat3m.dartagnan.parsers.cat.ParserCat;
 import com.dat3m.dartagnan.parsers.program.ProgramParser;
 import com.dat3m.dartagnan.program.Program;
-import com.dat3m.dartagnan.utils.Graph;
-import com.dat3m.dartagnan.utils.Result;
-import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.utils.options.DartagnanOptions;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
@@ -97,7 +95,7 @@ public class Dartagnan {
 
     public static Result testProgram(Solver s1, Context c, Program program, Wmm wmm, Arch target, Settings settings) {
     	program.unroll(settings.getBound(), 0);
-        program.compile(target, 0);
+        int count = program.compile(target, 0);
         // AssertionInline depends on compiled events (copies)
         // Thus we need to set the assertion after compilation
         if(program.getAss() == null){
@@ -109,7 +107,7 @@ public class Dartagnan {
         		return PASS;
         	}
         }
-			Encoder ctx = new Encoder(c);
+		Encoder ctx = settings.getMode() == Mode.FO ? new EncoderFO(c, count) : new Encoder(c);
         
         // Using two solvers is much faster than using
         // an incremental solver or check-sat-assuming
@@ -131,7 +129,7 @@ public class Dartagnan {
 		s1.add(encodeWmm);
         s2.add(encodeWmm);
         
-        BoolExpr encodeConsistency = wmm.consistent(program, ctx);
+        BoolExpr encodeConsistency = wmm.consistent(program, ctx, settings);
 		s1.add(encodeConsistency);
         s2.add(encodeConsistency);
        	
@@ -180,7 +178,7 @@ public class Dartagnan {
         solver.add(program.encodeCF(ctx));
         solver.add(program.encodeFinalRegisterValues(ctx));
         solver.add(wmm.encodeBase(program, ctx, settings));
-       	solver.add(wmm.getAxioms().get(cegar).encodeRelAndConsistency(ctx));
+       	solver.add(wmm.getAxioms().get(cegar).encodeRelAndConsistency(ctx, settings));
 
         if(program.getAssFilter() != null){
             solver.add(program.getAssFilter().encode(ctx));
@@ -226,7 +224,7 @@ public class Dartagnan {
 			solver.add(execution);
     		solver.add(wmm.encodeBase(program, ctx, settings));
         	for(Axiom ax : wmm.getAxioms()) {
-        		BoolExpr enc = ax.encodeRelAndConsistency(ctx);
+        		BoolExpr enc = ax.encodeRelAndConsistency(ctx, settings);
         		BoolExpr axVar = c.mkBoolConst(ax.toString());
         		solver.assertAndTrack(enc, axVar);
         		track.put(axVar, enc);

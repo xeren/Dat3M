@@ -1,10 +1,12 @@
 package com.dat3m.dartagnan.wmm.relation.binary;
 
+import com.dat3m.dartagnan.utils.EncoderFO;
 import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import com.microsoft.z3.Expr;
 
 /**
  *
@@ -135,5 +137,13 @@ public class RelUnion extends BinaryRelation {
         }
 
         return enc;
+    }
+
+    protected BoolExpr encodeFO() {
+        EncoderFO c = (EncoderFO)ctx;
+        Expr[] e = new Expr[]{c.bind(0), c.bind(1)};
+        BoolExpr e1 = c.edge(r1.getName()).of(e[0], e[1]);
+        BoolExpr e2 = c.edge(r2.getName()).of(e[0], e[1]);
+        return c.forall(e, c.mkEq(c.edge(getName()).of(e[0], e[1]), c.mkOr(e1, e2)), c.pattern(e1), c.pattern(e2));
     }
 }

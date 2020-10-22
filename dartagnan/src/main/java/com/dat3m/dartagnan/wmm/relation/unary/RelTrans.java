@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.wmm.relation.unary;
 
 import com.dat3m.dartagnan.utils.Encoder;
+import com.dat3m.dartagnan.utils.EncoderFO;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.program.Program;
 import com.microsoft.z3.BoolExpr;
@@ -8,6 +9,7 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import com.microsoft.z3.Expr;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -229,6 +231,17 @@ public class RelTrans extends UnaryRelation {
         }
 
         return enc;
+    }
+
+    protected BoolExpr encodeFO() {
+        EncoderFO c = (EncoderFO)ctx;
+        Expr[] e = new Expr[]{c.bind(0), c.bind(1), c.bind(2)};
+        BoolExpr e1 = c.edge(r1.getName()).of(e[0], e[1]);
+        BoolExpr e2 = c.edge(getName()).of(e[0], e[1]);
+        BoolExpr e3 = c.edge(getName()).of(e[1], e[2]);
+        return c.mkAnd(
+            c.forall(new Expr[]{e[0], e[1]}, c.mkImplies(e1, e2), c.pattern(e1)),
+            c.forall(e, c.mkImplies(c.mkAnd(e2, e3), c.edge(getName()).of(e[0], e[2])), c.pattern(e2, e3)));
     }
 
     private TupleSet getFullEncodeTupleSet(TupleSet tuples){

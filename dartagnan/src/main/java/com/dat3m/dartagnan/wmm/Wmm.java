@@ -90,34 +90,36 @@ public class Wmm {
             relation.initialise(program, ctx, settings);
         }
 
-        for(RecursiveGroup recursiveGroup : recursiveGroups){
-            recursiveGroup.initMaxTupleSets();
-        }
+        if(settings.getMode() != Mode.FO){
+            for(RecursiveGroup recursiveGroup : recursiveGroups){
+                recursiveGroup.initMaxTupleSets();
+            }
 
-        for (Axiom ax : axioms) {
-            ax.getRel().getMaxTupleSet();
-        }
+            for (Axiom ax : axioms) {
+                ax.getRel().getMaxTupleSet();
+            }
 
-        for(String relName : baseRelations){
-            relationRepository.getRelation(relName).getMaxTupleSet();
-        }
+            for(String relName : baseRelations){
+                relationRepository.getRelation(relName).getMaxTupleSet();
+            }
 
-        if(settings.getDrawGraph()){
-            for(String relName : settings.getGraphRelations()){
-                Relation relation = relationRepository.getRelation(relName);
-                if(relation != null){
-                    relation.addEncodeTupleSet(relation.getMaxTupleSet());
+            if(settings.getDrawGraph()){
+                for(String relName : settings.getGraphRelations()){
+                    Relation relation = relationRepository.getRelation(relName);
+                    if(relation != null){
+                        relation.addEncodeTupleSet(relation.getMaxTupleSet());
+                    }
                 }
             }
-        }
 
-        for (Axiom ax : axioms) {
-            ax.getRel().addEncodeTupleSet(ax.getEncodeTupleSet());
-        }
+            for (Axiom ax : axioms) {
+                ax.getRel().addEncodeTupleSet(ax.getEncodeTupleSet());
+            }
 
-        Collections.reverse(recursiveGroups);
-        for(RecursiveGroup recursiveGroup : recursiveGroups){
-            recursiveGroup.updateEncodeTupleSets();
+            Collections.reverse(recursiveGroups);
+            for(RecursiveGroup recursiveGroup : recursiveGroups){
+                recursiveGroup.updateEncodeTupleSets();
+            }
         }
 
         BoolExpr enc = ctx.mkTrue();
@@ -142,24 +144,24 @@ public class Wmm {
         return enc;
     }
 
-    public BoolExpr consistent(Program program, Encoder ctx) {
+    public BoolExpr consistent(Program program, Encoder ctx, Settings settings) {
         if(this.program != program){
             throw new RuntimeException("Wmm relations must be encoded before consistency predicate");
         }
         BoolExpr expr = ctx.mkTrue();
         for (Axiom ax : axioms) {
-            expr = ctx.mkAnd(expr, ax.consistent(ctx));
+            expr = ctx.mkAnd(expr, ax.consistent(ctx, settings));
         }
         return expr;
     }
 
-    public BoolExpr inconsistent(Program program, Encoder ctx) {
+    public BoolExpr inconsistent(Program program, Encoder ctx, Settings settings) {
         if(this.program != program){
             throw new RuntimeException("Wmm relations must be encoded before inconsistency predicate");
         }
         BoolExpr expr = ctx.mkFalse();
         for (Axiom ax : axioms) {
-            expr = ctx.mkOr(expr, ax.inconsistent(ctx));
+            expr = ctx.mkOr(expr, ax.inconsistent(ctx, settings));
         }
         return expr;
     }

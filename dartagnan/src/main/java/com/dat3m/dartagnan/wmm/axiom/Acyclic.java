@@ -1,11 +1,16 @@
 package com.dat3m.dartagnan.wmm.axiom;
 
 import com.dat3m.dartagnan.utils.Encoder;
+import com.dat3m.dartagnan.utils.EncoderFO;
+import com.dat3m.dartagnan.utils.Settings;
+import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import com.microsoft.z3.Expr;
+import com.microsoft.z3.IntExpr;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -51,7 +56,17 @@ public class Acyclic extends Axiom {
     }
 
     @Override
-    protected BoolExpr _consistent(Encoder ctx) {
+    protected BoolExpr _consistent(Encoder ctx, Settings settings) {
+        if(settings.getMode() == Mode.FO) {
+            assert ctx instanceof EncoderFO;
+            EncoderFO c = (EncoderFO)ctx;
+            Expr[] e = new Expr[]{c.bind(0), c.bind(1)};
+            BoolExpr e1 = c.edge(rel.getName()).of(e[0], e[1]);
+            IntExpr e2 = c.intVar(rel.getName()).of(e[0]);
+            return c.mkAnd(
+                c.forall(new Expr[]{e[0]}, c.mkLt(c.mkInt(0), e2), c.pattern(e2)),
+                c.forall(e, c.mkImplies(e1, c.mkLt(e2, c.intVar(rel.getName()).of(e[1]))), c.pattern(e1)));
+        }
         BoolExpr enc = ctx.mkTrue();
         for(Tuple tuple : rel.getEncodeTupleSet()){
             Event e1 = tuple.getFirst();
@@ -63,7 +78,23 @@ public class Acyclic extends Axiom {
     }
 
     @Override
-    protected BoolExpr _inconsistent(Encoder ctx) {
+    protected BoolExpr _inconsistent(Encoder ctx, Settings settings) {
+        if(settings.getMode() == Mode.FO) {
+            assert ctx instanceof EncoderFO;
+            EncoderFO c = (EncoderFO)ctx;
+            Expr[] e = new Expr[]{c.bind(0), c.bind(1)};
+            BoolExpr c0 = c.cycleVar(rel.getName()).of(e[0]);
+            BoolExpr c1 = c.cycleVar(rel.getName()).of(e[1]);
+            BoolExpr edge = c.edge(rel.getName()).of(e[0], e[1]);
+            BoolExpr cycleEdge = c.cycleEdge(rel.getName()).of(e[0], e[1]);
+            return c.mkAnd(
+                c.forall(e, c.mkImplies(cycleEdge, c.mkAnd(c0, c1, edge)), c.pattern(edge)),
+                c.forall(new Expr[]{e[0]}, c.mkImplies(c0,
+                    c.exists(new Expr[]{e[1]}, cycleEdge, c.pattern(edge))), c.pattern(c0)),
+                c.forall(new Expr[]{e[1]}, c.mkImplies(c1,
+                    c.exists(new Expr[]{e[0]}, cycleEdge, c.pattern(edge))), c.pattern(c1)),
+                c.exists(e, cycleEdge, c.pattern(edge)));
+        }
         return ctx.mkAnd(satCycleDef(ctx), satCycle(ctx));
     }
 

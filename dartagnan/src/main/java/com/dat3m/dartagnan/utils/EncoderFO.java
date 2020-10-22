@@ -23,6 +23,7 @@ public class EncoderFO extends Encoder {
 	private final HashMap<String,UnaryPredicate> cycleVar = new HashMap<>();
 	private final HashMap<String,BinaryPredicate> cycleEdge = new HashMap<>();
 	private final BinaryPredicate exclusivePair;
+	private final HashMap<Integer,Expr> bound = new HashMap<>();
 
 	public EncoderFO(Context context, int eventCount) {
 		super(context);
@@ -38,6 +39,61 @@ public class EncoderFO extends Encoder {
 		this.finalWriter = x -> (BoolExpr)finalWriter.apply(x);
 		FuncDecl exclusivePair = context.mkFuncDecl("exclusive", sortEventPair, sortBoolean);
 		this.exclusivePair = (x, y) -> (BoolExpr)exclusivePair.apply(x, y);
+	}
+
+	public BinaryPredicate edge(String name) {
+		return edge.computeIfAbsent(name, k->{
+			FuncDecl f = context.mkFuncDecl("edge." + k, sortEventPair, sortBoolean);
+			return (x, y) -> (BoolExpr)f.apply(x, y);
+		});
+	}
+
+	public BinaryFunction intCount(String relName) {
+		return intCount.computeIfAbsent(relName, k->{
+			FuncDecl f = context.mkFuncDecl("count." + k, sortEventPair, sortInteger);
+			return (x, y) -> (IntExpr)f.apply(x, y);
+		});
+	}
+
+	public UnaryFunction intVar(String name) {
+		return intVar.computeIfAbsent(name, k->{
+			FuncDecl f = context.mkFuncDecl("var." + k, sortEvent, sortInteger);
+			return x -> (IntExpr)f.apply(x);
+		});
+	}
+
+	public UnaryPredicate cycleVar(String name) {
+		return cycleVar.computeIfAbsent(name, k->{
+			FuncDecl f = context.mkFuncDecl("cycle.var." + k, sortEvent, sortBoolean);
+			return x -> (BoolExpr)f.apply(x);
+		});
+	}
+
+	public BinaryPredicate cycleEdge(String name) {
+		return cycleEdge.computeIfAbsent(name, k->{
+			FuncDecl f = context.mkFuncDecl("cycle.edge." + k, sortEventPair, sortBoolean);
+			return (x, y) -> (BoolExpr)f.apply(x, y);
+		});
+	}
+
+	public Expr bind(int index) {
+		return bound.computeIfAbsent(index, k->context.mkConst("x" + k, sortEvent));
+	}
+
+	public Pattern pattern(Expr... expression) {
+		return context.mkPattern(expression);
+	}
+
+	public BoolExpr forall(Expr[] bind, BoolExpr body, Pattern... pattern) {
+		return context.mkForall(bind, body, 0, pattern, null, null, null);
+	}
+
+	public BoolExpr exists(Expr[] bind, BoolExpr body, Pattern... pattern) {
+		return context.mkExists(bind, body, 0, pattern, null, null, null);
+	}
+
+	public BoolExpr mkEq(Expr first, Expr second) {
+		return context.mkEq(first, second);
 	}
 
 	@Override
@@ -77,43 +133,28 @@ public class EncoderFO extends Encoder {
 	}
 
 	@Override
-	public BoolExpr edge(String relName, Event e1, Event e2) {
-		return edge.computeIfAbsent(relName, k->{
-			FuncDecl f = context.mkFuncDecl("edge." + k, sortEventPair, sortBoolean);
-			return (x, y) -> (BoolExpr)f.apply(x, y);
-		}).of(expr(e1), expr(e2));
+	public BoolExpr edge(String name, Event e1, Event e2) {
+		return edge(name).of(expr(e1), expr(e2));
 	}
 
 	@Override
-	public IntExpr intVar(String relName, Event e) {
-		return intVar.computeIfAbsent(relName, k->{
-			FuncDecl f = context.mkFuncDecl("var." + k, sortEvent, sortInteger);
-			return x -> (IntExpr)f.apply(x);
-		}).of(expr(e));
+	public IntExpr intVar(String name, Event e) {
+		return intVar(name).of(expr(e));
 	}
 
 	@Override
-	public IntExpr intCount(String relName, Event e1, Event e2) {
-		return intCount.computeIfAbsent(relName, k->{
-			FuncDecl f = context.mkFuncDecl("count." + k, sortEventPair, sortInteger);
-			return (x, y) -> (IntExpr)f.apply(x, y);
-		}).of(expr(e1), expr(e2));
+	public IntExpr intCount(String name, Event e1, Event e2) {
+		return intCount(name).of(expr(e1), expr(e2));
 	}
 
 	@Override
-	public BoolExpr cycleVar(String relName, Event e) {
-		return cycleVar.computeIfAbsent(relName, k->{
-			FuncDecl f = context.mkFuncDecl("cycle.var." + k, sortEvent, sortBoolean);
-			return x -> (BoolExpr)f.apply(x);
-		}).of(expr(e));
+	public BoolExpr cycleVar(String name, Event e) {
+		return cycleVar(name).of(expr(e));
 	}
 
 	@Override
-	public BoolExpr cycleEdge(String relName, Event e1, Event e2) {
-		return cycleEdge.computeIfAbsent(relName, k->{
-			FuncDecl f = context.mkFuncDecl("cycle.edge." + k, sortEventPair, sortBoolean);
-			return (x, y) -> (BoolExpr)f.apply(x, y);
-		}).of(expr(e1), expr(e2));
+	public BoolExpr cycleEdge(String name, Event e1, Event e2) {
+		return cycleEdge(name).of(expr(e1), expr(e2));
 	}
 
 	@Override
@@ -121,19 +162,19 @@ public class EncoderFO extends Encoder {
 		return exclusivePair.of(expr(load), expr(store));
 	}
 
-	private interface UnaryPredicate {
+	public interface UnaryPredicate {
 		BoolExpr of(Expr operand);
 	}
 
-	private interface BinaryPredicate {
+	public interface BinaryPredicate {
 		BoolExpr of(Expr first, Expr second);
 	}
 
-	private interface UnaryFunction {
+	public interface UnaryFunction {
 		IntExpr of(Expr operand);
 	}
 
-	private interface BinaryFunction {
+	public interface BinaryFunction {
 		IntExpr of(Expr first, Expr second);
 	}
 

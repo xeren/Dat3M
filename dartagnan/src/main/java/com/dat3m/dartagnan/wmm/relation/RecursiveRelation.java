@@ -119,6 +119,11 @@ public class RecursiveRelation extends Relation {
     }
 
     @Override
+    protected BoolExpr encodeFO() {
+        return r1.encodeFO();
+    }
+
+    @Override
     public BoolExpr encodeIteration(int recGroupId, int iteration){
         if(doRecurse){
             doRecurse = false;

@@ -35,6 +35,7 @@ public abstract class AbstractDartagnanTest {
         Settings s1 = new Settings(Mode.KNASTER, Alias.CFIS, 1);
         Settings s2 = new Settings(Mode.IDL, Alias.CFIS, 1);
         Settings s3 = new Settings(Mode.KLEENE, Alias.CFIS, 1);
+        Settings s4 = new Settings(Mode.FO, Alias.CFIS, 1);
 
         return Files.walk(Paths.get(ResourceHelper.LITMUS_RESOURCE_PATH + litmusPath))
                 .filter(Files::isRegularFile)
@@ -47,6 +48,7 @@ public abstract class AbstractDartagnanTest {
                             l.add(new Object[]{f[0], f[1], target, wmm, s1});
                             l.add(new Object[]{f[0], f[1], target, wmm, s2});
                             l.add(new Object[]{f[0], f[1], target, wmm, s3});
+                            l.add(new Object[]{f[0], f[1], target, wmm, s4});
                         }, ArrayList::addAll);
     }
 

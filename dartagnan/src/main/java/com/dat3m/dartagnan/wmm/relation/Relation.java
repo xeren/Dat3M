@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.wmm.relation;
 
 import com.dat3m.dartagnan.utils.Encoder;
+import com.dat3m.dartagnan.utils.EncoderFO;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.microsoft.z3.BoolExpr;
@@ -144,7 +145,18 @@ public abstract class Relation {
         return ctx.mkTrue();
     }
 
+    protected BoolExpr encodeFO(){
+        encodeTupleSet = getMaxTupleSet();
+        return encodeApprox();
+    }
+
     protected BoolExpr doEncode(){
+        if(settings.getMode() == Mode.FO) {
+            assert encodeTupleSet.isEmpty();
+            assert maxTupleSet == null;
+            assert ctx instanceof EncoderFO;
+            return encodeFO();
+        }
         BoolExpr enc = encodeNegations();
         if(!encodeTupleSet.isEmpty() || forceDoEncode){
             if(settings.getMode() == Mode.KLEENE) {

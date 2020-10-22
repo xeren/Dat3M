@@ -1,10 +1,12 @@
 package com.dat3m.dartagnan.wmm.relation.binary;
 
+import com.dat3m.dartagnan.utils.EncoderFO;
 import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import com.microsoft.z3.Expr;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -255,5 +257,14 @@ public class RelComposition extends BinaryRelation {
         }
 
         return enc;
+    }
+
+    @Override
+    protected BoolExpr encodeFO() {
+        EncoderFO c = (EncoderFO)ctx;
+        Expr[] e = new Expr[]{c.bind(0), c.bind(1), c.bind(2)};
+        BoolExpr e1 = c.edge(r1.getName()).of(e[0], e[1]);
+        BoolExpr e2 = c.edge(r2.getName()).of(e[1], e[2]);
+        return c.forall(e, c.mkImplies(c.mkAnd(e1, e2), c.edge(getName()).of(e[0], e[2])), c.pattern(e1, e2));
     }
 }

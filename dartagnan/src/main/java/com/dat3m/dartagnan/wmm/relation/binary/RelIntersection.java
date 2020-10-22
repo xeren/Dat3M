@@ -1,10 +1,12 @@
 package com.dat3m.dartagnan.wmm.relation.binary;
 
+import com.dat3m.dartagnan.utils.EncoderFO;
 import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import com.microsoft.z3.Expr;
 
 /**
  *
@@ -48,8 +50,8 @@ public class RelIntersection extends BinaryRelation {
 
     @Override
     public BoolExpr encodeApprox() {
-        BoolExpr enc = ctx.mkTrue();
 
+        BoolExpr enc = ctx.mkTrue();
         for(Tuple tuple : encodeTupleSet){
             Event e1 = tuple.getFirst();
             Event e2 = tuple.getSecond();
@@ -131,5 +133,14 @@ public class RelIntersection extends BinaryRelation {
         }
 
         return enc;
+    }
+
+    @Override
+    protected BoolExpr encodeFO() {
+        EncoderFO c = (EncoderFO)ctx;
+        Expr[] e = new Expr[]{c.bind(0), c.bind(1)};
+        BoolExpr e1 = c.edge(r1.getName()).of(e[0], e[1]);
+        BoolExpr e2 = c.edge(r2.getName()).of(e[0], e[1]);
+        return c.forall(e, c.mkEq(c.edge(getName()).of(e[0], e[1]), c.mkAnd(e1, e2)), c.pattern(e1, e2));
     }
 }
