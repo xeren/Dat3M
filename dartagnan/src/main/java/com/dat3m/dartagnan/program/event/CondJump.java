@@ -4,10 +4,12 @@ import com.dat3m.dartagnan.expression.BExpr;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.wmm.Computation;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
+import com.microsoft.z3.Model;
 
 public class CondJump extends Jump implements RegReaderData {
 
@@ -76,5 +78,10 @@ public class CondJump extends Jump implements RegReaderData {
             cfEnc = ctx.mkAnd(cfEnc, successor.encodeCF(ctx, ctx.mkAnd(ctx.mkNot(ifCond), cfVar)));
         }
         return cfEnc;
+    }
+
+    @Override
+    public void extract(Model m, Computation.Thread t) {
+        t.branch(dataRegs);
     }
 }

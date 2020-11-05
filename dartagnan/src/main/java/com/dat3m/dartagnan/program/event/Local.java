@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.program.event;
 
 import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.wmm.Computation;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
@@ -9,6 +10,7 @@ import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
+import com.microsoft.z3.Model;
 
 public class Local extends Event implements RegWriter, RegReaderData {
 	
@@ -73,5 +75,10 @@ public class Local extends Event implements RegWriter, RegReaderData {
 	@Override
 	public Local getCopy(){
 		return new Local(this);
+	}
+
+	@Override
+	public void extract(Model m, Computation.Thread t) {
+		t.local(register, dataRegs);
 	}
 }

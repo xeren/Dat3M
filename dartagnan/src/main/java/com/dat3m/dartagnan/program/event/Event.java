@@ -1,8 +1,8 @@
 package com.dat3m.dartagnan.program.event;
 
+import com.dat3m.dartagnan.wmm.Computation;
 import com.dat3m.dartagnan.wmm.utils.Arch;
-import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
+import com.microsoft.z3.*;
 
 import java.util.*;
 
@@ -219,5 +219,14 @@ public abstract class Event implements Comparable<Event> {
 
 	protected BoolExpr encodeExec(Context ctx){
 		return ctx.mkEq(execVar, cfVar);
+	}
+
+	public void extract(Model model, Computation.Thread thread) {
+	}
+
+	protected static long interpret(Model model, IntExpr expression) {
+		// constants cannot be interpreted
+		Expr interpretation = model.getConstInterp(expression);
+		return Long.parseLong((null != interpretation ? interpretation : expression).toString());
 	}
 }

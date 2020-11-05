@@ -2,11 +2,14 @@ package com.dat3m.dartagnan.program;
 
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.program.utils.ThreadCache;
+import com.dat3m.dartagnan.wmm.Computation;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.utils.Arch;
+import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
+import com.microsoft.z3.Expr;
 import com.microsoft.z3.Model;
 import com.dat3m.dartagnan.asserts.AbstractAssert;
 import com.dat3m.dartagnan.asserts.AssertCompositeOr;
@@ -23,6 +26,7 @@ import com.dat3m.dartagnan.program.memory.Memory;
 import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Program {
 
@@ -238,4 +242,20 @@ public class Program {
         }
         return enc;  	
     }
+
+    public Computation extract(Context context, Model model) {
+		List<Event> writes = getCache().getEvents(FilterBasic.get(EType.WRITE));
+		Computation result = new Computation(getCache().getEvents(FilterBasic.get(EType.READ)).stream()
+			.collect(Collectors.toMap(Event::getCId, r->writes.stream()
+				.filter(w->Optional.ofNullable(model.getConstInterp(edge("rf", w, r, context))).filter(Expr::isTrue).isPresent())
+				.findAny().orElseThrow(()->new IllegalStateException("unsatisfied read in model")).getCId())));
+		for(Thread t : threads) {
+			Computation.Thread thread = result.new Thread(t.getId());
+			t.getCache().getEvents(FilterBasic.get(EType.ANY)).stream()
+				.filter(e->model.getConstInterp(e.exec()).isTrue())
+				.sorted((a,b)->a.equals(b) ? 0 : Optional.ofNullable(model.getConstInterp(Utils.edge("po", a, b, context))).filter(Expr::isTrue).isPresent() ? 1 : -1)
+				.forEach(e->e.extract(model, thread));
+		}
+    	return result;
+	}
 }
