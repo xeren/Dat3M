@@ -250,7 +250,7 @@ public class Program {
 				.filter(w->Optional.ofNullable(model.getConstInterp(edge("rf", w, r, context))).filter(Expr::isTrue).isPresent())
 				.findAny().orElseThrow(()->new IllegalStateException("unsatisfied read in model")).getCId())));
 		for(Thread t : threads) {
-			Computation.Thread thread = result.new Thread(t.getId());
+			Computation.Thread thread = result.new Thread();
 			t.getCache().getEvents(FilterBasic.get(EType.ANY)).stream()
 				.filter(e->model.getConstInterp(e.exec()).isTrue())
 				.sorted((a,b)->a.equals(b) ? 0 : Optional.ofNullable(model.getConstInterp(Utils.edge("po", a, b, context))).filter(Expr::isTrue).isPresent() ? 1 : -1)

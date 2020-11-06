@@ -224,9 +224,9 @@ public abstract class Event implements Comparable<Event> {
 	public void extract(Model model, Computation.Thread thread) {
 	}
 
-	protected static long interpret(Model model, IntExpr expression) {
+	protected static Object interpret(Model model, IntExpr expression) {
 		// constants cannot be interpreted
 		Expr interpretation = model.getConstInterp(expression);
-		return Long.parseLong((null != interpretation ? interpretation : expression).toString());
+		return null != interpretation ? interpretation : expression;
 	}
 }

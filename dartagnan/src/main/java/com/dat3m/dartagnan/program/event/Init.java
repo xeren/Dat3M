@@ -58,6 +58,6 @@ public class Init extends MemEvent {
 
 	@Override
 	public void extract(Model m, Computation.Thread t) {
-		t.init(cId, interpret(m, memAddressExpr), value.getValue());
+		t.init(cId, interpret(m, memAddressExpr));
 	}
 }

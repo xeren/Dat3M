@@ -64,6 +64,6 @@ public class Store extends MemEvent implements RegReaderData {
 
 	@Override
 	public void extract(Model m, Computation.Thread t) {
-		t.write(cId, interpret(m, memAddressExpr), interpret(m, memValueExpr), address.getRegs(), dataRegs);
+		t.write(cId, interpret(m, memAddressExpr), address.getRegs(), dataRegs);
 	}
 }
