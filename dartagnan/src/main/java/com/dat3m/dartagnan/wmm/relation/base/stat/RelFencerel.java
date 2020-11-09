@@ -2,6 +2,7 @@ package com.dat3m.dartagnan.wmm.relation.base.stat;
 
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.wmm.Computation;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.program.event.Event;
@@ -84,5 +85,26 @@ public class RelFencerel extends Relation {
         }
 
         return enc;
+    }
+
+    @Override
+    public Computation.Relation register(Computation computation) {
+        if(computation.relation.containsKey(this))
+            return computation.relation.get(this);
+        Computation.Relation r = new Computation.Relation();
+        computation.relation.put(this, r);
+        computation.forEachThread(t->{
+            int last = 0;
+            for(int f = 0; f < t.size(); ++f) {
+                if(t.get(f) instanceof com.dat3m.dartagnan.wmm.Event.Fence
+                    && fenceName.equals(((com.dat3m.dartagnan.wmm.Event.Fence)t.get(f)).name)) {
+                    for(int i = last; i < f; ++i)
+                        for(int j = f + 1; j < t.size(); ++j)
+                            r.addMax(t.get(i), t.get(j));
+                    last = f + 1;
+                }
+            }
+        });
+        return r;
     }
 }

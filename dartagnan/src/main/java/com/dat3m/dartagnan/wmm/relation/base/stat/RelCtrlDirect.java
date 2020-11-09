@@ -4,6 +4,7 @@ import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.If;
 import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.wmm.Computation;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -44,5 +45,15 @@ public class RelCtrlDirect extends StaticRelation {
             }
         }
         return maxTupleSet;
+    }
+
+    @Override
+    public Computation.Relation register(Computation computation) {
+        if(computation.relation.containsKey(this))
+            return computation.relation.get(this);
+        Computation.Relation r = new Computation.Relation();
+        computation.relation.put(this, r);
+        computation.forEachBranch(y->y.dependency.forEach(x->r.addMax(x,y)));
+        return r;
     }
 }

@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.wmm.relation.binary;
 
+import com.dat3m.dartagnan.wmm.Computation;
 import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.utils.Utils;
@@ -256,5 +257,18 @@ public class RelComposition extends BinaryRelation {
         }
 
         return enc;
+    }
+
+    @Override
+    public Computation.Relation register(Computation computation) {
+        if(computation.relation.containsKey(this))
+            return computation.relation.get(this);
+        Computation.Relation c1 = r1.register(computation);
+        Computation.Relation c2 = r2.register(computation);
+        Computation.Relation r = new Computation.Relation();
+        computation.relation.put(this, r);
+        c1.addParent((x,y)->c2.maxByFirst(y).forEach(z->r.addMax(x,z)));
+        c2.addParent((y,z)->c1.maxBySecond(y).forEach(x->r.addMax(x,z)));
+        return r;
     }
 }

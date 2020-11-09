@@ -1,6 +1,9 @@
 package com.dat3m.dartagnan.wmm;
 
 import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 /**
  * Describes one computation of a program.
@@ -21,6 +24,8 @@ public class Computation {
 
 	private final HashMap<Object,LinkedList<Event.Write>> location = new HashMap<>();
 
+	public final HashMap<Object,Relation> relation = new HashMap<>();
+
 	/**
 	 * Initializes an empty computation.
 	 * @param readFrom
@@ -28,6 +33,33 @@ public class Computation {
 	 */
 	public Computation(Map<Integer,Integer> readFrom) {
 		this.readFrom = readFrom;
+	}
+
+	public void forEach(Consumer<Event> action) {
+		thread.forEach(t->t.forEach(action));
+	}
+
+	public void forEachRead(Consumer<Event.Read> action) {
+		readByCid.values().forEach(action);
+	}
+
+	public void forEachWrite(Consumer<Event.Write> action) {
+		writeByCid.values().forEach(action);
+	}
+
+	public void forEachBranch(Consumer<Event.Branch> action) {
+		forEach(x->{if(x instanceof Event.Branch)action.accept((Event.Branch)x);});
+	}
+
+	public void forEachLocation(BiConsumer<Event.Write,Event.Write> action) {
+		location.values().forEach(l->{
+			for(int i = 0; i < l.size(); ++i)
+				for(int j = 0; j < i; ++j)
+					action.accept(l.get(j), l.get(i));});
+	}
+
+	public void forEachThread(Consumer<List<Event>> action) {
+		thread.forEach(action);
 	}
 
 	/**
@@ -157,6 +189,35 @@ public class Computation {
 					result.addAll(s);
 			}
 			return result;
+		}
+	}
+
+	public static class Relation {
+
+		private final HashMap<Event,HashSet<Event>> max = new HashMap<>();
+
+		private final LinkedList<BiConsumer<Event,Event>> parent = new LinkedList<>();
+
+		public void addParent(BiConsumer<Event,Event> p) {
+			parent.add(p);
+			max.forEach((x,y)->y.forEach(z->p.accept(x, z)));
+		}
+
+		public void addMax(Event first, Event second) {
+			if(max.computeIfAbsent(first, k->new HashSet<>()).add(second))
+				parent.forEach(p->p.accept(first, second));
+		}
+
+		public boolean hasMax(Event first, Event second) {
+			return max.containsKey(first) && max.get(first).contains(second);
+		}
+
+		public Stream<Event> maxByFirst(Event first) {
+			return max.getOrDefault(first, new HashSet<>()).stream();
+		}
+
+		public Stream<Event> maxBySecond(Event second) {
+			return max.entrySet().stream().filter(e->e.getValue().contains(second)).map(Map.Entry::getKey);
 		}
 	}
 }

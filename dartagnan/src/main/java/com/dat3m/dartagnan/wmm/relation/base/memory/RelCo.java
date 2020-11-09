@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.wmm.relation.base.memory;
 
 import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.wmm.Computation;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.filter.FilterMinus;
 import com.microsoft.z3.BoolExpr;
@@ -103,5 +104,19 @@ public class RelCo extends Relation {
             }
         }
         return enc;
+    }
+
+    @Override
+    public Computation.Relation register(Computation computation) {
+        if(computation.relation.containsKey(this))
+            return computation.relation.get(this);
+        Computation.Relation r = new Computation.Relation();
+        computation.relation.put(this, r);
+        computation.forEachLocation((x,y)->{
+            if(!(y instanceof com.dat3m.dartagnan.wmm.Event.Init))
+                r.addMax(x,y);
+            if(!(x instanceof com.dat3m.dartagnan.wmm.Event.Init))
+                r.addMax(y,x);});
+        return r;
     }
 }

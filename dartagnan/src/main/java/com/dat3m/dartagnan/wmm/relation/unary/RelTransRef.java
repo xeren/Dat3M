@@ -2,6 +2,7 @@ package com.dat3m.dartagnan.wmm.relation.unary;
 
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.utils.Settings;
+import com.dat3m.dartagnan.wmm.Computation;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
@@ -96,6 +97,18 @@ public class RelTransRef extends RelTrans {
     @Override
     protected BoolExpr encodeLFP() {
         return invokeEncode("encodeLFP");
+    }
+
+    @Override
+    public Computation.Relation register(Computation computation) {
+        if(computation.relation.containsKey(this))
+            return computation.relation.get(this);
+        Computation.Relation c1 = r1.register(computation);
+        Computation.Relation r = new Computation.Relation();
+        computation.relation.put(this, r);
+        c1.addParent((x,y)->r.maxByFirst(y).forEach(z->r.addMax(x,z)));
+        computation.forEach(x->r.addMax(x,x));
+        return r;
     }
 
     private BoolExpr invokeEncode(String methodName){

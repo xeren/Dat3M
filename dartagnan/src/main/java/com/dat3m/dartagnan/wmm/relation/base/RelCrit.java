@@ -3,6 +3,7 @@ package com.dat3m.dartagnan.wmm.relation.base;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.arch.linux.utils.EType;
 import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.wmm.Computation;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.relation.base.stat.StaticRelation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
@@ -63,5 +64,15 @@ public class RelCrit extends StaticRelation {
             }
         }
         return enc;
+    }
+
+    @Override
+    public Computation.Relation register(Computation computation) {
+        if(computation.relation.containsKey(this))
+            return computation.relation.get(this);
+        Computation.Relation r = new Computation.Relation();
+        computation.relation.put(this, r);
+        //TODO
+        return r;
     }
 }

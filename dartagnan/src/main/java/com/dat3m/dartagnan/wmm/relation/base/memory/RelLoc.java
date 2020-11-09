@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.wmm.relation.base.memory;
 
 import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.wmm.Computation;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.microsoft.z3.BoolExpr;
@@ -46,5 +47,18 @@ public class RelLoc extends Relation {
             )));
         }
         return enc;
+    }
+
+    @Override
+    public Computation.Relation register(Computation computation) {
+        if(computation.relation.containsKey(this))
+            return computation.relation.get(this);
+        Computation.Relation r = new Computation.Relation();
+        computation.relation.put(this, r);
+        computation.forEachLocation((x,y)->{r.addMax(x,y);r.addMax(y,x);});
+        computation.forEachRead(x->{
+            x.from.location.forEach(y->{r.addMax(x,y);r.addMax(y,x);});
+            computation.forEachRead(y->{if(x!=y&&x.from.location==y.from.location)r.addMax(x,y);});});
+        return r;
     }
 }

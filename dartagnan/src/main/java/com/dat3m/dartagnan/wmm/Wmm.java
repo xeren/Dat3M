@@ -164,6 +164,15 @@ public class Wmm {
         return expr;
     }
 
+    public void encode(Computation computation) {
+        for(Axiom axiom : axioms)
+            axiom.getRel().register(computation);
+        computation.relation.forEach((k,v)->{
+            System.out.printf("\t%s\n", k);
+            v.addParent((x,y)->System.out.printf("%s %s\n", x, y));
+        });
+    }
+
     public String toString() {
         StringBuilder sb = new StringBuilder();
 

@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.wmm.filter;
 
 import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.program.utils.EType;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -23,6 +24,27 @@ public class FilterBasic extends FilterAbstract {
     @Override
     public boolean filter(Event e){
         return e.is(param);
+    }
+
+    @Override
+    public boolean filter(com.dat3m.dartagnan.wmm.Event e) {
+        //TODO more built-in filters?
+        switch(param) {
+            case EType.ANY:
+                return true;
+            case EType.BRANCH:
+                return e instanceof com.dat3m.dartagnan.wmm.Event.Branch;
+            case EType.FENCE:
+                return e instanceof com.dat3m.dartagnan.wmm.Event.Fence;
+            case EType.INIT:
+                return e instanceof com.dat3m.dartagnan.wmm.Event.Init;
+            case EType.READ:
+                return e instanceof com.dat3m.dartagnan.wmm.Event.Read;
+            case EType.WRITE:
+                return e instanceof com.dat3m.dartagnan.wmm.Event.Write;
+            default:
+                return e instanceof com.dat3m.dartagnan.wmm.Event.Fence && param.equals(((com.dat3m.dartagnan.wmm.Event.Fence)e).name);
+        }
     }
 
     @Override

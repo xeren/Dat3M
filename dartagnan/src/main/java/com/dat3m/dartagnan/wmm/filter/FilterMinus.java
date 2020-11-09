@@ -34,6 +34,11 @@ public class FilterMinus extends FilterAbstract {
     }
 
     @Override
+    public boolean filter(com.dat3m.dartagnan.wmm.Event e) {
+        return filter1.filter(e) && !filter2.filter(e);
+    }
+
+    @Override
     public String toString(){
         return mkName(filter1, filter2);
     }

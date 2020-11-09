@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.wmm.relation.binary;
 
+import com.dat3m.dartagnan.wmm.Computation;
 import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.utils.Utils;
@@ -132,5 +133,18 @@ public class RelIntersection extends BinaryRelation {
         }
 
         return enc;
+    }
+
+    @Override
+    public Computation.Relation register(Computation computation) {
+        if(computation.relation.containsKey(this))
+            return computation.relation.get(this);
+        Computation.Relation c1 = r1.register(computation);
+        Computation.Relation c2 = r2.register(computation);
+        Computation.Relation r = new Computation.Relation();
+        computation.relation.put(this, r);
+        c1.addParent((x,y)->{if(c2.hasMax(x,y))r.addMax(x,y);});
+        c2.addParent((x,y)->{if(c1.hasMax(x,y))r.addMax(x,y);});
+        return r;
     }
 }

@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.wmm.relation;
 
 import com.dat3m.dartagnan.utils.Settings;
+import com.dat3m.dartagnan.wmm.Computation;
 import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
@@ -171,4 +172,6 @@ public abstract class Relation {
         }
         return enc;
     }
+
+    public abstract Computation.Relation register(Computation computation);
 }

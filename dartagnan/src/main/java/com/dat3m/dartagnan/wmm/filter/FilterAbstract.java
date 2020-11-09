@@ -17,4 +17,6 @@ public abstract class FilterAbstract {
     public void initialise(){}
 
     public abstract boolean filter(Event e);
+
+    public abstract boolean filter(com.dat3m.dartagnan.wmm.Event e);
 }

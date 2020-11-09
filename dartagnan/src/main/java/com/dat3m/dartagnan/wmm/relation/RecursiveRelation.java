@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.wmm.relation;
 
 import com.dat3m.dartagnan.utils.Settings;
+import com.dat3m.dartagnan.wmm.Computation;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.Program;
@@ -137,5 +138,16 @@ public class RecursiveRelation extends Relation {
             ));
         }
         return enc;
+    }
+
+    @Override
+    public Computation.Relation register(Computation computation) {
+        if(computation.relation.containsKey(this))
+            return computation.relation.get(this);
+        Computation.Relation c1 = r1.register(computation);
+        Computation.Relation r = new Computation.Relation();
+        computation.relation.put(this, r);
+        c1.addParent(r::addMax);
+        return r;
     }
 }

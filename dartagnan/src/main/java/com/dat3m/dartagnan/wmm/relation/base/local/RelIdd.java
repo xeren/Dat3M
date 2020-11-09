@@ -4,6 +4,7 @@ import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.wmm.Computation;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.BoolExpr;
@@ -33,5 +34,15 @@ public class RelIdd extends BasicRegRelation {
     @Override
     Collection<Register> getRegisters(Event regReader){
         return ((RegReaderData) regReader).getDataRegs();
+    }
+
+    @Override
+    public Computation.Relation register(Computation computation) {
+        if(computation.relation.containsKey(this))
+            return computation.relation.get(this);
+        Computation.Relation r = new Computation.Relation();
+        computation.relation.put(this, r);
+        computation.forEachWrite(y->y.valueDependency.forEach(x->r.addMax(x,y)));
+        return r;
     }
 }

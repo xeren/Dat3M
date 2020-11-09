@@ -1,10 +1,12 @@
 package com.dat3m.dartagnan.wmm.relation.base.stat;
 
 import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.wmm.Computation;
 import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class RelCartesian extends StaticRelation {
@@ -41,5 +43,17 @@ public class RelCartesian extends StaticRelation {
             }
         }
         return maxTupleSet;
+    }
+
+    @Override
+    public Computation.Relation register(Computation computation) {
+        if(computation.relation.containsKey(this))
+            return computation.relation.get(this);
+        Computation.Relation r = new Computation.Relation();
+        computation.relation.put(this, r);
+        ArrayList<com.dat3m.dartagnan.wmm.Event> second = new ArrayList<>();
+        computation.forEach(x->{if(filter2.filter(x))second.add(x);});
+        computation.forEach(x->{if(filter1.filter(x))second.forEach(y->r.addMax(x,y));});
+        return r;
     }
 }

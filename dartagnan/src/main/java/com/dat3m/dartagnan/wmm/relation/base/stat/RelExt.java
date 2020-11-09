@@ -3,6 +3,7 @@ package com.dat3m.dartagnan.wmm.relation.base.stat;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.wmm.Computation;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -37,5 +38,18 @@ public class RelExt extends StaticRelation {
             }
         }
         return maxTupleSet;
+    }
+
+    @Override
+    public Computation.Relation register(Computation computation) {
+        if(computation.relation.containsKey(this))
+            return computation.relation.get(this);
+        Computation.Relation r = new Computation.Relation();
+        computation.relation.put(this, r);
+        computation.forEachThread(t->computation.forEachThread(u->{
+                if(t!=u)
+                    t.forEach(x->u.forEach(y->{r.addMax(x,y);r.addMax(y,x);}));
+            }));
+        return r;
     }
 }
