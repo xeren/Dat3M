@@ -52,20 +52,25 @@ public class RelLoc extends Relation {
     }
 
     @Override
-    public Computation.Relation register(Computation computation) {
-        if(computation.relation.containsKey(this))
-            return computation.relation.get(this);
-        Computation.Relation r = new Computation.Relation();
-        computation.relation.put(this, r);
-        computation.forEachLocation((x,y)->{r.addMax(x,y);r.addMax(y,x);});
-        computation.forEachRead(x->{
-            x.from.location.forEach(y->{r.addMax(x,y);r.addMax(y,x);});
-            computation.forEachRead(y->{if(x!=y&&x.from.location==y.from.location)r.addMax(x,y);});});
-        return r;
+    public Computation.Relation register(Computation r) {
+        if(r.relation.containsKey(this))
+            return r.relation.get(this);
+        Computation.Relation rel = new Computation.Relation();
+        r.relation.put(this, rel);
+        r.forEachLocation((x,y)->{rel.addMax(x,y);rel.addMax(y,x);});
+        r.forEachRead(x->{
+            x.from.location.forEach(y->{rel.addMax(x,y);rel.addMax(y,x);});
+            r.forEachRead(y->{if(x!=y&&x.from.location==y.from.location)rel.addMax(x,y);});});
+        return rel;
     }
 
     @Override
     public BoolExpr encode(Context c, Computation r, List<BoolExpr> o, com.dat3m.dartagnan.wmm.Event x, com.dat3m.dartagnan.wmm.Event y) {
-        return c.mkBoolConst("loc " + x.id + " " + y.id);
+        //to be asserted and tracked
+        return of(c, x.id, y.id);
+    }
+
+    public static BoolExpr of(Context c, int x, int y) {
+        return x < y ? c.mkBoolConst("loc " + x + " " + y) : c.mkBoolConst("loc " + y + " " + x);
     }
 }

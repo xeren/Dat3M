@@ -99,7 +99,12 @@ public class RelRf extends Relation {
 
     @Override
     public BoolExpr encode(Context c, Computation r, List<BoolExpr> o, com.dat3m.dartagnan.wmm.Event x, com.dat3m.dartagnan.wmm.Event y) {
-        return c.mkBoolConst("rf " + x.id + " " + y.id);
+        //to be asserted and tracked
+        return of(c, x.id, y.id);
+    }
+
+    public static BoolExpr of(Context c, int x, int y) {
+        return c.mkBoolConst("rf " + x + " " + y);
     }
 
     private BoolExpr encodeEdgeNaive(Event read, BoolExpr isMemInit, List<BoolExpr> edges){
