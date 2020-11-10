@@ -5,6 +5,7 @@ import com.dat3m.dartagnan.wmm.Computation;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.filter.FilterMinus;
 import com.microsoft.z3.BoolExpr;
+import com.microsoft.z3.Context;
 import com.microsoft.z3.IntExpr;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.MemEvent;
@@ -118,5 +119,34 @@ public class RelCo extends Relation {
             if(!(x instanceof com.dat3m.dartagnan.wmm.Event.Init))
                 r.addMax(y,x);});
         return r;
+    }
+
+    @Override
+    public BoolExpr encode(Context c, Computation r, List<BoolExpr> o, com.dat3m.dartagnan.wmm.Event x, com.dat3m.dartagnan.wmm.Event y) {
+        if(x instanceof com.dat3m.dartagnan.wmm.Event.Init)
+            return c.mkTrue();
+        assert !(y instanceof com.dat3m.dartagnan.wmm.Event.Init);
+        Computation.Relation rel = r.relation.get(this);
+        boolean isNew = rel.encode(x, y);
+        boolean isNewR = rel.encode(y, x);
+        assert isNew == isNewR;
+        BoolExpr edge = mkEdge(c, x, y);
+        if(isNew) {
+            BoolExpr edgeR = mkEdge(c, y, x);
+            o.add(c.mkOr(edge, edgeR));
+            o.add(c.mkOr(c.mkNot(edge), c.mkNot(edgeR)));
+            assert x instanceof com.dat3m.dartagnan.wmm.Event.Write;
+            ((com.dat3m.dartagnan.wmm.Event.Write)x).location.forEach(z->{
+                if(z instanceof com.dat3m.dartagnan.wmm.Event.Init || x == z || y == z)
+                    return;
+                o.add(c.mkOr(edge, c.mkNot(mkEdge(c, x, z)), c.mkNot(mkEdge(c, z, y))));
+                o.add(c.mkOr(edgeR, c.mkNot(mkEdge(c, y, z)), c.mkNot(mkEdge(c, z, x))));
+            });
+        }
+        return edge;
+    }
+
+    private static BoolExpr mkEdge(Context c, com.dat3m.dartagnan.wmm.Event x, com.dat3m.dartagnan.wmm.Event y) {
+        return c.mkBoolConst("co " + x.id + " " + y.id);
     }
 }

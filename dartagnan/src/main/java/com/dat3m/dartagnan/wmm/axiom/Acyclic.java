@@ -3,14 +3,14 @@ package com.dat3m.dartagnan.wmm.axiom;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.wmm.utils.Utils;
+import com.dat3m.dartagnan.wmm.Computation;
 import com.dat3m.dartagnan.wmm.relation.Relation;
+import com.dat3m.dartagnan.wmm.relation.unary.RelTrans;
+import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 
@@ -68,6 +68,22 @@ public class Acyclic extends Axiom {
     @Override
     protected BoolExpr _inconsistent(Context ctx) {
         return ctx.mkAnd(satCycleDef(ctx), satCycle(ctx));
+    }
+
+    @Override
+    public BoolExpr encode(Context c, Computation r) {
+        ArrayList<BoolExpr> enc = new ArrayList<>();
+        Relation t = new RelTrans(rel).setName("reach " + rel.getName());
+        t.register(r).addParent((x,y)->{if(x==y)t.encode(c,r,enc,x,y);});
+        return c.mkAnd(enc.toArray(new BoolExpr[0]));
+    }
+
+    @Override
+    protected BoolExpr _consistent(Context c, Computation r) {
+        ArrayList<BoolExpr> enc = new ArrayList<>();
+        Relation t = new RelTrans(rel).setName("reach " + rel.getName());
+        t.register(r).addParent((x,y)->{if(x==y)enc.add(c.mkNot(t.encode(c,r,null,x,y)));});
+        return c.mkAnd(enc.toArray(new BoolExpr[0]));
     }
 
     @Override

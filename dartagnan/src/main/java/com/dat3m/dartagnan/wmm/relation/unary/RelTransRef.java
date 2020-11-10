@@ -16,6 +16,7 @@ import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -109,6 +110,11 @@ public class RelTransRef extends RelTrans {
         c1.addParent((x,y)->r.maxByFirst(y).forEach(z->r.addMax(x,z)));
         computation.forEach(x->r.addMax(x,x));
         return r;
+    }
+
+    @Override
+    public BoolExpr encode(Context c, Computation r, List<BoolExpr> o, com.dat3m.dartagnan.wmm.Event x, com.dat3m.dartagnan.wmm.Event y) {
+        return x == y ? c.mkTrue() : super.encode(c, r, o, x, y);
     }
 
     private BoolExpr invokeEncode(String methodName){

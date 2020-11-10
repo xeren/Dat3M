@@ -7,11 +7,9 @@ import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import com.microsoft.z3.Context;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  *
@@ -270,5 +268,16 @@ public class RelComposition extends BinaryRelation {
         c1.addParent((x,y)->c2.maxByFirst(y).forEach(z->r.addMax(x,z)));
         c2.addParent((y,z)->c1.maxBySecond(y).forEach(x->r.addMax(x,z)));
         return r;
+    }
+
+    @Override
+    public BoolExpr encode(Context c, Computation r, List<BoolExpr> o, com.dat3m.dartagnan.wmm.Event x, com.dat3m.dartagnan.wmm.Event y) {
+        BoolExpr result = c.mkBoolConst(getName() + " " + x.id + " " + y.id);
+        if(r.relation.get(this).encode(x, y)) {
+            Computation.Relation c2 = r.relation.get(r2);
+            o.add(c.mkEq(result, c.mkOr(r.relation.get(r1).maxByFirst(x).filter(z->c2.hasMax(z, y))
+                .map(z->c.mkAnd(r1.encode(c, r, o, x, z), r2.encode(c, r, o, z, y))).toArray(BoolExpr[]::new))));
+        }
+        return result;
     }
 }

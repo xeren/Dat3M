@@ -9,6 +9,7 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import com.microsoft.z3.Context;
 
 import java.util.List;
 import java.util.ListIterator;
@@ -106,5 +107,10 @@ public class RelFencerel extends Relation {
             }
         });
         return r;
+    }
+
+    @Override
+    public BoolExpr encode(Context c, Computation r, List<BoolExpr> o, com.dat3m.dartagnan.wmm.Event x, com.dat3m.dartagnan.wmm.Event y) {
+        return c.mkTrue();
     }
 }

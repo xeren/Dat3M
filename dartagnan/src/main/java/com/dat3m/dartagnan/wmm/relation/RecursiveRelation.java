@@ -2,12 +2,15 @@ package com.dat3m.dartagnan.wmm.relation;
 
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.Computation;
+import com.dat3m.dartagnan.wmm.Event;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+
+import java.util.List;
 
 /**
  *
@@ -149,5 +152,10 @@ public class RecursiveRelation extends Relation {
         computation.relation.put(this, r);
         c1.addParent(r::addMax);
         return r;
+    }
+
+    @Override
+    public BoolExpr encode(Context c, Computation r, List<BoolExpr> o, Event x, Event y) {
+        return r1.encode(c, r, o, x, y);
     }
 }

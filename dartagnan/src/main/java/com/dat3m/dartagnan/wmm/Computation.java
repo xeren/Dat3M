@@ -99,7 +99,7 @@ public class Computation {
 
 		/**
 		 * Inserts a store event at the end of this thread's computation.
-		 * @param cId
+		 * @param id
 		 * Compile identifier of the store, connecting to the read-from relation.
 		 * @param key
 		 * Address of the location being modified.
@@ -108,13 +108,13 @@ public class Computation {
 		 * @param valueRegister
 		 * Registers being used for the value.
 		 */
-		public void write(int cId, Object key, Set<?> keyRegister, Set<?> valueRegister) {
+		public void write(int id, Object key, Set<?> keyRegister, Set<?> valueRegister) {
 			LinkedList<Event.Write> l = location.computeIfAbsent(key, k->new LinkedList<>());
-			Event.Write write = new Event.Write(this, l, dependency(keyRegister), dependency(valueRegister));
+			Event.Write write = new Event.Write(id, this, l, dependency(keyRegister), dependency(valueRegister));
 			l.add(write);
-			writeByCid.put(cId, write);
+			writeByCid.put(id, write);
 			for(Map.Entry<Integer,Integer> e : readFrom.entrySet()) {
-				if(e.getValue() == cId) {
+				if(id == e.getValue()) {
 					Event.Read read = readByCid.get(e.getKey());
 					if(null != read)
 						read.from = write;
@@ -124,17 +124,17 @@ public class Computation {
 
 		/**
 		 * Inserts a load event at the end of this thread's computation.
-		 * @param cId
+		 * @param id
 		 * Compile identifier of the load.
 		 * @param destination
 		 * Register being modified.
 		 * @param register
 		 * Registers being used for the address.
 		 */
-		public void read(int cId, Object destination, Set<?> register) {
-			Event.Read read = new Event.Read(this, dependency(register));
-			readByCid.put(cId, read);
-			Event.Write write = writeByCid.get(readFrom.get(cId));
+		public void read(int id, Object destination, Set<?> register) {
+			Event.Read read = new Event.Read(id, this, dependency(register));
+			readByCid.put(id, read);
+			Event.Write write = writeByCid.get(readFrom.get(id));
 			if(null != write)
 				read.from = write;
 			HashSet<Event.Read> d = new HashSet<>();
@@ -144,36 +144,40 @@ public class Computation {
 
 		/**
 		 * Inserts a memory barrier event at the end of this thread's computation.
+		 * @param id
+		 * Compile identifier of the barrier.
 		 * @param name
 		 * Identifies the type of barrier.
 		 */
-		public void fence(String name) {
-			new Event.Fence(this, name);
+		public void fence(int id, String name) {
+			new Event.Fence(id, this, name);
 		}
 
 		/**
 		 * Inserts a branching event at the end of this thread's computation.
+		 * @param id
+		 * Compile identifier of the branch.
 		 * @param register
 		 * Registers being used for determining the direction of control flow.
 		 */
-		public void branch(Set<?> register) {
-			new Event.Branch(this, dependency(register));
+		public void branch(int id, Set<?> register) {
+			new Event.Branch(id, this, dependency(register));
 		}
 
 		/**
 		 * Inserts an initial event at the end of this thread's computation.
-		 * @param cId
+		 * @param id
 		 * Compile identifier of the event.
 		 * @param key
 		 * Identifies the location being modified.
 		 */
-		public void init(int cId, Object key) {
+		public void init(int id, Object key) {
 			LinkedList<Event.Write> l = location.computeIfAbsent(key, k->new LinkedList<>());
-			Event.Init init = new Event.Init(this, l);
+			Event.Init init = new Event.Init(id, this, l);
 			l.add(init);
-			writeByCid.put(cId, init);
+			writeByCid.put(id, init);
 			for(Map.Entry<Integer,Integer> e : readFrom.entrySet()) {
-				if(e.getValue() == cId) {
+				if(id == e.getValue()) {
 					Event.Read read = readByCid.get(e.getKey());
 					if(null != read)
 						read.from = init;
@@ -195,6 +199,8 @@ public class Computation {
 	public static class Relation {
 
 		private final HashMap<Event,HashSet<Event>> max = new HashMap<>();
+
+		private final HashMap<Event,HashSet<Event>> encode = new HashMap<>();
 
 		private final LinkedList<BiConsumer<Event,Event>> parent = new LinkedList<>();
 
@@ -218,6 +224,11 @@ public class Computation {
 
 		public Stream<Event> maxBySecond(Event second) {
 			return max.entrySet().stream().filter(e->e.getValue().contains(second)).map(Map.Entry::getKey);
+		}
+
+		public boolean encode(Event first, Event second) {
+			assert max.containsKey(first) && max.get(first).contains(second);
+			return encode.computeIfAbsent(first, k->new HashSet<>()).add(second);
 		}
 	}
 }

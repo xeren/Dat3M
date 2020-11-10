@@ -11,6 +11,8 @@ import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
+import java.util.List;
+
 /**
  *
  * @author Florian Furbach
@@ -145,5 +147,13 @@ public class RelMinus extends BinaryRelation {
         //assuming that c2 is already complete
         c1.addParent((x,y)->{if(!c2.hasMax(x,y))r.addMax(x,y);});
         return r;
+    }
+
+    @Override
+    public BoolExpr encode(Context c, Computation r, List<BoolExpr> o, com.dat3m.dartagnan.wmm.Event x, com.dat3m.dartagnan.wmm.Event y) {
+        BoolExpr result = c.mkBoolConst(getName() + " " + x.id + " " + y.id);
+        if(r.relation.get(this).encode(x, y))
+            o.add(c.mkEq(result, c.mkAnd(r1.encode(c, r, o, x, y), c.mkNot(r2.encode(c, r, o, x, y)))));
+        return result;
     }
 }

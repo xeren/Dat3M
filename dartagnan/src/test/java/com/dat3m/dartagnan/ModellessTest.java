@@ -5,6 +5,7 @@ import com.dat3m.dartagnan.parsers.program.ProgramParser;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.Computation;
+import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.relation.base.memory.RelLoc;
 import com.dat3m.dartagnan.wmm.relation.base.memory.RelRf;
@@ -19,6 +20,7 @@ import com.microsoft.z3.Status;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.fail;
 
 import java.io.File;
@@ -30,6 +32,7 @@ public class ModellessTest {
 	public void test() {
 		try {
 			Settings settings = new Settings(Mode.KLEENE, Alias.CFS, 1);
+			Wmm model = new ParserCat().parse(new File("cat/tso.cat"));
 			String path = "litmus/X86/m24.litmus";
 			Program program = new ProgramParser().parse(new File(path));
 			program.unroll(settings.getBound(), 0);
@@ -47,7 +50,9 @@ public class ModellessTest {
 				}
 				assertEquals(Status.SATISFIABLE, s.check());
 				Computation computation = program.extract(c, s.getModel());
-				new ParserCat().parse(new File("cat/tso.cat")).encode(computation);
+				Solver sat = c.mkSolver(c.mkTactic("sat"));
+				sat.add(model.consistent(c, computation));
+				System.out.println(sat.check());
 			}
 		} catch(IOException e) {
 			fail(e.getMessage());

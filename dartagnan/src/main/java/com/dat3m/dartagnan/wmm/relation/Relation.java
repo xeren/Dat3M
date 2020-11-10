@@ -2,6 +2,7 @@ package com.dat3m.dartagnan.wmm.relation;
 
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.Computation;
+import com.dat3m.dartagnan.wmm.Event;
 import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
@@ -10,6 +11,8 @@ import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 
 import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
@@ -173,5 +176,33 @@ public abstract class Relation {
         return enc;
     }
 
+    /**
+     * Collects all tuples that are possible members of this relation.
+     * Does not require {@link #initialise}.
+     * @param computation
+     * Graph of executed events.
+     * Keeps track of relations already registered to avoid repetition and loops.
+     * @return
+     * Live tuple collection associated with this relation.
+     */
     public abstract Computation.Relation register(Computation computation);
+
+    /**
+     * Requires {@link #register} to be called sometime previously.
+     * Does not require {@link #initialise}.
+     * @param context
+     * Formula factory.
+     * @param computation
+     * Graph of executed events.
+     * Keeps track of pairs already encoded to avoid repetition.
+     * @param first
+     * Domain part of the relevant pair.
+     * @param second
+     * Pair contained by the set of possible pairs for this relation.
+     * @param encoding
+     * Receives additional constraints for this .
+     * @return
+     * Atomic proposition that the pair is a member of this relation.
+     */
+    public abstract BoolExpr encode(Context context, Computation computation, List<BoolExpr> encoding, Event first, Event second);
 }

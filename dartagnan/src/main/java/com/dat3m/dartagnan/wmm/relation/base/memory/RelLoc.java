@@ -9,8 +9,10 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import com.microsoft.z3.Context;
 
 import java.util.Collection;
+import java.util.List;
 
 import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 
@@ -60,5 +62,10 @@ public class RelLoc extends Relation {
             x.from.location.forEach(y->{r.addMax(x,y);r.addMax(y,x);});
             computation.forEachRead(y->{if(x!=y&&x.from.location==y.from.location)r.addMax(x,y);});});
         return r;
+    }
+
+    @Override
+    public BoolExpr encode(Context c, Computation r, List<BoolExpr> o, com.dat3m.dartagnan.wmm.Event x, com.dat3m.dartagnan.wmm.Event y) {
+        return c.mkBoolConst("loc " + x.id + " " + y.id);
     }
 }

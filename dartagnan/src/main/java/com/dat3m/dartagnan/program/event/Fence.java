@@ -42,6 +42,6 @@ public class Fence extends Event {
 
 	@Override
 	public void extract(Model m, Computation.Thread t) {
-		t.fence(name);
+		t.fence(cId, name);
 	}
 }

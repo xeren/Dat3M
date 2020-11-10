@@ -17,6 +17,8 @@ public abstract class Event {
 	/**
 	 * Index of this event in {@link #thread}.
 	 */
+	public final int threadIndex;
+
 	public final int id;
 
 	/**
@@ -24,9 +26,10 @@ public abstract class Event {
 	 * @param thread
 	 * Sequence of events to be
 	 */
-	private Event(List<Event> thread) {
+	private Event(int id, List<Event> thread) {
 		this.thread = thread;
-		this.id = thread.size();
+		this.threadIndex = thread.size();
+		this.id = id;
 		thread.add(this);
 	}
 
@@ -38,8 +41,8 @@ public abstract class Event {
 
 		public final Set<Read> valueDependency;
 
-		Write(List<Event> thread, LinkedList<Write> location, Set<Read> dKey, Set<Read> dValue) {
-			super(thread);
+		Write(int id, List<Event> thread, LinkedList<Write> location, Set<Read> dKey, Set<Read> dValue) {
+			super(id, thread);
 			this.location = location;
 			keyDependency = dKey;
 			valueDependency = dValue;
@@ -52,8 +55,8 @@ public abstract class Event {
 
 		public Write from;
 
-		Read(List<Event> thread, Set<Read> dependency) {
-			super(thread);
+		Read(int id, List<Event> thread, Set<Read> dependency) {
+			super(id, thread);
 			this.dependency = dependency;
 		}
 	}
@@ -62,8 +65,8 @@ public abstract class Event {
 
 		public final String name;
 
-		Fence(List<Event> thread, String name) {
-			super(thread);
+		Fence(int id, List<Event> thread, String name) {
+			super(id, thread);
 			this.name = name;
 		}
 	}
@@ -72,16 +75,16 @@ public abstract class Event {
 
 		public final Set<Read> dependency;
 
-		Branch(List<Event> thread, Set<Read> dependency) {
-			super(thread);
+		Branch(int id, List<Event> thread, Set<Read> dependency) {
+			super(id, thread);
 			this.dependency = dependency;
 		}
 	}
 
 	public static class Init extends Write {
 
-		Init(List<Event> thread, LinkedList<Write> location) {
-			super(thread, location, Collections.emptySet(), Collections.emptySet());
+		Init(int id, List<Event> thread, LinkedList<Write> location) {
+			super(id, thread, location, Collections.emptySet(), Collections.emptySet());
 		}
 	}
 }

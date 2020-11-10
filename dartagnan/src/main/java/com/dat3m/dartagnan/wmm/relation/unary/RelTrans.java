@@ -11,10 +11,7 @@ import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 import static com.dat3m.dartagnan.wmm.utils.Utils.intCount;
@@ -245,6 +242,16 @@ public class RelTrans extends UnaryRelation {
         computation.relation.put(this, r);
         c1.addParent((x,y)->r.maxByFirst(y).forEach(z->r.addMax(x,z)));
         return r;
+    }
+
+    @Override
+    public BoolExpr encode(Context c, Computation r, List<BoolExpr> o, com.dat3m.dartagnan.wmm.Event x, com.dat3m.dartagnan.wmm.Event y) {
+        BoolExpr result = c.mkBoolConst(getName() + " " + x.id + " " + y.id);
+        Computation.Relation rel = r.relation.get(this);
+        if(rel.encode(x, y))
+            o.add(c.mkEq(result, c.mkOr(r1.encode(c, r, o, x, y),
+                c.mkOr(rel.maxByFirst(x).filter(z->rel.hasMax(z, y)).map(z->c.mkAnd(encode(c,r,o,x,z),encode(c,r,o,z,y))).toArray(BoolExpr[]::new)))));
+        return result;
     }
 
     private TupleSet getFullEncodeTupleSet(TupleSet tuples){

@@ -82,6 +82,6 @@ public class CondJump extends Jump implements RegReaderData {
 
     @Override
     public void extract(Model m, Computation.Thread t) {
-        t.branch(dataRegs);
+        t.branch(cId, dataRegs);
     }
 }

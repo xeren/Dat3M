@@ -164,13 +164,13 @@ public class Wmm {
         return expr;
     }
 
-    public void encode(Computation computation) {
-        for(Axiom axiom : axioms)
-            axiom.getRel().register(computation);
-        computation.relation.forEach((k,v)->{
-            System.out.printf("\t%s\n", k);
-            v.addParent((x,y)->System.out.printf("%s %s\n", x, y));
-        });
+    public BoolExpr consistent(Context context, Computation computation) {
+        ArrayList<BoolExpr> result = new ArrayList<>();
+        for(Axiom axiom : axioms) {
+            result.add(axiom.encode(context, computation));
+            result.add(axiom.consistent(context, computation));
+        }
+        return context.mkAnd(result.toArray(new BoolExpr[0]));
     }
 
     public String toString() {

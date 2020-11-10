@@ -7,6 +7,9 @@ import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import com.microsoft.z3.Context;
+
+import java.util.List;
 
 /**
  *
@@ -146,5 +149,13 @@ public class RelIntersection extends BinaryRelation {
         c1.addParent((x,y)->{if(c2.hasMax(x,y))r.addMax(x,y);});
         c2.addParent((x,y)->{if(c1.hasMax(x,y))r.addMax(x,y);});
         return r;
+    }
+
+    @Override
+    public BoolExpr encode(Context c, Computation r, List<BoolExpr> o, com.dat3m.dartagnan.wmm.Event x, com.dat3m.dartagnan.wmm.Event y) {
+        BoolExpr result = c.mkBoolConst(getName() + " " + x.id + " " + y.id);
+        if(r.relation.get(this).encode(x, y))
+            o.add(c.mkEq(result, c.mkAnd(r1.encode(c, r, o, x, y), r2.encode(c, r, o, x, y))));
+        return result;
     }
 }
