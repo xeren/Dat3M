@@ -83,10 +83,7 @@ public class RelInverse extends UnaryRelation {
 
     @Override
     public BoolExpr encode(Context c, Computation r, List<BoolExpr> o, com.dat3m.dartagnan.wmm.Event x, com.dat3m.dartagnan.wmm.Event y) {
-        BoolExpr result = c.mkBoolConst(getName() + " " + x.id + " " + y.id);
-        if(r.relation.get(this).encode(x, y))
-            o.add(c.mkEq(result, r1.encode(c, r, o, y, x)));
-        return result;
+        return r1.encode(c, r, o, y, x);
     }
 }
     

@@ -240,19 +240,45 @@ public class RelTrans extends UnaryRelation {
         Computation.Relation c1 = r1.register(computation);
         Computation.Relation r = new Computation.Relation();
         computation.relation.put(this, r);
-        c1.addParent((x,y)->{r.addMax(x,y);r.maxByFirst(y).forEach(z->r.addMax(x,z));});
+        c1.addParent((x,y)->{r.addMax(x,y);if(x!=y)r.maxByFirst(y).forEach(z->r.addMax(x,z));});
         return r;
     }
 
+    private static class Pair {
+        final com.dat3m.dartagnan.wmm.Event x;
+        final com.dat3m.dartagnan.wmm.Event z;
+        Pair(com.dat3m.dartagnan.wmm.Event x, com.dat3m.dartagnan.wmm.Event z) {
+            this.x = x;
+            this.z = z;
+        }
+    }
+
     @Override
-    public BoolExpr encode(Context c, Computation r, List<BoolExpr> o, com.dat3m.dartagnan.wmm.Event x, com.dat3m.dartagnan.wmm.Event y) {
-        BoolExpr result = c.mkBoolConst(getName() + " " + x.id + " " + y.id);
+    public BoolExpr encode(Context c, Computation r, List<BoolExpr> o, com.dat3m.dartagnan.wmm.Event x, com.dat3m.dartagnan.wmm.Event z) {
         Computation.Relation rel = r.relation.get(this);
-        if(rel.encode(x, y))
-            o.add(c.mkEq(result, c.mkOr(
-                r.relation.get(r1).hasMax(x, y) ? r1.encode(c, r, o, x, y) : c.mkFalse(),
-                c.mkOr(rel.maxByFirst(x).filter(z->y!=z&&rel.hasMax(z, y)).map(z->c.mkAnd(encode(c,r,o,x,z),encode(c,r,o,z,y))).toArray(BoolExpr[]::new)))));
-        return result;
+        if(rel.encode(x, z)) {
+            Stack<Pair> active = new Stack<>();
+            active.push(new Pair(x, z));
+            while(!active.empty()){
+                Pair p = active.pop();
+                ArrayList<BoolExpr> opt = new ArrayList<>();
+                if(r.relation.get(r1).hasMax(p.x, p.z))
+                    opt.add(r1.encode(c, r, o, p.x, p.z));
+                rel.maxByFirst(p.x).forEach(y->{
+                    if(p.z != y && rel.hasMax(y, p.z)) {
+                        //mark x-y as encoded
+                        if(rel.encode(p.x, y))
+                            active.push(new Pair(p.x, y));
+                        //mark y-z as encoded
+                        if(rel.encode(y, p.z))
+                            active.push(new Pair(y, p.z));
+                        opt.add(c.mkAnd(encode(c, r, o, p.x, y), encode(c, r, o, y, p.z)));
+                    }
+                });
+                o.add(c.mkEq(c.mkBoolConst(getName() + " " + p.x.id + " " + p.z.id), c.mkOr(opt.toArray(new BoolExpr[0]))));
+            }
+        }
+        return c.mkBoolConst(getName() + " " + x.id + " " + z.id);
     }
 
     private TupleSet getFullEncodeTupleSet(TupleSet tuples){
