@@ -7,19 +7,19 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.utils.Settings;
+import com.dat3m.dartagnan.utils.options.BaseOptions;
 import com.dat3m.dartagnan.wmm.Computation;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.relation.base.memory.RelLoc;
 import com.dat3m.dartagnan.wmm.relation.base.memory.RelRf;
-import com.dat3m.dartagnan.wmm.utils.Arch;
-import com.dat3m.dartagnan.wmm.utils.Mode;
-import com.dat3m.dartagnan.wmm.utils.alias.Alias;
 import com.dat3m.dartagnan.wmm.utils.alias.AliasAnalysis;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.Solver;
 import com.microsoft.z3.Status;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.ParseException;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,14 +28,15 @@ import java.util.List;
 
 public class Cegar {
 
-	public static void main(String[] argument) throws IOException {
-		Settings settings = new Settings(Mode.KLEENE, Alias.CFS, 1);
-		Wmm model = new ParserCat().parse(new File("cat/tso.cat"));
+	public static void main(String[] argument) throws IOException, ParseException {
+		BaseOptions options = new Options();
+		options.parse(argument);
+		Settings settings = options.getSettings();
+		Wmm model = new ParserCat().parse(new File(options.getTargetModelFilePath()));
 
-		String path = "litmus/X86/m24.litmus";
-		Program program = new ProgramParser().parse(new File(path));
+		Program program = new ProgramParser().parse(new File(options.getProgramFilePath()));
 		program.unroll(settings.getBound(), 0);
-		program.compile(Arch.TSO, 0);
+		program.compile(options.getTarget(), 0);
 
 		try(Context c = new Context()) {
 			Solver s = c.mkSolver();
@@ -120,6 +121,16 @@ public class Cegar {
 				s.add(c.mkNot(c.mkAnd(Arrays.stream(sat.getUnsatCore()).toArray(BoolExpr[]::new))));
 			}
 			System.out.println("All executions consistent with the model satisfy the assertion.");
+		}
+	}
+
+	private static class Options extends BaseOptions {
+
+		public Options() {
+			Option catOption = new Option("cat", true,
+				"Path to the CAT file");
+			catOption.setRequired(true);
+			addOption(catOption);
 		}
 	}
 }
