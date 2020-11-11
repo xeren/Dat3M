@@ -240,7 +240,7 @@ public class RelTrans extends UnaryRelation {
         Computation.Relation c1 = r1.register(computation);
         Computation.Relation r = new Computation.Relation();
         computation.relation.put(this, r);
-        c1.addParent((x,y)->r.maxByFirst(y).forEach(z->r.addMax(x,z)));
+        c1.addParent((x,y)->{r.addMax(x,y);r.maxByFirst(y).forEach(z->r.addMax(x,z));});
         return r;
     }
 
@@ -249,8 +249,9 @@ public class RelTrans extends UnaryRelation {
         BoolExpr result = c.mkBoolConst(getName() + " " + x.id + " " + y.id);
         Computation.Relation rel = r.relation.get(this);
         if(rel.encode(x, y))
-            o.add(c.mkEq(result, c.mkOr(r1.encode(c, r, o, x, y),
-                c.mkOr(rel.maxByFirst(x).filter(z->rel.hasMax(z, y)).map(z->c.mkAnd(encode(c,r,o,x,z),encode(c,r,o,z,y))).toArray(BoolExpr[]::new)))));
+            o.add(c.mkEq(result, c.mkOr(
+                r.relation.get(r1).hasMax(x, y) ? r1.encode(c, r, o, x, y) : c.mkFalse(),
+                c.mkOr(rel.maxByFirst(x).filter(z->y!=z&&rel.hasMax(z, y)).map(z->c.mkAnd(encode(c,r,o,x,z),encode(c,r,o,z,y))).toArray(BoolExpr[]::new)))));
         return result;
     }
 

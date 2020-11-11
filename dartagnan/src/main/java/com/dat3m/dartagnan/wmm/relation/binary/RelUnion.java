@@ -159,7 +159,9 @@ public class RelUnion extends BinaryRelation {
     public BoolExpr encode(Context c, Computation r, List<BoolExpr> o, com.dat3m.dartagnan.wmm.Event x, com.dat3m.dartagnan.wmm.Event y) {
         BoolExpr result = c.mkBoolConst(getName() + " " + x.id + " " + y.id);
         if(r.relation.get(this).encode(x, y))
-            o.add(c.mkEq(result, c.mkOr(r1.encode(c, r, o, x, y), r2.encode(c, r, o, x, y))));
+            o.add(c.mkEq(result, c.mkOr(
+                r.relation.get(r1).hasMax(x, y) ? r1.encode(c, r, o, x, y) : c.mkFalse(),
+                r.relation.get(r2).hasMax(x, y) ? r2.encode(c, r, o, x, y) : c.mkFalse())));
         return result;
     }
 }
