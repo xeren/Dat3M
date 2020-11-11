@@ -62,6 +62,46 @@ public class Computation {
 		thread.forEach(action);
 	}
 
+	@Override
+	public String toString() {
+		StringBuilder s = new StringBuilder();
+		for(int i = 0; i < thread.size(); ++i) {
+			Thread t = thread.get(i);
+			if(t.size() == 1 && t.get(0) instanceof Event.Init)
+				continue;
+			for(Event e : t) {
+				s.append(i).append('.').append(e.threadIndex).append(':');
+				if(e instanceof Event.Branch) {
+					s.append('B');
+				} else if(e instanceof Event.Init) {
+					s.append('I').append(' ');
+					//ASSUME there is only one match
+					location.forEach((k,v)->{if(((Event.Init) e).location==v)s.append(k);});
+				} else if(e instanceof Event.Fence) {
+					s.append(((Event.Fence) e).name);
+				} else if(e instanceof Event.Read) {
+					s.append('R');
+					Event.Write w = ((Event.Read) e).from;
+					if(!(w instanceof Event.Init)) {
+						s.append(' ');
+						//ASSUME there is only one match
+						for(int j = 0; j < thread.size(); ++j)
+							if(w.thread==thread.get(j))
+								s.append(j);
+						s.append('.').append(w.threadIndex);
+					}
+				} else if(e instanceof Event.Write) {
+					s.append('W').append(' ');
+					//ASSUME there is only one match
+					location.forEach((k,v)->{if(((Event.Write) e).location==v)s.append(k);});
+				}
+				s.append('\n');
+			}
+			s.append('\n');
+		}
+		return s.toString();
+	}
+
 	/**
 	 * Used to insert events that originate from a common thread into the computation.
 	 * Preserves the perceived program order.

@@ -13,6 +13,7 @@ import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.relation.base.memory.RelLoc;
 import com.dat3m.dartagnan.wmm.relation.base.memory.RelRf;
+import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.dat3m.dartagnan.wmm.utils.alias.AliasAnalysis;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
@@ -33,16 +34,29 @@ public class Cegar {
 		options.parse(argument);
 		Settings settings = options.getSettings();
 		Wmm model = new ParserCat().parse(new File(options.getTargetModelFilePath()));
-
 		Program program = new ProgramParser().parse(new File(options.getProgramFilePath()));
+		if(test(model, options.getTarget(), program, settings)) {
+			System.out.println("Some feasible execution violates the assertion.");
+		} else {
+			System.out.println("All feasible executions satisfy the assertion.");
+		}
+	}
+
+	/**
+	 * @return
+	 * There was a feasible computation reaching a queried state.
+	 */
+	public static boolean test(Wmm model, Arch arch, Program program, Settings settings) {
 		program.unroll(settings.getBound(), 0);
-		program.compile(options.getTarget(), 0);
+		program.compile(arch, 0);
 
 		try(Context c = new Context()) {
 			Solver s = c.mkSolver();
 			s.add(program.encodeUINonDet(c));
 			s.add(program.encodeCF(c));
 			s.add(program.encodeFinalRegisterValues(c));
+
+			s.add((null != program.getAss() ? program.getAss() : program.createAssertion()).encode(c));
 
 			new AliasAnalysis().calculateLocationSets(program, settings.getAlias());
 
@@ -95,7 +109,7 @@ public class Cegar {
 				s.add(prev);
 			}
 
-			while(Status.SATISFIABLE == s.check()) {
+			while(Status.UNSATISFIABLE != s.check()) {
 				Computation computation = program.extract(c, s.getModel());
 
 				Solver sat = c.mkSolver(c.mkTactic("sat"));
@@ -113,15 +127,16 @@ public class Cegar {
 				});
 
 				if(Status.SATISFIABLE == sat.check(special.toArray(new BoolExpr[0]))) {
-					System.out.println("Some execution consistent with the model violates the assertion.");
-					return;
+					return true;
 				}
 
-				System.out.println("Spurious executions with " + Arrays.toString(sat.getUnsatCore()) + ".");
+				System.err.println("Spurious " + Arrays.toString(sat.getUnsatCore()));
 				s.add(c.mkNot(c.mkAnd(Arrays.stream(sat.getUnsatCore()).toArray(BoolExpr[]::new))));
 			}
-			System.out.println("All executions consistent with the model satisfy the assertion.");
+			if(Status.UNKNOWN == s.check())
+				throw new RuntimeException(s.getReasonUnknown());
 		}
+		return false;
 	}
 
 	private static class Options extends BaseOptions {
