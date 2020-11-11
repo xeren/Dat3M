@@ -38,6 +38,9 @@ public class FilterBasic extends FilterAbstract {
                 return e instanceof com.dat3m.dartagnan.wmm.Event.Fence;
             case EType.INIT:
                 return e instanceof com.dat3m.dartagnan.wmm.Event.Init;
+            case EType.MEMORY:
+                return e instanceof com.dat3m.dartagnan.wmm.Event.Read
+                    || e instanceof com.dat3m.dartagnan.wmm.Event.Write;
             case EType.READ:
                 return e instanceof com.dat3m.dartagnan.wmm.Event.Read;
             case EType.WRITE:
