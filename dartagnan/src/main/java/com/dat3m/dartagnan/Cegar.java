@@ -18,7 +18,6 @@ import com.dat3m.dartagnan.wmm.utils.alias.AliasAnalysis;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.Solver;
-import com.microsoft.z3.Status;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.ParseException;
 import java.io.File;
@@ -35,10 +34,19 @@ public class Cegar {
 		Settings settings = options.getSettings();
 		Wmm model = new ParserCat().parse(new File(options.getTargetModelFilePath()));
 		Program program = new ProgramParser().parse(new File(options.getProgramFilePath()));
+		boolean specifyForAll = (null != program.getArch() ? program.getAss() : program.createAssertion()).getInvert();
 		if(test(model, options.getTarget(), program, settings)) {
-			System.out.println("Some feasible execution violates the assertion.");
+			if(specifyForAll) {
+				System.out.println("Witnessed specified execution.");
+			} else {
+				System.out.println("Some feasible execution violates the assertion.");
+			}
 		} else {
-			System.out.println("All feasible executions satisfy the assertion.");
+			if(specifyForAll) {
+				System.out.println("All feasible executions satisfy the assertion.");
+			} else {
+				System.out.println("Unable to witness specified execution.");
+			}
 		}
 	}
 
@@ -109,7 +117,7 @@ public class Cegar {
 				s.add(prev);
 			}
 
-			while(Status.UNSATISFIABLE != s.check()) {
+			while(check(s)) {
 				Computation computation = program.extract(c, s.getModel());
 
 				Solver sat = c.mkSolver(c.mkTactic("sat"));
@@ -126,17 +134,38 @@ public class Cegar {
 					});
 				});
 
-				if(Status.SATISFIABLE == sat.check(special.toArray(new BoolExpr[0]))) {
+				if(check(sat, special.toArray(new BoolExpr[0]))) {
 					return true;
 				}
 
-				System.err.println("Spurious " + Arrays.toString(sat.getUnsatCore()));
-				s.add(c.mkNot(c.mkAnd(Arrays.stream(sat.getUnsatCore()).toArray(BoolExpr[]::new))));
+				BoolExpr[] core = sat.getUnsatCore();
+				System.err.println("Spurious " + Arrays.toString(core));
+				s.add(c.mkNot(c.mkAnd(Arrays.stream(core).toArray(BoolExpr[]::new))));
 			}
-			if(Status.UNKNOWN == s.check())
-				throw new RuntimeException(s.getReasonUnknown());
 		}
 		return false;
+	}
+
+	private static boolean check(Solver s) {
+		switch(s.check()) {
+			case SATISFIABLE:
+				return true;
+			case UNSATISFIABLE:
+				return false;
+			default:
+				throw new RuntimeException(s.getReasonUnknown());
+		}
+	}
+
+	private static boolean check(Solver s, BoolExpr[] query) {
+		switch(s.check(query)) {
+			case SATISFIABLE:
+				return true;
+			case UNSATISFIABLE:
+				return false;
+			default:
+				throw new RuntimeException(s.getReasonUnknown());
+		}
 	}
 
 	private static class Options extends BaseOptions {

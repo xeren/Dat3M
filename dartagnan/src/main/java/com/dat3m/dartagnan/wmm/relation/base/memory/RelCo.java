@@ -132,15 +132,12 @@ public class RelCo extends Relation {
         assert isNew == isNewR;
         BoolExpr edge = mkEdge(c, x, y);
         if(isNew) {
-            BoolExpr edgeR = mkEdge(c, y, x);
-            o.add(c.mkOr(edge, edgeR));
-            o.add(c.mkOr(c.mkNot(edge), c.mkNot(edgeR)));
+            o.add(c.mkEq(edge, c.mkNot(mkEdge(c, y, x))));
             assert x instanceof com.dat3m.dartagnan.wmm.Event.Write;
             ((com.dat3m.dartagnan.wmm.Event.Write)x).location.forEach(z->{
                 if(z instanceof com.dat3m.dartagnan.wmm.Event.Init || x == z || y == z)
                     return;
                 o.add(c.mkOr(edge, c.mkNot(mkEdge(c, x, z)), c.mkNot(mkEdge(c, z, y))));
-                o.add(c.mkOr(edgeR, c.mkNot(mkEdge(c, y, z)), c.mkNot(mkEdge(c, z, x))));
             });
         }
         return edge;

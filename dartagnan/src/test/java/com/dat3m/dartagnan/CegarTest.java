@@ -47,7 +47,6 @@ public class CegarTest {
 		try {
 			Program program = new ProgramParser().parse(new File(path));
 			boolean sat = Cegar.test(wmm, target, program, settings);
-			System.err.println(program.getEvents().stream().filter(e->e.is("RMW")).count());
 			assertEquals(expected, sat == program.getAss().getInvert() ? Result.FAIL : Result.PASS);
 		} catch(IOException e) {
 			fail();

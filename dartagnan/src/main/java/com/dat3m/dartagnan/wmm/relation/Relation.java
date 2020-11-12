@@ -188,6 +188,7 @@ public abstract class Relation {
     public abstract Computation.Relation register(Computation computation);
 
     /**
+     * Requires the pair to be contained by the set of possible pairs for this relation.
      * Requires {@link #register} to be called sometime previously.
      * Does not require {@link #initialise}.
      * @param context
@@ -195,12 +196,12 @@ public abstract class Relation {
      * @param computation
      * Graph of executed events.
      * Keeps track of pairs already encoded to avoid repetition.
+     * @param encoding
+     * Receives additional constraints for the pair.
      * @param first
      * Domain part of the relevant pair.
      * @param second
-     * Pair contained by the set of possible pairs for this relation.
-     * @param encoding
-     * Receives additional constraints for this .
+     * Co-domain part of the relevant pair.
      * @return
      * Atomic proposition that the pair is a member of this relation.
      */

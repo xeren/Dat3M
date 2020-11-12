@@ -265,7 +265,7 @@ public class RelTrans extends UnaryRelation {
                 if(r.relation.get(r1).hasMax(p.x, p.z))
                     opt.add(r1.encode(c, r, o, p.x, p.z));
                 rel.maxByFirst(p.x).forEach(y->{
-                    if(p.z != y && rel.hasMax(y, p.z)) {
+                    if(p.x != y && p.z != y && rel.hasMax(y, p.z)) {
                         //mark x-y as encoded
                         if(rel.encode(p.x, y))
                             active.push(new Pair(p.x, y));
