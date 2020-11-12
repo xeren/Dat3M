@@ -231,6 +231,7 @@ public class Program {
     public Computation extract(Context context, Model model) {
 		List<Event> writes = getCache().getEvents(FilterBasic.get(EType.WRITE));
 		Computation result = new Computation(getCache().getEvents(FilterBasic.get(EType.READ)).stream()
+			.filter(r->model.getConstInterp(r.exec()).isTrue())
 			.collect(Collectors.toMap(Event::getCId, r->writes.stream()
 				.filter(w->Optional.ofNullable(model.getConstInterp(RelRf.of(context, w.getCId(), r.getCId()))).filter(Expr::isTrue).isPresent())
 				.findAny().orElseThrow(()->new IllegalStateException("unsatisfied read in model")).getCId())));

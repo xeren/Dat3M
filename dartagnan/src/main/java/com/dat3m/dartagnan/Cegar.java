@@ -113,7 +113,7 @@ public class Cegar {
 						prev = curr;
 					}
 				}
-				s.add(prev);
+				s.add(c.mkImplies(ld.exec(), prev));
 			}
 
 			while(check(s)) {
