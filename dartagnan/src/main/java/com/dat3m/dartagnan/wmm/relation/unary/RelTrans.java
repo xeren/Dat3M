@@ -240,7 +240,12 @@ public class RelTrans extends UnaryRelation {
         Computation.Relation c1 = r1.register(computation);
         Computation.Relation r = new Computation.Relation();
         computation.relation.put(this, r);
-        c1.addParent((x,y)->{r.addMax(x,y);if(x!=y)r.maxByFirst(y).forEach(z->r.addMax(x,z));});
+        c1.addParent((x,y)->{
+            r.addMax(x,y);
+            if(x!=y) {
+                r.maxByFirst(y).forEach(z->r.addMax(x,z));
+                r.maxBySecond(x).forEach(z->r.addMax(z,y));
+            }});
         return r;
     }
 
