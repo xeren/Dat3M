@@ -35,15 +35,14 @@ public class Cegar {
 		Settings settings = options.getSettings();
 		Wmm model = new ParserCat().parse(new File(options.getTargetModelFilePath()));
 		Program program = new ProgramParser().parse(new File(options.getProgramFilePath()));
-		boolean specifyForAll = (null != program.getArch() ? program.getAss() : program.createAssertion()).getInvert();
 		if(test(model, options.getTarget(), program, settings)) {
-			if(specifyForAll) {
+			if(program.getAss().getInvert()) {
 				System.out.println("Witnessed specified execution.");
 			} else {
 				System.out.println("Some feasible execution violates the assertion.");
 			}
 		} else {
-			if(specifyForAll) {
+			if(program.getAss().getInvert()) {
 				System.out.println("All feasible executions satisfy the assertion.");
 			} else {
 				System.out.println("Unable to witness specified execution.");
@@ -61,11 +60,10 @@ public class Cegar {
 
 		try(Context c = new Context()) {
 			Solver s = c.mkSolver();
-			s.add(program.encodeUINonDet(c));
 			s.add(program.encodeCF(c));
 			s.add(program.encodeFinalRegisterValues(c));
-
-			s.add((null != program.getAss() ? program.getAss() : program.createAssertion()).encode(c));
+			program.updateAssertion();
+			s.add(program.getAss().encode(c));
 
 			new AliasAnalysis().calculateLocationSets(program, settings.getAlias());
 

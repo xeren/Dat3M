@@ -32,8 +32,6 @@ public class FilterBasic extends FilterAbstract {
         switch(param) {
             case EType.ANY:
                 return true;
-            case EType.BRANCH:
-                return e instanceof com.dat3m.dartagnan.wmm.Event.Branch;
             case EType.FENCE:
                 return e instanceof com.dat3m.dartagnan.wmm.Event.Fence;
             case EType.INIT:
