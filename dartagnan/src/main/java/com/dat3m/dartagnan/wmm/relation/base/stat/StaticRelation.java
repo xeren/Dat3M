@@ -9,6 +9,7 @@ import com.microsoft.z3.Context;
 import java.util.List;
 
 import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
+import static com.dat3m.dartagnan.program.event.Event.exec;
 
 public abstract class StaticRelation extends Relation {
 
@@ -32,6 +33,6 @@ public abstract class StaticRelation extends Relation {
 
     @Override
     public BoolExpr encode(Context c, Computation r, List<BoolExpr> o, com.dat3m.dartagnan.wmm.Event x, com.dat3m.dartagnan.wmm.Event y) {
-        return c.mkTrue();
+        return c.mkAnd(exec(c, x.id), exec(c, y.id));
     }
 }

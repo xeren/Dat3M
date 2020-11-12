@@ -125,7 +125,6 @@ public abstract class Event implements Comparable<Event> {
     	if(successor != null) {
     		successor.unroll(bound, copy);
     	}
-	    return;
     }
 
 	public Event getCopy(){
@@ -185,7 +184,7 @@ public abstract class Event implements Comparable<Event> {
 		if(cId < 0){
 			throw new RuntimeException("Event ID is not set in " + this);
 		}
-		execVar = ctx.mkBoolConst("exec(" + repr() + ")");
+		execVar = exec(ctx, cId);
 		cfVar = ctx.mkBoolConst("cf(" + repr() + ")");
 	}
 
@@ -228,5 +227,9 @@ public abstract class Event implements Comparable<Event> {
 		// constants cannot be interpreted
 		Expr interpretation = model.getConstInterp(expression);
 		return null != interpretation ? interpretation : expression;
+	}
+
+	public static BoolExpr exec(Context context, int event) {
+		return context.mkBoolConst("exec " + event);
 	}
 }

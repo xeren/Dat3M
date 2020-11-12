@@ -14,6 +14,7 @@ import com.microsoft.z3.Context;
 import java.util.List;
 import java.util.ListIterator;
 
+import static com.dat3m.dartagnan.program.event.Event.exec;
 import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 
 public class RelFencerel extends Relation {
@@ -111,6 +112,6 @@ public class RelFencerel extends Relation {
 
     @Override
     public BoolExpr encode(Context c, Computation r, List<BoolExpr> o, com.dat3m.dartagnan.wmm.Event x, com.dat3m.dartagnan.wmm.Event y) {
-        return c.mkTrue();
+        return c.mkAnd(exec(c, x.id), exec(c, y.id));
     }
 }

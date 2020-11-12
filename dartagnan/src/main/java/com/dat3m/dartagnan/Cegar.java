@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import static com.dat3m.dartagnan.program.event.Event.exec;
 
 public class Cegar {
 
@@ -120,7 +121,7 @@ public class Cegar {
 			while(check(s)) {
 				Computation computation = program.extract(c, s.getModel());
 
-				Solver sat = c.mkSolver(c.mkTactic("sat"));
+				Solver sat = c.mkSolver();
 				sat.add(model.consistent(c, computation));
 
 				ArrayList<BoolExpr> special = new ArrayList<>();
@@ -129,10 +130,11 @@ public class Cegar {
 					special.add(RelRf.of(c, r.from.id, r.id));
 					r.from.location.forEach(w->special.add(RelLoc.of(c,r.id,w.id)));
 					computation.forEachRead(o->{
-						if(r.from.location == o.from.location && r != o)
+						if(r.from.location == o.from.location && o.id < r.id)
 							special.add(RelLoc.of(c, r.id, o.id));
 					});
 				});
+				computation.forEach(e->special.add(exec(c, e.id)));
 
 				if(check(sat, special.toArray(new BoolExpr[0]))) {
 					return true;
