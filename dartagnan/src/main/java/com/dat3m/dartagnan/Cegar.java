@@ -37,9 +37,9 @@ public class Cegar {
 		Program program = new ProgramParser().parse(new File(options.getProgramFilePath()));
 		if(test(model, options.getTarget(), program, settings)) {
 			if(program.getAss().getInvert()) {
-				System.out.println("Witnessed specified execution.");
-			} else {
 				System.out.println("Some feasible execution violates the assertion.");
+			} else {
+				System.out.println("Witnessed specified execution.");
 			}
 		} else {
 			if(program.getAss().getInvert()) {
