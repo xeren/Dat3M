@@ -1,13 +1,13 @@
 package com.dat3m.dartagnan.program.event;
 
-import com.dat3m.dartagnan.wmm.Computation;
-import com.microsoft.z3.Context;
-import com.microsoft.z3.IntExpr;
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
 import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.wmm.Computation;
+import com.microsoft.z3.Context;
+import com.microsoft.z3.Expr;
 import com.microsoft.z3.Model;
 
 public class Load extends MemEvent implements RegWriter {
@@ -37,7 +37,7 @@ public class Load extends MemEvent implements RegWriter {
 	}
 
 	@Override
-	public IntExpr getResultRegisterExpr(){
+	public Expr getResultRegisterExpr(){
 		return memValueExpr;
 	}
 

@@ -15,8 +15,6 @@ import com.dat3m.dartagnan.asserts.AbstractAssert;
 import com.dat3m.dartagnan.asserts.AssertCompositeOr;
 import com.dat3m.dartagnan.asserts.AssertInline;
 import com.dat3m.dartagnan.asserts.AssertTrue;
-import com.dat3m.dartagnan.expression.ExprInterface;
-import com.dat3m.dartagnan.expression.INonDet;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Local;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
@@ -129,19 +127,21 @@ public class Program {
 		return events;
 	}
 
-	public AbstractAssert createAssertion() {
-		AbstractAssert ass = new AssertTrue();
+	public void updateAssertion() {
+		if(ass != null) {
+			return;
+		}
 		List<Event> assertions = new ArrayList<>();
 		for(Thread t : threads){
 			assertions.addAll(t.getCache().getEvents(FilterBasic.get(EType.ASSERTION)));
 		}
-    	if(!assertions.isEmpty()) {
+		ass = new AssertTrue();
+		if(!assertions.isEmpty()) {
     		ass = new AssertInline((Local)assertions.get(0));
     		for(int i = 1; i < assertions.size(); i++) {
     			ass = new AssertCompositeOr(ass, new AssertInline((Local)assertions.get(i)));
     		}
     	}
-		return ass;
 	}
 
     // Unrolling
@@ -216,21 +216,6 @@ public class Program {
         return enc;
     }
     
-    public BoolExpr encodeUINonDet(Context ctx) {
-    	BoolExpr enc = ctx.mkTrue();
-        for(Event e : getCache().getEvents(FilterBasic.get(EType.LOCAL))){
-        	if(!(e instanceof Local)) {
-        		continue;
-        	}
-        	ExprInterface expr = ((Local)e).getExpr();
-			if(expr instanceof INonDet) {
-	        	enc = ctx.mkAnd(enc, ctx.mkGe(((INonDet)expr).toZ3Int(e, ctx), ctx.mkInt(((INonDet)expr).getMin())));
-	        	enc = ctx.mkAnd(enc, ctx.mkLe(((INonDet)expr).toZ3Int(e, ctx), ctx.mkInt(((INonDet)expr).getMax())));
-			}
-        }
-        return enc;  	
-    }
-
     public BoolExpr getRf(Context ctx, Model m) {
     	BoolExpr enc = ctx.mkTrue();
         for(Event r : getCache().getEvents(FilterBasic.get(EType.READ))){
