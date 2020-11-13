@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan;
 
-import static com.dat3m.dartagnan.analysis.Base.runAnalysis;
-import static com.dat3m.dartagnan.analysis.Base.runAnalysisIncrementalSolver;
+import static com.dat3m.dartagnan.analysis.Base.*;
 import static com.dat3m.dartagnan.analysis.DataRaces.checkForRaces;
 import static com.dat3m.dartagnan.utils.Result.FAIL;
 import static com.microsoft.z3.enumerations.Z3_ast_print_mode.Z3_PRINT_SMTLIB_FULL;
@@ -93,9 +92,11 @@ public class Dartagnan {
 			case TERMINATION:
 				return Termination.runAnalysis(s, ctx, p, mcm, target, settings);
 			case REACHABILITY:
-				return options.useISolver() ? 
-						runAnalysisIncrementalSolver(s, ctx, p, mcm, target, settings) : 
-						runAnalysis(s, ctx, p, mcm, target, settings); 
+				return options.useISolver()
+					? runAnalysisIncrementalSolver(s, ctx, p, mcm, target, settings)
+					: options.useCore()
+						? runRefining(s, ctx, p, mcm, target, settings)
+						: runAnalysis(s, ctx, p, mcm, target, settings);
 			default:
 				throw new RuntimeException("Unrecognized analysis");
 		}

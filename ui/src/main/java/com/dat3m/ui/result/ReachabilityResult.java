@@ -1,6 +1,7 @@
 package com.dat3m.ui.result;
 
 import static com.dat3m.dartagnan.analysis.Base.runAnalysisIncrementalSolver;
+import static com.dat3m.dartagnan.analysis.Base.runRefining;
 import static com.dat3m.dartagnan.utils.Result.FAIL;
 
 import com.dat3m.dartagnan.Dartagnan;
@@ -42,7 +43,9 @@ public class ReachabilityResult implements Dat3mResult {
         if(validate()){
             Context ctx = new Context();
             Solver solver = ctx.mkSolver();
-            Result result = runAnalysisIncrementalSolver(solver, ctx, program, wmm, options.getTarget(), options.getSettings());
+            Result result = options.getUseCore()
+                ? runRefining(solver, ctx, program, wmm, options.getTarget(), options.getSettings())
+                : runAnalysisIncrementalSolver(solver, ctx, program, wmm, options.getTarget(), options.getSettings());
             buildVerdict(result);
             if(options.getSettings().getDrawGraph() && Dartagnan.canDrawGraph(program.getAss(), result == FAIL)){
                 graph = new Graph(solver.getModel(), ctx, program, options.getSettings().getGraphRelations());

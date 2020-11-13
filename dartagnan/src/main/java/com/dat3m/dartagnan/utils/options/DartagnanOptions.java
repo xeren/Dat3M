@@ -18,6 +18,7 @@ public class DartagnanOptions extends BaseOptions {
     protected Set<String> supportedFormats = ImmutableSet.copyOf(Arrays.asList("litmus", "bpl"));
     protected String overApproxFilePath;
     protected boolean iSolver;
+    protected boolean rCore;
     protected String witness;
     private Set<AnalysisTypes> analyses = ImmutableSet.copyOf(Arrays.asList(REACHABILITY, RACES, TERMINATION));
     private AnalysisTypes analysis = REACHABILITY; 
@@ -31,6 +32,9 @@ public class DartagnanOptions extends BaseOptions {
 
         addOption(new Option("incrementalSolver", false,
         		"Use an incremental solver"));
+
+        addOption(new Option("coreRefinement", false,
+			"Iterate without target model, use extract minimal subset from spurious examples"));
         
         addOption(new Option("w", "witness", true,
                 "Creates a violation witness. The argument is the original *.c file from which the Boogie code was generated."));
@@ -46,6 +50,7 @@ public class DartagnanOptions extends BaseOptions {
         }
         CommandLine cmd = new DefaultParser().parse(this, args);
         iSolver = cmd.hasOption("incrementalSolver");
+        rCore = cmd.hasOption("coreRefinement");
         if(cmd.hasOption("analysis")) {
         	AnalysisTypes selectedAnalysis = fromString(cmd.getOptionValue("analysis"));
         	if(!analyses.contains(selectedAnalysis)) {
@@ -61,6 +66,10 @@ public class DartagnanOptions extends BaseOptions {
     public boolean useISolver(){
         return iSolver;
     }
+
+    public boolean useCore() {
+    	return rCore;
+	}
 
     public AnalysisTypes getAnalysis(){
 		return analysis;

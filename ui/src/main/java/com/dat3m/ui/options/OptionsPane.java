@@ -44,6 +44,7 @@ public class OptionsPane extends JPanel implements ActionListener {
     private final Selector<Arch> targetPane;
 
     private final BoundField boundField;
+    private final JCheckBox useCore;
 
     private final JButton testButton;
     private final JButton clearButton;
@@ -71,6 +72,7 @@ public class OptionsPane extends JPanel implements ActionListener {
         archManager = new ArchManager(sourcePane, targetPane);
 
         boundField = new BoundField();
+        useCore = new JCheckBox("Refinement");
 
         testButton = new TestButton();
         clearButton = new ClearButton();
@@ -139,7 +141,7 @@ public class OptionsPane extends JPanel implements ActionListener {
         Task task = (Task)taskPane.getSelectedItem();
         Arch source = (Arch)sourcePane.getSelectedItem();
         Arch target = (Arch)targetPane.getSelectedItem();
-        return new UiOptions(task, source, target, settings);
+        return new UiOptions(task, source, target, settings, useCore.isEnabled() && useCore.isSelected());
     }
 
     private int getIconHeight(){
@@ -168,7 +170,7 @@ public class OptionsPane extends JPanel implements ActionListener {
         graphPane.setLeftComponent(graphButton);
         graphPane.setRightComponent(relsButton);
         graphPane.setDividerSize(0);
-        JComponent[] panes = { taskPane, archPane, modePane, aliasPane, boundPane, testButton, clearButton, graphPane, scrollConsole };
+        JComponent[] panes = { taskPane, archPane, modePane, aliasPane, boundPane, useCore, testButton, clearButton, graphPane, scrollConsole };
         Iterator<JComponent> it = Arrays.asList(panes).iterator();
         JComponent current = iconPane;
         current.setBorder(emptyBorder);

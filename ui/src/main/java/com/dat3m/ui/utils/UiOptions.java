@@ -11,13 +11,15 @@ public class UiOptions {
 	private Arch source;
 	private Arch target;
 	private final Settings settings;
+	private final boolean useCore;
 
 
-	public UiOptions(Task task, Arch source, Arch target, Settings settings) {
+	public UiOptions(Task task, Arch source, Arch target, Settings settings, boolean useCore) {
 		this.task = task;
 		this.source = source;
 		this.target = target;
 		this.settings = settings;
+		this.useCore = useCore;
 	}
 	
 	public Task getTask() {
@@ -34,6 +36,10 @@ public class UiOptions {
 
 	public Settings getSettings(){
 		return settings;
+	}
+
+	public boolean getUseCore() {
+		return useCore;
 	}
 
 	public boolean validate(){
