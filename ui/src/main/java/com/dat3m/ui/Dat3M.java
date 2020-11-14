@@ -19,6 +19,8 @@ import com.dat3m.ui.result.PortabilityResult;
 import com.dat3m.ui.result.ReachabilityResult;
 import com.dat3m.ui.options.utils.Task;
 import javax.swing.*;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Document;
 
 import org.antlr.v4.runtime.InputMismatchException;
 import org.antlr.v4.runtime.Token;
@@ -26,6 +28,9 @@ import org.antlr.v4.runtime.Token;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 
 import static com.dat3m.ui.utils.Utils.showError;
 import static javax.swing.BorderFactory.createEmptyBorder;
@@ -95,13 +100,41 @@ public class Dat3M extends JFrame implements ActionListener {
 	public void actionPerformed(ActionEvent event) {
 	    String command = event.getActionCommand();
 	    if(ControlCode.TEST.actionCommand().equals(command)){
-            runTest();
-            if(testResult != null){
-                optionsPane.getConsolePane().setText(testResult.getVerdict());
-                if(testResult.getGraph() != null && optionsPane.getGraphButton().isSelected() && optionsPane.getGraphButton().isEnabled()) {
-					GraphUtils.showGraph(testResult.getGraph());
-                }
-            }
+			PrintStream s = System.out;
+			try(PrintStream p = new PrintStream(new OutputStream() {
+				@Override
+				public void write(int i) {
+					Document document = optionsPane.getConsolePane().getDocument();
+					try {
+						document.insertString(document.getLength(), "" + (char)i, null);
+					} catch(BadLocationException e) {
+						throw new AssertionError();
+					}
+				}
+				@Override
+				public void write(byte[] b) {
+					Document document = optionsPane.getConsolePane().getDocument();
+					try {
+						document.insertString(document.getLength(), new String(b), null);
+					} catch(BadLocationException e) {
+						throw new AssertionError();
+					}
+				}
+				@Override
+				public void close() throws IOException {
+					System.setOut(s);
+					super.close();
+				}
+			})) {
+				System.setOut(p);
+				runTest();
+				if(testResult != null) {
+					p.println(testResult.getVerdict());
+					if(testResult.getGraph() != null && optionsPane.getGraphButton().isSelected() && optionsPane.getGraphButton().isEnabled()) {
+						GraphUtils.showGraph(testResult.getGraph());
+					}
+				}
+			}
         }
 	}
 

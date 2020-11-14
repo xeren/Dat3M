@@ -206,6 +206,7 @@ public class Base {
 
 			BoolExpr[] core = Arrays.stream(s3.getUnsatCore()).map(track::get).toArray(BoolExpr[]::new);
 			BoolExpr refinement = ctx.mkNot(ctx.mkAnd(core));
+			System.out.println(Arrays.toString(core));
 			s1.add(refinement);
 			s2.add(refinement);
 		}
