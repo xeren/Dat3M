@@ -132,8 +132,8 @@ public class Base {
 		s2.add(encodeFinalRegisterValues);
 
 		BoolExpr encodeWmm = wmm.encode(program, ctx, settings);
-		s1.add(encodeWmm);
-		s2.add(encodeWmm);
+		BoolExpr encodeEmptyWmm = new Wmm().encode(program, ctx, settings);
+		s1.add(encodeEmptyWmm);
 
 		BoolExpr encodeConsistency = wmm.consistent(program, ctx);
 
@@ -162,6 +162,7 @@ public class Base {
 				.filter(MemEvent.class::isInstance)
 				.map(MemEvent.class::cast)
 				.collect(Collectors.toList());
+			Stream.concat(loads.stream(), stores.stream()).map(MemEvent::getMemAddressExpr).filter(e->null==m.getConstInterp(e)).forEach(System.err::println);
 			Map<Expr,List<MemEvent>> loc = Stream.concat(loads.stream(), stores.stream())
 				.collect(Collectors.groupingBy(e->m.getConstInterp(e.getMemAddressExpr())));
 			Map<MemEvent,MemEvent> rf = loads.stream()
@@ -177,25 +178,27 @@ public class Base {
 			s3.add(encodeConsistency);
 
 			HashMap<BoolExpr,BoolExpr> track = new HashMap<>();
-			int trackCount = 0;
 			for(Event e: executed.get(true)) {
-				track.put(ctx.mkBoolConst("track " + trackCount++), e.exec());
+				track.put(e.exec(), e.exec());
 			}
 			//NOTE sometimes all events are executed
 			for(Event e: executed.getOrDefault(false, Collections.emptyList())) {
-				track.put(ctx.mkBoolConst("track " + trackCount++), ctx.mkNot(e.exec()));
+				BoolExpr notExec = ctx.mkNot(e.exec());
+				track.put(notExec, notExec);
 			}
 			for(List<MemEvent> l: loc.values()) {
 				for(int i = 0; i < l.size(); i++) {
 					MemEvent st2 = l.get(i);
 					for(int j = 0; j < i; j++) {
 						MemEvent st1 = l.get(j);
-						track.put(ctx.mkBoolConst("track " + trackCount++), ctx.mkEq(st1.getMemAddressExpr(), st2.getMemAddressExpr()));
+						track.put(edge("loc", st1, st2, ctx), ctx.mkEq(st1.getMemAddressExpr(), st2.getMemAddressExpr()));
+						track.put(edge("loc", st2, st1, ctx), ctx.mkEq(st1.getMemAddressExpr(), st2.getMemAddressExpr()));
 					}
 				}
 			}
 			for(MemEvent r: loads) {
-				track.put(ctx.mkBoolConst("track " + trackCount++), edge("rf", rf.get(r), r, ctx));
+				BoolExpr literal = edge("rf", rf.get(r), r, ctx);
+				track.put(literal, literal);
 			}
 			track.forEach((k,v)->s3.assertAndTrack(v,k));
 
@@ -204,8 +207,8 @@ public class Base {
 				return s1.check() != SATISFIABLE ? UNKNOWN : program.getAss().getInvert() ? PASS : FAIL;
 			}
 
-			BoolExpr[] core = Arrays.stream(s3.getUnsatCore()).map(track::get).toArray(BoolExpr[]::new);
-			BoolExpr refinement = ctx.mkNot(ctx.mkAnd(core));
+			BoolExpr[] core = s3.getUnsatCore();
+			BoolExpr refinement = ctx.mkNot(ctx.mkAnd(Arrays.stream(s3.getUnsatCore()).map(track::get).toArray(BoolExpr[]::new)));
 			System.out.println(Arrays.toString(core));
 			s1.add(refinement);
 			s2.add(refinement);

@@ -42,6 +42,7 @@ public class Dat3M extends JFrame implements ActionListener {
 	private final EditorsPane editorsPane = new EditorsPane();
 	
 	private Dat3mResult testResult;
+	private Thread currentThread;
 
 	private Dat3M() {
 		getDefaults().put("SplitPane.border", createEmptyBorder());
@@ -90,51 +91,58 @@ public class Dat3M extends JFrame implements ActionListener {
 	}
 
 	public static void main(String[] args) {
-		EventQueue.invokeLater(() -> {
-			Dat3M app = new Dat3M();
-			app.setVisible(true);
-		});
+		EventQueue.invokeLater(()->new Dat3M().setVisible(true));
 	}
 
 	@Override
 	public void actionPerformed(ActionEvent event) {
 	    String command = event.getActionCommand();
 	    if(ControlCode.TEST.actionCommand().equals(command)){
-			PrintStream s = System.out;
-			try(PrintStream p = new PrintStream(new OutputStream() {
-				@Override
-				public void write(int i) {
-					Document document = optionsPane.getConsolePane().getDocument();
-					try {
-						document.insertString(document.getLength(), "" + (char)i, null);
-					} catch(BadLocationException e) {
-						throw new AssertionError();
+	    	if(null != currentThread)
+	    		currentThread.interrupt();
+			currentThread = new Thread(()->{
+				PrintStream s = System.out;
+				long start = System.nanoTime();
+				try(PrintStream p = new PrintStream(new OutputStream() {
+					@Override
+					public void write(int i) {
+						Document document = optionsPane.getConsolePane().getDocument();
+						try {
+							document.insertString(document.getLength(), "" + (char) i, null);
+						} catch(BadLocationException e) {
+							throw new AssertionError();
+						}
+					}
+
+					@Override
+					public void write(byte[] b) {
+						Document document = optionsPane.getConsolePane().getDocument();
+						try {
+							document.insertString(document.getLength(), new String(b), null);
+						} catch(BadLocationException e) {
+							throw new AssertionError();
+						}
+						optionsPane.repaint();
+					}
+
+					@Override
+					public void close() throws IOException {
+						System.setOut(s);
+						super.close();
+					}
+				})) {
+					System.setOut(p);
+					runTest();
+					if(testResult != null) {
+						p.println(testResult.getVerdict());
+						System.out.println(System.nanoTime() - start);
+						if(testResult.getGraph() != null && optionsPane.getGraphButton().isSelected() && optionsPane.getGraphButton().isEnabled()) {
+							GraphUtils.showGraph(testResult.getGraph());
+						}
 					}
 				}
-				@Override
-				public void write(byte[] b) {
-					Document document = optionsPane.getConsolePane().getDocument();
-					try {
-						document.insertString(document.getLength(), new String(b), null);
-					} catch(BadLocationException e) {
-						throw new AssertionError();
-					}
-				}
-				@Override
-				public void close() throws IOException {
-					System.setOut(s);
-					super.close();
-				}
-			})) {
-				System.setOut(p);
-				runTest();
-				if(testResult != null) {
-					p.println(testResult.getVerdict());
-					if(testResult.getGraph() != null && optionsPane.getGraphButton().isSelected() && optionsPane.getGraphButton().isEnabled()) {
-						GraphUtils.showGraph(testResult.getGraph());
-					}
-				}
-			}
+			});
+			currentThread.start();
         }
 	}
 
