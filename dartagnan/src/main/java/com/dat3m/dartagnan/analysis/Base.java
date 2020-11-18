@@ -14,6 +14,9 @@ import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.Wmm;
+import com.dat3m.dartagnan.wmm.relation.base.local.RelAddrDirect;
+import com.dat3m.dartagnan.wmm.relation.base.local.RelIdd;
+import com.dat3m.dartagnan.wmm.relation.base.memory.RelRf;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.microsoft.z3.*;
 
@@ -132,7 +135,16 @@ public class Base {
 		s2.add(encodeFinalRegisterValues);
 
 		BoolExpr encodeWmm = wmm.encode(program, ctx, settings);
-		BoolExpr encodeEmptyWmm = new Wmm().encode(program, ctx, settings);
+		RelRf relRf = new RelRf();
+		relRf.initialise(program, ctx, settings);
+		relRf.addEncodeTupleSet(relRf.getMaxTupleSet());
+		RelIdd relIdd = new RelIdd();
+		relIdd.initialise(program, ctx, settings);
+		relIdd.addEncodeTupleSet(relIdd.getMaxTupleSet());
+		RelAddrDirect relAddr = new RelAddrDirect();
+		relAddr.initialise(program, ctx, settings);
+		relAddr.addEncodeTupleSet(relAddr.getMaxTupleSet());
+		BoolExpr encodeEmptyWmm = ctx.mkAnd(relRf.encode(), relIdd.encode(), relAddr.encode());
 		s1.add(encodeEmptyWmm);
 
 		BoolExpr encodeConsistency = wmm.consistent(program, ctx);
