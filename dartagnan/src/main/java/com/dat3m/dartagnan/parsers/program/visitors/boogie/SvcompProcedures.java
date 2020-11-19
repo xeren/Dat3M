@@ -80,10 +80,9 @@ public class SvcompProcedures {
 
 	//TODO: seems to be obsolete after SVCOMP 2020
 	private static void __VERIFIER_assume(VisitorBoogie visitor, Call_cmdContext ctx) {
-       	Label label = visitor.programBuilder.getOrCreateLabel("END_OF_T" + visitor.threadCount);
        	ExprInterface c = (ExprInterface)ctx.call_params().exprs().accept(visitor);
 		if(c != null) {
-			Assume child = new Assume(c, label);
+			Assume child = new Assume(c);
 			child.setCLine(visitor.currentLine);
 			visitor.programBuilder.addChild(visitor.threadCount, child);	
 		}

@@ -129,9 +129,8 @@ public class PthreadsProcedures {
 		}
 		Location loc = visitor.programBuilder.getOrCreateLocation(visitor.pool.getPtrFromReg(callReg) + "_active", -1);
 		Register reg = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, null, -1);
-       	Label label = visitor.programBuilder.getOrCreateLabel("END_OF_T" + visitor.threadCount);
        	visitor.programBuilder.addChild(visitor.threadCount, new AtomicLoad(reg, loc.getAddress(), SC));
-       	visitor.programBuilder.addChild(visitor.threadCount, new Assume(new Atom(reg, EQ, new IConst(0, -1)), label));
+       	visitor.programBuilder.addChild(visitor.threadCount, new Assume(new Atom(reg, EQ, new IConst(0, -1))));
 	}
 
 	private static void mutexInit(VisitorBoogie visitor, Call_cmdContext ctx) {

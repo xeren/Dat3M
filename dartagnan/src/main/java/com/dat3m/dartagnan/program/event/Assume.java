@@ -1,41 +1,45 @@
 package com.dat3m.dartagnan.program.event;
 
-import static com.dat3m.dartagnan.expression.op.BOpUn.NOT;
-
-import java.util.LinkedList;
-
-import com.dat3m.dartagnan.expression.BExprUn;
 import com.dat3m.dartagnan.expression.ExprInterface;
+import com.dat3m.dartagnan.program.Register;
+import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.utils.EType;
-import com.dat3m.dartagnan.wmm.utils.Arch;
+import com.google.common.collect.ImmutableSet;
+import com.microsoft.z3.BoolExpr;
+import com.microsoft.z3.Context;
 
-public class Assume extends Event {
+public class Assume extends Event implements RegReaderData {
 
-	private ExprInterface exp;
-	private Label label;
-	
-	public Assume(ExprInterface e, Label l) {
-		this.exp = e;
-		this.label = l;
-        addFilters(EType.ANY);
+	private final ExprInterface condition;
+	private final ImmutableSet<Register> registers;
+
+	public Assume(ExprInterface e) {
+		condition = e;
+		registers = e.getRegs();
+        addFilters(EType.ANY, EType.REG_READER, EType.JUMP);
 	}
 
-	protected Assume(Assume other){
+	protected Assume(Assume other) {
 		super(other);
-		this.exp = other.exp;
-		this.label = other.label;
+		condition = other.condition;
+		registers = other.registers;
+	}
+
+	@Override
+	public ImmutableSet<Register> getDataRegs() {
+		return registers;
 	}
 
 	@Override
     public String toString() {
-        return "assume(" + exp + ")";
+        return "assume(" + condition + ")";
     }
 
 	// Unrolling
 	// -----------------------------------------------------------------------------------------------------------------
 
 	@Override
-	public Assume getCopy(){
+	public Assume getCopy() {
 		return new Assume(this);
 	}
 
@@ -43,9 +47,7 @@ public class Assume extends Event {
     // -----------------------------------------------------------------------------------------------------------------
 
 	@Override
-    public int compile(Arch target, int nextId, Event predecessor) {
-        LinkedList<Event> events = new LinkedList<>();
-        events.add(new CondJump(new BExprUn(NOT, exp), label));
-		return compileSequence(target, nextId, predecessor, events);
+	protected BoolExpr encodeExec(Context ctx) {
+		return ctx.mkAnd(super.encodeExec(ctx), ctx.mkEq(cfVar, condition.toZ3Bool(this, ctx)));
 	}
 }

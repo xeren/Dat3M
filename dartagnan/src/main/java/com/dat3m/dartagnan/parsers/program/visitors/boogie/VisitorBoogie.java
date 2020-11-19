@@ -281,9 +281,8 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
             	// Used to allow execution of threads after they have been created (pthread_create)
         		Location loc = programBuilder.getOrCreateLocation(pool.getPtrFromInt(threadCount) + "_active", -1);
         		Register reg = programBuilder.getOrCreateRegister(threadCount, null, -1);
-               	Label label = programBuilder.getOrCreateLabel("END_OF_T" + threadCount);
         		programBuilder.addChild(threadCount, new AtomicLoad(reg, loc.getAddress(), SC));
-        		programBuilder.addChild(threadCount, new Assume(new Atom(reg, EQ, new IConst(1, -1)), label));
+        		programBuilder.addChild(threadCount, new Assume(new Atom(reg, EQ, new IConst(1, -1))));
             }
     	}
 
@@ -325,14 +324,10 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
         
         currentScope = currentScope.getParent();
         
-    	if(create) {
-         	if(threadCount != 1) {
-         		// Used to mark the end of the execution of a thread (used by pthread_join)
-        		Location loc = programBuilder.getOrCreateLocation(pool.getPtrFromInt(threadCount) + "_active", -1);
-        		programBuilder.addChild(threadCount, new AtomicStore(loc.getAddress(), new IConst(0, -1), SC));
-         	}
-        	label = programBuilder.getOrCreateLabel("END_OF_T" + threadCount);
-         	programBuilder.addChild(threadCount, label);
+    	if(create && threadCount != 1) {
+       		// Used to mark the end of the execution of a thread (used by pthread_join)
+       		Location loc = programBuilder.getOrCreateLocation(pool.getPtrFromInt(threadCount) + "_active", -1);
+       		programBuilder.addChild(threadCount, new AtomicStore(loc.getAddress(), new IConst(0, -1), SC));
     	}
     }
     
@@ -369,8 +364,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 			initMode = true;;
 		}
 		if(name.equals("abort")) {
-	       	Label label = programBuilder.getOrCreateLabel("END_OF_T" + threadCount);
-			programBuilder.addChild(threadCount, new CondJump(new BConst(true), label));
+			programBuilder.addChild(threadCount, new Assume(new BConst(false)));
 	       	return null;
 		}
 		if(name.equals("reach_error")) {
