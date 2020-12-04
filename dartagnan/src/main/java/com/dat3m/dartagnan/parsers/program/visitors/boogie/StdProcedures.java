@@ -112,17 +112,17 @@ public class StdProcedures {
 		}
 		List<IConst> values = Collections.nCopies(size, new IConst(0, -1));
 		String ptr = ctx.call_params().Ident(0).getText();
-		Register start = visitor.programBuilder.getRegister(visitor.threadCount, visitor.currentScope.getID() + ":" + ptr);
+		Register start = visitor.thread.register(visitor.currentScope.getID() + ":" + ptr);
 		// Several threads can use the same pointer name but when using addDeclarationArray, 
 		// the name should be unique, thus we add the process identifier.
 		visitor.programBuilder.addDeclarationArray(visitor.currentScope.getID() + ":" + ptr, values, start.getPrecision());
 		Address adds = visitor.programBuilder.getPointer(visitor.currentScope.getID() + ":" + ptr);
-		visitor.programBuilder.addChild(visitor.threadCount, new Local(start, adds));
+		visitor.thread.add(new Local(start, adds));
 		visitor.allocationRegs.add(start);
 	}
 	
 	private static void __assert(VisitorBoogie visitor, Call_cmdContext ctx) {
-    	Register ass = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, "assert_" + visitor.assertionIndex, -1);
+    	Register ass = visitor.thread.register("assert_" + visitor.assertionIndex, -1);
     	visitor.assertionIndex++;
     	ExprInterface expr = (ExprInterface)ctx.call_params().exprs().accept(visitor);
     	if(expr instanceof IConst && ((IConst)expr).getValue() == 1) {
@@ -130,7 +130,7 @@ public class StdProcedures {
     	}
     	Local event = new Local(ass, expr);
 		event.addFilters(EType.ASSERTION);
-		visitor.programBuilder.addChild(visitor.threadCount, event);
+		visitor.thread.add(event);
 	}
 
 }

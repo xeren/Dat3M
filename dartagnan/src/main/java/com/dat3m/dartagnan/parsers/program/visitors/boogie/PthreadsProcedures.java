@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan.parsers.program.visitors.boogie;
 
 import static com.dat3m.dartagnan.expression.op.COpBin.EQ;
-import static com.dat3m.dartagnan.expression.op.COpBin.NEQ;
 import static com.dat3m.dartagnan.program.atomic.utils.Mo.SC;
 
 import java.util.ArrayList;
@@ -20,9 +19,7 @@ import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.atomic.event.AtomicLoad;
 import com.dat3m.dartagnan.program.atomic.event.AtomicStore;
 import com.dat3m.dartagnan.program.event.Assume;
-import com.dat3m.dartagnan.program.event.CondJump;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.Label;
 import com.dat3m.dartagnan.program.event.Load;
 import com.dat3m.dartagnan.program.event.Store;
 import com.dat3m.dartagnan.program.memory.Location;
@@ -109,7 +106,7 @@ public class PthreadsProcedures {
 		visitor.threadCallingValues.put(visitor.currentThread, new ArrayList<>());
 		String namePtr = ctx.call_params().exprs().expr().get(0).getText();
 		// This names are global so we don't use currentScope.getID(), but per thread.
-		Register threadPtr = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, namePtr, -1);
+		Register threadPtr = visitor.thread.register(namePtr, -1);
 		String threadName = ctx.call_params().exprs().expr().get(2).getText();
 		ExprInterface callingValue = (ExprInterface)ctx.call_params().exprs().expr().get(3).accept(visitor);
 		visitor.threadCallingValues.get(visitor.currentThread).add(callingValue);
@@ -117,20 +114,20 @@ public class PthreadsProcedures {
 		Location loc = visitor.programBuilder.getOrCreateLocation(threadPtr + "_active", -1);
 		AtomicStore child = new AtomicStore(loc.getAddress(), new IConst(1, -1), SC);
 		child.setCLine(visitor.currentLine);
-		visitor.programBuilder.addChild(visitor.threadCount, child);
+		visitor.thread.add(child);
 	}
 	
 	private static void pthread_join(VisitorBoogie visitor, Call_cmdContext ctx) {		
 		String namePtr = ctx.call_params().exprs().expr().get(0).getText();
 		// This names are global so we don't use currentScope.getID(), but per thread.
-		Register callReg = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, namePtr, -1);
+		Register callReg = visitor.thread.register(namePtr, -1);
 		if(visitor.pool.getPtrFromReg(callReg) == null) {
         	throw new UnsupportedOperationException("pthread_join cannot be handled");
 		}
 		Location loc = visitor.programBuilder.getOrCreateLocation(visitor.pool.getPtrFromReg(callReg) + "_active", -1);
-		Register reg = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, null, -1);
-       	visitor.programBuilder.addChild(visitor.threadCount, new AtomicLoad(reg, loc.getAddress(), SC));
-       	visitor.programBuilder.addChild(visitor.threadCount, new Assume(new Atom(reg, EQ, new IConst(0, -1))));
+		Register reg = visitor.thread.register(null, -1);
+       	visitor.thread.add(new AtomicLoad(reg, loc.getAddress(), SC));
+       	visitor.thread.add(new Assume(new Atom(reg, EQ, new IConst(0, -1))));
 	}
 
 	private static void mutexInit(VisitorBoogie visitor, Call_cmdContext ctx) {
@@ -139,38 +136,36 @@ public class PthreadsProcedures {
 		IExpr lockAddress = (IExpr)lock.accept(visitor);
 		IExpr val = (IExpr)value.accept(visitor);
 		if(lockAddress != null) {
-			visitor.programBuilder.addChild(visitor.threadCount, new Store(lockAddress, val, SC));	
+			visitor.thread.add(new Store(lockAddress, val, SC));
 		}
 	}
 	
 	private static void mutexLock(VisitorBoogie visitor, Call_cmdContext ctx) {
-        Register register = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, null, -1);
+        Register register = visitor.thread.register(null, -1);
 		IExpr lockAddress = (IExpr)ctx.call_params().exprs().accept(visitor);
-       	Label label = visitor.programBuilder.getOrCreateLabel("END_OF_T" + visitor.threadCount);
 		if(lockAddress != null) {
 	        LinkedList<Event> events = new LinkedList<>();
 	        events.add(new Load(register, lockAddress, SC));
-	        events.add(new CondJump(new Atom(register, NEQ, new IConst(0, -1)),label));
+	        events.add(new Assume(new Atom(register, EQ, new IConst(0, -1))));
 	        events.add(new Store(lockAddress, new IConst(1, -1), SC));
 	        for(Event e : events) {
 	        	e.addFilters(EType.LOCK, EType.RMW);
-	        	visitor.programBuilder.addChild(visitor.threadCount, e);
+	        	visitor.thread.add(e);
 	        }
 		}
 	}
 	
 	private static void mutexUnlock(VisitorBoogie visitor, Call_cmdContext ctx) {
-        Register register = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, null, -1);
+        Register register = visitor.thread.register(null, -1);
 		IExpr lockAddress = (IExpr)ctx.call_params().exprs().accept(visitor);
-       	Label label = visitor.programBuilder.getOrCreateLabel("END_OF_T" + visitor.threadCount);
 		if(lockAddress != null) {
 			LinkedList<Event> events = new LinkedList<>();
 	        events.add(new Load(register, lockAddress, SC));
-	        events.add(new CondJump(new Atom(register, NEQ, new IConst(1, -1)),label));
+	        events.add(new Assume(new Atom(register, EQ, new IConst(1, -1))));
 	        events.add(new Store(lockAddress, new IConst(0, -1), SC));
 	        for(Event e : events) {
 	        	e.addFilters(EType.LOCK, EType.RMW);
-	        	visitor.programBuilder.addChild(visitor.threadCount, e);
+	        	visitor.thread.add(e);
 	        }
 		}
 	}

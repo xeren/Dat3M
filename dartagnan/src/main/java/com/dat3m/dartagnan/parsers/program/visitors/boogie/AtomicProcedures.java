@@ -62,7 +62,7 @@ public class AtomicProcedures {
 		ExprInterface value = (ExprInterface)ctx.call_params().exprs().expr().get(1).accept(visitor);
 		Store child = new Store(add, value, null);
 		child.setCLine(visitor.currentLine);
-		visitor.programBuilder.addChild(visitor.threadCount, child);
+		visitor.thread.add(child);
 	}
 
 	private static void atomicStore(VisitorBoogie visitor, Call_cmdContext ctx) {
@@ -74,11 +74,11 @@ public class AtomicProcedures {
 		}
 		AtomicStore child = new AtomicStore(add, value, mo);
 		child.setCLine(visitor.currentLine);
-		visitor.programBuilder.addChild(visitor.threadCount, child);
+		visitor.thread.add(child);
 	}
 
 	private static void atomicLoad(VisitorBoogie visitor, Call_cmdContext ctx) {
-		Register reg = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, visitor.currentScope.getID() + ":" + ctx.call_params().Ident(0).getText(), -1);
+		Register reg = visitor.thread.register(visitor.currentScope.getID() + ":" + ctx.call_params().Ident(0).getText(), -1);
 		IExpr add = (IExpr)ctx.call_params().exprs().expr().get(0).accept(visitor);
 		String mo = null;
 		if(ctx.call_params().exprs().expr().size() > 1) {
@@ -86,11 +86,11 @@ public class AtomicProcedures {
 		}
 		AtomicLoad child = new AtomicLoad(reg, add, mo);
 		child.setCLine(visitor.currentLine);
-		visitor.programBuilder.addChild(visitor.threadCount, child);
+		visitor.thread.add(child);
 	}
 
 	private static void atomicFetchOp(VisitorBoogie visitor, Call_cmdContext ctx) {
-		Register reg = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, visitor.currentScope.getID() + ":" + ctx.call_params().Ident(0).getText(), -1);
+		Register reg = visitor.thread.register(visitor.currentScope.getID() + ":" + ctx.call_params().Ident(0).getText(), -1);
 		IExpr add = (IExpr)ctx.call_params().exprs().expr().get(0).accept(visitor);
 		ExprInterface value = (IExpr)ctx.call_params().exprs().expr().get(1).accept(visitor);
 		String mo = null;
@@ -113,11 +113,11 @@ public class AtomicProcedures {
 		}
 		AtomicFetchOp child = new AtomicFetchOp(reg, add, value, op, mo);
 		child.setCLine(visitor.currentLine);
-		visitor.programBuilder.addChild(visitor.threadCount, child);
+		visitor.thread.add(child);
 	}
 
 	private static void atomicXchg(VisitorBoogie visitor, Call_cmdContext ctx) {
-		Register reg = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, visitor.currentScope.getID() + ":" + ctx.call_params().Ident(0).getText(), -1);
+		Register reg = visitor.thread.register(visitor.currentScope.getID() + ":" + ctx.call_params().Ident(0).getText(), -1);
 		IExpr add = (IExpr)ctx.call_params().exprs().expr().get(0).accept(visitor);
 		ExprInterface value = (ExprInterface)ctx.call_params().exprs().expr().get(1).accept(visitor);
 		String mo = null;
@@ -126,13 +126,13 @@ public class AtomicProcedures {
 		}
 		AtomicXchg child = new AtomicXchg(reg, add, value, mo);
 		child.setCLine(visitor.currentLine);
-		visitor.programBuilder.addChild(visitor.threadCount, child);
+		visitor.thread.add(child);
 	}
 
 	private static void atomicThreadFence(VisitorBoogie visitor, Call_cmdContext ctx) {
 		String mo = intToMo(((IConst)ctx.call_params().exprs().expr().get(0).accept(visitor)).getValue());
 		AtomicThreadFence child = new AtomicThreadFence(mo);
 		child.setCLine(visitor.currentLine);
-		visitor.programBuilder.addChild(visitor.threadCount, child);
+		visitor.thread.add(child);
 	}
 }

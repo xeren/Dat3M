@@ -1,6 +1,6 @@
 package com.dat3m.dartagnan.parsers.program.visitors.boogie;
 
-import static com.dat3m.dartagnan.expression.op.COpBin.NEQ;
+import static com.dat3m.dartagnan.expression.op.COpBin.EQ;
 
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -17,9 +17,7 @@ import com.dat3m.dartagnan.parsers.BoogieParser.Call_cmdContext;
 import com.dat3m.dartagnan.parsers.program.utils.ParsingException;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Assume;
-import com.dat3m.dartagnan.program.event.CondJump;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.Label;
 import com.dat3m.dartagnan.program.event.Load;
 import com.dat3m.dartagnan.program.event.Local;
 import com.dat3m.dartagnan.program.event.Store;
@@ -84,23 +82,23 @@ public class SvcompProcedures {
 		if(c != null) {
 			Assume child = new Assume(c);
 			child.setCLine(visitor.currentLine);
-			visitor.programBuilder.addChild(visitor.threadCount, child);	
+			visitor.thread.add(child);
 		}
 	}
 
 	//TODO: seems to be obsolete after SVCOMP 2020
 	private static void __VERIFIER_error(VisitorBoogie visitor) {
-    	Register ass = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, "assert_" + visitor.assertionIndex, -1);
+    	Register ass = visitor.thread.register("assert_" + visitor.assertionIndex, -1);
     	visitor.assertionIndex++;
     	Local event = new Local(ass, new BConst(false));
 		event.addFilters(EType.ASSERTION);
 		event.setCLine(visitor.currentLine);
-		visitor.programBuilder.addChild(visitor.threadCount, event);
+		visitor.thread.add(event);
 	}
 	
 	private static void __VERIFIER_assert(VisitorBoogie visitor, Call_cmdContext ctx) {
     	ExprInterface expr = (ExprInterface)ctx.call_params().exprs().accept(visitor);
-    	Register ass = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, "assert_" + visitor.assertionIndex, expr.getPrecision());
+    	Register ass = visitor.thread.register("assert_" + visitor.assertionIndex, expr.getPrecision());
     	visitor.assertionIndex++;
     	if(expr instanceof IConst && ((IConst)expr).getValue() == 1) {
     		return;
@@ -108,23 +106,22 @@ public class SvcompProcedures {
     	Local event = new Local(ass, expr);
 		event.addFilters(EType.ASSERTION);
 		event.setCLine(visitor.currentLine);
-		visitor.programBuilder.addChild(visitor.threadCount, event);
+		visitor.thread.add(event);
 	}
 	
 	public static void __VERIFIER_atomic(VisitorBoogie visitor, boolean begin) {
-        Register register = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, null, -1);
-        Address lockAddress = visitor.programBuilder.getOrCreateLocation("__VERIFIER_atomic", -1).getAddress();
-       	Label label = visitor.programBuilder.getOrCreateLabel("END_OF_T" + visitor.threadCount);
+		Register register = visitor.thread.register(null, -1);
+		Address lockAddress = visitor.programBuilder.getOrCreateLocation("__VERIFIER_atomic", -1).getAddress();
 		LinkedList<Event> events = new LinkedList<>();
-        events.add(new Load(register, lockAddress, null));
-        events.add(new CondJump(new Atom(register, NEQ, new IConst(begin ? 0 : 1, -1)),label));
-        events.add(new Store(lockAddress, new IConst(begin ? 1 : 0, -1), null));
-        for(Event e : events) {
-        	e.addFilters(EType.LOCK, EType.RMW);
-        	visitor.programBuilder.addChild(visitor.threadCount, e);
-        }
+		events.add(new Load(register, lockAddress, null));
+		events.add(new Assume(new Atom(register, EQ, new IConst(begin ? 0 : 1, -1))));
+		events.add(new Store(lockAddress, new IConst(begin ? 1 : 0, -1), null));
+		for(Event e : events) {
+			e.addFilters(EType.LOCK, EType.RMW);
+			visitor.thread.add(e);
+		}
 	}
-	
+
 	private static void __VERIFIER_nondet(VisitorBoogie visitor, Call_cmdContext ctx, String name) {
 		INonDetTypes type = null;
 		if(name.equals("__VERIFIER_nondet_int")) {
@@ -147,21 +144,21 @@ public class SvcompProcedures {
 			throw new ParsingException(name + " is not supported");
 		}
 		String registerName = ctx.call_params().Ident(0).getText();
-		Register register = visitor.programBuilder.getRegister(visitor.threadCount, visitor.currentScope.getID() + ":" + registerName);
+		Register register = visitor.thread.register(visitor.currentScope.getID() + ":" + registerName);
 	    if(register != null){
 	    	Local child = new Local(register, new INonDet(type, register.getPrecision()));
 	    	child.setCLine(visitor.currentLine);
-			visitor.programBuilder.addChild(visitor.threadCount, child);
+			visitor.thread.add(child);
 	    }
 	}
 
 	private static void __VERIFIER_nondet_bool(VisitorBoogie visitor, Call_cmdContext ctx) {
 		String registerName = ctx.call_params().Ident(0).getText();
-		Register register = visitor.programBuilder.getRegister(visitor.threadCount, visitor.currentScope.getID() + ":" + registerName);
+		Register register = visitor.thread.register(visitor.currentScope.getID() + ":" + registerName);
 	    if(register != null){
 	    	Local child = new Local(register, new BNonDet(register.getPrecision()));
 	    	child.setCLine(visitor.currentLine);
-			visitor.programBuilder.addChild(visitor.threadCount, child);
+			visitor.thread.add(child);
 	    }
 	}
 }
