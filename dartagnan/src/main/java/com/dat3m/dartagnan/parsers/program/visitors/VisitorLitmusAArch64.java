@@ -20,6 +20,9 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 	private final ProgramBuilder programBuilder;
 	private ProgramBuilder.T[] threadArray;
 	private ProgramBuilder.T thread;
+	private Cmp[] cmpArray;
+	private Cmp cmpIn;
+	private Cmp cmpOut;
 
 	public VisitorLitmusAArch64(ProgramBuilder pb){
 		this.programBuilder = pb;
@@ -84,6 +87,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 	@Override
 	public Object visitThreadDeclaratorList(LitmusAArch64Parser.ThreadDeclaratorListContext ctx) {
 		threadArray = new ProgramBuilder.T[ctx.threadId().size()];
+		cmpArray = new Cmp[threadArray.length];
 		int i = 0;
 		for(LitmusAArch64Parser.ThreadIdContext threadCtx : ctx.threadId()){
 			threadArray[i++] = programBuilder.thread(threadCtx.id);
@@ -98,7 +102,11 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 	public Object visitInstructionRow(LitmusAArch64Parser.InstructionRowContext ctx) {
 		for(int i = 0; i < threadArray.length; i++){
 			thread = threadArray[i];
+			cmpIn = cmpArray[i];
+			assert null == cmpOut;
 			visitInstruction(ctx.instruction(i));
+			cmpArray[i] = cmpOut;
+			cmpOut = null;
 		}
 		return null;
 	}
@@ -115,7 +123,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 	public Object visitCmp(LitmusAArch64Parser.CmpContext ctx) {
 		Register register = thread.register(ctx.rD, -1);
 		IExpr expr = ctx.expr32() != null ? (IExpr)ctx.expr32().accept(this) : (IExpr)ctx.expr64().accept(this);
-		thread.add(new Cmp(register, expr));
+		cmpOut = new Cmp(register, expr);
 		return null;
 	}
 
@@ -176,16 +184,14 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 	@Override
 	public Object visitBranch(LitmusAArch64Parser.BranchContext ctx) {
 		Label label = thread.label(ctx.label().getText());
-		if(ctx.branchCondition() == null){
+		if(ctx.branchCondition() == null) {
 			thread.add(new CondJump(new BConst(true), label));
 			return null;
 		}
-		Event lastEvent = thread.last();
-		if(!(lastEvent instanceof Cmp)){
+		if(null == cmpIn) {
 			throw new ParsingException("Invalid syntax near " + ctx.getText());
 		}
-		Cmp cmp = (Cmp)lastEvent;
-		Atom expr = new Atom(cmp.getLeft(), ctx.branchCondition().op, cmp.getRight());
+		Atom expr = new Atom(cmpIn.getLeft(), ctx.branchCondition().op, cmpIn.getRight());
 		thread.add(new CondJump(expr, label));
 		return null;
 	}

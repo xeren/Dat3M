@@ -24,6 +24,9 @@ public class VisitorLitmusPPC
 	private final ProgramBuilder programBuilder;
 	private ProgramBuilder.T[] threadArray;
 	private ProgramBuilder.T thread;
+	private Cmp[] cmp;
+	private Cmp cmpIn;
+	private Cmp cmpOut;
 
 	public VisitorLitmusPPC(ProgramBuilder pb){
 		this.programBuilder = pb;
@@ -87,6 +90,7 @@ public class VisitorLitmusPPC
 	@Override
 	public Object visitThreadDeclaratorList(LitmusPPCParser.ThreadDeclaratorListContext ctx) {
 		threadArray = new ProgramBuilder.T[ctx.threadId().size()];
+		cmp = new Cmp[threadArray.length];
 		int i = 0;
 		for(LitmusPPCParser.ThreadIdContext threadCtx : ctx.threadId()){
 			threadArray[i++] = programBuilder.thread(threadCtx.id);
@@ -102,7 +106,11 @@ public class VisitorLitmusPPC
 	public Object visitInstructionRow(LitmusPPCParser.InstructionRowContext ctx) {
 		for(int i = 0; i < threadArray.length; i++){
 			thread = threadArray[i];
+			cmpIn = cmp[i];
+			assert null == cmpOut;
 			visitInstruction(ctx.instruction(i));
+			cmp[i] = cmpOut;
+			cmpOut = null;
 		}
 		return null;
 	}
@@ -173,19 +181,17 @@ public class VisitorLitmusPPC
 	public Object visitCmpw(LitmusPPCParser.CmpwContext ctx) {
 		Register r1 = thread.registerOrError(ctx.register(0).getText());
 		Register r2 = thread.registerOrError(ctx.register(1).getText());
-		thread.add(new Cmp(r1, r2));
+		cmpOut = new Cmp(r1, r2);
 		return null;
 	}
 
 	@Override
 	public Object visitBranchCond(LitmusPPCParser.BranchCondContext ctx) {
 		Label label = thread.label(ctx.Label().getText());
-		Event lastEvent = thread.last();
-		if(!(lastEvent instanceof Cmp)){
+		if(null == cmpIn){
 			throw new ParsingException("Invalid syntax near " + ctx.getText());
 		}
-		Cmp cmp = (Cmp)lastEvent;
-		Atom expr = new Atom(cmp.getLeft(), ctx.cond().op, cmp.getRight());
+		Atom expr = new Atom(cmpIn.getLeft(), ctx.cond().op, cmpIn.getRight());
 		thread.add(new CondJump(expr, label));
 		return null;
 	}
