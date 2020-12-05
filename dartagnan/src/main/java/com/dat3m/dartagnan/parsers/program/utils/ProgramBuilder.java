@@ -69,16 +69,6 @@ public class ProgramBuilder {
 		return t;
 	}
 
-	@Deprecated
-	public Event addChild(int thread, Event child) {
-		T t = threads.get(thread);
-		if(null == t) {
-			throw new RuntimeException("Thread " + thread + " is not initialised");
-		}
-		t.add(child);
-		return child;
-	}
-
 	public void setAssert(AbstractAssert ass) {
 		this.ass = ass;
 	}
@@ -142,11 +132,6 @@ public class ProgramBuilder {
 	// ----------------------------------------------------------------------------------------------------------------
 	// Utility
 
-	@Deprecated
-	public Event getLastEvent(int thread){
-		return threadOrError(thread).last();
-	}
-
 	public Location getLocation(String name){
 		return locations.get(name);
 	}
@@ -165,22 +150,6 @@ public class ProgramBuilder {
 			return locations.get(name);
 		}
 		throw new ParsingException("Location " + name + " has not been initialised");
-	}
-
-	@Deprecated
-	public Register getRegister(int thread, String name) {
-		T t = threads.get(thread);
-		return null == t ? null : t.register(name);
-	}
-
-	@Deprecated
-	public Register getOrCreateRegister(int threadId, String name, int precision) {
-		return thread(threadId).register(name, precision);
-	}
-
-	@Deprecated
-	public Register getOrErrorRegister(int thread, String name) {
-		return threadOrError(thread).registerOrError(name);
 	}
 
 	public IConst getInitValue(Address address) {
@@ -231,14 +200,6 @@ public class ProgramBuilder {
 			this.id = id;
 			this.name = name;
 			event.add(new Skip());
-		}
-
-		/**
-		 * @return
-		 * The event most recently appended to this thread.
-		 */
-		public Event last() {
-			return event.get(event.size() - 1);
 		}
 
 		/**
