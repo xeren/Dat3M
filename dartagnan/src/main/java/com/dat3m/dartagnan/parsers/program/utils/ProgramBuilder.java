@@ -98,18 +98,18 @@ public class ProgramBuilder {
 
 	public void initRegEqLocPtr(int regThread, String regName, String locName, int precision) {
 		Location loc = getOrCreateLocation(locName, precision);
-		T t = threadOrError(regThread);
+		T t = thread(regThread);
 		t.add(new Local(t.register(regName, precision), loc.getAddress()));
 	}
 
 	public void initRegEqLocVal(int regThread, String regName, String locName, int precision) {
 		Location loc = getOrCreateLocation(locName, precision);
-		T t = threadOrError(regThread);
+		T t = thread(regThread);
 		t.add(new Local(t.register(regName, precision), iValueMap.get(loc.getAddress())));
 	}
 
 	public void initRegEqConst(int regThread, String regName, IConst iValue) {
-		T t = threadOrError(regThread);
+		T t = thread(regThread);
 		t.add(new Local(t.register(regName, iValue.getPrecision()), iValue));
 	}
 

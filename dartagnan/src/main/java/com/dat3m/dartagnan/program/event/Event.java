@@ -140,7 +140,6 @@ public abstract class Event implements Comparable<Event> {
     	if(successor != null) {
     		successor.unroll(bound, copy);
     	}
-	    return;
     }
 
 	public Event getCopy(){
@@ -154,9 +153,6 @@ public abstract class Event implements Comparable<Event> {
 			if(from instanceof If){
 				from = ((If)from).getExitElseBranch();
 				appendTo = ((If)copy).getExitElseBranch();
-			} else if(from instanceof While){
-				from = ((While)from).getExitEvent();
-				appendTo = ((While)copy).getExitEvent();
 			} else {
 				appendTo = copy;
 			}

@@ -98,7 +98,6 @@ import com.dat3m.dartagnan.program.event.Load;
 import com.dat3m.dartagnan.program.event.Local;
 import com.dat3m.dartagnan.program.event.Skip;
 import com.dat3m.dartagnan.program.event.Store;
-import com.dat3m.dartagnan.program.event.While;
 import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.program.memory.Location;
 import com.dat3m.dartagnan.program.utils.EType;
@@ -434,13 +433,14 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 	@Override
 	public Object visitWhile_cmd(While_cmdContext ctx) {
 		ExprInterface expr = (ExprInterface) ctx.guard().expr().accept(this);
-		Skip exitEvent = new Skip();
-		While whileEvent = new While(expr, exitEvent);
-		thread.add(whileEvent);
-
+		Label begin = new Label(".continue");
+		Label end = new Label(".break");
+		thread.add(begin);
+		thread.add(new CondJump(new BExprUn(NOT, expr), end));
 		visitChildren(ctx.stmt_list());
-		thread.add(exitEvent);
-		return exitEvent;
+		thread.add(new CondJump(new BConst(true), begin));
+		thread.add(end);
+		return null;
 	}
 
 	@Override

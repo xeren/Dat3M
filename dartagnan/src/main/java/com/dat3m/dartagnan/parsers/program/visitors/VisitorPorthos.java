@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.parsers.program.visitors;
 
 import com.dat3m.dartagnan.expression.*;
+import com.dat3m.dartagnan.expression.op.BOpUn;
 import com.dat3m.dartagnan.parsers.PorthosBaseVisitor;
 import com.dat3m.dartagnan.parsers.PorthosParser;
 import com.dat3m.dartagnan.parsers.PorthosVisitor;
@@ -53,10 +54,13 @@ public class VisitorPorthos extends PorthosBaseVisitor<Object> implements Portho
 	@Override
 	public Event visitExpressionWhile(PorthosParser.ExpressionWhileContext ctx) {
 		ExprInterface expr = (ExprInterface)ctx.boolExpr().accept(this);
-		Skip exitEvent = new Skip();
-		thread.add(new While(expr, exitEvent));
+		Label begin = new Label(".continue");
+		Label end = new Label(".break");
+		thread.add(begin);
+		thread.add(new CondJump(new BExprUn(BOpUn.NOT, expr), end));
 		ctx.expressionSequence().accept(this);
-		thread.add(exitEvent);
+		thread.add(new CondJump(new BConst(true), begin));
+		thread.add(end);
 		return null;
 	}
 

@@ -179,14 +179,14 @@ public class VisitorLitmusC
     @Override
     public Object visitWhileExpression(LitmusCParser.WhileExpressionContext ctx) {
         ExprInterface expr = (ExprInterface) ctx.re().accept(this);
-        Skip exitEvent = new Skip();
-        While whileEvent = new While(expr, exitEvent);
-        thread.add(whileEvent);
-
+        Label begin = new Label(".continue");
+        Label end = new Label(".break");
+        thread.add(begin);
+        thread.add(new CondJump(new BExprUn(BOpUn.NOT, expr), end));
         for(LitmusCParser.ExpressionContext expressionContext : ctx.expression())
             expressionContext.accept(this);
-
-        thread.add(exitEvent);
+        thread.add(new CondJump(new BConst(true), begin));
+        thread.add(end);
         return null;
     }
 

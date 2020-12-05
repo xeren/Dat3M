@@ -100,12 +100,6 @@ public class Printer {
                 result.append(padding).append("{\n");
                 padding.append(paddingStep);
             }
-
-            if(e instanceof While) {
-                endStack.push(((While)e).getExitEvent());
-                result.append(padding).append("{\n");
-                padding.append(paddingStep);
-            }
         }
     }
 
