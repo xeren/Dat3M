@@ -72,7 +72,7 @@ public enum IOpBin {
             case AND:
             	return e1.isBV() ? ctx.mkBVAND((BitVecExpr)e1, (BitVecExpr)e2) : ctx.mkBV2Int(ctx.mkBVAND(ctx.mkInt2BV(32, (IntExpr)e1), ctx.mkInt2BV(32, (IntExpr)e2)), false);	
             case OR:
-            	return e1.isBV() ? ctx.mkBVOR((BitVecExpr)e1, (BitVecExpr)e2) : ctx.mkBV2Int(ctx.mkBVOR(ctx.mkInt2BV(32, (IntExpr)e1), ctx.mkInt2BV(32, (IntExpr)e2)), false);	
+            	return e1.isBV() ? ctx.mkBVOR((BitVecExpr)e1, (BitVecExpr)e2) : ctx.mkBV2Int(ctx.mkBVOR(ctx.mkInt2BV(32, (IntExpr)e1), ctx.mkInt2BV(32, (IntExpr)e2)), false);
             case XOR:
             	return e1.isBV() ? ctx.mkBVXOR((BitVecExpr)e1, (BitVecExpr)e2) : ctx.mkBV2Int(ctx.mkBVXOR(ctx.mkInt2BV(32, (IntExpr)e1), ctx.mkInt2BV(32, (IntExpr)e2)), false);
             case L_SHIFT:

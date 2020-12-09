@@ -36,7 +36,7 @@ public class DartagnanOptions extends BaseOptions {
 			"Iterate without target model, use extract minimal subset from spurious examples"));
         
         addOption(new Option("w", "witness", true,
-                "Creates a violation witness. The argument is the original *.c file from which the Boogie code was generated."));
+                "Creates a machine readable witness. The argument is the original *.c file from which the Boogie code was generated."));
 
         addOption(new Option("analysis", true,
         		"The analysis to be performed: reachability (default), data-race detection, termination"));
