@@ -9,7 +9,7 @@ import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
-import com.dat3m.dartagnan.program.arch.linux.utils.EType;
+import com.dat3m.dartagnan.program.utils.EType;
 
 public abstract class AtomicAbstract extends MemEvent implements RegWriter, RegReaderData {
 

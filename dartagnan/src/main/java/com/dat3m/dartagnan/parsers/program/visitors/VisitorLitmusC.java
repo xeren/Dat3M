@@ -2,6 +2,8 @@ package com.dat3m.dartagnan.parsers.program.visitors;
 
 import com.dat3m.dartagnan.expression.*;
 import com.dat3m.dartagnan.expression.op.BOpUn;
+import com.dat3m.dartagnan.expression.op.COpBin;
+import com.dat3m.dartagnan.expression.op.IOpBin;
 import com.dat3m.dartagnan.parsers.LitmusCBaseVisitor;
 import com.dat3m.dartagnan.parsers.LitmusCParser;
 import com.dat3m.dartagnan.parsers.LitmusCVisitor;
@@ -10,8 +12,11 @@ import com.dat3m.dartagnan.parsers.program.utils.ParsingException;
 import com.dat3m.dartagnan.parsers.program.utils.ProgramBuilder;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.arch.linux.event.*;
+import com.dat3m.dartagnan.program.arch.linux.utils.Mo;
 import com.dat3m.dartagnan.program.event.*;
+import com.dat3m.dartagnan.program.event.rmw.RMWLoad;
+import com.dat3m.dartagnan.program.event.rmw.RMWStore;
+import com.dat3m.dartagnan.program.event.rmw.cond.*;
 import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.program.memory.Location;
 import org.antlr.v4.runtime.misc.Interval;
@@ -211,61 +216,112 @@ public class VisitorLitmusC
     // ----------------------------------------------------------------------------------------------------------------
     // Return expressions (memory reads, must have register for return value)
 
-    // Returns new value (the value after computation)
-    @Override
-    public IExpr visitReAtomicOpReturn(LitmusCParser.ReAtomicOpReturnContext ctx){
-        Register register = getReturnRegister(true);
-        ExprInterface value = returnExpressionOrDefault(ctx.value, 1);
-        Event event = new RMWOpReturn(getAddress(ctx.address), register, value, ctx.op, ctx.mo);
-        thread.add(event);
-        return register;
-    }
+	// Returns new value (the value after computation)
+	@Override
+	public IExpr visitReAtomicOpReturn(LitmusCParser.ReAtomicOpReturnContext ctx){
+		Register register = getReturnRegister(true);
+		ExprInterface value = returnExpressionOrDefault(ctx.value, 1);
+		IExpr address = getAddress(ctx.address);
+		Register dummy = thread.register(null, register.getPrecision());
+		RMWLoad load = new RMWLoad(dummy, address, Mo.loadMO(ctx.mo));
+		if(Mo.MB.equals(ctx.mo))
+			addFence();
+		thread.add(load);
+		thread.add(new Local(register, new IExprBin(dummy, ctx.op, value)));
+		thread.add(new RMWStore(load, address, register, Mo.storeMO(ctx.mo)));
+		if(Mo.MB.equals(ctx.mo))
+			addFence();
+		return register;
+	}
 
-    // Returns old value (the value before computation)
-    @Override
-    public IExpr visitReAtomicFetchOp(LitmusCParser.ReAtomicFetchOpContext ctx){
-        Register register = getReturnRegister(true);
-        ExprInterface value = returnExpressionOrDefault(ctx.value, 1);
-        Event event = new RMWFetchOp(getAddress(ctx.address), register, value, ctx.op, ctx.mo);
-        thread.add(event);
-        return register;
-    }
+	// Returns old value (the value before computation)
+	@Override
+	public IExpr visitReAtomicFetchOp(LitmusCParser.ReAtomicFetchOpContext ctx){
+		Register register = getReturnRegister(true);
+		ExprInterface value = returnExpressionOrDefault(ctx.value, 1);
+		IExpr address = getAddress(ctx.address);
+		Register dummy = register != value ? register : thread.register(null, register.getPrecision());
+		RMWLoad load = new RMWLoad(dummy, address, Mo.loadMO(ctx.mo));
+		if(Mo.MB.equals(ctx.mo))
+			addFence();
+		thread.add(load);
+		thread.add(new RMWStore(load, address, new IExprBin(dummy, ctx.op, value), Mo.storeMO(ctx.mo)));
+		if(dummy != register)
+			thread.add(new Local(register, dummy));
+		if(Mo.MB.equals(ctx.mo))
+			addFence();
+		return register;
+	}
 
-    @Override
-    public IExpr visitReAtomicOpAndTest(LitmusCParser.ReAtomicOpAndTestContext ctx){
-        Register register = getReturnRegister(true);
-        ExprInterface value = returnExpressionOrDefault(ctx.value, 1);
-        Event event = new RMWOpAndTest(getAddress(ctx.address), register, value, ctx.op);
-        thread.add(event);
-        return register;
-    }
+	@Override
+	public IExpr visitReAtomicOpAndTest(LitmusCParser.ReAtomicOpAndTestContext ctx){
+		Register register = getReturnRegister(true);
+		ExprInterface value = returnExpressionOrDefault(ctx.value, 1);
+		IExpr address = getAddress(ctx.address);
+		Register dummy = thread.register(null, register.getPrecision());
+		RMWLoad load = new RMWLoad(dummy, address, Mo.RELAXED);
+		addFence();
+		thread.add(load);
+		thread.add(new Local(dummy, new IExprBin(dummy, ctx.op, value)));
+		thread.add(new RMWStore(load, address, dummy, Mo.RELAXED));
+		thread.add(new Local(register, new Atom(dummy, COpBin.EQ, new IConst(0, register.getPrecision()))));
+		addFence();
+		return register;
+	}
 
-    // Returns non-zero if the addition was executed, zero otherwise
-    @Override
-    public IExpr visitReAtomicAddUnless(LitmusCParser.ReAtomicAddUnlessContext ctx){
-        Register register = getReturnRegister(true);
-        ExprInterface value = (ExprInterface)ctx.value.accept(this);
-        ExprInterface cmp = (ExprInterface)ctx.cmp.accept(this);
-        thread.add(new RMWAddUnless(getAddress(ctx.address), register, cmp, value));
-        return register;
-    }
+	// Returns non-zero if the addition was executed, zero otherwise
+	@Override
+	public IExpr visitReAtomicAddUnless(LitmusCParser.ReAtomicAddUnlessContext ctx){
+		Register register = getReturnRegister(true);
+		ExprInterface value = (ExprInterface)ctx.value.accept(this);
+		ExprInterface cmp = (ExprInterface)ctx.cmp.accept(this);
+		IExpr address = getAddress(ctx.address);
+		Register dummy = thread.register(null, register.getPrecision());
+		RMWReadCondUnless load = new RMWReadCondUnless(dummy, cmp, address, Mo.RELAXED);
+		addFence(load);
+		thread.add(load);
+		thread.add(new RMWStoreCond(load, address, new IExprBin(dummy, IOpBin.PLUS, value), Mo.RELAXED));
+		thread.add(new Local(register, new Atom(dummy, COpBin.NEQ, cmp)));
+		addFence(load);
+		return register;
+	}
 
-    @Override
-    public IExpr visitReXchg(LitmusCParser.ReXchgContext ctx){
-        Register register = getReturnRegister(true);
-        ExprInterface value = (ExprInterface)ctx.value.accept(this);
-        thread.add(new RMWXchg(getAddress(ctx.address), register, value, ctx.mo));
-        return register;
-    }
+	@Override
+	public IExpr visitReXchg(LitmusCParser.ReXchgContext ctx){
+		Register register = getReturnRegister(true);
+		ExprInterface value = (ExprInterface)ctx.value.accept(this);
+		IExpr address = getAddress(ctx.address);
+		Register dummy = register != value ? register : thread.register(null, register.getPrecision());
+		RMWLoad load = new RMWLoad(dummy, address, Mo.loadMO(ctx.mo));
+		if(Mo.MB.equals(ctx.mo))
+			addFence();
+		thread.add(load);
+		thread.add(new RMWStore(load, address, value, Mo.storeMO(ctx.mo)));
+		if(dummy != register)
+			thread.add(new Local(register, dummy));
+		if(Mo.MB.equals(ctx.mo))
+			addFence();
+		return register;
+	}
 
-    @Override
-    public IExpr visitReCmpXchg(LitmusCParser.ReCmpXchgContext ctx){
-        Register register = getReturnRegister(true);
-        ExprInterface cmp = (ExprInterface)ctx.cmp.accept(this);
-        ExprInterface value = (ExprInterface)ctx.value.accept(this);
-        thread.add(new RMWCmpXchg(getAddress(ctx.address), register, cmp, value, ctx.mo));
-        return register;
-    }
+	@Override
+	public IExpr visitReCmpXchg(LitmusCParser.ReCmpXchgContext ctx){
+		Register register = getReturnRegister(true);
+		ExprInterface cmp = (ExprInterface)ctx.cmp.accept(this);
+		ExprInterface value = (ExprInterface)ctx.value.accept(this);
+		IExpr address = getAddress(ctx.address);
+		Register dummy = register != value && register != cmp ? register : thread.register(null, register.getPrecision());
+		RMWReadCondCmp load = new RMWReadCondCmp(dummy, cmp, address, Mo.loadMO(ctx.mo));
+		if(Mo.MB.equals(ctx.mo))
+			addFence(load);
+		thread.add(load);
+		thread.add(new RMWStoreCond(load, address, value, Mo.storeMO(ctx.mo)));
+		if(dummy != register)
+			thread.add(new Local(register, dummy));
+		if(Mo.MB.equals(ctx.mo))
+			addFence(load);
+		return register;
+	}
 
     @Override
     public IExpr visitReLoad(LitmusCParser.ReLoadContext ctx){
@@ -365,21 +421,24 @@ public class VisitorLitmusC
     // ----------------------------------------------------------------------------------------------------------------
     // NonReturn expressions (all other return expressions are reduced to these ones)
 
-    @Override
-    public Object visitNreAtomicOp(LitmusCParser.NreAtomicOpContext ctx){
-        ExprInterface value = returnExpressionOrDefault(ctx.value, 1);
-        Register register = thread.register(null, -1);
-        Event event = new RMWOp(getAddress(ctx.address), register, value, ctx.op);
-        thread.add(event);
-        return null;
-    }
+	@Override
+	public Object visitNreAtomicOp(LitmusCParser.NreAtomicOpContext ctx){
+		ExprInterface value = returnExpressionOrDefault(ctx.value, 1);
+		Register register = thread.register(null, -1);
+		IExpr address = getAddress(ctx.address);
+		RMWLoad load = new RMWLoad(register, address, Mo.RELAXED);
+		RMWStore store = new RMWStore(load, address, new IExprBin(register, ctx.op, value), Mo.RELAXED);
+		thread.add(load);
+		thread.add(store);
+		return null;
+	}
 
     @Override
     public Object visitNreStore(LitmusCParser.NreStoreContext ctx){
         ExprInterface value = (ExprInterface)ctx.value.accept(this);
         if(ctx.mo.equals("Mb")){
-            thread.add(new Store(getAddress(ctx.address), value, "Relaxed"));
-            thread.add(new Fence("Mb"));
+            thread.add(new Store(getAddress(ctx.address), value, Mo.RELAXED));
+            addFence();
             return null;
         }
         thread.add(new Store(getAddress(ctx.address), value, ctx.mo));
@@ -485,4 +544,12 @@ public class VisitorLitmusC
         }
         return value;
     }
+
+	private void addFence() {
+    	thread.add(new Fence("Mb"));
+	}
+
+	private void addFence(RMWReadCond load) {
+    	thread.add(new FenceCond(load, "Mb"));
+	}
 }

@@ -12,7 +12,9 @@ import com.dat3m.dartagnan.program.event.Fence;
 import com.dat3m.dartagnan.program.event.Load;
 import com.dat3m.dartagnan.program.event.Local;
 import com.dat3m.dartagnan.program.event.Store;
-import com.dat3m.dartagnan.program.arch.tso.event.Xchg;
+import com.dat3m.dartagnan.program.event.rmw.RMWLoad;
+import com.dat3m.dartagnan.program.event.rmw.RMWStore;
+import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.program.memory.Location;
 import com.google.common.collect.ImmutableSet;
 import org.antlr.v4.runtime.misc.Interval;
@@ -145,7 +147,12 @@ public class VisitorLitmusX86
 	public Object visitExchangeRegisterLocation(LitmusX86Parser.ExchangeRegisterLocationContext ctx) {
 		Register register = thread.registerOrError(ctx.register().getText());
 		Location location = programBuilder.getOrCreateLocation(ctx.location().getText(), -1);
-		thread.add(new Xchg(location.getAddress(), register));
+		Address address = location.getAddress();
+		Register dummy = thread.register(null, register.getPrecision());
+		RMWLoad load = new RMWLoad(dummy, address, null);
+		thread.add(load);
+		thread.add(new RMWStore(load, address, register, null));
+		thread.add(new Local(register, dummy));
 		return null;
 	}
 

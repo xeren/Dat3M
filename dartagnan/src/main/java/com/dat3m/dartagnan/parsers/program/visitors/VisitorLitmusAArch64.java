@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.parsers.program.visitors;
 
 import com.dat3m.dartagnan.expression.*;
+import com.dat3m.dartagnan.expression.op.COpBin;
 import com.dat3m.dartagnan.expression.op.IOpBin;
 import com.dat3m.dartagnan.parsers.LitmusAArch64BaseVisitor;
 import com.dat3m.dartagnan.parsers.LitmusAArch64Parser;
@@ -9,8 +10,7 @@ import com.dat3m.dartagnan.parsers.program.utils.AssertionHelper;
 import com.dat3m.dartagnan.parsers.program.utils.ParsingException;
 import com.dat3m.dartagnan.parsers.program.utils.ProgramBuilder;
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.arch.aarch64.event.RMWLoadExclusive;
-import com.dat3m.dartagnan.program.arch.aarch64.event.StoreExclusive;
+import com.dat3m.dartagnan.program.arch.aarch64.utils.EType;
 import com.dat3m.dartagnan.program.event.*;
 import org.antlr.v4.runtime.misc.Interval;
 
@@ -154,7 +154,9 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 		if(ctx.offset() != null){
 			address = visitOffset(ctx.offset(), address);
 		}
-		thread.add(new RMWLoadExclusive(register, address, ctx.loadExclusiveInstruction().mo));
+		Load load = new Load(register, address, ctx.loadExclusiveInstruction().mo);
+		load.addFilters(EType.EXCL);
+		thread.add(load);
 		return null;
 	}
 
@@ -174,10 +176,15 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 		Register register = thread.register(ctx.rV, -1);
 		Register statusReg = thread.register(ctx.rS, -1);
 		Register address = thread.registerOrError(ctx.address().id);
-		if(ctx.offset() != null){
+		if(ctx.offset() != null)
 			address = visitOffset(ctx.offset(), address);
-		}
-		thread.add(new StoreExclusive(statusReg, address, register, ctx.storeExclusiveInstruction().mo));
+		thread.add(new Local(statusReg, new BNonDet(1)));
+		Label next = thread.label(null);
+		thread.add(new CondJump(new Atom(statusReg, COpBin.NEQ, new IConst(0, -1)), next));
+		Store store = new Store(address, register, ctx.storeExclusiveInstruction().mo);
+		store.addFilters(EType.EXCL);
+		thread.add(store);
+		thread.add(next);
 		return null;
 	}
 
