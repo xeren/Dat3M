@@ -190,24 +190,22 @@ public class VisitorLitmusC
         return null;
     }
 
-    @Override
-    public Object visitIfExpression(LitmusCParser.IfExpressionContext ctx) {
-        ExprInterface expr = (ExprInterface) ctx.re().accept(this);
-        Skip exitMainBranch = new Skip();
-        Skip exitElseBranch = new Skip();
-        If ifEvent = new If(expr, exitMainBranch, exitElseBranch);
-        thread.add(ifEvent);
-
-        for(LitmusCParser.ExpressionContext expressionContext : ctx.expression())
-            expressionContext.accept(this);
-        thread.add(exitMainBranch);
-
-        if(ctx.elseExpression() != null){
-            ctx.elseExpression().accept(this);
-        }
-        thread.add(exitElseBranch);
-        return null;
-    }
+	@Override
+	public Object visitIfExpression(LitmusCParser.IfExpressionContext ctx) {
+		ExprInterface expr = (ExprInterface) ctx.re().accept(this);
+		Label exitMainBranch = thread.label(null);
+		Label exitElseBranch = thread.label(null);
+		CondJump ifEvent = new CondJump(new BExprUn(BOpUn.NOT, expr), exitMainBranch);
+		thread.add(ifEvent);
+		for(LitmusCParser.ExpressionContext expressionContext : ctx.expression())
+			expressionContext.accept(this);
+		thread.add(new CondJump(new BConst(true), exitElseBranch));
+		thread.add(exitMainBranch);
+		if(ctx.elseExpression() != null)
+			ctx.elseExpression().accept(this);
+		thread.add(exitElseBranch);
+		return null;
+	}
 
 
     // ----------------------------------------------------------------------------------------------------------------

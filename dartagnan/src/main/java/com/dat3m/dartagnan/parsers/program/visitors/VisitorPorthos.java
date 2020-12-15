@@ -67,17 +67,15 @@ public class VisitorPorthos extends PorthosBaseVisitor<Object> implements Portho
 	@Override
 	public Object visitExpressionIf(PorthosParser.ExpressionIfContext ctx) {
 		ExprInterface expr = (ExprInterface)ctx.boolExpr().accept(this);
-		Skip exitMainBranch = new Skip();
-		Skip exitElseBranch = new Skip();
-		If ifEvent = new If(expr, exitMainBranch, exitElseBranch);
+		Label exitMainBranch = thread.label(null);
+		Label exitElseBranch = thread.label(null);
+		CondJump ifEvent = new CondJump(new BExprUn(BOpUn.NOT, expr), exitMainBranch);
 		thread.add(ifEvent);
-
 		ctx.expressionSequence(0).accept(this);
+		thread.add(new CondJump(new BConst(true), exitElseBranch));
 		thread.add(exitMainBranch);
-
-		if(ctx.expressionSequence(1) != null){
+		if(ctx.expressionSequence(1) != null)
 			ctx.expressionSequence(1).accept(this);
-		}
 		thread.add(exitElseBranch);
 		return null;
 	}

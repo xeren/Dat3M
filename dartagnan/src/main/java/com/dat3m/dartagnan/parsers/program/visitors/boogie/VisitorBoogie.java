@@ -92,11 +92,9 @@ import com.dat3m.dartagnan.program.event.CondJump;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.FunCall;
 import com.dat3m.dartagnan.program.event.FunRet;
-import com.dat3m.dartagnan.program.event.If;
 import com.dat3m.dartagnan.program.event.Label;
 import com.dat3m.dartagnan.program.event.Load;
 import com.dat3m.dartagnan.program.event.Local;
-import com.dat3m.dartagnan.program.event.Skip;
 import com.dat3m.dartagnan.program.event.Store;
 import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.program.memory.Location;
@@ -446,27 +444,23 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 	@Override
 	public Object visitIf_cmd(If_cmdContext ctx) {
 		ExprInterface expr = (ExprInterface) ctx.guard().expr().accept(this);
-		Skip exitMainBranch = new Skip();
-		Skip exitElseBranch = new Skip();
-		If ifEvent = new If(expr, exitMainBranch, exitElseBranch);
+		Label exitMainBranch = thread.label(null);
+		Label exitElseBranch = thread.label(null);
+		CondJump ifEvent = new CondJump(new BExprUn(NOT, expr), exitMainBranch);
 		thread.add(ifEvent);
-
 		visitChildren(ctx.stmt_list(0));
+		thread.add(new CondJump(new BConst(true), exitElseBranch));
 		thread.add(exitMainBranch);
-
 		// case when the else branch is a stmt list
 		if(ctx.stmt_list().size() > 1) {
 			visitChildren(ctx.stmt_list(1));
 		}
-
 		// case when the else branch is another if
 		if(ctx.if_cmd() != null) {
 			visitChildren(ctx.if_cmd());
 		}
-
 		thread.add(exitElseBranch);
 		return null;
-
 	}
 
 	@Override

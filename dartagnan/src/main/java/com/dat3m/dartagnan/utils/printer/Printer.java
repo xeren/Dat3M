@@ -6,8 +6,6 @@ import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 
-import java.util.Stack;
-
 public class Printer {
 
     private StringBuilder result;
@@ -68,39 +66,9 @@ public class Printer {
     }
 
     private void appendThread(Thread thread){
-        Stack<Event> elseStack = new Stack<>();
-        Stack<Event> endStack = new Stack<>();
-
         result.append("\nthread_").append(thread.getName()).append("\n");
-        for(Event e : thread.getCache().getEvents(FilterBasic.get(EType.ANY))){
-
+        for(Event e : thread.getCache().getEvents(FilterBasic.get(EType.ANY)))
             appendEvent(e);
-
-            while(!endStack.empty() && e.equals(endStack.peek())){
-                endStack.pop();
-                padding.delete(padding.length() - paddingSize, padding.length());
-                result.append(padding).append("}\n");
-            }
-
-            while(!elseStack.empty() && e.equals(elseStack.peek())){
-                elseStack.pop();
-                padding.delete(padding.length() - paddingSize, padding.length());
-                result.append(padding).append("}\n");
-                result.append(padding).append("else\n");
-                result.append(padding).append("{\n");
-                padding.append(paddingStep);
-            }
-
-            if(e instanceof If) {
-                If ifEvent = (If) e;
-                if (!ifEvent.getExitMainBranch().equals(ifEvent.getExitElseBranch())) {
-                    elseStack.push(ifEvent.getExitMainBranch());
-                }
-                endStack.push(ifEvent.getExitElseBranch());
-                result.append(padding).append("{\n");
-                padding.append(paddingStep);
-            }
-        }
     }
 
     private void appendEvent(Event event){
