@@ -199,7 +199,6 @@ public class ProgramBuilder {
 		private T(int id, String name) {
 			this.id = id;
 			this.name = name;
-			event.add(new Skip());
 		}
 
 		/**
