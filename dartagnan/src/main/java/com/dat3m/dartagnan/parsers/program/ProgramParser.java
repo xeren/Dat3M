@@ -21,7 +21,6 @@ public class ProgramParser {
         CharStream charStream = CharStreams.fromStream(stream);
         Program program = parser.parse(charStream);
         stream.close();
-        program.setName(file.getName());
         return program;
     }
 

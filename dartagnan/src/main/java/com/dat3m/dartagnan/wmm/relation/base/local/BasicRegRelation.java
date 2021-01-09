@@ -10,10 +10,10 @@ import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.microsoft.z3.BoolExpr;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 abstract class BasicRegRelation extends StaticRelation {
 
@@ -25,14 +25,15 @@ abstract class BasicRegRelation extends StaticRelation {
 	public TupleSet getMaxTupleSet() {
 		if(maxTupleSet == null) {
 			maxTupleSet = new TupleSet();
-			ImmutableMap<Register, ImmutableList<Event>> regWriterMap = program.getCache().getRegWriterMap();
+			Map<Register,List<RegWriter>> regWriterMap = program.getCache().getEvents(RegWriter.class).stream().collect(Collectors.groupingBy(RegWriter::getResultRegister));
 			for(Event regReader : program.getCache().getEvents(filter())) {
 				for(Register register : getRegisters(regReader)) {
-					for(Event regWriter : regWriterMap.getOrDefault(register, ImmutableList.of())) {
-						if(regWriter.getCId() >= regReader.getCId()) {
+					for(RegWriter regWriter : regWriterMap.getOrDefault(register, ImmutableList.of())) {
+						Event e = (Event) regWriter;
+						if(e.getCId() >= regReader.getCId()) {
 							break;
 						}
-						maxTupleSet.add(new Tuple(regWriter, regReader));
+						maxTupleSet.add(new Tuple(e, regReader));
 					}
 				}
 			}
@@ -43,18 +44,18 @@ abstract class BasicRegRelation extends StaticRelation {
 	@Override
 	protected BoolExpr encodeApprox() {
 		BoolExpr enc = ctx.mkTrue();
-		ImmutableMap<Register, ImmutableList<Event>> regWriterMap = program.getCache().getRegWriterMap();
+		Map<Register,List<RegWriter>> regWriterMap = program.getCache().getEvents(RegWriter.class).stream().collect(Collectors.groupingBy(RegWriter::getResultRegister));
 
 		for(Event regReader : program.getCache().getEvents(filter())) {
 			for(Register register : getRegisters(regReader)) {
-				List<Event> writers = regWriterMap.getOrDefault(register, ImmutableList.of());
-				if(writers.isEmpty() || writers.get(0).getCId() >= regReader.getCId()) {
+				List<RegWriter> writers = regWriterMap.getOrDefault(register, ImmutableList.of());
+				if(writers.isEmpty() || ((Event) writers.get(0)).getCId() >= regReader.getCId()) {
 					enc = ctx.mkAnd(enc, ctx.mkEq(register.toZ3Int(regReader, ctx), new IConst(0, register.getPrecision()).toZ3Int(ctx)));
 
 				} else {
-					ListIterator<Event> writerIt = writers.listIterator();
+					ListIterator<RegWriter> writerIt = writers.listIterator();
 					while(writerIt.hasNext()) {
-						Event regWriter = writerIt.next();
+						Event regWriter = (Event)writerIt.next();
 						if(regWriter.getCId() >= regReader.getCId()) {
 							break;
 						}
@@ -64,9 +65,9 @@ abstract class BasicRegRelation extends StaticRelation {
 						BoolExpr edge = Utils.edge(this.getName(), regWriter, regReader, ctx);
 
 						// .. and no other write to the same register is executed in between
-						ListIterator<Event> otherIt = writers.listIterator(writerIt.nextIndex());
+						ListIterator<RegWriter> otherIt = writers.listIterator(writerIt.nextIndex());
 						while(otherIt.hasNext()) {
-							Event other = otherIt.next();
+							Event other = (Event) otherIt.next();
 							if(other.getCId() >= regReader.getCId()) {
 								break;
 							}

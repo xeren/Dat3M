@@ -1,79 +1,54 @@
 package com.dat3m.dartagnan.program.utils;
 
-import com.dat3m.dartagnan.expression.IExpr;
-import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.*;
-import com.dat3m.dartagnan.program.event.utils.RegReaderData;
-import com.dat3m.dartagnan.program.event.utils.RegWriter;
 import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-
 import java.util.*;
+import static java.util.stream.Collectors.toList;//TODO toUnmodifiableList
 
+/**
+Represents a thread of a compiled program.
+*/
 public class ThreadCache {
 
-    private Map<FilterAbstract, ImmutableList<Event>> events = new HashMap<>();
-    private ImmutableSet<Register> registers;
-    private ImmutableMap<Register, ImmutableList<Event>> regWriterMap;
+	private final ImmutableList<Event> all;
+	private final Map<FilterAbstract,List<Event>> tag = new HashMap<>();
+	private final HashMap<Class<?>,List<?>> subclass = new HashMap<>();
 
-    public ThreadCache(List<Event> events){
-        this.events.put(FilterBasic.get(EType.ANY), ImmutableList.copyOf(events));
-    }
+	/**
+	Tracks information about a compiled thread.
+	@param events
+	List of all events reachable in this thread.
+	First element must be the thread's entry point.
+	All jumps must be directed forwards.
+	*/
+	public ThreadCache(List<Event> events) {
+		all = ImmutableList.copyOf(events);
+		tag.put(FilterBasic.get(EType.ANY), all);
+		subclass.put(Event.class, all);
+	}
 
-    public ImmutableList<Event> getEvents(FilterAbstract filter){
-        if(!events.containsKey(filter)){
-            ImmutableList.Builder<Event> builder = new ImmutableList.Builder<>();
-            for(Event e : getEvents(FilterBasic.get(EType.ANY))){
-                if(filter.filter(e)){
-                    builder.add(e);
-                }
-            }
-            events.put(filter, builder.build());
-        }
-        return events.get(filter);
-    }
+	/**
+	Subsequence of tagged events.
+	@param filter
+	Proposition of tags.
+	@return
+	Immutable list of events satisfying the filter in order of appearance.
+	*/
+	public List<Event> getEvents(FilterAbstract filter) {
+		return tag.computeIfAbsent(filter, k->all.stream().filter(filter::filter).collect(toList()));
+	}
 
-    public ImmutableSet<Register> getRegisters(){
-        if(registers == null){
-            ImmutableSet.Builder<Register> builder = new ImmutableSet.Builder<>();
-            for(Event e : getEvents(FilterBasic.get(EType.ANY))){
-                if(e instanceof RegWriter){
-                    builder.add(((RegWriter) e).getResultRegister());
-                }
-                if(e instanceof MemEvent){
-                    IExpr address = ((MemEvent) e).getAddress();
-                    builder.addAll(address.getRegs());
-                }
-                if(e instanceof RegReaderData){
-                    builder.addAll(((RegReaderData) e).getDataRegs());
-                }
-            }
-            registers = builder.build();
-        }
-        return registers;
-    }
-
-    public ImmutableMap<Register, ImmutableList<Event>> getRegWriterMap(){
-        if(regWriterMap == null){
-            Map<Register, Set<Event>> setMap = new HashMap<>();
-            for (Event e : getEvents(FilterBasic.get(EType.REG_WRITER))) {
-                Register register = ((RegWriter) e).getResultRegister();
-                setMap.putIfAbsent(register, new TreeSet<>());
-                setMap.get(register).add(e);
-            }
-
-            ImmutableMap.Builder<Register, ImmutableList<Event>> builder = new ImmutableMap.Builder<>();
-            for (Register register : setMap.keySet()) {
-                List<Event> list = new ArrayList<>(setMap.get(register));
-                Collections.sort(list);
-                builder.put(register, ImmutableList.copyOf(list));
-            }
-
-            regWriterMap = builder.build();
-        }
-        return regWriterMap;
-    }
+	/**
+	Subsequence of instances of a certain interface or class.
+	@param cls
+	Class object characterizing the targeted elements.
+	@return
+	Immutable list of events in order of appearance.
+	*/
+	@SuppressWarnings("unchecked")
+	public <T> List<T> getEvents(Class<T> cls) {
+		return (List<T>) subclass.computeIfAbsent(cls, k->all.stream().filter(cls::isInstance).collect(toList()));
+	}
 }
