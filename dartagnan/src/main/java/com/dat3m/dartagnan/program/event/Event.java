@@ -10,35 +10,33 @@ public abstract class Event implements Comparable<Event> {
 
 	public static final int PRINT_PAD_EXTRA = 50;
 
-	protected int oId = -1;		// ID after parsing (original)
-	protected int uId = -1;		// ID after unrolling
-	protected int cId = -1;		// ID after compilation
-	
-	protected int cLine = -1;	// line in the original C program
+	protected int oId = -1;        // ID after parsing (original)
+	protected int uId = -1;        // ID after unrolling
+	protected int cId = -1;        // ID after compilation
+
+	protected int cLine = -1;    // line in the original C program
 
 	protected final Set<String> filter;
 
 	protected transient Event successor;
 
-    protected transient BoolExpr cfEnc;
-    protected transient BoolExpr cfCond;
+	protected transient BoolExpr cfEnc;
+	protected transient BoolExpr cfCond;
 
 	protected transient BoolExpr cfVar;
 	protected transient BoolExpr execVar;
 
-	protected Set<Event> listeners = new HashSet<>();
-	
-	protected Event(){
+	protected Event() {
 		filter = new HashSet<>();
 	}
 
-	protected Event(Event other){
+	protected Event(Event other) {
 		this.oId = other.oId;
-        this.uId = other.uId;
-        this.cId = other.cId;
-        this.cLine = other.cLine;
-        this.filter = other.filter;
-    }
+		this.uId = other.uId;
+		this.cId = other.cId;
+		this.cLine = other.cLine;
+		this.filter = other.filter;
+	}
 
 	public int getOId() {
 		return oId;
@@ -48,7 +46,7 @@ public abstract class Event implements Comparable<Event> {
 		this.oId = id;
 	}
 
-	public int getUId(){
+	public int getUId() {
 		return uId;
 	}
 
@@ -64,131 +62,98 @@ public abstract class Event implements Comparable<Event> {
 		this.cLine = line;
 	}
 
-	public Event getSuccessor(){
+	@Deprecated
+	public Event getSuccessor() {
 		return successor;
 	}
 
-	public void setSuccessor(Event event){
+	@Deprecated
+	public void setSuccessor(Event event) {
 		successor = event;
 	}
 
-	public LinkedList<Event> getSuccessors(){
+	@Deprecated
+	public LinkedList<Event> getSuccessors() {
 		LinkedList<Event> result = successor != null
-				? successor.getSuccessors()
-				: new LinkedList<>();
+			? successor.getSuccessors()
+			: new LinkedList<>();
 		result.addFirst(this);
 		return result;
 	}
 
-	public String label(){
+	public String label() {
 		return repr() + " " + getClass().getSimpleName();
 	}
 
-	public boolean is(String param){
+	public boolean is(String param) {
 		return param != null && (filter.contains(param));
 	}
 
-	public void addFilters(String... params){
+	public void addFilters(String... params) {
 		filter.addAll(Arrays.asList(params));
 	}
 
 	public boolean hasFilter(String f) {
 		return filter.contains(f);
 	}
-	
+
 	@Override
-	public int compareTo(Event e){
+	public int compareTo(Event e) {
 		int result = Integer.compare(cId, e.cId);
-		if(result == 0){
+		if(result == 0) {
 			result = Integer.compare(uId, e.uId);
-			if(result == 0){
+			if(result == 0) {
 				result = Integer.compare(oId, e.oId);
 			}
 		}
 		return result;
 	}
 
-    public void addListener(Event e) {
-    	listeners.add(e);
-    }
-
-    public void notify(Event e) {
-    	throw new UnsupportedOperationException("notify is not allowed for " + getClass().getSimpleName());
-    }
-    
 	// Unrolling
-    // -----------------------------------------------------------------------------------------------------------------
+	// -----------------------------------------------------------------------------------------------------------------
 
-    public int setUId(int nextId) {
-    	uId = nextId++;
-    	if(successor != null) {
-    		nextId = successor.setUId(nextId);
-    	}
-	    return nextId;
-    }
+	public static void setUId(Event[] event, int nextId) {
+		for(Event e : event)
+			e.uId = nextId++;
+	}
 
-    public void unroll(int bound, Event predecessor) {
-    	Event copy = this;
-    	if(predecessor != null) {
-    		// This check must be done inside this if
-    		// Needed for the current implementation of copy in If events
-    		if(bound != 1) {
-        		copy = getCopy();    			
-    		}
-    		predecessor.setSuccessor(copy);
-    	}
-    	if(successor != null) {
-    		successor.unroll(bound, copy);
-    	}
-    }
-
-	public Event getCopy(){
+	public Event getCopy() {
 		throw new UnsupportedOperationException("Copying is not allowed for " + getClass().getSimpleName());
 	}
 
-	static Event copyPath(Event from, Event until, Event appendTo){
-		while(from != null && !from.equals(until)){
-			Event copy = from.getCopy();
-			appendTo.setSuccessor(copy);
-			appendTo = copy;
-			from = from.successor;
-		}
-		return appendTo;
-	}
 
+	// Compilation
+	// -----------------------------------------------------------------------------------------------------------------
 
-    // Compilation
-    // -----------------------------------------------------------------------------------------------------------------
-
-    public int compile(Arch target, int nextId, Event predecessor) {
+	public int compile(Arch target, int nextId, Event predecessor) {
 		cId = nextId++;
-		if(successor != null){
+		if(successor != null) {
 			return successor.compile(target, nextId, this);
 		}
-        return nextId;
-    }
+		return nextId;
+	}
 
-    protected int compileSequence(Arch target, int nextId, Event predecessor, LinkedList<Event> sequence){
-        for(Event e : sequence){
-        	e.oId = oId;
+	protected int compileSequence(Arch target, int nextId, Event predecessor, LinkedList<Event> sequence) {
+		for(Event e : sequence) {
+			e.oId = oId;
 			e.uId = uId;
-            e.cId = nextId++;
-            predecessor.setSuccessor(e);
-            predecessor = e;
-        }
-        if(successor != null){
-            predecessor.successor = successor;
-            return successor.compile(target, nextId, predecessor);
-        }
-        return nextId;
-    }
+			e.cId = nextId++;
+			predecessor.setSuccessor(e);
+			predecessor = e;
+		}
+		if(successor != null) {
+			predecessor.successor = successor;
+			return successor.compile(target, nextId, predecessor);
+		}
+		return nextId;
+	}
 
 
 	// Encoding
 	// -----------------------------------------------------------------------------------------------------------------
 
-	public void initialise(Context ctx){
-		if(cId < 0){
+	public void initialise(Context ctx) {
+		if(cId < 0) {
 			throw new RuntimeException("Event ID is not set in " + this);
 		}
 		execVar = ctx.mkBoolConst("exec(" + repr() + ")");
@@ -199,31 +164,31 @@ public abstract class Event implements Comparable<Event> {
 		return "E" + cId;
 	}
 
-	public BoolExpr exec(){
+	public BoolExpr exec() {
 		return execVar;
 	}
 
-	public BoolExpr cf(){
+	public BoolExpr cf() {
 		return cfVar;
 	}
 
-	public void addCfCond(Context ctx, BoolExpr cond){
+	public void addCfCond(Context ctx, BoolExpr cond) {
 		cfCond = (cfCond == null) ? cond : ctx.mkOr(cfCond, cond);
 	}
 
 	public BoolExpr encodeCF(Context ctx, BoolExpr cond) {
-		if(cfEnc == null){
+		if(cfEnc == null) {
 			cfCond = (cfCond == null) ? cond : ctx.mkOr(cfCond, cond);
 			cfEnc = ctx.mkEq(cfVar, cfCond);
 			cfEnc = ctx.mkAnd(cfEnc, encodeExec(ctx));
-			if(successor != null){
+			if(successor != null) {
 				cfEnc = ctx.mkAnd(cfEnc, successor.encodeCF(ctx, cfVar));
 			}
 		}
 		return cfEnc;
 	}
 
-	protected BoolExpr encodeExec(Context ctx){
+	protected BoolExpr encodeExec(Context ctx) {
 		return ctx.mkEq(execVar, cfVar);
 	}
 }

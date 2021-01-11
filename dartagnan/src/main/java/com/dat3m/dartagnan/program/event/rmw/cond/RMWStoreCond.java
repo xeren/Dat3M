@@ -23,12 +23,4 @@ public class RMWStoreCond extends RMWStore implements RegReaderData {
     protected BoolExpr encodeExec(Context ctx){
         return ctx.mkEq(execVar, ctx.mkAnd(cfVar, ((RMWReadCond)loadEvent).getCond()));
     }
-
-    // Unrolling
-    // -----------------------------------------------------------------------------------------------------------------
-
-    @Override
-    public void unroll(int bound, Event predecessor) {
-        throw new RuntimeException("RMWStoreCond cannot be unrolled: event must be generated during compilation");
-    }
 }

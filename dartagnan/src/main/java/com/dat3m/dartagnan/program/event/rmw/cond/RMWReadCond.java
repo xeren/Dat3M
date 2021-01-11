@@ -45,12 +45,4 @@ public abstract class RMWReadCond extends RMWLoad implements RegWriter, RegReade
     }
 
     public abstract String condToString();
-
-    // Unrolling
-    // -----------------------------------------------------------------------------------------------------------------
-
-    @Override
-    public void unroll(int bound, Event predecessor) {
-        throw new RuntimeException("RMWReadCond cannot be unrolled: event must be generated during compilation");
-    }
 }

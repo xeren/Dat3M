@@ -12,8 +12,7 @@ import com.microsoft.z3.Context;
 
 public class CondJump extends Event implements RegReaderData {
 
-	private Label label;
-	private transient Label label4Copy;
+	private final Label label;
 	private final BExpr expr;
 	private final ImmutableSet<Register> dataRegs;
 
@@ -25,19 +24,20 @@ public class CondJump extends Event implements RegReaderData {
 			throw new IllegalArgumentException("CondJump event requires non null expression");
 		}
 		this.label = label;
-		this.label.addListener(this);
 		this.expr = expr;
 		dataRegs = expr.getRegs();
 		addFilters(EType.ANY, EType.JUMP, EType.REG_READER);
 	}
 
-	protected CondJump(CondJump other) {
+	/**
+	Called during unrolling of a program.
+	Creates a copy of th
+	*/
+	public CondJump(CondJump other, Label label) {
 		super(other);
-		this.label = other.label4Copy;
-		this.expr = other.expr;
-		this.dataRegs = other.dataRegs;
-		Event notifier = label != null ? label : other.label;
-		notifier.addListener(this);
+		expr = other.expr;
+		dataRegs = other.dataRegs;
+		this.label = label;
 	}
 
 	/**
@@ -64,42 +64,6 @@ public class CondJump extends Event implements RegReaderData {
 			return "goto " + label;
 		}
 		return "if(" + expr + "); then goto " + label;
-	}
-
-	@Override
-	public void notify(Event label) {
-		if(this.label == null) {
-			this.label = (Label) label;
-		} else if(oId > label.getOId()) {
-			this.label4Copy = (Label) label;
-		}
-	}
-
-	// Unrolling
-	// -----------------------------------------------------------------------------------------------------------------
-
-	@Override
-	public void unroll(int bound, Event predecessor) {
-		if(label.getOId() < oId) {
-			if(bound > 1) {
-				predecessor = copyPath(label, successor, predecessor);
-			}
-			Event next = predecessor;
-			if(bound == 1) {
-				next = new BoundEvent();
-				predecessor.setSuccessor(next);
-			}
-			if(successor != null) {
-				successor.unroll(bound, next);
-			}
-			return;
-		}
-		super.unroll(bound, predecessor);
-	}
-
-	@Override
-	public CondJump getCopy() {
-		return new CondJump(this);
 	}
 
 	// Compilation

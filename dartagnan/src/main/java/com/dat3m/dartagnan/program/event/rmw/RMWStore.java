@@ -2,7 +2,6 @@ package com.dat3m.dartagnan.program.event.rmw;
 
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IExpr;
-import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Store;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.utils.EType;
@@ -19,13 +18,5 @@ public class RMWStore extends Store implements RegReaderData {
 
     public RMWLoad getLoadEvent(){
         return loadEvent;
-    }
-
-    // Unrolling
-    // -----------------------------------------------------------------------------------------------------------------
-
-    @Override
-    public void unroll(int bound, Event predecessor) {
-        throw new RuntimeException("RMWStore cannot be unrolled: event must be generated during compilation");
     }
 }

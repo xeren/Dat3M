@@ -4,36 +4,32 @@ import com.dat3m.dartagnan.program.utils.EType;
 
 public class Label extends Event {
 
-    private final String name;
-    
-    public Label(String name){
-        this.name = name;
-        addFilters(EType.ANY, EType.LABEL);
-    }
+	private final String name;
 
-    protected Label(Label other){
+	public Label(String name) {
+		this.name = name;
+		addFilters(EType.ANY, EType.LABEL);
+	}
+
+	protected Label(Label other) {
 		super(other);
-        this.name = other.name;
-    }
+		this.name = other.name;
+	}
 
-    public String getName(){
-        return name;
-    }
+	public String getName() {
+		return name;
+	}
 
-    @Override
-    public String toString(){
-        return name + ":";
-    }
+	@Override
+	public String toString() {
+		return name + ":";
+	}
 
-    // Unrolling
-    // -----------------------------------------------------------------------------------------------------------------
+	// Unrolling
+	// -----------------------------------------------------------------------------------------------------------------
 
-    @Override
-    public Label getCopy(){
-    	Label copy = new Label(this);
-    	for(Event jump : listeners) {
-    		jump.notify(copy);
-    	}
-    	return copy;
-    }
+	@Override
+	public Label getCopy() {
+		return new Label(this);
+	}
 }

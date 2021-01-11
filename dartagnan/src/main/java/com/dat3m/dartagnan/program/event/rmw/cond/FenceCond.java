@@ -23,12 +23,4 @@ public class FenceCond extends Fence {
     protected BoolExpr encodeExec(Context ctx){
         return ctx.mkEq(execVar, ctx.mkAnd(cfVar, loadEvent.getCond()));
     }
-
-    // Unrolling
-    // -----------------------------------------------------------------------------------------------------------------
-
-    @Override
-    public void unroll(int bound, Event predecessor) {
-        throw new RuntimeException("FenceCond cannot be unrolled: event must be generated during compilation");
-    }
 }

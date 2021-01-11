@@ -1,23 +1,27 @@
 package com.dat3m.dartagnan.program;
 
+import com.dat3m.dartagnan.program.event.BoundEvent;
+import com.dat3m.dartagnan.program.event.CondJump;
 import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.program.event.Label;
 import com.dat3m.dartagnan.program.utils.ThreadCache;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 
 import java.util.*;
+import java.util.stream.IntStream;
 
 public class Thread {
 
 	private final String name;
 	private final int id;
-	private final Event entry;
-	private Event exit;
+	private final Event[] original;
+	private Event[] unrolled;
 
 	private ThreadCache cache;
 
-	public Thread(String name, int id, Event entry) {
+	public Thread(String name, int id, Event[] entry) {
 		if(id < 0) {
 			throw new IllegalArgumentException("Invalid thread ID");
 		}
@@ -26,12 +30,7 @@ public class Thread {
 		}
 		this.name = name;
 		this.id = id;
-		this.entry = entry;
-		this.exit = this.entry;
-	}
-
-	public Thread(int id, Event entry) {
-		this(String.valueOf(id), id, entry);
+		this.original = entry;
 	}
 
 	public String getName() {
@@ -44,27 +43,15 @@ public class Thread {
 
 	public ThreadCache getCache() {
 		if(cache == null) {
-			List<Event> events = new ArrayList<>(entry.getSuccessors());
+			List<Event> events = new ArrayList<>(unrolled[0].getSuccessors());
 			cache = new ThreadCache(events);
 		}
 		return cache;
 	}
 
+	@Deprecated
 	public Event getEntry() {
-		return entry;
-	}
-
-	public Event getExit() {
-		return exit;
-	}
-
-	private void updateExit(Event event) {
-		exit = event;
-		Event next = exit.getSuccessor();
-		while(next != null) {
-			exit = next;
-			next = next.getSuccessor();
-		}
+		return unrolled[0];
 	}
 
 	@Override
@@ -87,14 +74,56 @@ public class Thread {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	public int unroll(int bound, int nextId) {
+		if(Arrays.stream(original).noneMatch(e->e instanceof CondJump && e.getOId() < ((CondJump)e).getLabel().getOId())) {
+			unrolled = original;
+			Event.setUId(unrolled, nextId);
+			return nextId + unrolled.length;
+		}
+		int start = original[0].getCId();
+		assert IntStream.range(0, original.length).allMatch(i->start+i==original[i].getCId());
+		Label[] e = new Label[original.length];
+		ArrayList<Event> r = new ArrayList<>(bound * e.length);
+		boolean reachable = true;
 		while(bound > 0) {
-			entry.unroll(bound, null);
+			for(int i = 0; i < e.length; i++) {
+				if(null != e[i]) {
+					r.add(e[i]);
+					e[i] = null;
+					reachable = true;
+				}
+				else if(reachable) {
+					if(original[i] instanceof CondJump) {
+						CondJump c = (CondJump) original[i];
+						Label l = c.getLabel();
+						int j = l.getCId() - start;
+						assert l == original[j];
+						if(null == e[j])
+							e[j] = l.getCopy();
+						r.add(new CondJump(c, e[j]));
+						reachable = !c.isUnconditional();
+					}
+					else {
+						r.add(original[i].getCopy());
+					}
+				}
+			}
+			reachable = false;
 			bound--;
 		}
-		nextId = entry.setUId(nextId);
-		updateExit(entry);
+		for(int i = 0; i < e.length; i++) {
+			if(null != e[i]) {
+				r.add(e[i]);
+				reachable = true;
+			}
+			else if(reachable) {
+				reachable = !(original[i] instanceof CondJump);
+				r.add(reachable ? original[i].getCopy() : new BoundEvent());
+			}
+		}
+		unrolled = r.toArray(new Event[0]);
+		Event.setUId(unrolled, nextId);
 		cache = null;
-		return nextId;
+		return nextId + unrolled.length;
 	}
 
 
@@ -102,8 +131,7 @@ public class Thread {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	public int compile(Arch target, int nextId) {
-		nextId = entry.compile(target, nextId, null);
-		updateExit(entry);
+		nextId = unrolled[0].compile(target, nextId, null);
 		cache = null;
 		return nextId;
 	}
@@ -113,6 +141,6 @@ public class Thread {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	public BoolExpr encodeCF(Context ctx) {
-		return entry.encodeCF(ctx, ctx.mkTrue());
+		return unrolled[0].encodeCF(ctx, ctx.mkTrue());
 	}
 }
