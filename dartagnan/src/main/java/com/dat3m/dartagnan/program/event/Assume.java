@@ -47,7 +47,8 @@ public class Assume extends Event implements RegReaderData {
     // -----------------------------------------------------------------------------------------------------------------
 
 	@Override
-	protected BoolExpr encodeExec(Context ctx) {
-		return ctx.mkAnd(super.encodeExec(ctx), ctx.mkEq(cfVar, condition.toZ3Bool(this, ctx)));
+	public void encode(Context c, RuleAcceptor out, BoolExpr in) {
+		super.encode(c, out, in);
+		out.add(c.mkEq(cfVar, condition.toZ3Bool(this, c)));
 	}
 }

@@ -139,9 +139,6 @@ public class Program {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	public BoolExpr encodeCF(Context ctx) {
-		for(Event e : getEvents()) {
-			e.initialise(ctx);
-		}
 		BoolExpr enc = memory.encode(ctx);
 		for(Thread t : threads) {
 			enc = ctx.mkAnd(enc, t.encodeCF(ctx));

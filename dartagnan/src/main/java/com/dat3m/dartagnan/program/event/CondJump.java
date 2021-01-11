@@ -6,8 +6,6 @@ import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.google.common.collect.ImmutableSet;
-import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 
 public class CondJump extends Event implements RegReaderData {
 
@@ -39,6 +37,10 @@ public class CondJump extends Event implements RegReaderData {
 		this.label = label;
 	}
 
+	public BExpr getCondition() {
+		return expr;
+	}
+
 	/**
 	Unconditional jumps have a literal true condition.
 	@return
@@ -63,20 +65,5 @@ public class CondJump extends Event implements RegReaderData {
 			return "goto " + label;
 		}
 		return "if(" + expr + "); then goto " + label;
-	}
-
-	// Encoding
-	// -----------------------------------------------------------------------------------------------------------------
-
-	@Override
-	public BoolExpr encodeCF(Context ctx, BoolExpr cond) {
-		if(cfEnc == null) {
-			cfCond = (cfCond == null) ? cond : ctx.mkOr(cfCond, cond);
-			BoolExpr ifCond = expr.toZ3Bool(this, ctx);
-			label.addCfCond(ctx, ctx.mkAnd(ifCond, cfVar));
-			cfEnc = ctx.mkAnd(ctx.mkEq(cfVar, cfCond), encodeExec(ctx));
-			cfEnc = ctx.mkAnd(cfEnc, successor.encodeCF(ctx, ctx.mkAnd(ctx.mkNot(ifCond), cfVar)));
-		}
-		return cfEnc;
 	}
 }

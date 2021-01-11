@@ -34,9 +34,13 @@ public class Local extends Event implements RegWriter, RegReaderData {
 	}
 
 	@Override
-	public void initialise(Context ctx) {
-		super.initialise(ctx);
-		regResultExpr = register.toZ3IntResult(this, ctx);
+	public void encode(Context c, RuleAcceptor out, BoolExpr in) {
+		super.encode(c, out, in);
+		regResultExpr = register.toZ3IntResult(this, c);
+		Expr x = expr.toZ3Int(this, c);
+		out.add(c.mkEq(regResultExpr, x));
+		if(expr instanceof INonDet)
+			out.add(((INonDet)expr).encodeBounds(x.isBV(), c));
 	}
 
 	public ExprInterface getExpr(){
@@ -61,15 +65,6 @@ public class Local extends Event implements RegWriter, RegReaderData {
     @Override
 	public String toString() {
 		return register + " <- " + expr;
-	}
-
-	@Override
-	protected BoolExpr encodeExec(Context ctx){
-		BoolExpr enc = super.encodeExec(ctx);
-		if(expr instanceof INonDet) {
-			enc = ctx.mkAnd(enc, ((INonDet)expr).encodeBounds(expr.toZ3Int(this, ctx).isBV(), ctx));
-		}
-		return ctx.mkAnd(enc, ctx.mkEq(regResultExpr,  expr.toZ3Int(this, ctx)));
 	}
 
 	// Unrolling

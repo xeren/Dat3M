@@ -18,11 +18,6 @@ public abstract class Event implements Comparable<Event> {
 
 	protected final Set<String> filter;
 
-	protected transient Event successor;
-
-	protected transient BoolExpr cfEnc;
-	protected transient BoolExpr cfCond;
-
 	protected transient BoolExpr cfVar;
 	protected transient BoolExpr execVar;
 
@@ -124,14 +119,6 @@ public abstract class Event implements Comparable<Event> {
 	// Encoding
 	// -----------------------------------------------------------------------------------------------------------------
 
-	public void initialise(Context ctx) {
-		if(cId < 0) {
-			throw new RuntimeException("Event ID is not set in " + this);
-		}
-		execVar = ctx.mkBoolConst("exec(" + repr() + ")");
-		cfVar = ctx.mkBoolConst("cf(" + repr() + ")");
-	}
-
 	public String repr() {
 		return "E" + cId;
 	}
@@ -144,23 +131,20 @@ public abstract class Event implements Comparable<Event> {
 		return cfVar;
 	}
 
-	public void addCfCond(Context ctx, BoolExpr cond) {
-		cfCond = (cfCond == null) ? cond : ctx.mkOr(cfCond, cond);
+	public interface RuleAcceptor {
+		void add(BoolExpr rule);
 	}
 
-	public BoolExpr encodeCF(Context ctx, BoolExpr cond) {
-		if(cfEnc == null) {
-			cfCond = (cfCond == null) ? cond : ctx.mkOr(cfCond, cond);
-			cfEnc = ctx.mkEq(cfVar, cfCond);
-			cfEnc = ctx.mkAnd(cfEnc, encodeExec(ctx));
-			if(successor != null) {
-				cfEnc = ctx.mkAnd(cfEnc, successor.encodeCF(ctx, cfVar));
-			}
-		}
-		return cfEnc;
-	}
-
-	protected BoolExpr encodeExec(Context ctx) {
-		return ctx.mkEq(execVar, cfVar);
+	/**
+	Prepares this event to be represented in a boolean formula.
+	@param context
+	Builder for expressions.
+	@param out
+	Receives additional rules.
+	@param in
+	Proposition that control flows to this event.
+	*/
+	public void encode(Context context, RuleAcceptor out, BoolExpr in) {
+		execVar = cfVar = in;
 	}
 }

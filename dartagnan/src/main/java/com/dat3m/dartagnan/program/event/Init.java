@@ -3,31 +3,32 @@ package com.dat3m.dartagnan.program.event;
 import com.dat3m.dartagnan.expression.IConst;
 import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.program.utils.EType;
+import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 
 public class Init extends MemEvent {
 
 	private final IConst value;
-	
+
 	public Init(Address address, IConst value) {
 		super(address, null);
 		this.value = value;
 		addFilters(EType.ANY, EType.VISIBLE, EType.MEMORY, EType.WRITE, EType.INIT);
 	}
 
-	private Init(Init other){
+	private Init(Init other) {
 		super(other);
 		this.value = other.value;
 	}
 
-	public IConst getValue(){
+	public IConst getValue() {
 		return value;
 	}
 
 	@Override
-	public void initialise(Context ctx) {
-		super.initialise(ctx);
-		memValueExpr = value.toZ3Int(ctx);
+	public void encode(Context c, RuleAcceptor out, BoolExpr in) {
+		super.encode(c, out, in);
+		memValueExpr = value.toZ3Int(c);
 	}
 
 	@Override
@@ -36,12 +37,12 @@ public class Init extends MemEvent {
 	}
 
 	@Override
-	public String label(){
+	public String label() {
 		return "W";
 	}
 
 	@Override
-	public IConst getMemValue(){
+	public IConst getMemValue() {
 		return value;
 	}
 
@@ -50,7 +51,7 @@ public class Init extends MemEvent {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	@Override
-	public Init getCopy(){
+	public Init getCopy() {
 		return new Init(this);
 	}
 }

@@ -75,8 +75,12 @@ public class Thread implements Iterable<Event> {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	/**
+	Under-approximates the graph to a certain depth.
+	The result is stored in this instance.
+	@param bound
+	Amount of backwards-jumps allowed for executions of this program.
 	*/
-	public void unroll(int bound) {
+	void unroll(int bound) {
 		if(Arrays.stream(original).noneMatch(e->e instanceof CondJump && e.getOId() < ((CondJump)e).getLabel().getOId())) {
 			unrolled = original;
 			cache = null;
@@ -131,7 +135,13 @@ public class Thread implements Iterable<Event> {
 	// Compilation
 	// -----------------------------------------------------------------------------------------------------------------
 
-	public void compile(Arch target) {
+	/**
+	Tries to substitutes all abstract events that can be expressed alternatively in a give architecture.
+	The result is stored in this instance.
+	@param target
+	Describes an instruction set.
+	*/
+	void compile(Arch target) {
 		ArrayList<Event> r = new ArrayList<>();
 		for(Event e : unrolled) {
 			Event[] substitute = e.compile(target);
@@ -152,7 +162,34 @@ public class Thread implements Iterable<Event> {
 	// Encoding
 	// -----------------------------------------------------------------------------------------------------------------
 
-	public BoolExpr encodeCF(Context ctx) {
-		return compiled[0].encodeCF(ctx, ctx.mkTrue());
+	/**
+	Expresses this thread's control flow as a boolean formula.
+	@param context
+	Builder for expressions.
+	@return
+	Conjunction of additional conditions.
+	*/
+	BoolExpr encodeCF(Context context) {
+		ArrayList<BoolExpr> out = new ArrayList<>();
+		HashMap<Integer,LinkedList<BoolExpr>> message = new HashMap<>();
+		BoolExpr cf = context.mkTrue();
+		for(Event e : compiled) {
+			LinkedList<BoolExpr> m = message.remove(e.getCId());
+			if(null != m) {
+				if(null != cf)
+					m.add(cf);
+				cf = context.mkBoolConst("cf " + e.getCId());
+				out.add(context.mkEq(cf, context.mkOr(m.toArray(new BoolExpr[0]))));
+			}
+			e.encode(context, out::add, cf);
+			if(e instanceof CondJump) {
+				BoolExpr condition = context.mkBoolConst("branch " + e.getCId());
+				out.add(context.mkEq(condition, ((CondJump) e).getCondition().toZ3Bool(e, context)));
+				message.computeIfAbsent(((CondJump) e).getLabel().getCId(), k->new LinkedList<>()).add(context.mkAnd(cf, condition));
+				message.computeIfAbsent(1 + e.getCId(), k->new LinkedList<>()).add(context.mkAnd(cf, context.mkNot(condition)));
+				cf = null;
+			}
+		}
+		return context.mkAnd(out.toArray(new BoolExpr[0]));
 	}
 }

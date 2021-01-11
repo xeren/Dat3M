@@ -1,12 +1,13 @@
 package com.dat3m.dartagnan.program.event;
 
-import com.microsoft.z3.Context;
-import com.microsoft.z3.Expr;
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
 import com.dat3m.dartagnan.program.utils.EType;
+import com.microsoft.z3.BoolExpr;
+import com.microsoft.z3.Context;
+import com.microsoft.z3.Expr;
 
 public class Load extends MemEvent implements RegWriter {
 
@@ -24,9 +25,9 @@ public class Load extends MemEvent implements RegWriter {
     }
 
     @Override
-    public void initialise(Context ctx) {
-        super.initialise(ctx);
-        memValueExpr = resultRegister.toZ3IntResult(this, ctx);
+    public void encode(Context c, RuleAcceptor out, BoolExpr in) {
+        super.encode(c, out, in);
+        memValueExpr = resultRegister.toZ3IntResult(this, c);
     }
 
     @Override
