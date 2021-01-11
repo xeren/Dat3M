@@ -31,7 +31,7 @@ public class ProgramBuilder {
 		buildInitThreads(program);
 		for(T t : threads.values()) {
 			if(!t.labelPending.isEmpty()) {
-				throw new ParsingException("Unassigned label " + t.labelPending.keySet().iterator().next());
+				throw new ParsingException("Unassigned labels " + t.labelPending.keySet());
 			}
 		}
 		int o = 0;
@@ -246,6 +246,8 @@ public class ProgramBuilder {
 		 * Identifier for the label.
 		 */
 		public Label label(String name) {
+			if(null == name)
+				return new Label(null);
 			Label l = label.get(name);
 			return null != l ? l : labelPending.computeIfAbsent(name, Label::new);
 		}

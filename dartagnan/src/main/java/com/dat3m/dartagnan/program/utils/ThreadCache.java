@@ -15,6 +15,7 @@ public class ThreadCache {
 	private final ImmutableList<Event> all;
 	private final Map<FilterAbstract,List<Event>> tag = new HashMap<>();
 	private final HashMap<Class<?>,List<?>> subclass = new HashMap<>();
+	private final HashMap<Event,Event> dominator = new HashMap<>();
 
 	/**
 	Tracks information about a compiled thread.
@@ -50,5 +51,39 @@ public class ThreadCache {
 	@SuppressWarnings("unchecked")
 	public <T> List<T> getEvents(Class<T> cls) {
 		return (List<T>) subclass.computeIfAbsent(cls, k->all.stream().filter(cls::isInstance).collect(toList()));
+	}
+
+	/**
+	Maps events to the latest event that must have been executed before in all executions.
+	@param successor
+	Some event of this thread except this thread's entry point.
+	@return
+	Latest predecessor where all executions including successor also include it.
+	*/
+	public Event dominator(Event successor) {
+		if(dominator.isEmpty()) {
+			Event predecessor = null;
+			for(Event e: all) {
+				dominator.put(e, predecessor);
+				if(e instanceof CondJump) {
+					Label l = ((CondJump) e).getLabel();
+					dominator.compute(l, (k,v)->{
+						if(null == v)
+							return e;
+						// latest common dominator
+						Event other = l;
+						while(other.getCId() != v.getCId()) {
+							if(other.getCId() < v.getCId())
+								v = dominator.get(v);
+							else
+								other = dominator.get(other);
+						}
+						return other;
+					});
+				}
+				predecessor = e instanceof CondJump && ((CondJump) e).isUnconditional() ? null : e;
+			}
+		}
+		return dominator.get(successor);
 	}
 }
