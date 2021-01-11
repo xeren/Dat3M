@@ -5,7 +5,6 @@ import static com.dat3m.dartagnan.program.atomic.utils.Mo.SC;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
 
 import com.dat3m.dartagnan.expression.Atom;
@@ -19,11 +18,10 @@ import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.atomic.event.AtomicLoad;
 import com.dat3m.dartagnan.program.atomic.event.AtomicStore;
 import com.dat3m.dartagnan.program.event.Assume;
-import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.Load;
 import com.dat3m.dartagnan.program.event.Store;
+import com.dat3m.dartagnan.program.event.rmw.RMWLoad;
+import com.dat3m.dartagnan.program.event.rmw.RMWStore;
 import com.dat3m.dartagnan.program.memory.Location;
-import com.dat3m.dartagnan.program.utils.EType;
 
 public class PthreadsProcedures {
 	
@@ -143,30 +141,22 @@ public class PthreadsProcedures {
 	private static void mutexLock(VisitorBoogie visitor, Call_cmdContext ctx) {
         Register register = visitor.thread.register(null, -1);
 		IExpr lockAddress = (IExpr)ctx.call_params().exprs().accept(visitor);
-		if(lockAddress != null) {
-	        LinkedList<Event> events = new LinkedList<>();
-	        events.add(new Load(register, lockAddress, SC));
-	        events.add(new Assume(new Atom(register, EQ, new IConst(0, -1))));
-	        events.add(new Store(lockAddress, new IConst(1, -1), SC));
-	        for(Event e : events) {
-	        	e.addFilters(EType.LOCK, EType.RMW);
-	        	visitor.thread.add(e);
-	        }
-		}
+		if(null == lockAddress)
+			return;
+        RMWLoad load = new RMWLoad(register, lockAddress, SC);
+        visitor.thread.add(load);
+        visitor.thread.add(new Assume(new Atom(register, EQ, new IConst(0, -1))));
+        visitor.thread.add(new RMWStore(load, lockAddress, new IConst(1, -1), SC));
 	}
 	
 	private static void mutexUnlock(VisitorBoogie visitor, Call_cmdContext ctx) {
         Register register = visitor.thread.register(null, -1);
 		IExpr lockAddress = (IExpr)ctx.call_params().exprs().accept(visitor);
-		if(lockAddress != null) {
-			LinkedList<Event> events = new LinkedList<>();
-	        events.add(new Load(register, lockAddress, SC));
-	        events.add(new Assume(new Atom(register, EQ, new IConst(1, -1))));
-	        events.add(new Store(lockAddress, new IConst(0, -1), SC));
-	        for(Event e : events) {
-	        	e.addFilters(EType.LOCK, EType.RMW);
-	        	visitor.thread.add(e);
-	        }
-		}
+		if(null == lockAddress)
+			return;
+		RMWLoad load = new RMWLoad(register, lockAddress, SC);
+		visitor.thread.add(load);
+		visitor.thread.add(new Assume(new Atom(register, EQ, new IConst(1, -1))));
+		visitor.thread.add(new RMWStore(load, lockAddress, new IConst(0, -1), SC));
 	}
 }

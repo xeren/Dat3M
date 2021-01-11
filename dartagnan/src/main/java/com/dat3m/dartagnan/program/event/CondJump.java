@@ -5,7 +5,6 @@ import com.dat3m.dartagnan.expression.BExpr;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.utils.EType;
-import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
@@ -64,18 +63,6 @@ public class CondJump extends Event implements RegReaderData {
 			return "goto " + label;
 		}
 		return "if(" + expr + "); then goto " + label;
-	}
-
-	// Compilation
-	// -----------------------------------------------------------------------------------------------------------------
-
-	@Override
-	public int compile(Arch target, int nextId, Event predecessor) {
-		cId = nextId++;
-		if(successor == null) {
-			throw new RuntimeException("Malformed CondJump event");
-		}
-		return successor.compile(target, nextId, this);
 	}
 
 	// Encoding

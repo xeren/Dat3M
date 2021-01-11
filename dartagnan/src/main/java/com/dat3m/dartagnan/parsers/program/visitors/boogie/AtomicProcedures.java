@@ -8,15 +8,16 @@ import java.util.List;
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IConst;
 import com.dat3m.dartagnan.expression.IExpr;
+import com.dat3m.dartagnan.expression.IExprBin;
 import com.dat3m.dartagnan.expression.op.IOpBin;
 import com.dat3m.dartagnan.parsers.BoogieParser.Call_cmdContext;
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.atomic.event.AtomicFetchOp;
 import com.dat3m.dartagnan.program.atomic.event.AtomicLoad;
 import com.dat3m.dartagnan.program.atomic.event.AtomicStore;
 import com.dat3m.dartagnan.program.atomic.event.AtomicThreadFence;
-import com.dat3m.dartagnan.program.atomic.event.AtomicXchg;
 import com.dat3m.dartagnan.program.event.Store;
+import com.dat3m.dartagnan.program.event.rmw.RMWLoad;
+import com.dat3m.dartagnan.program.event.rmw.RMWStore;
 
 public class AtomicProcedures {
 
@@ -111,9 +112,12 @@ public class AtomicProcedures {
 		if(ctx.call_params().exprs().expr().size() > 2) {
 			mo = intToMo(((IConst)ctx.call_params().exprs().expr().get(2).accept(visitor)).getValue());			
 		}
-		AtomicFetchOp child = new AtomicFetchOp(reg, add, value, op, mo);
-		child.setCLine(visitor.currentLine);
-		visitor.thread.add(child);
+		RMWLoad load = new RMWLoad(reg, add, mo);
+		load.setCLine(visitor.currentLine);
+		visitor.thread.add(load);
+		RMWStore store = new RMWStore(load, add, new IExprBin(reg, op, value), mo);
+		store.setCLine(visitor.currentLine);
+		visitor.thread.add(store);
 	}
 
 	private static void atomicXchg(VisitorBoogie visitor, Call_cmdContext ctx) {
@@ -124,9 +128,12 @@ public class AtomicProcedures {
 		if(ctx.call_params().exprs().expr().size() > 2) {
 			mo = intToMo(((IConst)ctx.call_params().exprs().expr().get(2).accept(visitor)).getValue());			
 		}
-		AtomicXchg child = new AtomicXchg(reg, add, value, mo);
-		child.setCLine(visitor.currentLine);
-		visitor.thread.add(child);
+		RMWLoad load = new RMWLoad(reg, add, mo);
+		load.setCLine(visitor.currentLine);
+		visitor.thread.add(load);
+		RMWStore store = new RMWStore(load, add, value, mo);
+		store.setCLine(visitor.currentLine);
+		visitor.thread.add(store);
 	}
 
 	private static void atomicThreadFence(VisitorBoogie visitor, Call_cmdContext ctx) {

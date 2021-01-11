@@ -112,7 +112,9 @@ public class Program {
 
 	public int unroll(int bound, int nextId) {
 		for(Thread thread : threads) {
-			nextId = thread.unroll(bound, nextId);
+			thread.unroll(bound);
+			for(Event event : thread.unrolled)
+				event.setUId(nextId++);
 		}
 		cache = null;
 		return nextId;
@@ -124,7 +126,9 @@ public class Program {
 
 	public int compile(Arch target, int nextId) {
 		for(Thread thread : threads) {
-			nextId = thread.compile(target, nextId);
+			thread.compile(target);
+			Event.setCId(thread.compiled, nextId);
+			nextId += thread.compiled.length;
 		}
 		cache = null;
 		return nextId;

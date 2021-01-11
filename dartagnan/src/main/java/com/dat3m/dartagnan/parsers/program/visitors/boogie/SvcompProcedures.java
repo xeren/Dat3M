@@ -3,7 +3,6 @@ package com.dat3m.dartagnan.parsers.program.visitors.boogie;
 import static com.dat3m.dartagnan.expression.op.COpBin.EQ;
 
 import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
 
 import com.dat3m.dartagnan.expression.Atom;
@@ -17,10 +16,9 @@ import com.dat3m.dartagnan.parsers.BoogieParser.Call_cmdContext;
 import com.dat3m.dartagnan.parsers.program.utils.ParsingException;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Assume;
-import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.Load;
 import com.dat3m.dartagnan.program.event.Local;
-import com.dat3m.dartagnan.program.event.Store;
+import com.dat3m.dartagnan.program.event.rmw.RMWLoad;
+import com.dat3m.dartagnan.program.event.rmw.RMWStore;
 import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.program.utils.EType;
 
@@ -112,14 +110,10 @@ public class SvcompProcedures {
 	public static void __VERIFIER_atomic(VisitorBoogie visitor, boolean begin) {
 		Register register = visitor.thread.register(null, -1);
 		Address lockAddress = visitor.programBuilder.getOrCreateLocation("__VERIFIER_atomic", -1).getAddress();
-		LinkedList<Event> events = new LinkedList<>();
-		events.add(new Load(register, lockAddress, null));
-		events.add(new Assume(new Atom(register, EQ, new IConst(begin ? 0 : 1, -1))));
-		events.add(new Store(lockAddress, new IConst(begin ? 1 : 0, -1), null));
-		for(Event e : events) {
-			e.addFilters(EType.LOCK, EType.RMW);
-			visitor.thread.add(e);
-		}
+		RMWLoad load = new RMWLoad(register, lockAddress, null);
+		visitor.thread.add(load);
+		visitor.thread.add(new Assume(new Atom(register, EQ, new IConst(begin ? 0 : 1, -1))));
+		visitor.thread.add(new RMWStore(load, lockAddress, new IConst(begin ? 1 : 0, -1), null));
 	}
 
 	private static void __VERIFIER_nondet(VisitorBoogie visitor, Call_cmdContext ctx, String name) {

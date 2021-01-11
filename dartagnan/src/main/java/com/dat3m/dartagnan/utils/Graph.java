@@ -111,7 +111,7 @@ public class Graph {
 
         int tId = 0;
         for(Thread t : program.getThreads()) {
-            Event firstEvent = t.getEntry().getSuccessor();
+            Event firstEvent = t.iterator().next();
             if(firstEvent instanceof Init){
                 Init e = (Init)firstEvent;
                 Location location = mapAddressLocation.get(e.getAddress().getIntValue(e, model, ctx));

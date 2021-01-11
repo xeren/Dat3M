@@ -10,16 +10,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.SortedSet;
-import java.util.Stack;
-import java.util.TimeZone;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import com.dat3m.dartagnan.expression.BConst;
@@ -189,41 +180,25 @@ public class Witness {
 	
 	private void populateMap() {
 		for(Thread t : program.getThreads()) {
-			for(Event e : t.getEntry().getSuccessors()) {
+			for(Event e : t) {
 				eventThreadMap.put(e, t.getId()-1);
 			}
 		}
 	}
 	
 	private List<Event> getSCExecutionOrder(Context ctx, Model model) {
+		//assume program order is preserved
 		List<Event> execEvents = program.getEvents().stream().filter(e -> model.getConstInterp(e.exec()).isTrue() && e.getCLine() > -1).collect(Collectors.toList());
-		
-		Map<Integer, List<Event>> map = new HashMap<Integer, List<Event>>();
+		TreeMap<Integer,ArrayList<Event>> map = new TreeMap<>();
+		ArrayList<Event> last = new ArrayList<>();
         for(Event e : execEvents) {
         	Expr var = model.getConstInterp(intVar("hb", e, ctx));
-        	if(var != null) {
-        		int key = Integer.parseInt(var.toString());
-				if(!map.containsKey(key)) {
-					map.put(key, new ArrayList<Event>());
-				}
-				List<Event> lst = new ArrayList<Event>(Arrays.asList(e));
-				Event next = e.getSuccessor();
-				// This collects all the successors not accessing global variables
-				while(next != null && execEvents.contains(next) && model.getConstInterp(intVar("hb", next, ctx)) == null) {
-					lst.add(next);
-					next = next.getSuccessor();
-				}
-        		map.get(key).addAll(lst);
-        	}
+        	if(var == null)
+				last.add(e);
+        	else
+				(last = map.computeIfAbsent(Integer.parseInt(var.toString()), k->new ArrayList<>())).add(e);
         }
-        
-        List<Event> exec = new ArrayList<Event>();
-        SortedSet<Integer> keys = new TreeSet<>(map.keySet());
-        for (Integer key : keys) {
-        	exec.addAll(map.get(key));
-        }
-        
-        return exec.isEmpty() ? execEvents : exec;
+        return map.isEmpty() ? execEvents : map.values().stream().flatMap(Collection::stream).collect(Collectors.toList());
 	}
 	
 	private String checksum() {

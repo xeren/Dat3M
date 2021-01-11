@@ -12,12 +12,13 @@ import com.microsoft.z3.Context;
 import java.util.*;
 import java.util.stream.IntStream;
 
-public class Thread {
+public class Thread implements Iterable<Event> {
 
 	private final String name;
 	private final int id;
 	private final Event[] original;
-	private Event[] unrolled;
+	Event[] unrolled;
+	Event[] compiled;
 
 	private ThreadCache cache;
 
@@ -43,15 +44,15 @@ public class Thread {
 
 	public ThreadCache getCache() {
 		if(cache == null) {
-			List<Event> events = new ArrayList<>(unrolled[0].getSuccessors());
+			List<Event> events = Arrays.asList(compiled);
 			cache = new ThreadCache(events);
 		}
 		return cache;
 	}
 
-	@Deprecated
-	public Event getEntry() {
-		return unrolled[0];
+	@Override
+	public Iterator<Event> iterator() {
+		return Arrays.asList(compiled).iterator();
 	}
 
 	@Override
@@ -73,11 +74,13 @@ public class Thread {
 	// Unrolling
 	// -----------------------------------------------------------------------------------------------------------------
 
-	public int unroll(int bound, int nextId) {
+	/**
+	*/
+	public void unroll(int bound) {
 		if(Arrays.stream(original).noneMatch(e->e instanceof CondJump && e.getOId() < ((CondJump)e).getLabel().getOId())) {
 			unrolled = original;
-			Event.setUId(unrolled, nextId);
-			return nextId + unrolled.length;
+			cache = null;
+			return;
 		}
 		int start = original[0].getCId();
 		assert IntStream.range(0, original.length).allMatch(i->start+i==original[i].getCId());
@@ -121,19 +124,28 @@ public class Thread {
 			}
 		}
 		unrolled = r.toArray(new Event[0]);
-		Event.setUId(unrolled, nextId);
 		cache = null;
-		return nextId + unrolled.length;
 	}
 
 
 	// Compilation
 	// -----------------------------------------------------------------------------------------------------------------
 
-	public int compile(Arch target, int nextId) {
-		nextId = unrolled[0].compile(target, nextId, null);
+	public void compile(Arch target) {
+		ArrayList<Event> r = new ArrayList<>();
+		for(Event e : unrolled) {
+			Event[] substitute = e.compile(target);
+			if(null == substitute)
+				r.add(e);
+			else for(Event c : substitute) {
+				c.setOId(e.getOId());
+				c.setCLine(e.getCLine());
+				c.setUId(e.getUId());
+				r.add(c);
+			}
+		}
+		compiled = r.toArray(new Event[0]);
 		cache = null;
-		return nextId;
 	}
 
 
@@ -141,6 +153,6 @@ public class Thread {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	public BoolExpr encodeCF(Context ctx) {
-		return unrolled[0].encodeCF(ctx, ctx.mkTrue());
+		return compiled[0].encodeCF(ctx, ctx.mkTrue());
 	}
 }

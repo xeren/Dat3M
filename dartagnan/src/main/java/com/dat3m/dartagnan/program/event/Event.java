@@ -62,25 +62,6 @@ public abstract class Event implements Comparable<Event> {
 		this.cLine = line;
 	}
 
-	@Deprecated
-	public Event getSuccessor() {
-		return successor;
-	}
-
-	@Deprecated
-	public void setSuccessor(Event event) {
-		successor = event;
-	}
-
-	@Deprecated
-	public LinkedList<Event> getSuccessors() {
-		LinkedList<Event> result = successor != null
-			? successor.getSuccessors()
-			: new LinkedList<>();
-		result.addFirst(this);
-		return result;
-	}
-
 	public String label() {
 		return repr() + " " + getClass().getSimpleName();
 	}
@@ -112,9 +93,8 @@ public abstract class Event implements Comparable<Event> {
 	// Unrolling
 	// -----------------------------------------------------------------------------------------------------------------
 
-	public static void setUId(Event[] event, int nextId) {
-		for(Event e : event)
-			e.uId = nextId++;
+	public void setUId(int id) {
+		uId = id;
 	}
 
 	public Event getCopy() {
@@ -125,27 +105,19 @@ public abstract class Event implements Comparable<Event> {
 	// Compilation
 	// -----------------------------------------------------------------------------------------------------------------
 
-	public int compile(Arch target, int nextId, Event predecessor) {
-		cId = nextId++;
-		if(successor != null) {
-			return successor.compile(target, nextId, this);
-		}
-		return nextId;
+	public static void setCId(Event[] event, int nextId) {
+		for(Event e : event)
+			e.cId = nextId++;
 	}
 
-	protected int compileSequence(Arch target, int nextId, Event predecessor, LinkedList<Event> sequence) {
-		for(Event e : sequence) {
-			e.oId = oId;
-			e.uId = uId;
-			e.cId = nextId++;
-			predecessor.setSuccessor(e);
-			predecessor = e;
-		}
-		if(successor != null) {
-			predecessor.successor = successor;
-			return successor.compile(target, nextId, predecessor);
-		}
-		return nextId;
+	/**
+	Given an architecture, simplify this event into smaller events defined by the architecture such that all guarantees are satisfied.
+	@return
+	Array of events to substitute.
+	{@code null} if no substitution should take place.
+	*/
+	public Event[] compile(Arch target) {
+		return null;
 	}
 
 

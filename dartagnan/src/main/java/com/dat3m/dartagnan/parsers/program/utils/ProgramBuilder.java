@@ -44,7 +44,6 @@ public class ProgramBuilder {
 			for(int i = 0; i < end; i++) {
 				Event next = t.event.get(i + 1);
 				next.setOId(o++);
-				t.event.get(i).setSuccessor(next);
 			}
 			program.add(thread);
 		}
