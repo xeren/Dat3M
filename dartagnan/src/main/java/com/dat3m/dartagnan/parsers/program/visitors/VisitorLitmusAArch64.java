@@ -10,7 +10,7 @@ import com.dat3m.dartagnan.parsers.program.utils.AssertionHelper;
 import com.dat3m.dartagnan.parsers.program.utils.ParsingException;
 import com.dat3m.dartagnan.parsers.program.utils.ProgramBuilder;
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.arch.aarch64.utils.EType;
+import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.program.event.Cmp;
 import com.dat3m.dartagnan.program.event.Label;
 import org.antlr.v4.runtime.misc.Interval;
@@ -144,7 +144,10 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 		if(ctx.offset() != null){
 			address = visitOffset(ctx.offset(), address);
 		}
-		thread.load(register, address, ctx.loadInstruction().mo);
+		if(ctx.loadInstruction().acquire)
+			thread.load(register, address, EType.ACQUIRE);
+		else
+			thread.load(register, address);
 		return null;
 	}
 
@@ -155,7 +158,10 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 		if(ctx.offset() != null){
 			address = visitOffset(ctx.offset(), address);
 		}
-		thread.load(register, address, EType.EXCL, ctx.loadExclusiveInstruction().mo);
+		if(ctx.loadExclusiveInstruction().acquire)
+			thread.load(register, address, EType.EXCLUSIVE, EType.ACQUIRE);
+		else
+			thread.load(register, address, EType.EXCLUSIVE);
 		return null;
 	}
 
@@ -166,7 +172,10 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 		if(ctx.offset() != null){
 			address = visitOffset(ctx.offset(), address);
 		}
-		thread.store(address, register, ctx.storeInstruction().mo);
+		if(ctx.storeInstruction().release)
+			thread.store(address, register, EType.RELEASE);
+		else
+			thread.store(address, register);
 		return null;
 	}
 
@@ -180,7 +189,10 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 		thread.local(statusReg, new BNonDet(1));
 		Label next = new Label();
 		thread.jump(next, new Atom(statusReg, COpBin.NEQ, new IConst(0, -1)));
-		thread.store(address, register, EType.EXCL, ctx.storeExclusiveInstruction().mo);
+		if(ctx.storeExclusiveInstruction().release)
+			thread.store(address, register, EType.EXCLUSIVE, EType.RELEASE);
+		else
+			thread.store(address, register, EType.EXCLUSIVE);
 		thread.add(next);
 		return null;
 	}

@@ -1,10 +1,5 @@
 package com.dat3m.dartagnan.parsers.program.visitors.boogie;
 
-import static com.dat3m.dartagnan.program.atomic.utils.Mo.intToMo;
-
-import java.util.Arrays;
-import java.util.List;
-
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IConst;
 import com.dat3m.dartagnan.expression.IExpr;
@@ -16,6 +11,9 @@ import com.dat3m.dartagnan.program.atomic.event.AtomicLoad;
 import com.dat3m.dartagnan.program.atomic.event.AtomicStore;
 import com.dat3m.dartagnan.program.atomic.event.AtomicThreadFence;
 import com.dat3m.dartagnan.program.event.Load;
+import com.dat3m.dartagnan.program.utils.EType;
+import java.util.Arrays;
+import java.util.List;
 
 public class AtomicProcedures {
 
@@ -131,5 +129,24 @@ public class AtomicProcedures {
 		AtomicThreadFence child = new AtomicThreadFence(mo);
 		child.setCLine(visitor.currentLine);
 		visitor.thread.add(child);
+	}
+
+	private static String intToMo(int i) {
+		switch(i) {
+			case 0:
+				return EType.RELAXED;
+			case 1:
+				return EType.CONSUME;
+			case 2:
+				return EType.ACQUIRE;
+			case 3:
+				return EType.RELEASE;
+			case 4:
+				return EType.ACQ_REL;
+			case 5:
+				return EType.SC;
+			default:
+				throw new UnsupportedOperationException("The memory order is not recognized");
+		}
 	}
 }

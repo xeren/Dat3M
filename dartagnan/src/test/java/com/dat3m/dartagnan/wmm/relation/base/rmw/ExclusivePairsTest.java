@@ -3,7 +3,7 @@ package com.dat3m.dartagnan.wmm.relation.base.rmw;
 import com.dat3m.dartagnan.parsers.cat.ParserCat;
 import com.dat3m.dartagnan.parsers.program.ProgramParser;
 import com.dat3m.dartagnan.program.Program;
-import com.dat3m.dartagnan.program.arch.aarch64.utils.EType;
+import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.utils.ResourceHelper;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.utils.Settings;
@@ -87,8 +87,8 @@ public class ExclusivePairsTest {
                 EdgeTestHelper helper = new EdgeTestHelper(
                         program,
                         wmm.getRelationRepository().getRelation("rmw"),
-                        FilterIntersection.get(FilterBasic.get(EType.EXCL), FilterBasic.get(EType.READ)),
-                        FilterIntersection.get(FilterBasic.get(EType.EXCL), FilterBasic.get(EType.WRITE))
+                        FilterIntersection.get(FilterBasic.get(EType.EXCLUSIVE), FilterBasic.get(EType.READ)),
+                        FilterIntersection.get(FilterBasic.get(EType.EXCLUSIVE), FilterBasic.get(EType.WRITE))
                 );
                 solver.add(helper.encodeIllegalEdges(expectedEdges, ctx));
                 assertSame(Status.UNSATISFIABLE, solver.check());

@@ -12,8 +12,6 @@ import com.microsoft.z3.Expr;
 
 import java.util.HashSet;
 
-import static com.dat3m.dartagnan.program.arch.aarch64.utils.EType.EXCL;
-
 public abstract class MemEvent extends Event {
 
 	protected final IExpr address;
@@ -79,7 +77,7 @@ public abstract class MemEvent extends Event {
 		f.remove(EType.READ);
 		f.remove(EType.WRITE);
 		f.remove(EType.INIT);
-		f.remove(EXCL);
+		f.remove(EType.EXCLUSIVE);
 		return f.isEmpty();
 	}
 

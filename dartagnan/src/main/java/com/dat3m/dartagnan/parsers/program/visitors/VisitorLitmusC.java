@@ -12,11 +12,11 @@ import com.dat3m.dartagnan.parsers.program.utils.ParsingException;
 import com.dat3m.dartagnan.parsers.program.utils.ProgramBuilder;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.arch.linux.utils.Mo;
 import com.dat3m.dartagnan.program.event.Label;
 import com.dat3m.dartagnan.program.event.Load;
 import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.program.memory.Location;
+import com.dat3m.dartagnan.program.utils.EType;
 import org.antlr.v4.runtime.misc.Interval;
 
 import java.util.*;
@@ -220,12 +220,12 @@ public class VisitorLitmusC
 		ExprInterface value = returnExpressionOrDefault(ctx.value, 1);
 		IExpr address = getAddress(ctx.address);
 		Register dummy = thread.register(null, register.getPrecision());
-		if(Mo.MB.equals(ctx.mo))
+		if(EType.MB.equals(ctx.mo))
 			addFence();
-		Load load = thread.load(dummy, address, Mo.loadMO(ctx.mo));
+		Load load = thread.load(dummy, address, loadMO(ctx.mo));
 		thread.local(register, new IExprBin(dummy, ctx.op, value));
-		thread.store(load, register, Mo.storeMO(ctx.mo));
-		if(Mo.MB.equals(ctx.mo))
+		thread.store(load, register, storeMO(ctx.mo));
+		if(EType.MB.equals(ctx.mo))
 			addFence();
 		return register;
 	}
@@ -237,13 +237,13 @@ public class VisitorLitmusC
 		ExprInterface value = returnExpressionOrDefault(ctx.value, 1);
 		IExpr address = getAddress(ctx.address);
 		Register dummy = register != value ? register : thread.register(null, register.getPrecision());
-		if(Mo.MB.equals(ctx.mo))
+		if(EType.MB.equals(ctx.mo))
 			addFence();
-		Load load = thread.load(dummy, address, Mo.loadMO(ctx.mo));
-		thread.store(load, new IExprBin(dummy, ctx.op, value), Mo.storeMO(ctx.mo));
+		Load load = thread.load(dummy, address, loadMO(ctx.mo));
+		thread.store(load, new IExprBin(dummy, ctx.op, value), storeMO(ctx.mo));
 		if(dummy != register)
 			thread.local(register, dummy);
-		if(Mo.MB.equals(ctx.mo))
+		if(EType.MB.equals(ctx.mo))
 			addFence();
 		return register;
 	}
@@ -255,9 +255,9 @@ public class VisitorLitmusC
 		IExpr address = getAddress(ctx.address);
 		Register dummy = thread.register(null, register.getPrecision());
 		addFence();
-		Load load = thread.load(dummy, address, Mo.RELAXED);
+		Load load = thread.load(dummy, address, EType.RELAXED);
 		thread.local(dummy, new IExprBin(dummy, ctx.op, value));
-		thread.store(load, dummy, Mo.RELAXED);
+		thread.store(load, dummy, EType.RELAXED);
 		thread.local(register, new Atom(dummy, COpBin.EQ, new IConst(0, register.getPrecision())));
 		addFence();
 		return register;
@@ -272,10 +272,10 @@ public class VisitorLitmusC
 		IExpr address = getAddress(ctx.address);
 		Register dummy = thread.register(null, register.getPrecision());
 		addFence();
-		Load load = thread.load(dummy, address, Mo.RELAXED);
+		Load load = thread.load(dummy, address, EType.RELAXED);
 		Label l = thread.label(null);
 		thread.jump(l, new Atom(dummy, COpBin.EQ, cmp));
-		thread.store(load, new IExprBin(dummy, IOpBin.PLUS, value), Mo.RELAXED);
+		thread.store(load, new IExprBin(dummy, IOpBin.PLUS, value), EType.RELAXED);
 		thread.add(l);
 		thread.local(register, new Atom(dummy, COpBin.NEQ, cmp));
 		addFence();
@@ -288,13 +288,13 @@ public class VisitorLitmusC
 		ExprInterface value = (ExprInterface)ctx.value.accept(this);
 		IExpr address = getAddress(ctx.address);
 		Register dummy = register != value ? register : thread.register(null, register.getPrecision());
-		if(Mo.MB.equals(ctx.mo))
+		if(EType.MB.equals(ctx.mo))
 			addFence();
-		Load load = thread.load(dummy, address, Mo.loadMO(ctx.mo));
-		thread.store(load, value, Mo.storeMO(ctx.mo));
+		Load load = thread.load(dummy, address, loadMO(ctx.mo));
+		thread.store(load, value, storeMO(ctx.mo));
 		if(dummy != register)
 			thread.local(register, dummy);
-		if(Mo.MB.equals(ctx.mo))
+		if(EType.MB.equals(ctx.mo))
 			addFence();
 		return register;
 	}
@@ -306,16 +306,16 @@ public class VisitorLitmusC
 		ExprInterface value = (ExprInterface)ctx.value.accept(this);
 		IExpr address = getAddress(ctx.address);
 		Register dummy = register != value && register != cmp ? register : thread.register(null, register.getPrecision());
-		if(Mo.MB.equals(ctx.mo))
+		if(EType.MB.equals(ctx.mo))
 			addFence();
-		Load load = thread.load(dummy, address, Mo.loadMO(ctx.mo));
-		Label l = thread.label(null);
+		Load load = thread.load(dummy, address, loadMO(ctx.mo));
+		Label l = thread.label(".skip");
 		thread.jump(l, new Atom(dummy, COpBin.NEQ, cmp));
-		thread.store(load, value, Mo.storeMO(ctx.mo));
+		thread.store(load, value, storeMO(ctx.mo));
 		if(dummy != register)
 			thread.local(register, dummy);
 		thread.add(l);
-		if(Mo.MB.equals(ctx.mo))
+		if(EType.MB.equals(ctx.mo))
 			addFence();
 		return register;
 	}
@@ -423,16 +423,16 @@ public class VisitorLitmusC
 		ExprInterface value = returnExpressionOrDefault(ctx.value, 1);
 		Register register = thread.register(null, -1);
 		IExpr address = getAddress(ctx.address);
-		Load load = thread.load(register, address, Mo.RELAXED);
-		thread.store(load, new IExprBin(register, ctx.op, value), Mo.RELAXED);
+		Load load = thread.load(register, address, EType.RELAXED);
+		thread.store(load, new IExprBin(register, ctx.op, value), EType.RELAXED);
 		return null;
 	}
 
     @Override
     public Object visitNreStore(LitmusCParser.NreStoreContext ctx){
         ExprInterface value = (ExprInterface)ctx.value.accept(this);
-        if(ctx.mo.equals(Mo.MB)){
-            thread.store(getAddress(ctx.address), value, Mo.RELAXED);
+        if(ctx.mo.equals(EType.MB)){
+            thread.store(getAddress(ctx.address), value, EType.RELAXED);
             addFence();
             return null;
         }
@@ -541,6 +541,14 @@ public class VisitorLitmusC
     }
 
 	private void addFence() {
-    	thread.fence(Mo.MB);
+    	thread.fence(EType.MB);
+	}
+
+	private static String loadMO(String mo) {
+    	return EType.ACQUIRE.equals(mo) ? EType.ACQUIRE : EType.RELAXED;
+	}
+
+	private static String storeMO(String mo) {
+    	return EType.RELEASE.equals(mo) ? EType.RELEASE : EType.RELAXED;
 	}
 }

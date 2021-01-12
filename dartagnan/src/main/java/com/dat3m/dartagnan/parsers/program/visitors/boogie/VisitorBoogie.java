@@ -12,7 +12,7 @@ import static com.dat3m.dartagnan.parsers.program.visitors.boogie.StdProcedures.
 import static com.dat3m.dartagnan.parsers.program.visitors.boogie.StdProcedures.handleStdFunction;
 import static com.dat3m.dartagnan.parsers.program.visitors.boogie.SvcompProcedures.SVCOMPPROCEDURES;
 import static com.dat3m.dartagnan.parsers.program.visitors.boogie.SvcompProcedures.handleSvcompFunction;
-import static com.dat3m.dartagnan.program.atomic.utils.Mo.SC;
+import static com.dat3m.dartagnan.program.utils.EType.SC;
 import static com.dat3m.dartagnan.program.llvm.utils.LlvmFunctions.LLVMFUNCTIONS;
 import static com.dat3m.dartagnan.program.llvm.utils.LlvmFunctions.llvmFunction;
 import static com.dat3m.dartagnan.program.llvm.utils.LlvmPredicates.LLVMPREDICATES;
@@ -499,7 +499,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 					} catch(Exception e) {
 						// Nothing to be done
 					}
-					Load child = new Load(register, (IExpr) value, null);
+					Load child = new Load(register, (IExpr) value);
 					if(!allocationRegs.contains(value)) {
 						child.setCLine(currentLine);
 					}
@@ -513,7 +513,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 			}
 			Location location = programBuilder.getLocation(name);
 			if(location != null) {
-				Store child = new Store(location.getAddress(), value, null);
+				Store child = new Store(location.getAddress(), value);
 				child.setCLine(currentLine);
 				thread.add(child);
 				continue;
@@ -715,7 +715,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 			if(initMode && value instanceof IConst && ((IConst)value).getValue() == 0) {
 				return null;
 			}
-			Store child = new Store(address, value, null);
+			Store child = new Store(address, value);
 			child.setCLine(currentLine);
 			thread.add(child);
 			return null;

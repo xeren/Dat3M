@@ -1,7 +1,7 @@
 package com.dat3m.dartagnan.wmm.relation.base;
 
 import com.dat3m.dartagnan.program.Thread;
-import com.dat3m.dartagnan.program.arch.linux.utils.EType;
+import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.relation.base.stat.StaticRelation;

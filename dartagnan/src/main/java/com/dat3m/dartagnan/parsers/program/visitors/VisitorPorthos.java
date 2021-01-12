@@ -8,9 +8,9 @@ import com.dat3m.dartagnan.parsers.PorthosVisitor;
 import com.dat3m.dartagnan.parsers.program.utils.AssertionHelper;
 import com.dat3m.dartagnan.parsers.program.utils.ProgramBuilder;
 import com.dat3m.dartagnan.program.Register;
+import com.dat3m.dartagnan.program.atomic.event.AtomicLoad;
+import com.dat3m.dartagnan.program.atomic.event.AtomicStore;
 import com.dat3m.dartagnan.program.event.Label;
-import com.dat3m.dartagnan.program.arch.pts.event.Read;
-import com.dat3m.dartagnan.program.arch.pts.event.Write;
 import com.dat3m.dartagnan.program.memory.Location;
 import org.antlr.v4.runtime.misc.Interval;
 
@@ -107,7 +107,7 @@ public class VisitorPorthos extends PorthosBaseVisitor<Object> implements Portho
 	public Object visitInstructionRead(PorthosParser.InstructionReadContext ctx) {
 		Register register = thread.register(ctx.register().getText(), -1);
 		Location location = programBuilder.getOrErrorLocation(ctx.location().getText());
-		thread.add(new Read(register, location.getAddress(), ctx.MemoryOrder().getText()));
+		thread.add(new AtomicLoad(register, location.getAddress(), ctx.MemoryOrder().getText()));
 		return null;
 	}
 
@@ -115,7 +115,7 @@ public class VisitorPorthos extends PorthosBaseVisitor<Object> implements Portho
 	public Object visitInstructionWrite(PorthosParser.InstructionWriteContext ctx) {
 		IExpr e = (IExpr)ctx.arithExpr().accept(this);
 		Location location = programBuilder.getOrErrorLocation(ctx.location().getText());
-		thread.add(new Write(location.getAddress(), e, ctx.MemoryOrder().getText()));
+		thread.add(new AtomicStore(location.getAddress(), e, ctx.MemoryOrder().getText()));
 		return null;
 	}
 

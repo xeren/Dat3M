@@ -4,7 +4,6 @@ import LitmusAssertions;
 
 @header{
 import com.dat3m.dartagnan.expression.op.*;
-import com.dat3m.dartagnan.program.arch.aarch64.utils.Mo;
 }
 
 main
@@ -131,24 +130,24 @@ branchLabel
     :   label Colon
     ;
 
-loadInstruction locals [String mo]
-    :   LDR     {$mo = Mo.RX;}
-    |   LDAR    {$mo = Mo.ACQ;}
+loadInstruction locals [boolean acquire]
+    :   LDR     {$acquire = false;}
+    |   LDAR    {$acquire = true;}
     ;
 
-loadExclusiveInstruction locals [String mo]
-    :   LDXR    {$mo = Mo.RX;}
-    |   LDAXR   {$mo = Mo.ACQ;}
+loadExclusiveInstruction locals [boolean acquire]
+    :   LDXR    {$acquire = false;}
+    |   LDAXR   {$acquire = true;}
     ;
 
-storeInstruction locals [String mo]
-    :   STR     {$mo = Mo.RX;}
-    |   STLR    {$mo = Mo.REL;}
+storeInstruction locals [boolean release]
+    :   STR     {$release = false;}
+    |   STLR    {$release = true;}
     ;
 
-storeExclusiveInstruction locals [String mo]
-    :   STXR    {$mo = Mo.RX;}
-    |   STLXR   {$mo = Mo.REL;}
+storeExclusiveInstruction locals [boolean release]
+    :   STXR    {$release = false;}
+    |   STLXR   {$release = true;}
     ;
 
 arithmeticInstruction locals [IOpBin op]

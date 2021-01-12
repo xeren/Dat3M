@@ -5,7 +5,7 @@ import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.program.event.RMWStore;
-import com.dat3m.dartagnan.program.arch.aarch64.utils.EType;
+import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
@@ -22,12 +22,12 @@ import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 public class RelRMW extends StaticRelation {
 
     private final FilterAbstract loadFilter  = FilterIntersection.get(
-            FilterBasic.get(EType.EXCL),
+            FilterBasic.get(EType.EXCLUSIVE),
             FilterBasic.get(EType.READ)
     );
 
     private final FilterAbstract storeFilter = FilterIntersection.get(
-            FilterBasic.get(EType.EXCL),
+            FilterBasic.get(EType.EXCLUSIVE),
             FilterBasic.get(EType.WRITE)
     );
 

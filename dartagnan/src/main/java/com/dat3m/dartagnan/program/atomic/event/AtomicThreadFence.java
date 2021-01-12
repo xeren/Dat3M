@@ -4,10 +4,10 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Fence;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 
-import static com.dat3m.dartagnan.program.atomic.utils.Mo.ACQUIRE;
-import static com.dat3m.dartagnan.program.atomic.utils.Mo.ACQ_REL;
-import static com.dat3m.dartagnan.program.atomic.utils.Mo.RELEASE;
-import static com.dat3m.dartagnan.program.atomic.utils.Mo.SC;
+import static com.dat3m.dartagnan.program.utils.EType.ACQUIRE;
+import static com.dat3m.dartagnan.program.utils.EType.ACQ_REL;
+import static com.dat3m.dartagnan.program.utils.EType.RELEASE;
+import static com.dat3m.dartagnan.program.utils.EType.SC;
 
 public class AtomicThreadFence extends Fence {
 

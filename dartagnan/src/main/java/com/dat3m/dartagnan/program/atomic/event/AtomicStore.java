@@ -7,22 +7,18 @@ import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Fence;
-import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.program.event.Store;
-import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.utils.EType;
 
-import static com.dat3m.dartagnan.program.atomic.utils.Mo.RELEASE;
-import static com.dat3m.dartagnan.program.atomic.utils.Mo.SC;
+public class AtomicStore extends Event {
 
-public class AtomicStore extends MemEvent implements RegReaderData {
-
+	private final IExpr address;
 	private final ExprInterface value;
 	private final ImmutableSet<Register> dataRegs;
 	private final String mo;
 
 	public AtomicStore(IExpr address, ExprInterface value, String mo) {
-		super(address);
+		this.address = address;
 		this.value = value;
 		dataRegs = value.getRegs();
 		this.mo = mo;
@@ -31,14 +27,10 @@ public class AtomicStore extends MemEvent implements RegReaderData {
 
 	private AtomicStore(AtomicStore other) {
 		super(other);
+		address = other.address;
 		value = other.value;
 		dataRegs = other.dataRegs;
 		mo = other.mo;
-	}
-
-	@Override
-	public ImmutableSet<Register> getDataRegs() {
-		return dataRegs;
 	}
 
 	@Override
@@ -67,23 +59,23 @@ public class AtomicStore extends MemEvent implements RegReaderData {
 			case NONE:
 				break;
 			case TSO:
-				if(SC.equals(mo)) {
+				if(EType.SC.equals(mo)) {
 					return new Event[]{store, new Fence("Mfence")};
 				}
 				break;
 			case POWER:
-				if(RELEASE.equals(mo)) {
+				if(EType.RELEASE.equals(mo)) {
 					return new Event[]{new Fence("Lwsync"), store};
 				}
-				else if(SC.equals(mo)) {
+				else if(EType.SC.equals(mo)) {
 					return new Event[]{new Fence("Sync"), store};
 				}
 				break;
 			case ARM:
 			case ARM8:
-				if(RELEASE.equals(mo) || SC.equals(mo)) {
+				if(EType.RELEASE.equals(mo) || EType.SC.equals(mo)) {
 					Fence fence = new Fence("Ish");
-					if(SC.equals(mo)) {
+					if(EType.SC.equals(mo)) {
 						return new Event[]{fence, store, new Fence("Ish")};
 					}
 					return new Event[]{fence, store};
