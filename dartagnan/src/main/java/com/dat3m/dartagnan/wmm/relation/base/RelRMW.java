@@ -4,7 +4,7 @@ import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.MemEvent;
-import com.dat3m.dartagnan.program.event.rmw.RMWStore;
+import com.dat3m.dartagnan.program.event.RMWStore;
 import com.dat3m.dartagnan.program.arch.aarch64.utils.EType;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
@@ -50,7 +50,7 @@ public class RelRMW extends StaticRelation {
         if(maxTupleSet == null){
             baseMaxTupleSet = new TupleSet();
             for(RMWStore store : program.getCache().getEvents(RMWStore.class))
-            	baseMaxTupleSet.add(new Tuple(store.getLoadEvent(), store));
+            	baseMaxTupleSet.add(new Tuple(store.loadEvent, store));
 
             maxTupleSet = new TupleSet();
             maxTupleSet.addAll(baseMaxTupleSet);

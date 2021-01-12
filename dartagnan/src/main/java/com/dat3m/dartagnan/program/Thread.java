@@ -1,9 +1,6 @@
 package com.dat3m.dartagnan.program;
 
-import com.dat3m.dartagnan.program.event.BoundEvent;
-import com.dat3m.dartagnan.program.event.CondJump;
-import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.Label;
+import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.utils.ThreadCache;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.microsoft.z3.BoolExpr;
@@ -92,6 +89,7 @@ public class Thread implements Iterable<Event> {
 		ArrayList<Event> r = new ArrayList<>(bound * e.length);
 		boolean reachable = true;
 		while(bound > 0) {
+			Load latest = null;
 			for(int i = 0; i < e.length; i++) {
 				if(null != e[i]) {
 					r.add(e[i]);
@@ -109,8 +107,16 @@ public class Thread implements Iterable<Event> {
 						r.add(new CondJump(c, e[j]));
 						reachable = !c.isUnconditional();
 					}
+					else if(original[i] instanceof RMWStore) {
+						RMWStore s = (RMWStore) original[i];
+						//latest load event is a copy of s.loadEvent
+						assert null != latest && latest.getOId() == s.loadEvent.getOId();
+						r.add(new RMWStore(s, latest));
+					}
 					else {
 						r.add(original[i].getCopy());
+						if(original[i] instanceof Load)
+							latest = (Load) r.get(r.size() - 1);
 					}
 				}
 			}
