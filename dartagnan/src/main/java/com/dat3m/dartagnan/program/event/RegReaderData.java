@@ -1,4 +1,4 @@
-package com.dat3m.dartagnan.program.event.utils;
+package com.dat3m.dartagnan.program.event;
 
 import com.google.common.collect.ImmutableSet;
 import com.dat3m.dartagnan.program.Register;

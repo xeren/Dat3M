@@ -14,7 +14,7 @@ import com.dat3m.dartagnan.asserts.AssertInline;
 import com.dat3m.dartagnan.asserts.AssertTrue;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Local;
-import com.dat3m.dartagnan.program.event.utils.RegWriter;
+import com.dat3m.dartagnan.program.event.RegWriter;
 import com.dat3m.dartagnan.program.memory.Location;
 import com.dat3m.dartagnan.program.memory.Memory;
 

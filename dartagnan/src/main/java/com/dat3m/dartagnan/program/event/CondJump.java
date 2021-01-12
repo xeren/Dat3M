@@ -3,7 +3,6 @@ package com.dat3m.dartagnan.program.event;
 import com.dat3m.dartagnan.expression.BConst;
 import com.dat3m.dartagnan.expression.BExpr;
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.google.common.collect.ImmutableSet;
 

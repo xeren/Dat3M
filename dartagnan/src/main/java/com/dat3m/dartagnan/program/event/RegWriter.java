@@ -1,4 +1,4 @@
-package com.dat3m.dartagnan.program.event.utils;
+package com.dat3m.dartagnan.program.event;
 
 import com.microsoft.z3.Expr;
 import com.dat3m.dartagnan.program.Register;

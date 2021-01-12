@@ -8,8 +8,6 @@ import com.microsoft.z3.Expr;
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.INonDet;
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.event.utils.RegReaderData;
-import com.dat3m.dartagnan.program.event.utils.RegWriter;
 
 public class Local extends Event implements RegWriter, RegReaderData {
 	
