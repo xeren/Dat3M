@@ -4,7 +4,6 @@ import com.dat3m.dartagnan.expression.IConst;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
-import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.relation.base.stat.StaticRelation;
 import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
@@ -15,19 +14,20 @@ import com.microsoft.z3.BoolExpr;
 import java.util.*;
 import java.util.stream.Collectors;
 
-abstract class BasicRegRelation extends StaticRelation {
+abstract class BasicRegRelation <T> extends StaticRelation {
 
-	protected abstract FilterAbstract filter();
+	protected abstract Class<T> filter();
 
-	protected abstract Collection<Register> getRegisters(Event regReader);
+	protected abstract Collection<Register> getRegisters(T regReader);
 
 	@Override
 	public TupleSet getMaxTupleSet() {
 		if(maxTupleSet == null) {
 			maxTupleSet = new TupleSet();
 			Map<Register,List<RegWriter>> regWriterMap = program.getCache().getEvents(RegWriter.class).stream().collect(Collectors.groupingBy(RegWriter::getResultRegister));
-			for(Event regReader : program.getCache().getEvents(filter())) {
-				for(Register register : getRegisters(regReader)) {
+			for(T o : program.getCache().getEvents(filter())) {
+				Event regReader = (Event) o;
+				for(Register register : getRegisters(o)) {
 					for(RegWriter regWriter : regWriterMap.getOrDefault(register, ImmutableList.of())) {
 						Event e = (Event) regWriter;
 						if(e.getCId() >= regReader.getCId()) {
@@ -46,8 +46,9 @@ abstract class BasicRegRelation extends StaticRelation {
 		BoolExpr enc = ctx.mkTrue();
 		Map<Register,List<RegWriter>> regWriterMap = program.getCache().getEvents(RegWriter.class).stream().collect(Collectors.groupingBy(RegWriter::getResultRegister));
 
-		for(Event regReader : program.getCache().getEvents(filter())) {
-			for(Register register : getRegisters(regReader)) {
+		for(T o : program.getCache().getEvents(filter())) {
+			Event regReader = (Event) o;
+			for(Register register : getRegisters(o)) {
 				List<RegWriter> writers = regWriterMap.getOrDefault(register, ImmutableList.of());
 				if(writers.isEmpty() || ((Event) writers.get(0)).getCId() >= regReader.getCId()) {
 					enc = ctx.mkAnd(enc, ctx.mkEq(register.toZ3Int(regReader, ctx), new IConst(0, register.getPrecision()).toZ3Int(ctx)));

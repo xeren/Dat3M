@@ -25,7 +25,7 @@ public class AtomicLoad extends MemEvent implements RegWriter {
 	public AtomicLoad(Register register, IExpr address, String mo) {
 		super(address, mo);
 		this.resultRegister = register;
-		addFilters(EType.ANY, EType.VISIBLE, EType.MEMORY, EType.READ, EType.REG_WRITER);
+		addFilters(EType.ANY, EType.VISIBLE, EType.MEMORY, EType.READ);
 	}
 
 	private AtomicLoad(AtomicLoad other) {

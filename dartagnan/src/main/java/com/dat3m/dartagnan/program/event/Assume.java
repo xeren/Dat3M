@@ -16,7 +16,7 @@ public class Assume extends Event implements RegReaderData {
 	public Assume(ExprInterface e) {
 		condition = e;
 		registers = e.getRegs();
-        addFilters(EType.ANY, EType.REG_READER, EType.JUMP);
+        addFilters(EType.ANY);
 	}
 
 	protected Assume(Assume other) {
@@ -49,6 +49,6 @@ public class Assume extends Event implements RegReaderData {
 	@Override
 	public void encode(Context c, RuleAcceptor out, BoolExpr in) {
 		super.encode(c, out, in);
-		out.add(c.mkEq(cfVar, condition.toZ3Bool(this, c)));
+		out.add(c.mkEq(execVar, condition.toZ3Bool(this, c)));
 	}
 }

@@ -1,15 +1,11 @@
 package com.dat3m.dartagnan.wmm.relation.base.local;
 
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.MemEvent;
-import com.dat3m.dartagnan.program.utils.EType;
-import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
-import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 
 import java.util.*;
 
-public class RelAddrDirect extends BasicRegRelation {
+public class RelAddrDirect extends BasicRegRelation<MemEvent> {
 
 	public RelAddrDirect(){
 		term = "addrDirect";
@@ -17,12 +13,12 @@ public class RelAddrDirect extends BasicRegRelation {
 	}
 
 	@Override
-	protected FilterAbstract filter() {
-		return FilterBasic.get(EType.MEMORY);
+	protected Class<MemEvent> filter() {
+		return MemEvent.class;
 	}
 
 	@Override
-	protected Collection<Register> getRegisters(Event regReader){
-		return ((MemEvent) regReader).getAddress().getRegs();
+	protected Collection<Register> getRegisters(MemEvent regReader){
+		return regReader.getAddress().getRegs();
 	}
 }

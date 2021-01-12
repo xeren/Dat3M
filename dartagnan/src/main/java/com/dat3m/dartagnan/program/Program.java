@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.program;
 
+import com.dat3m.dartagnan.program.event.BoundEvent;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.program.utils.ThreadCache;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
@@ -84,9 +85,8 @@ public class Program {
 
 	public List<Event> getEvents() {
 		List<Event> events = new ArrayList<>();
-		for(Thread t : threads) {
-			events.addAll(t.getCache().getEvents(FilterBasic.get(EType.ANY)));
-		}
+		for(Thread t : threads)
+			events.addAll(Arrays.asList(t.compiled));
 		return events;
 	}
 
@@ -147,34 +147,29 @@ public class Program {
 	}
 
 	public BoolExpr encodeFinalRegisterValues(Context ctx) {
-		Map<Register, List<Event>> eMap = new HashMap<>();
-		for(Event e : getCache().getEvents(FilterBasic.get(EType.REG_WRITER))) {
-			Register reg = ((RegWriter) e).getResultRegister();
-			eMap.putIfAbsent(reg, new ArrayList<>());
-			eMap.get(reg).add(e);
-		}
-
-		BoolExpr enc = ctx.mkTrue();
+		Map<Register,ArrayList<RegWriter>> eMap = new HashMap<>();
+		for(RegWriter e : getCache().getEvents(RegWriter.class))
+			eMap.computeIfAbsent(e.getResultRegister(), k->new ArrayList<>()).add(e);
+		LinkedList<BoolExpr> enc = new LinkedList<>();
 		for(Register reg : eMap.keySet()) {
-			List<Event> events = eMap.get(reg);
+			ArrayList<RegWriter> events = eMap.get(reg);
 			events.sort(Collections.reverseOrder());
 			for(int i = 0; i < events.size(); i++) {
-				BoolExpr lastModReg = eMap.get(reg).get(i).exec();
-				for(int j = 0; j < i; j++) {
-					lastModReg = ctx.mkAnd(lastModReg, ctx.mkNot(events.get(j).exec()));
-				}
-				enc = ctx.mkAnd(enc, ctx.mkImplies(lastModReg,
-					ctx.mkEq(reg.getLastValueExpr(ctx), ((RegWriter) events.get(i)).getResultRegisterExpr())));
+				LinkedList<BoolExpr> lastModReg = new LinkedList<>();
+				lastModReg.add(ctx.mkNot(((Event)eMap.get(reg).get(i)).exec()));
+				for(int j = 0; j < i; j++)
+					lastModReg.add(((Event)events.get(j)).exec());
+				lastModReg.add(ctx.mkEq(reg.getLastValueExpr(ctx), events.get(i).getResultRegisterExpr()));
+				enc.add(ctx.mkOr(lastModReg.toArray(new BoolExpr[0])));
 			}
 		}
-		return enc;
+		return ctx.mkAnd(enc.toArray(new BoolExpr[0]));
 	}
 
 	public BoolExpr encodeNoBoundEventExec(Context ctx) {
-		BoolExpr enc = ctx.mkTrue();
-		for(Event e : getCache().getEvents(FilterBasic.get(EType.BOUND))) {
-			enc = ctx.mkAnd(enc, ctx.mkNot(e.exec()));
-		}
-		return enc;
+		LinkedList<BoolExpr> enc = new LinkedList<>();
+		for(Event e : getCache().getEvents(BoundEvent.class))
+			enc.add(ctx.mkNot(e.exec()));
+		return ctx.mkAnd(enc.toArray(new BoolExpr[0]));
 	}
 }

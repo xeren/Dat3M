@@ -220,7 +220,9 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 
 	@Override
 	public Object visitFence(LitmusAArch64Parser.FenceContext ctx) {
-		thread.add(new FenceOpt(ctx.Fence().getText(), ctx.opt));
+		Fence fence = new Fence(ctx.Fence().getText());
+		fence.addFilters(ctx.Fence().getText() + "." + ctx.opt);
+		thread.add(fence);
 		return null;
 	}
 

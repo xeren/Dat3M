@@ -23,7 +23,7 @@ public class CondJump extends Event implements RegReaderData {
 		this.label = label;
 		this.expr = expr;
 		dataRegs = expr.getRegs();
-		addFilters(EType.ANY, EType.JUMP, EType.REG_READER);
+		addFilters(EType.ANY);
 	}
 
 	/**

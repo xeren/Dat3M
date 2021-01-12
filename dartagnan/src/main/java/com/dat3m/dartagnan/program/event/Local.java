@@ -22,7 +22,7 @@ public class Local extends Event implements RegWriter, RegReaderData {
 		this.register = register;
 		this.expr = expr;
 		this.dataRegs = expr.getRegs();
-		addFilters(EType.ANY, EType.LOCAL, EType.REG_WRITER, EType.REG_READER);
+		addFilters(EType.ANY, EType.LOCAL);
 	}
 
 	protected Local(Local other){

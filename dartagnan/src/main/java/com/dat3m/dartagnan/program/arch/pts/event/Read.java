@@ -20,7 +20,7 @@ public class Read extends MemEvent implements RegWriter {
 		super(address, mo);
 		this.resultRegister = register;
 		this.mo = mo;
-		addFilters(EType.ANY, EType.VISIBLE, EType.MEMORY, EType.READ, EType.REG_WRITER);
+		addFilters(EType.ANY, EType.VISIBLE, EType.MEMORY, EType.READ);
 	}
 
 	private Read(Read other) {

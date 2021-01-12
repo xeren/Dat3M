@@ -8,7 +8,7 @@ public class Label extends Event {
 
 	public Label(String name) {
 		this.name = name;
-		addFilters(EType.ANY, EType.LABEL);
+		addFilters(EType.ANY);
 	}
 
 	protected Label(Label other) {

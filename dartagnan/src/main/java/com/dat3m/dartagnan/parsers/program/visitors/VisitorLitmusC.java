@@ -16,7 +16,6 @@ import com.dat3m.dartagnan.program.arch.linux.utils.Mo;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.event.rmw.RMWLoad;
 import com.dat3m.dartagnan.program.event.rmw.RMWStore;
-import com.dat3m.dartagnan.program.event.rmw.cond.*;
 import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.program.memory.Location;
 import org.antlr.v4.runtime.misc.Interval;
@@ -277,12 +276,15 @@ public class VisitorLitmusC
 		ExprInterface cmp = (ExprInterface)ctx.cmp.accept(this);
 		IExpr address = getAddress(ctx.address);
 		Register dummy = thread.register(null, register.getPrecision());
-		RMWReadCondUnless load = new RMWReadCondUnless(dummy, cmp, address, Mo.RELAXED);
-		addFence(load);
+		RMWLoad load = new RMWLoad(dummy, address, Mo.RELAXED);
+		addFence();
 		thread.add(load);
-		thread.add(new RMWStoreCond(load, address, new IExprBin(dummy, IOpBin.PLUS, value), Mo.RELAXED));
+		Label l = thread.label(null);
+		thread.add(new CondJump(new Atom(dummy, COpBin.EQ, cmp), l));
+		thread.add(new RMWStore(load, address, new IExprBin(dummy, IOpBin.PLUS, value), Mo.RELAXED));
+		thread.add(l);
 		thread.add(new Local(register, new Atom(dummy, COpBin.NEQ, cmp)));
-		addFence(load);
+		addFence();
 		return register;
 	}
 
@@ -311,15 +313,18 @@ public class VisitorLitmusC
 		ExprInterface value = (ExprInterface)ctx.value.accept(this);
 		IExpr address = getAddress(ctx.address);
 		Register dummy = register != value && register != cmp ? register : thread.register(null, register.getPrecision());
-		RMWReadCondCmp load = new RMWReadCondCmp(dummy, cmp, address, Mo.loadMO(ctx.mo));
+		RMWLoad load = new RMWLoad(dummy, address, Mo.loadMO(ctx.mo));
 		if(Mo.MB.equals(ctx.mo))
-			addFence(load);
+			addFence();
 		thread.add(load);
-		thread.add(new RMWStoreCond(load, address, value, Mo.storeMO(ctx.mo)));
+		Label l = thread.label(null);
+		thread.add(new CondJump(new Atom(dummy, COpBin.NEQ, cmp), l));
+		thread.add(new RMWStore(load, address, value, Mo.storeMO(ctx.mo)));
 		if(dummy != register)
 			thread.add(new Local(register, dummy));
+		thread.add(l);
 		if(Mo.MB.equals(ctx.mo))
-			addFence(load);
+			addFence();
 		return register;
 	}
 
@@ -547,9 +552,5 @@ public class VisitorLitmusC
 
 	private void addFence() {
     	thread.add(new Fence("Mb"));
-	}
-
-	private void addFence(RMWReadCond load) {
-    	thread.add(new FenceCond(load, "Mb"));
 	}
 }

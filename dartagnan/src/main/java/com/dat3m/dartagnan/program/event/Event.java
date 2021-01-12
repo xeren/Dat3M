@@ -8,8 +8,6 @@ import java.util.*;
 
 public abstract class Event implements Comparable<Event> {
 
-	public static final int PRINT_PAD_EXTRA = 50;
-
 	protected int oId = -1;        // ID after parsing (original)
 	protected int uId = -1;        // ID after unrolling
 	protected int cId = -1;        // ID after compilation
@@ -18,7 +16,6 @@ public abstract class Event implements Comparable<Event> {
 
 	protected final Set<String> filter;
 
-	protected transient BoolExpr cfVar;
 	protected transient BoolExpr execVar;
 
 	protected Event() {
@@ -127,10 +124,6 @@ public abstract class Event implements Comparable<Event> {
 		return execVar;
 	}
 
-	public BoolExpr cf() {
-		return cfVar;
-	}
-
 	public interface RuleAcceptor {
 		void add(BoolExpr rule);
 	}
@@ -145,6 +138,6 @@ public abstract class Event implements Comparable<Event> {
 	Proposition that control flows to this event.
 	*/
 	public void encode(Context context, RuleAcceptor out, BoolExpr in) {
-		execVar = cfVar = in;
+		execVar = in;
 	}
 }

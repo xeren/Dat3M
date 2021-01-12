@@ -24,7 +24,7 @@ public class AtomicStore extends MemEvent implements RegReaderData {
 		super(address, mo);
 		this.value = value;
 		this.dataRegs = value.getRegs();
-		addFilters(EType.ANY, EType.VISIBLE, EType.MEMORY, EType.WRITE, EType.REG_READER);
+		addFilters(EType.ANY, EType.VISIBLE, EType.MEMORY, EType.WRITE);
 	}
 
 	private AtomicStore(AtomicStore other) {
