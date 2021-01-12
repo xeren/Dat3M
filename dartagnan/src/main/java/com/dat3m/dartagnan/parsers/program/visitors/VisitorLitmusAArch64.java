@@ -11,7 +11,8 @@ import com.dat3m.dartagnan.parsers.program.utils.ParsingException;
 import com.dat3m.dartagnan.parsers.program.utils.ProgramBuilder;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.arch.aarch64.utils.EType;
-import com.dat3m.dartagnan.program.event.*;
+import com.dat3m.dartagnan.program.event.Cmp;
+import com.dat3m.dartagnan.program.event.Label;
 import org.antlr.v4.runtime.misc.Interval;
 
 public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
@@ -115,7 +116,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 	public Object visitMov(LitmusAArch64Parser.MovContext ctx) {
 		Register register = thread.register(ctx.rD, -1);
 		IExpr expr = ctx.expr32() != null ? (IExpr)ctx.expr32().accept(this) : (IExpr)ctx.expr64().accept(this);
-		thread.add(new Local(register, expr));
+		thread.local(register, expr);
 		return null;
 	}
 
@@ -132,7 +133,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 		Register rD = thread.register(ctx.rD, -1);
 		Register r1 = thread.registerOrError(ctx.rV);
 		IExpr expr = ctx.expr32() != null ? (IExpr)ctx.expr32().accept(this) : (IExpr)ctx.expr64().accept(this);
-		thread.add(new Local(rD, new IExprBin(r1, ctx.arithmeticInstruction().op, expr)));
+		thread.local(rD, new IExprBin(r1, ctx.arithmeticInstruction().op, expr));
 		return null;
 	}
 
@@ -143,7 +144,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 		if(ctx.offset() != null){
 			address = visitOffset(ctx.offset(), address);
 		}
-		thread.add(new Load(register, address, ctx.loadInstruction().mo));
+		thread.load(register, address, ctx.loadInstruction().mo);
 		return null;
 	}
 
@@ -154,9 +155,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 		if(ctx.offset() != null){
 			address = visitOffset(ctx.offset(), address);
 		}
-		Load load = new Load(register, address, ctx.loadExclusiveInstruction().mo);
-		load.addFilters(EType.EXCL);
-		thread.add(load);
+		thread.load(register, address, EType.EXCL, ctx.loadExclusiveInstruction().mo);
 		return null;
 	}
 
@@ -167,7 +166,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 		if(ctx.offset() != null){
 			address = visitOffset(ctx.offset(), address);
 		}
-		thread.add(new Store(address, register, ctx.storeInstruction().mo));
+		thread.store(address, register, ctx.storeInstruction().mo);
 		return null;
 	}
 
@@ -178,12 +177,10 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 		Register address = thread.registerOrError(ctx.address().id);
 		if(ctx.offset() != null)
 			address = visitOffset(ctx.offset(), address);
-		thread.add(new Local(statusReg, new BNonDet(1)));
-		Label next = thread.label(null);
-		thread.add(new CondJump(new Atom(statusReg, COpBin.NEQ, new IConst(0, -1)), next));
-		Store store = new Store(address, register, ctx.storeExclusiveInstruction().mo);
-		store.addFilters(EType.EXCL);
-		thread.add(store);
+		thread.local(statusReg, new BNonDet(1));
+		Label next = new Label();
+		thread.jump(next, new Atom(statusReg, COpBin.NEQ, new IConst(0, -1)));
+		thread.store(address, register, EType.EXCL, ctx.storeExclusiveInstruction().mo);
 		thread.add(next);
 		return null;
 	}
@@ -192,23 +189,21 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 	public Object visitBranch(LitmusAArch64Parser.BranchContext ctx) {
 		Label label = thread.label(ctx.label().getText());
 		if(ctx.branchCondition() == null) {
-			thread.add(new CondJump(new BConst(true), label));
+			thread.jump(label, new BConst(true));
 			return null;
 		}
 		if(null == cmpIn) {
 			throw new ParsingException("Invalid syntax near " + ctx.getText());
 		}
-		Atom expr = new Atom(cmpIn.getLeft(), ctx.branchCondition().op, cmpIn.getRight());
-		thread.add(new CondJump(expr, label));
+		thread.jump(label, new Atom(cmpIn.getLeft(), ctx.branchCondition().op, cmpIn.getRight()));
 		return null;
 	}
 
 	@Override
 	public Object visitBranchRegister(LitmusAArch64Parser.BranchRegisterContext ctx) {
 		Register register = thread.registerOrError(ctx.rV);
-		Atom expr = new Atom(register, ctx.branchRegInstruction().op, new IConst(0, -1));
 		Label label = thread.label(ctx.label().getText());
-		thread.add(new CondJump(expr, label));
+		thread.jump(label, new Atom(register, ctx.branchRegInstruction().op, new IConst(0, -1)));
 		return null;
 	}
 
@@ -220,9 +215,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 
 	@Override
 	public Object visitFence(LitmusAArch64Parser.FenceContext ctx) {
-		Fence fence = new Fence(ctx.Fence().getText());
-		fence.addFilters(ctx.Fence().getText() + "." + ctx.opt);
-		thread.add(fence);
+		thread.fence(ctx.Fence().getText(), ctx.Fence().getText() + "." + ctx.opt);
 		return null;
 	}
 
@@ -268,7 +261,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 		IExpr expr = ctx.immediate() == null
 			? thread.registerOrError(ctx.expressionConversion().register32().id)
 			: new IConst(Integer.parseInt(ctx.immediate().constant().getText()), -1);
-		thread.add(new Local(result, new IExprBin(register, IOpBin.PLUS, expr)));
+		thread.local(result, new IExprBin(register, IOpBin.PLUS, expr));
 		return result;
 	}
 }

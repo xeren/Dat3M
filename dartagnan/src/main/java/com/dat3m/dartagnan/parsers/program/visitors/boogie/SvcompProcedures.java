@@ -16,9 +16,8 @@ import com.dat3m.dartagnan.parsers.BoogieParser.Call_cmdContext;
 import com.dat3m.dartagnan.parsers.program.utils.ParsingException;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Assume;
+import com.dat3m.dartagnan.program.event.Load;
 import com.dat3m.dartagnan.program.event.Local;
-import com.dat3m.dartagnan.program.event.rmw.RMWLoad;
-import com.dat3m.dartagnan.program.event.rmw.RMWStore;
 import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.program.utils.EType;
 
@@ -110,10 +109,9 @@ public class SvcompProcedures {
 	public static void __VERIFIER_atomic(VisitorBoogie visitor, boolean begin) {
 		Register register = visitor.thread.register(null, -1);
 		Address lockAddress = visitor.programBuilder.getOrCreateLocation("__VERIFIER_atomic", -1).getAddress();
-		RMWLoad load = new RMWLoad(register, lockAddress, null);
-		visitor.thread.add(load);
+		Load load = visitor.thread.load(register, lockAddress);
 		visitor.thread.add(new Assume(new Atom(register, EQ, new IConst(begin ? 0 : 1, -1))));
-		visitor.thread.add(new RMWStore(load, lockAddress, new IConst(begin ? 1 : 0, -1), null));
+		visitor.thread.store(load, new IConst(begin ? 1 : 0, -1));
 	}
 
 	private static void __VERIFIER_nondet(VisitorBoogie visitor, Call_cmdContext ctx, String name) {

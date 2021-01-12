@@ -1,7 +1,11 @@
 package com.dat3m.dartagnan.parsers.program.utils;
 
+import com.dat3m.dartagnan.expression.BExpr;
+import com.dat3m.dartagnan.expression.ExprInterface;
+import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.*;
+import com.dat3m.dartagnan.program.event.rmw.RMWStore;
 import com.google.common.collect.ImmutableSet;
 import com.dat3m.dartagnan.asserts.AbstractAssert;
 import com.dat3m.dartagnan.expression.IConst;
@@ -98,18 +102,18 @@ public class ProgramBuilder {
 	public void initRegEqLocPtr(int regThread, String regName, String locName, int precision) {
 		Location loc = getOrCreateLocation(locName, precision);
 		T t = thread(regThread);
-		t.add(new Local(t.register(regName, precision), loc.getAddress()));
+		t.local(t.register(regName, precision), loc.getAddress());
 	}
 
 	public void initRegEqLocVal(int regThread, String regName, String locName, int precision) {
 		Location loc = getOrCreateLocation(locName, precision);
 		T t = thread(regThread);
-		t.add(new Local(t.register(regName, precision), iValueMap.get(loc.getAddress())));
+		t.local(t.register(regName, precision), iValueMap.get(loc.getAddress()));
 	}
 
 	public void initRegEqConst(int regThread, String regName, IConst iValue) {
 		T t = thread(regThread);
-		t.add(new Local(t.register(regName, iValue.getPrecision()), iValue));
+		t.local(t.register(regName, iValue.getPrecision()), iValue);
 	}
 
 	public void addDeclarationArray(String name, List<IConst> values, int precision) {
@@ -207,6 +211,42 @@ public class ProgramBuilder {
 		 */
 		public void add(Event event) {
 			this.event.add(event);
+		}
+
+		public Local local(Register register, ExprInterface value) {
+			Local result = new Local(register, value);
+			event.add(result);
+			return result;
+		}
+
+		public Load load(Register register, IExpr address, String... tag) {
+			Load result = new Load(register, address, tag);
+			event.add(result);
+			return result;
+		}
+
+		public Store store(IExpr address, ExprInterface value, String... tag) {
+			Store result = new Store(address, value, tag);
+			event.add(result);
+			return result;
+		}
+
+		public Fence fence(String... tag) {
+			Fence result = new Fence(tag);
+			event.add(result);
+			return result;
+		}
+
+		public CondJump jump(Label label, BExpr condition) {
+			CondJump result = new CondJump(condition, label);
+			event.add(result);
+			return result;
+		}
+
+		public RMWStore store(Load load, ExprInterface value, String... tag) {
+			RMWStore result = new RMWStore(load, load.getAddress(), value, tag);
+			event.add(result);
+			return result;
 		}
 
 		/**

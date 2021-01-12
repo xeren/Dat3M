@@ -14,18 +14,13 @@ public class AtomicThreadFence extends Fence {
 	private final String mo;
 
 	public AtomicThreadFence(String mo) {
-		super("atomic_thread_fence");
+		super("atomic_thread_fence", mo);
 		this.mo = mo;
 	}
 
 	private AtomicThreadFence(AtomicThreadFence other) {
 		super(other);
 		this.mo = other.mo;
-	}
-
-	@Override
-	public String toString() {
-		return name + "(" + mo + ")";
 	}
 
 

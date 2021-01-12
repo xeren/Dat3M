@@ -4,37 +4,25 @@ import com.dat3m.dartagnan.program.utils.EType;
 
 public class Fence extends Event {
 
-	protected final String name;
-
-	public Fence(String name){
-        this.name = name;
-        this.addFilters(EType.ANY, EType.VISIBLE, EType.FENCE, name);
+	public Fence(String... tag) {
+		addFilters(EType.ANY, EType.VISIBLE, EType.FENCE);
+		addFilters(tag);
 	}
 
-	protected Fence(Fence other){
+	protected Fence(Fence other) {
 		super(other);
-		this.name = other.name;
-	}
-
-	public String getName(){
-		return name;
 	}
 
 	@Override
 	public String toString() {
-		return getName();
-	}
-
-	@Override
-	public String label(){
-		return getName();
+		return filter.toString();
 	}
 
 	// Unrolling
 	// -----------------------------------------------------------------------------------------------------------------
 
 	@Override
-	public Fence getCopy(){
+	public Fence getCopy() {
 		return new Fence(this);
 	}
 }

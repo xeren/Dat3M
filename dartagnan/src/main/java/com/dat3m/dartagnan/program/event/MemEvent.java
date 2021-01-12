@@ -3,27 +3,26 @@ package com.dat3m.dartagnan.program.event;
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.memory.Address;
+import com.dat3m.dartagnan.program.utils.EType;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.Expr;
 
+import java.util.HashSet;
+
+import static com.dat3m.dartagnan.program.arch.aarch64.utils.EType.EXCL;
+
 public abstract class MemEvent extends Event {
 
 	protected final IExpr address;
-	protected final String mo;
-
 	protected Expr memAddressExpr;
 	protected Expr memValueExpr;
 	private ImmutableSet<Address> maxAddressSet;
 
-	public MemEvent(IExpr address, String mo) {
+	public MemEvent(IExpr address) {
 		this.address = address;
-		this.mo = mo;
-		if(mo != null) {
-			addFilters(mo);
-		}
 	}
 
 	protected MemEvent(MemEvent other) {
@@ -32,7 +31,6 @@ public abstract class MemEvent extends Event {
 		this.maxAddressSet = other.maxAddressSet;
 		this.memAddressExpr = other.memAddressExpr;
 		this.memValueExpr = other.memValueExpr;
-		this.mo = other.mo;
 	}
 
 	public Expr getMemAddressExpr() {
@@ -73,7 +71,16 @@ public abstract class MemEvent extends Event {
 	}
 
 	public boolean canRace() {
-		return mo == null || mo == "NA";
+		//TODO associate tags with data race inability
+		HashSet<String> f = new HashSet<>(filter);
+		f.remove(EType.ANY);
+		f.remove(EType.MEMORY);
+		f.remove(EType.RMW);
+		f.remove(EType.READ);
+		f.remove(EType.WRITE);
+		f.remove(EType.INIT);
+		f.remove(EXCL);
+		return f.isEmpty();
 	}
 
 	@Override

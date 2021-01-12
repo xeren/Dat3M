@@ -13,10 +13,11 @@ public class Load extends MemEvent implements RegWriter {
 
     protected final Register resultRegister;
 
-    public Load(Register register, IExpr address, String mo) {
-        super(address, mo);
+    public Load(Register register, IExpr address, String... tag) {
+        super(address);
         this.resultRegister = register;
         addFilters(EType.ANY, EType.VISIBLE, EType.MEMORY, EType.READ);
+        addFilters(tag);
     }
 
     protected Load(Load other){
@@ -42,12 +43,7 @@ public class Load extends MemEvent implements RegWriter {
 
     @Override
     public String toString() {
-        return resultRegister + " = load(*" + address + (mo != null ? ", " + mo : "") + ")";
-    }
-
-    @Override
-    public String label(){
-        return "R" + (mo != null ? "_" + mo : "");
+        return resultRegister + " = load(*" + address + ")";
     }
 
     @Override

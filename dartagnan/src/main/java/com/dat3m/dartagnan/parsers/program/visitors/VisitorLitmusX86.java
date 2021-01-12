@@ -8,12 +8,7 @@ import com.dat3m.dartagnan.parsers.program.utils.AssertionHelper;
 import com.dat3m.dartagnan.parsers.program.utils.ParsingException;
 import com.dat3m.dartagnan.parsers.program.utils.ProgramBuilder;
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.event.Fence;
 import com.dat3m.dartagnan.program.event.Load;
-import com.dat3m.dartagnan.program.event.Local;
-import com.dat3m.dartagnan.program.event.Store;
-import com.dat3m.dartagnan.program.event.rmw.RMWLoad;
-import com.dat3m.dartagnan.program.event.rmw.RMWStore;
 import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.program.memory.Location;
 import com.google.common.collect.ImmutableSet;
@@ -115,7 +110,7 @@ public class VisitorLitmusX86
 	public Object visitLoadValueToRegister(LitmusX86Parser.LoadValueToRegisterContext ctx) {
 		Register register = thread.register(ctx.register().getText(), -1);
 		IConst constant = new IConst(Integer.parseInt(ctx.constant().getText()), -1);
-		thread.add(new Local(register, constant));
+		thread.local(register, constant);
 		return null;
 	}
 
@@ -123,7 +118,7 @@ public class VisitorLitmusX86
 	public Object visitLoadLocationToRegister(LitmusX86Parser.LoadLocationToRegisterContext ctx) {
 		Register register = thread.register(ctx.register().getText(), -1);
 		Location location = programBuilder.getOrCreateLocation(ctx.location().getText(), -1);
-		thread.add(new Load(register, location.getAddress(), "_rx"));
+		thread.load(register, location.getAddress(), "_rx");
 		return null;
 	}
 
@@ -131,7 +126,7 @@ public class VisitorLitmusX86
 	public Object visitStoreValueToLocation(LitmusX86Parser.StoreValueToLocationContext ctx) {
 		Location location = programBuilder.getOrCreateLocation(ctx.location().getText(), -1);
 		IConst constant = new IConst(Integer.parseInt(ctx.constant().getText()), -1);
-		thread.add(new Store(location.getAddress(), constant, "_rx"));
+		thread.store(location.getAddress(), constant, "_rx");
 		return null;
 	}
 
@@ -139,7 +134,7 @@ public class VisitorLitmusX86
 	public Object visitStoreRegisterToLocation(LitmusX86Parser.StoreRegisterToLocationContext ctx) {
 		Register register = thread.registerOrError(ctx.register().getText());
 		Location location = programBuilder.getOrCreateLocation(ctx.location().getText(), -1);
-		thread.add(new Store(location.getAddress(), register, "_rx"));
+		thread.store(location.getAddress(), register, "_rx");
 		return null;
 	}
 
@@ -149,10 +144,9 @@ public class VisitorLitmusX86
 		Location location = programBuilder.getOrCreateLocation(ctx.location().getText(), -1);
 		Address address = location.getAddress();
 		Register dummy = thread.register(null, register.getPrecision());
-		RMWLoad load = new RMWLoad(dummy, address, null);
-		thread.add(load);
-		thread.add(new RMWStore(load, address, register, null));
-		thread.add(new Local(register, dummy));
+		Load load = thread.load(dummy, address);
+		thread.store(load, register);
+		thread.local(register, dummy);
 		return null;
 	}
 
@@ -191,7 +185,7 @@ public class VisitorLitmusX86
 		String name = ctx.getText().toLowerCase();
 		name = name.substring(0, 1).toUpperCase() + name.substring(1);
 		if(fences.contains(name)){
-			thread.add(new Fence(name));
+			thread.fence(name);
 			return null;
 		}
 		throw new ParsingException("Unrecognised fence " + name);

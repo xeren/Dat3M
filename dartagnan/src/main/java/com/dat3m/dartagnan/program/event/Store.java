@@ -14,11 +14,12 @@ public class Store extends MemEvent implements RegReaderData {
 	protected final ExprInterface value;
 	private final ImmutableSet<Register> dataRegs;
 
-	public Store(IExpr address, ExprInterface value, String mo) {
-		super(address, mo);
+	public Store(IExpr address, ExprInterface value, String... tag) {
+		super(address);
 		this.value = value;
 		dataRegs = value.getRegs();
 		addFilters(EType.ANY, EType.VISIBLE, EType.MEMORY, EType.WRITE);
+		addFilters(tag);
 	}
 
 	protected Store(Store other) {
@@ -40,12 +41,7 @@ public class Store extends MemEvent implements RegReaderData {
 
 	@Override
 	public String toString() {
-		return "store(*" + address + ", " + value + (mo != null ? ", " + mo : "") + ")";
-	}
-
-	@Override
-	public String label() {
-		return "W" + (mo != null ? "_" + mo : "");
+		return "store(*" + address + ", " + value + ")";
 	}
 
 	@Override

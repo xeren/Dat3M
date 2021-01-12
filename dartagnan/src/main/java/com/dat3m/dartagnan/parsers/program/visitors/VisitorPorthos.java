@@ -8,7 +8,7 @@ import com.dat3m.dartagnan.parsers.PorthosVisitor;
 import com.dat3m.dartagnan.parsers.program.utils.AssertionHelper;
 import com.dat3m.dartagnan.parsers.program.utils.ProgramBuilder;
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.event.*;
+import com.dat3m.dartagnan.program.event.Label;
 import com.dat3m.dartagnan.program.arch.pts.event.Read;
 import com.dat3m.dartagnan.program.arch.pts.event.Write;
 import com.dat3m.dartagnan.program.memory.Location;
@@ -52,14 +52,14 @@ public class VisitorPorthos extends PorthosBaseVisitor<Object> implements Portho
 	}
 
 	@Override
-	public Event visitExpressionWhile(PorthosParser.ExpressionWhileContext ctx) {
+	public Object visitExpressionWhile(PorthosParser.ExpressionWhileContext ctx) {
 		ExprInterface expr = (ExprInterface)ctx.boolExpr().accept(this);
 		Label begin = new Label(".continue");
 		Label end = new Label(".break");
 		thread.add(begin);
-		thread.add(new CondJump(new BExprUn(BOpUn.NOT, expr), end));
+		thread.jump(end, new BExprUn(BOpUn.NOT, expr));
 		ctx.expressionSequence().accept(this);
-		thread.add(new CondJump(new BConst(true), begin));
+		thread.jump(begin, new BConst(true));
 		thread.add(end);
 		return null;
 	}
@@ -69,10 +69,9 @@ public class VisitorPorthos extends PorthosBaseVisitor<Object> implements Portho
 		ExprInterface expr = (ExprInterface)ctx.boolExpr().accept(this);
 		Label exitMainBranch = thread.label(null);
 		Label exitElseBranch = thread.label(null);
-		CondJump ifEvent = new CondJump(new BExprUn(BOpUn.NOT, expr), exitMainBranch);
-		thread.add(ifEvent);
+		thread.jump(exitMainBranch, new BExprUn(BOpUn.NOT, expr));
 		ctx.expressionSequence(0).accept(this);
-		thread.add(new CondJump(new BConst(true), exitElseBranch));
+		thread.jump(exitElseBranch, new BConst(true));
 		thread.add(exitMainBranch);
 		if(ctx.expressionSequence(1) != null)
 			ctx.expressionSequence(1).accept(this);
@@ -81,31 +80,31 @@ public class VisitorPorthos extends PorthosBaseVisitor<Object> implements Portho
 	}
 
 	@Override
-	public Event visitInstructionLocal(PorthosParser.InstructionLocalContext ctx) {
+	public Object visitInstructionLocal(PorthosParser.InstructionLocalContext ctx) {
 		Register register = thread.register(ctx.register().getText(), -1);
 		IExpr expr = (IExpr)ctx.arithExpr().accept(this);
-		thread.add(new Local(register, expr));
+		thread.local(register, expr);
 		return null;
 	}
 
 	@Override
-	public Event visitInstructionLoad(PorthosParser.InstructionLoadContext ctx) {
+	public Object visitInstructionLoad(PorthosParser.InstructionLoadContext ctx) {
 		Register register = thread.register(ctx.register().getText(), -1);
 		Location location = programBuilder.getOrErrorLocation(ctx.location().getText());
-		thread.add(new Load(register, location.getAddress(), null));
+		thread.load(register, location.getAddress());
 		return null;
 	}
 
 	@Override
-	public Event visitInstructionStore(PorthosParser.InstructionStoreContext ctx) {
+	public Object visitInstructionStore(PorthosParser.InstructionStoreContext ctx) {
 		IExpr expr = (IExpr)ctx.arithExpr().accept(this);
 		Location location = programBuilder.getOrErrorLocation(ctx.location().getText());
-		thread.add(new Store(location.getAddress(), expr, null));
+		thread.store(location.getAddress(), expr);
 		return null;
 	}
 
 	@Override
-	public Event visitInstructionRead(PorthosParser.InstructionReadContext ctx) {
+	public Object visitInstructionRead(PorthosParser.InstructionReadContext ctx) {
 		Register register = thread.register(ctx.register().getText(), -1);
 		Location location = programBuilder.getOrErrorLocation(ctx.location().getText());
 		thread.add(new Read(register, location.getAddress(), ctx.MemoryOrder().getText()));
@@ -113,7 +112,7 @@ public class VisitorPorthos extends PorthosBaseVisitor<Object> implements Portho
 	}
 
 	@Override
-	public Event visitInstructionWrite(PorthosParser.InstructionWriteContext ctx) {
+	public Object visitInstructionWrite(PorthosParser.InstructionWriteContext ctx) {
 		IExpr e = (IExpr)ctx.arithExpr().accept(this);
 		Location location = programBuilder.getOrErrorLocation(ctx.location().getText());
 		thread.add(new Write(location.getAddress(), e, ctx.MemoryOrder().getText()));
@@ -121,8 +120,8 @@ public class VisitorPorthos extends PorthosBaseVisitor<Object> implements Portho
 	}
 
 	@Override
-	public Event visitInstructionFence(PorthosParser.InstructionFenceContext ctx) {
-		thread.add(new Fence(ctx.getText()));
+	public Object visitInstructionFence(PorthosParser.InstructionFenceContext ctx) {
+		thread.fence(ctx.getText());
 		return null;
 	}
 

@@ -19,18 +19,21 @@ public class AtomicStore extends MemEvent implements RegReaderData {
 
 	private final ExprInterface value;
 	private final ImmutableSet<Register> dataRegs;
+	private final String mo;
 
 	public AtomicStore(IExpr address, ExprInterface value, String mo) {
-		super(address, mo);
+		super(address);
 		this.value = value;
-		this.dataRegs = value.getRegs();
+		dataRegs = value.getRegs();
+		this.mo = mo;
 		addFilters(EType.ANY, EType.VISIBLE, EType.MEMORY, EType.WRITE);
 	}
 
 	private AtomicStore(AtomicStore other) {
 		super(other);
-		this.value = other.value;
-		this.dataRegs = other.dataRegs;
+		value = other.value;
+		dataRegs = other.dataRegs;
+		mo = other.mo;
 	}
 
 	@Override

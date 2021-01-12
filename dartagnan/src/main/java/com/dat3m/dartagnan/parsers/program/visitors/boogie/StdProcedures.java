@@ -117,7 +117,7 @@ public class StdProcedures {
 		// the name should be unique, thus we add the process identifier.
 		visitor.programBuilder.addDeclarationArray(visitor.currentScope.getID() + ":" + ptr, values, start.getPrecision());
 		Address adds = visitor.programBuilder.getPointer(visitor.currentScope.getID() + ":" + ptr);
-		visitor.thread.add(new Local(start, adds));
+		visitor.thread.local(start, adds);
 		visitor.allocationRegs.add(start);
 	}
 	
@@ -128,9 +128,7 @@ public class StdProcedures {
     	if(expr instanceof IConst && ((IConst)expr).getValue() == 1) {
     		return;
     	}
-    	Local event = new Local(ass, expr);
-		event.addFilters(EType.ASSERTION);
-		visitor.thread.add(event);
+		visitor.thread.local(ass, expr).addFilters(EType.ASSERTION);
 	}
 
 }

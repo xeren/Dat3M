@@ -11,7 +11,7 @@ public class Init extends MemEvent {
 	private final IConst value;
 
 	public Init(Address address, IConst value) {
-		super(address, null);
+		super(address);
 		this.value = value;
 		addFilters(EType.ANY, EType.VISIBLE, EType.MEMORY, EType.WRITE, EType.INIT);
 	}

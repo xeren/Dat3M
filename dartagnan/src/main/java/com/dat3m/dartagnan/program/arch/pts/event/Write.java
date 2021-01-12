@@ -20,7 +20,7 @@ public class Write extends MemEvent implements RegReaderData {
 	private final ImmutableSet<Register> dataRegs;
 
 	public Write(IExpr address, ExprInterface value, String mo) {
-		super(address, mo);
+		super(address);
 		this.value = value;
 		this.mo = mo;
 		this.dataRegs = value.getRegs();

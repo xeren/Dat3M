@@ -6,6 +6,10 @@ public class Label extends Event {
 
 	private final String name;
 
+	public Label() {
+		this((String)null);
+	}
+
 	public Label(String name) {
 		this.name = name;
 		addFilters(EType.ANY);

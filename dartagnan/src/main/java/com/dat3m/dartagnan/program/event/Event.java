@@ -55,11 +55,11 @@ public abstract class Event implements Comparable<Event> {
 	}
 
 	public String label() {
-		return repr() + " " + getClass().getSimpleName();
+		return cId + " " + getClass().getSimpleName();
 	}
 
 	public boolean is(String param) {
-		return param != null && (filter.contains(param));
+		return param != null && filter.contains(param);
 	}
 
 	public void addFilters(String... params) {
@@ -68,18 +68,6 @@ public abstract class Event implements Comparable<Event> {
 
 	public boolean hasFilter(String f) {
 		return filter.contains(f);
-	}
-
-	@Override
-	public int compareTo(Event e) {
-		int result = Integer.compare(cId, e.cId);
-		if(result == 0) {
-			result = Integer.compare(uId, e.uId);
-			if(result == 0) {
-				result = Integer.compare(oId, e.oId);
-			}
-		}
-		return result;
 	}
 
 	// Unrolling
@@ -139,5 +127,27 @@ public abstract class Event implements Comparable<Event> {
 	*/
 	public void encode(Context context, RuleAcceptor out, BoolExpr in) {
 		execVar = in;
+	}
+
+	@Override
+	public int compareTo(Event e) {
+		int result = Integer.compare(cId, e.cId);
+		if(result == 0) {
+			result = Integer.compare(uId, e.uId);
+			if(result == 0) {
+				result = Integer.compare(oId, e.oId);
+			}
+		}
+		return result;
+	}
+
+	@Override
+	public int hashCode() {
+		return cId;
+	}
+
+	@Override
+	public String toString() {
+		return cId + " " + getClass().getSimpleName() + " " + filter.toString();
 	}
 }

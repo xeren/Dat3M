@@ -11,7 +11,8 @@ import com.dat3m.dartagnan.parsers.program.utils.AssertionHelper;
 import com.dat3m.dartagnan.parsers.program.utils.ParsingException;
 import com.dat3m.dartagnan.parsers.program.utils.ProgramBuilder;
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.event.*;
+import com.dat3m.dartagnan.program.event.Cmp;
+import com.dat3m.dartagnan.program.event.Label;
 import com.google.common.collect.ImmutableSet;
 import org.antlr.v4.runtime.misc.Interval;
 
@@ -119,7 +120,7 @@ public class VisitorLitmusPPC
 	public Object visitLi(LitmusPPCParser.LiContext ctx) {
 		Register register = thread.register(ctx.register().getText(), -1);
 		IConst constant = new IConst(Integer.parseInt(ctx.constant().getText()), -1);
-		thread.add(new Local(register, constant));
+		thread.local(register, constant);
 		return null;
 	}
 
@@ -127,7 +128,7 @@ public class VisitorLitmusPPC
 	public Object visitLwz(LitmusPPCParser.LwzContext ctx) {
 		Register r1 = thread.register(ctx.register(0).getText(), -1);
 		Register ra = thread.registerOrError(ctx.register(1).getText());
-		thread.add(new Load(r1, ra, "_rx"));
+		thread.load(r1, ra, "_rx");
 		return null;
 	}
 
@@ -141,7 +142,7 @@ public class VisitorLitmusPPC
 	public Object visitStw(LitmusPPCParser.StwContext ctx) {
 		Register r1 = thread.registerOrError(ctx.register(0).getText());
 		Register ra = thread.registerOrError(ctx.register(1).getText());
-		thread.add(new Store(ra, r1, "_rx"));
+		thread.store(ra, r1, "_rx");
 		return null;
 	}
 
@@ -155,7 +156,7 @@ public class VisitorLitmusPPC
 	public Object visitMr(LitmusPPCParser.MrContext ctx) {
 		Register r1 = thread.register(ctx.register(0).getText(), -1);
 		Register r2 = thread.registerOrError(ctx.register(1).getText());
-		thread.add(new Local(r1, r2));
+		thread.local(r1, r2);
 		return null;
 	}
 
@@ -164,7 +165,7 @@ public class VisitorLitmusPPC
 		Register r1 = thread.register(ctx.register(0).getText(), -1);
 		Register r2 = thread.registerOrError(ctx.register(1).getText());
 		IConst constant = new IConst(Integer.parseInt(ctx.constant().getText()), -1);
-		thread.add(new Local(r1, new IExprBin(r2, IOpBin.PLUS, constant)));
+		thread.local(r1, new IExprBin(r2, IOpBin.PLUS, constant));
 		return null;
 	}
 
@@ -173,7 +174,7 @@ public class VisitorLitmusPPC
 		Register r1 = thread.register(ctx.register(0).getText(), -1);
 		Register r2 = thread.registerOrError(ctx.register(1).getText());
 		Register r3 = thread.registerOrError(ctx.register(2).getText());
-		thread.add(new Local(r1, new IExprBin(r2, IOpBin.XOR, r3)));
+		thread.local(r1, new IExprBin(r2, IOpBin.XOR, r3));
 		return null;
 	}
 
@@ -191,8 +192,7 @@ public class VisitorLitmusPPC
 		if(null == cmpIn){
 			throw new ParsingException("Invalid syntax near " + ctx.getText());
 		}
-		Atom expr = new Atom(cmpIn.getLeft(), ctx.cond().op, cmpIn.getRight());
-		thread.add(new CondJump(expr, label));
+		thread.jump(label, new Atom(cmpIn.getLeft(), ctx.cond().op, cmpIn.getRight()));
 		return null;
 	}
 
@@ -207,7 +207,7 @@ public class VisitorLitmusPPC
 		String name = ctx.getText().toLowerCase();
 		name = name.substring(0, 1).toUpperCase() + name.substring(1);
 		if(fences.contains(name)){
-			thread.add(new Fence(name));
+			thread.fence(name);
 			return null;
 		}
 		throw new ParsingException("Unrecognised fence " + name);

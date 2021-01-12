@@ -13,9 +13,8 @@ import com.dat3m.dartagnan.parsers.program.utils.ProgramBuilder;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.arch.linux.utils.Mo;
-import com.dat3m.dartagnan.program.event.*;
-import com.dat3m.dartagnan.program.event.rmw.RMWLoad;
-import com.dat3m.dartagnan.program.event.rmw.RMWStore;
+import com.dat3m.dartagnan.program.event.Label;
+import com.dat3m.dartagnan.program.event.Load;
 import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.program.memory.Location;
 import org.antlr.v4.runtime.misc.Interval;
@@ -169,11 +168,11 @@ public class VisitorLitmusC
                 Address pointer = programBuilder.getPointer(name);
                 if(pointer != null){
                     Register register = thread.register(name, -1);
-                    thread.add(new Local(register, pointer));
+                    thread.local(register, pointer);
                 } else {
                     Location location = programBuilder.getOrCreateLocation(varName.getText(), -1);
                     Register register = thread.register(varName.getText(), -1);
-                    thread.add(new Local(register, location.getAddress()));
+                    thread.local(register, location.getAddress());
                 }
             }
         }
@@ -186,10 +185,10 @@ public class VisitorLitmusC
         Label begin = new Label(".continue");
         Label end = new Label(".break");
         thread.add(begin);
-        thread.add(new CondJump(new BExprUn(BOpUn.NOT, expr), end));
+        thread.jump(end, new BExprUn(BOpUn.NOT, expr));
         for(LitmusCParser.ExpressionContext expressionContext : ctx.expression())
             expressionContext.accept(this);
-        thread.add(new CondJump(new BConst(true), begin));
+        thread.jump(begin, new BConst(true));
         thread.add(end);
         return null;
     }
@@ -199,11 +198,10 @@ public class VisitorLitmusC
 		ExprInterface expr = (ExprInterface) ctx.re().accept(this);
 		Label exitMainBranch = thread.label(null);
 		Label exitElseBranch = thread.label(null);
-		CondJump ifEvent = new CondJump(new BExprUn(BOpUn.NOT, expr), exitMainBranch);
-		thread.add(ifEvent);
+		thread.jump(exitMainBranch, new BExprUn(BOpUn.NOT, expr));
 		for(LitmusCParser.ExpressionContext expressionContext : ctx.expression())
 			expressionContext.accept(this);
-		thread.add(new CondJump(new BConst(true), exitElseBranch));
+		thread.jump(exitElseBranch, new BConst(true));
 		thread.add(exitMainBranch);
 		if(ctx.elseExpression() != null)
 			ctx.elseExpression().accept(this);
@@ -222,12 +220,11 @@ public class VisitorLitmusC
 		ExprInterface value = returnExpressionOrDefault(ctx.value, 1);
 		IExpr address = getAddress(ctx.address);
 		Register dummy = thread.register(null, register.getPrecision());
-		RMWLoad load = new RMWLoad(dummy, address, Mo.loadMO(ctx.mo));
 		if(Mo.MB.equals(ctx.mo))
 			addFence();
-		thread.add(load);
-		thread.add(new Local(register, new IExprBin(dummy, ctx.op, value)));
-		thread.add(new RMWStore(load, address, register, Mo.storeMO(ctx.mo)));
+		Load load = thread.load(dummy, address, Mo.loadMO(ctx.mo));
+		thread.local(register, new IExprBin(dummy, ctx.op, value));
+		thread.store(load, register, Mo.storeMO(ctx.mo));
 		if(Mo.MB.equals(ctx.mo))
 			addFence();
 		return register;
@@ -240,13 +237,12 @@ public class VisitorLitmusC
 		ExprInterface value = returnExpressionOrDefault(ctx.value, 1);
 		IExpr address = getAddress(ctx.address);
 		Register dummy = register != value ? register : thread.register(null, register.getPrecision());
-		RMWLoad load = new RMWLoad(dummy, address, Mo.loadMO(ctx.mo));
 		if(Mo.MB.equals(ctx.mo))
 			addFence();
-		thread.add(load);
-		thread.add(new RMWStore(load, address, new IExprBin(dummy, ctx.op, value), Mo.storeMO(ctx.mo)));
+		Load load = thread.load(dummy, address, Mo.loadMO(ctx.mo));
+		thread.store(load, new IExprBin(dummy, ctx.op, value), Mo.storeMO(ctx.mo));
 		if(dummy != register)
-			thread.add(new Local(register, dummy));
+			thread.local(register, dummy);
 		if(Mo.MB.equals(ctx.mo))
 			addFence();
 		return register;
@@ -258,12 +254,11 @@ public class VisitorLitmusC
 		ExprInterface value = returnExpressionOrDefault(ctx.value, 1);
 		IExpr address = getAddress(ctx.address);
 		Register dummy = thread.register(null, register.getPrecision());
-		RMWLoad load = new RMWLoad(dummy, address, Mo.RELAXED);
 		addFence();
-		thread.add(load);
-		thread.add(new Local(dummy, new IExprBin(dummy, ctx.op, value)));
-		thread.add(new RMWStore(load, address, dummy, Mo.RELAXED));
-		thread.add(new Local(register, new Atom(dummy, COpBin.EQ, new IConst(0, register.getPrecision()))));
+		Load load = thread.load(dummy, address, Mo.RELAXED);
+		thread.local(dummy, new IExprBin(dummy, ctx.op, value));
+		thread.store(load, dummy, Mo.RELAXED);
+		thread.local(register, new Atom(dummy, COpBin.EQ, new IConst(0, register.getPrecision())));
 		addFence();
 		return register;
 	}
@@ -276,14 +271,13 @@ public class VisitorLitmusC
 		ExprInterface cmp = (ExprInterface)ctx.cmp.accept(this);
 		IExpr address = getAddress(ctx.address);
 		Register dummy = thread.register(null, register.getPrecision());
-		RMWLoad load = new RMWLoad(dummy, address, Mo.RELAXED);
 		addFence();
-		thread.add(load);
+		Load load = thread.load(dummy, address, Mo.RELAXED);
 		Label l = thread.label(null);
-		thread.add(new CondJump(new Atom(dummy, COpBin.EQ, cmp), l));
-		thread.add(new RMWStore(load, address, new IExprBin(dummy, IOpBin.PLUS, value), Mo.RELAXED));
+		thread.jump(l, new Atom(dummy, COpBin.EQ, cmp));
+		thread.store(load, new IExprBin(dummy, IOpBin.PLUS, value), Mo.RELAXED);
 		thread.add(l);
-		thread.add(new Local(register, new Atom(dummy, COpBin.NEQ, cmp)));
+		thread.local(register, new Atom(dummy, COpBin.NEQ, cmp));
 		addFence();
 		return register;
 	}
@@ -294,13 +288,12 @@ public class VisitorLitmusC
 		ExprInterface value = (ExprInterface)ctx.value.accept(this);
 		IExpr address = getAddress(ctx.address);
 		Register dummy = register != value ? register : thread.register(null, register.getPrecision());
-		RMWLoad load = new RMWLoad(dummy, address, Mo.loadMO(ctx.mo));
 		if(Mo.MB.equals(ctx.mo))
 			addFence();
-		thread.add(load);
-		thread.add(new RMWStore(load, address, value, Mo.storeMO(ctx.mo)));
+		Load load = thread.load(dummy, address, Mo.loadMO(ctx.mo));
+		thread.store(load, value, Mo.storeMO(ctx.mo));
 		if(dummy != register)
-			thread.add(new Local(register, dummy));
+			thread.local(register, dummy);
 		if(Mo.MB.equals(ctx.mo))
 			addFence();
 		return register;
@@ -313,15 +306,14 @@ public class VisitorLitmusC
 		ExprInterface value = (ExprInterface)ctx.value.accept(this);
 		IExpr address = getAddress(ctx.address);
 		Register dummy = register != value && register != cmp ? register : thread.register(null, register.getPrecision());
-		RMWLoad load = new RMWLoad(dummy, address, Mo.loadMO(ctx.mo));
 		if(Mo.MB.equals(ctx.mo))
 			addFence();
-		thread.add(load);
+		Load load = thread.load(dummy, address, Mo.loadMO(ctx.mo));
 		Label l = thread.label(null);
-		thread.add(new CondJump(new Atom(dummy, COpBin.NEQ, cmp), l));
-		thread.add(new RMWStore(load, address, value, Mo.storeMO(ctx.mo)));
+		thread.jump(l, new Atom(dummy, COpBin.NEQ, cmp));
+		thread.store(load, value, Mo.storeMO(ctx.mo));
 		if(dummy != register)
-			thread.add(new Local(register, dummy));
+			thread.local(register, dummy);
 		thread.add(l);
 		if(Mo.MB.equals(ctx.mo))
 			addFence();
@@ -331,21 +323,21 @@ public class VisitorLitmusC
     @Override
     public IExpr visitReLoad(LitmusCParser.ReLoadContext ctx){
         Register register = getReturnRegister(true);
-        thread.add(new Load(register, getAddress(ctx.address), ctx.mo));
+        thread.load(register, getAddress(ctx.address), ctx.mo);
         return register;
     }
 
     @Override
     public IExpr visitReReadOnce(LitmusCParser.ReReadOnceContext ctx){
         Register register = getReturnRegister(true);
-        thread.add(new Load(register, getAddress(ctx.address), ctx.mo));
+        thread.load(register, getAddress(ctx.address), ctx.mo);
         return register;
     }
 
     @Override
     public IExpr visitReReadNa(LitmusCParser.ReReadNaContext ctx){
         Register register = getReturnRegister(true);
-        thread.add(new Load(register, getAddress(ctx.address), "NA"));
+        thread.load(register, getAddress(ctx.address));
         return register;
     }
 
@@ -431,29 +423,27 @@ public class VisitorLitmusC
 		ExprInterface value = returnExpressionOrDefault(ctx.value, 1);
 		Register register = thread.register(null, -1);
 		IExpr address = getAddress(ctx.address);
-		RMWLoad load = new RMWLoad(register, address, Mo.RELAXED);
-		RMWStore store = new RMWStore(load, address, new IExprBin(register, ctx.op, value), Mo.RELAXED);
-		thread.add(load);
-		thread.add(store);
+		Load load = thread.load(register, address, Mo.RELAXED);
+		thread.store(load, new IExprBin(register, ctx.op, value), Mo.RELAXED);
 		return null;
 	}
 
     @Override
     public Object visitNreStore(LitmusCParser.NreStoreContext ctx){
         ExprInterface value = (ExprInterface)ctx.value.accept(this);
-        if(ctx.mo.equals("Mb")){
-            thread.add(new Store(getAddress(ctx.address), value, Mo.RELAXED));
+        if(ctx.mo.equals(Mo.MB)){
+            thread.store(getAddress(ctx.address), value, Mo.RELAXED);
             addFence();
             return null;
         }
-        thread.add(new Store(getAddress(ctx.address), value, ctx.mo));
+        thread.store(getAddress(ctx.address), value, ctx.mo);
         return null;
     }
 
     @Override
     public Object visitNreWriteOnce(LitmusCParser.NreWriteOnceContext ctx){
         ExprInterface value = (ExprInterface)ctx.value.accept(this);
-        thread.add(new Store(getAddress(ctx.address), value, ctx.mo));
+        thread.store(getAddress(ctx.address), value, ctx.mo);
         return null;
     }
 
@@ -471,7 +461,7 @@ public class VisitorLitmusC
 
         ExprInterface value = (ExprInterface)ctx.re().accept(this);
         if(variable instanceof Address || variable instanceof Register){
-            thread.add(new Store((IExpr) variable, value, "NA"));
+            thread.store((IExpr) variable, value);
             return null;
         }
         throw new ParsingException("Invalid syntax near " + ctx.getText());
@@ -493,7 +483,7 @@ public class VisitorLitmusC
 
     @Override
     public Object visitNreFence(LitmusCParser.NreFenceContext ctx){
-        thread.add(new Fence(ctx.name));
+        thread.fence(ctx.name);
         return null;
     }
 
@@ -511,14 +501,14 @@ public class VisitorLitmusC
             Location location = programBuilder.getLocation(ctx.getText());
             if(location != null){
                 register = thread.register(null, -1);
-                thread.add(new Load(register, location.getAddress(), "NA"));
+                thread.load(register, location.getAddress());
                 return register;
             }
             return thread.register(ctx.getText(), -1);
         }
         Location location = programBuilder.getOrCreateLocation(ctx.getText(), -1);
         Register register = thread.register(null, -1);
-        thread.add(new Load(register, location.getAddress(), "NA"));
+        thread.load(register, location.getAddress());
         return register;
     }
 
@@ -545,12 +535,12 @@ public class VisitorLitmusC
 
     private ExprInterface assignToReturnRegister(Register register, ExprInterface value){
         if(register != null){
-            thread.add(new Local(register, value));
+            thread.local(register, value);
         }
         return value;
     }
 
 	private void addFence() {
-    	thread.add(new Fence("Mb"));
+    	thread.fence(Mo.MB);
 	}
 }

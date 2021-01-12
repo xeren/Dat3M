@@ -15,9 +15,7 @@ import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.atomic.event.AtomicLoad;
 import com.dat3m.dartagnan.program.atomic.event.AtomicStore;
 import com.dat3m.dartagnan.program.atomic.event.AtomicThreadFence;
-import com.dat3m.dartagnan.program.event.Store;
-import com.dat3m.dartagnan.program.event.rmw.RMWLoad;
-import com.dat3m.dartagnan.program.event.rmw.RMWStore;
+import com.dat3m.dartagnan.program.event.Load;
 
 public class AtomicProcedures {
 
@@ -61,9 +59,7 @@ public class AtomicProcedures {
 	private static void atomicInit(VisitorBoogie visitor, Call_cmdContext ctx) {
 		IExpr add = (IExpr)ctx.call_params().exprs().expr().get(0).accept(visitor);
 		ExprInterface value = (ExprInterface)ctx.call_params().exprs().expr().get(1).accept(visitor);
-		Store child = new Store(add, value, null);
-		child.setCLine(visitor.currentLine);
-		visitor.thread.add(child);
+		visitor.thread.store(add, value).setCLine(visitor.currentLine);
 	}
 
 	private static void atomicStore(VisitorBoogie visitor, Call_cmdContext ctx) {
@@ -112,12 +108,9 @@ public class AtomicProcedures {
 		if(ctx.call_params().exprs().expr().size() > 2) {
 			mo = intToMo(((IConst)ctx.call_params().exprs().expr().get(2).accept(visitor)).getValue());			
 		}
-		RMWLoad load = new RMWLoad(reg, add, mo);
+		Load load = visitor.thread.load(reg, add, mo);
 		load.setCLine(visitor.currentLine);
-		visitor.thread.add(load);
-		RMWStore store = new RMWStore(load, add, new IExprBin(reg, op, value), mo);
-		store.setCLine(visitor.currentLine);
-		visitor.thread.add(store);
+		visitor.thread.store(load, new IExprBin(reg, op, value), mo).setCLine(visitor.currentLine);
 	}
 
 	private static void atomicXchg(VisitorBoogie visitor, Call_cmdContext ctx) {
@@ -128,12 +121,9 @@ public class AtomicProcedures {
 		if(ctx.call_params().exprs().expr().size() > 2) {
 			mo = intToMo(((IConst)ctx.call_params().exprs().expr().get(2).accept(visitor)).getValue());			
 		}
-		RMWLoad load = new RMWLoad(reg, add, mo);
+		Load load = visitor.thread.load(reg, add, mo);
 		load.setCLine(visitor.currentLine);
-		visitor.thread.add(load);
-		RMWStore store = new RMWStore(load, add, value, mo);
-		store.setCLine(visitor.currentLine);
-		visitor.thread.add(store);
+		visitor.thread.store(load, value, mo).setCLine(visitor.currentLine);
 	}
 
 	private static void atomicThreadFence(VisitorBoogie visitor, Call_cmdContext ctx) {
