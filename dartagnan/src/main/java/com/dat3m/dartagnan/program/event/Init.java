@@ -32,13 +32,8 @@ public class Init extends MemEvent {
 	}
 
 	@Override
-	public String toString() {
-		return "*" + address + " := " + value;
-	}
-
-	@Override
-	public String label() {
-		return "W";
+	protected String label() {
+		return " " + address + " " + value + " ";
 	}
 
 	@Override

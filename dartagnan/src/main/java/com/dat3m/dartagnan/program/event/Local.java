@@ -61,8 +61,8 @@ public class Local extends Event implements RegWriter, RegReaderData {
 	}
 
     @Override
-	public String toString() {
-		return register + " <- " + expr;
+	protected String label() {
+		return " " + register + " " + expr + " ";
 	}
 
 	// Unrolling

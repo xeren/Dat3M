@@ -22,7 +22,7 @@ public class CondJump extends Event implements RegReaderData {
 		this.label = label;
 		this.expr = expr;
 		dataRegs = expr.getRegs();
-		addFilters(EType.ANY);
+		addFilters(EType.ANY, EType.BRANCH);
 	}
 
 	/**
@@ -59,10 +59,7 @@ public class CondJump extends Event implements RegReaderData {
 	}
 
 	@Override
-	public String toString() {
-		if(isUnconditional()) {
-			return "goto " + label;
-		}
-		return "if(" + expr + "); then goto " + label;
+	protected String label() {
+		return " " + label.getCId() + " " + expr + " ";
 	}
 }

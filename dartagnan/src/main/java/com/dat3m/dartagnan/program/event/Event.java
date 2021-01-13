@@ -54,8 +54,8 @@ public abstract class Event implements Comparable<Event> {
 		this.cLine = line;
 	}
 
-	public String label() {
-		return cId + " " + getClass().getSimpleName();
+	protected String label() {
+		return " ";
 	}
 
 	public boolean is(String param) {
@@ -148,6 +148,6 @@ public abstract class Event implements Comparable<Event> {
 
 	@Override
 	public String toString() {
-		return cId + " " + getClass().getSimpleName() + " " + filter.toString();
+		return cId + " " + getClass().getSimpleName() + label() + filter;
 	}
 }

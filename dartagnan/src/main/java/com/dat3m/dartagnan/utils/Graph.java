@@ -115,13 +115,13 @@ public class Graph {
             if(firstEvent instanceof Init){
                 Init e = (Init)firstEvent;
                 Location location = mapAddressLocation.get(e.getAddress().getIntValue(e, model, ctx));
-                String label = e.label() + " " + location.getName() + " = " + e.getValue();
+                String label = e.toString() + " " + location.getName() + " = " + e.getValue();
                 sb.append(L3).append(e.repr()).append(" ").append(getEventDef(label)).append(";\n");
             } else {
                 sb.append(L2).append("subgraph cluster_Thread_").append(t.getId()).append(" { ").append(getThreadDef(tId++)).append("\n");
                 for(Event e : t.getCache().getEvents(FilterBasic.get(EType.VISIBLE))) {
                     if(model.getConstInterp(e.exec()).isTrue()){
-                        String label = e.label();
+                        String label = e.toString();
                         if(e instanceof MemEvent) {
                             Location location = mapAddressLocation.get(((MemEvent) e).getAddress().getIntValue(e, model, ctx));
                             int value = 0;

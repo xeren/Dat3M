@@ -8,8 +8,9 @@ public class EType {
     public static final String WRITE        = "W";
     public static final String MEMORY       = "M";
     public static final String FENCE        = "F";
-    public static final String RMW          = "RMW";
+    public static final String RMW          = "A";
     public static final String LOCAL        = "T";
+    public static final String BRANCH       = "B";
     public static final String VISIBLE      = "V";
     public static final String ASSERTION    = "ASS";
     public static final String EXCLUSIVE    = "arm.exclusive";

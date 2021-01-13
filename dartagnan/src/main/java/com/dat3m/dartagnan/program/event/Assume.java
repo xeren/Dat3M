@@ -30,8 +30,8 @@ public class Assume extends Event implements RegReaderData {
 	}
 
 	@Override
-    public String toString() {
-        return "assume(" + condition + ")";
+    protected String label() {
+        return " " + condition.toString() + " ";
     }
 
 	// Unrolling

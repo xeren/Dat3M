@@ -41,8 +41,8 @@ public class Load extends MemEvent implements RegWriter {
     }
 
     @Override
-    public String toString() {
-        return resultRegister + " = load(*" + address + ")";
+    protected String label() {
+        return " " + resultRegister + " " + address + " ";
     }
 
     @Override

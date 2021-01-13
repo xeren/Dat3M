@@ -13,11 +13,6 @@ public class Fence extends Event {
 		super(other);
 	}
 
-	@Override
-	public String toString() {
-		return filter.toString();
-	}
-
 	// Unrolling
 	// -----------------------------------------------------------------------------------------------------------------
 

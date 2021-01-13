@@ -83,8 +83,8 @@ public class Thread implements Iterable<Event> {
 			cache = null;
 			return;
 		}
-		int start = original[0].getCId();
-		assert IntStream.range(0, original.length).allMatch(i->start+i==original[i].getCId());
+		int start = original[0].getOId();
+		assert IntStream.range(0, original.length).allMatch(i->start+i==original[i].getOId());
 		Label[] e = new Label[original.length];
 		ArrayList<Event> r = new ArrayList<>(bound * e.length);
 		boolean reachable = true;
@@ -100,7 +100,7 @@ public class Thread implements Iterable<Event> {
 					if(original[i] instanceof CondJump) {
 						CondJump c = (CondJump) original[i];
 						Label l = c.getLabel();
-						int j = l.getCId() - start;
+						int j = l.getOId() - start;
 						assert l == original[j];
 						if(null == e[j])
 							e[j] = l.getCopy();

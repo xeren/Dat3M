@@ -24,11 +24,6 @@ public class Label extends Event {
 		return name;
 	}
 
-	@Override
-	public String toString() {
-		return name + ":";
-	}
-
 	// Unrolling
 	// -----------------------------------------------------------------------------------------------------------------
 

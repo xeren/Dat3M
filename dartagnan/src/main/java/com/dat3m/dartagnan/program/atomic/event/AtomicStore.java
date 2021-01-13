@@ -34,9 +34,8 @@ public class AtomicStore extends Event {
 	}
 
 	@Override
-	public String toString() {
-		String tag = mo != null ? "_explicit" : "";
-		return "atomic_store" + tag + "(*" + address + ", " + value + (mo != null ? ", " + mo : "") + ")";
+	protected String label() {
+		return " " + address + " " + value + " " + mo + " ";
 	}
 
 

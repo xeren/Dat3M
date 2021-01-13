@@ -34,9 +34,8 @@ public class AtomicLoad extends Event {
 	}
 
 	@Override
-	public String toString() {
-		String tag = mo != null ? "_explicit" : "";
-		return resultRegister + " = atomic_load" + tag + "(*" + address + (mo != null ? ", " + mo : "") + ")";
+	protected String label() {
+		return " " + resultRegister + " " + address + " " + mo + " ";
 	}
 
 
