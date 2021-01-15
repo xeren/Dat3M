@@ -1,8 +1,6 @@
 package com.dat3m.dartagnan.wmm.utils;
 
-import com.dat3m.dartagnan.program.utils.EType;
-import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
-import com.dat3m.dartagnan.wmm.filter.FilterBasic;
+import com.dat3m.dartagnan.wmm.Filter;
 import com.dat3m.dartagnan.wmm.relation.RecursiveRelation;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.relation.base.RelCrit;
@@ -95,9 +93,9 @@ public class RelationRepository {
         } else if(UnaryRelation.class.isAssignableFrom(cls)){
             return new Class<?>[]{Relation.class};
         } else if(RelCartesian.class.isAssignableFrom(cls)){
-            return new Class<?>[]{FilterAbstract.class, FilterAbstract.class};
+            return new Class<?>[]{Filter.class, Filter.class};
         } else if(RelSetIdentity.class.isAssignableFrom(cls)){
-            return new Class<?>[]{FilterAbstract.class};
+            return new Class<?>[]{Filter.class};
         } else if(RelFencerel.class.isAssignableFrom(cls) || RecursiveRelation.class.isAssignableFrom(cls)) {
             return new Class<?>[]{String.class};
         }
@@ -140,11 +138,11 @@ public class RelationRepository {
             case "fr":
                 return getRelation(RelComposition.class, getRelation("rf^-1"), getRelation("co")).setName("fr");
             case "(R*W)":
-                return getRelation(RelCartesian.class, FilterBasic.get(EType.READ), FilterBasic.get(EType.WRITE));
+                return getRelation(RelCartesian.class, Filter.Atom.read, Filter.Atom.write);
             case "(R*M)":
-                return getRelation(RelCartesian.class, FilterBasic.get(EType.READ), FilterBasic.get(EType.MEMORY));
+                return getRelation(RelCartesian.class, Filter.Atom.read, Filter.Atom.memory);
             case "(R*B)":
-                return getRelation(RelCartesian.class, FilterBasic.get(EType.READ), FilterBasic.get(EType.BRANCH));
+                return getRelation(RelCartesian.class, Filter.Atom.read, Filter.Atom.branch);
             case "idd^+":
                 return getRelation(RelTrans.class, getRelation("idd"));
             case "data":

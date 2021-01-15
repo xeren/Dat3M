@@ -1,22 +1,23 @@
 package com.dat3m.dartagnan.utils;
 
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.event.Load;
-import com.dat3m.dartagnan.program.utils.EType;
-import com.dat3m.dartagnan.wmm.filter.FilterBasic;
-import com.dat3m.dartagnan.wmm.utils.Utils;
-import com.microsoft.z3.*;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Init;
+import com.dat3m.dartagnan.program.event.Load;
 import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.program.memory.Location;
+import com.dat3m.dartagnan.wmm.Filter;
+import com.dat3m.dartagnan.wmm.utils.Utils;
+import com.microsoft.z3.*;
 
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import static com.dat3m.dartagnan.program.utils.EType.VISIBLE;
 
 public class Graph {
 
@@ -119,12 +120,12 @@ public class Graph {
                 sb.append(L3).append(e.repr()).append(" ").append(getEventDef(label)).append(";\n");
             } else {
                 sb.append(L2).append("subgraph cluster_Thread_").append(t.getId()).append(" { ").append(getThreadDef(tId++)).append("\n");
-                for(Event e : t.getCache().getEvents(FilterBasic.get(EType.VISIBLE))) {
+                for(Event e : t.getCache().getEvents(Filter.of(VISIBLE))) {
                     if(model.getConstInterp(e.exec()).isTrue()){
                         String label = e.toString();
                         if(e instanceof MemEvent) {
                             Location location = mapAddressLocation.get(((MemEvent) e).getAddress().getIntValue(e, model, ctx));
-                            int value = 0;
+                            int value;
                             if(e instanceof Load){
                                 Register r = ((Load) e).getResultRegister();
                                 value = Integer.parseInt(model.getConstInterp(r.toZ3IntResult(e, ctx)).toString());
@@ -149,7 +150,7 @@ public class Graph {
 
         for(Thread thread : program.getThreads()) {
             List<Event> events = thread.getCache()
-                    .getEvents(FilterBasic.get(EType.VISIBLE))
+                    .getEvents(Filter.of(VISIBLE))
                     .stream()
                     .filter(e -> model.getConstInterp(e.exec()).isTrue())
                     .collect(Collectors.toList());
@@ -168,7 +169,7 @@ public class Graph {
         String edge = " " + getEdgeDef("co") + ";\n";
 
         Map<Integer, Set<Event>> mapAddressEvent = new HashMap<>();
-        for(Event e : program.getCache().getEvents(FilterBasic.get(EType.WRITE))){
+        for(Event e : program.getCache().getEvents(Filter.Atom.write)){
             if(model.getConstInterp(e.exec()).isTrue()){
                 int address = ((MemEvent)e).getAddress().getIntValue(e, model, ctx);
                 mapAddressEvent.putIfAbsent(address, new HashSet<>());
@@ -204,7 +205,7 @@ public class Graph {
         StringBuilder sb = new StringBuilder();
 
         List<Event> events = program.getCache()
-                .getEvents(FilterBasic.get(EType.VISIBLE))
+                .getEvents(Filter.of(VISIBLE))
                 .stream()
                 .filter(e -> model.getConstInterp(e.exec()).isTrue())
                 .collect(Collectors.toList());

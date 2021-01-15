@@ -10,14 +10,13 @@ import static com.microsoft.z3.Status.SATISFIABLE;
 import com.dat3m.dartagnan.expression.BConst;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
-import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.program.event.Init;
 import com.dat3m.dartagnan.program.event.MemEvent;
+import com.dat3m.dartagnan.program.event.Store;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.Wmm;
-import com.dat3m.dartagnan.wmm.filter.FilterBasic;
-import com.dat3m.dartagnan.wmm.filter.FilterMinus;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
@@ -57,23 +56,23 @@ public class DataRaces {
     			if(t1.getId() == t2.getId()) {
     				continue;
     			}
-    			for(Event e1 : t1.getCache().getEvents(FilterMinus.get(FilterBasic.get(EType.WRITE), FilterBasic.get(EType.INIT)))) {
-    				MemEvent w = (MemEvent)e1;
-    				for(Event e2 : t2.getCache().getEvents(FilterMinus.get(FilterBasic.get(EType.MEMORY), FilterBasic.get(EType.INIT)))) {
-    					MemEvent m = (MemEvent)e2;
-    					if(w.hasFilter(EType.RMW) && m.hasFilter(EType.RMW)) {
+    			for(Store e1 : t1.getCache().getEvents(Store.class)) {
+					for(MemEvent e2 : t2.getCache().getEvents(MemEvent.class)) {
+    					if(e2 instanceof Init)
+    						continue;
+						if(e1.hasFilter(EType.RMW) && e2.hasFilter(EType.RMW)) {
     						continue;
     					}
     					// TODO improve this: these events correspond to return statements
-    					if(w.getMemValue() instanceof BConst && !((BConst)w.getMemValue()).getValue()) {
+    					if(e1.getMemValue() instanceof BConst && !((BConst) e1.getMemValue()).getValue()) {
     						continue;
     					}
-    					if(m.getMemValue() instanceof BConst && !((BConst)m.getMemValue()).getValue()) {
+    					if(e2.getMemValue() instanceof BConst && !((BConst) e2.getMemValue()).getValue()) {
     						continue;
     					}
-    					if(w.canRace() && m.canRace() && MemEvent.canAddressTheSameLocation(w, m)) {
-        					BoolExpr conflict = ctx.mkAnd(m.exec(), w.exec(), ctx.mkEq(w.getMemAddressExpr(), m.getMemAddressExpr()), 
-        							edge("hb", m, w, ctx), ctx.mkEq(intVar("hb", w, ctx), ctx.mkAdd(intVar("hb", m, ctx), ctx.mkInt(1))));
+    					if(e1.canRace() && e2.canRace() && MemEvent.canAddressTheSameLocation(e1, e2)) {
+        					BoolExpr conflict = ctx.mkAnd(e2.exec(), e1.exec(), ctx.mkEq(e1.getMemAddressExpr(), e2.getMemAddressExpr()),
+        							edge("hb", e2, e1, ctx), ctx.mkEq(intVar("hb", e1, ctx), ctx.mkAdd(intVar("hb", e2, ctx), ctx.mkInt(1))));
     						enc = ctx.mkOr(enc, conflict);
     					}
     				}

@@ -1,8 +1,7 @@
 package com.dat3m.dartagnan.program.utils;
 
 import com.dat3m.dartagnan.program.event.*;
-import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
-import com.dat3m.dartagnan.wmm.filter.FilterBasic;
+import com.dat3m.dartagnan.wmm.Filter;
 import com.google.common.collect.ImmutableList;
 import java.util.*;
 import static java.util.stream.Collectors.toList;//TODO toUnmodifiableList
@@ -13,7 +12,7 @@ Represents a thread of a compiled program.
 public class ThreadCache {
 
 	private final ImmutableList<Event> all;
-	private final Map<FilterAbstract,List<Event>> tag = new HashMap<>();
+	private final Map<Filter,List<Event>> tag = new HashMap<>();
 	private final HashMap<Class<?>,List<?>> subclass = new HashMap<>();
 	private final HashMap<Event,Event> dominator = new HashMap<>();
 
@@ -26,7 +25,7 @@ public class ThreadCache {
 	*/
 	public ThreadCache(List<Event> events) {
 		all = ImmutableList.copyOf(events);
-		tag.put(FilterBasic.get(EType.ANY), all);
+		tag.put(Filter.Atom.any, all);
 		subclass.put(Event.class, all);
 	}
 
@@ -37,7 +36,7 @@ public class ThreadCache {
 	@return
 	Immutable list of events satisfying the filter in order of appearance.
 	*/
-	public List<Event> getEvents(FilterAbstract filter) {
+	public List<Event> getEvents(Filter filter) {
 		return tag.computeIfAbsent(filter, k->all.stream().filter(filter::filter).collect(toList()));
 	}
 

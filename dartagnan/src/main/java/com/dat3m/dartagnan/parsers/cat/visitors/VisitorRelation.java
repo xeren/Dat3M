@@ -3,7 +3,7 @@ package com.dat3m.dartagnan.parsers.cat.visitors;
 import com.dat3m.dartagnan.parsers.CatBaseVisitor;
 import com.dat3m.dartagnan.parsers.CatVisitor;
 import com.dat3m.dartagnan.parsers.CatParser;
-import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
+import com.dat3m.dartagnan.wmm.Filter;
 import com.dat3m.dartagnan.wmm.relation.RecursiveRelation;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.relation.base.stat.RelCartesian;
@@ -91,7 +91,7 @@ public class VisitorRelation extends CatBaseVisitor<Relation> implements CatVisi
     public Relation visitExprIdentity(CatParser.ExprIdentityContext ctx) {
         boolean orig = base.recursiveDef;
         base.recursiveDef = false;
-        FilterAbstract filter = ctx.e.accept(base.filterVisitor);
+        Filter filter = ctx.e.accept(base.filterVisitor);
         Relation relation = base.relationRepository.getRelation(RelSetIdentity.class, filter);
         base.recursiveDef = orig;
         return relation;
@@ -101,8 +101,8 @@ public class VisitorRelation extends CatBaseVisitor<Relation> implements CatVisi
     public Relation visitExprCartesian(CatParser.ExprCartesianContext ctx) {
         boolean orig = base.recursiveDef;
         base.recursiveDef = false;
-        FilterAbstract filter1 = ctx.e1.accept(base.filterVisitor);
-        FilterAbstract filter2 = ctx.e2.accept(base.filterVisitor);
+        Filter filter1 = ctx.e1.accept(base.filterVisitor);
+        Filter filter2 = ctx.e2.accept(base.filterVisitor);
         Relation relation = base.relationRepository.getRelation(RelCartesian.class, filter1, filter2);
         base.recursiveDef = orig;
         return relation;

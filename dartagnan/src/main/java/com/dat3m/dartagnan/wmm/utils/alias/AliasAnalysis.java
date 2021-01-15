@@ -8,8 +8,6 @@ import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.program.memory.Location;
-import com.dat3m.dartagnan.program.utils.EType;
-import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.google.common.collect.ImmutableSet;
 import java.util.*;
 
@@ -45,8 +43,7 @@ public class AliasAnalysis {
     }
 
     private void processLocs(Program program) {
-        for (Event ev : program.getCache().getEvents(FilterBasic.get(EType.MEMORY))) {
-            MemEvent e = (MemEvent) ev;
+        for (MemEvent e : program.getCache().getEvents(MemEvent.class)) {
             IExpr address = e.getAddress();
 
             // Collect for each v events of form: p = *v, *v = q
@@ -84,8 +81,7 @@ public class AliasAnalysis {
     }
 
     private void cfsProcessLocs(Program program) {
-        for (Event ev : program.getCache().getEvents(FilterBasic.get(EType.MEMORY))) {
-            MemEvent e = (MemEvent) ev;
+        for (MemEvent e : program.getCache().getEvents(MemEvent.class)) {
             IExpr address = e.getAddress();
 
             // Collect for each v events of form: p = *v, *v = q
@@ -126,45 +122,39 @@ public class AliasAnalysis {
     }
 
     private void processRegs(Program program) {
-        for (Event ev : program.getCache().getEvents(FilterBasic.get(EType.LOCAL))) {
-            if(ev instanceof Local) {
-                Local e = (Local) ev;
-                Register register = e.getResultRegister();
-                ExprInterface expr = e.getExpr();
+        for (Local e : program.getCache().getEvents(Local.class)) {
+            Register register = e.getResultRegister();
+            ExprInterface expr = e.getExpr();
 
-                if (expr instanceof Register) {
-                    // r1 = r2 -> add edge r2 --> r1
-                    graph.addEdge((Register) expr, register);
+            if (expr instanceof Register) {
+                // r1 = r2 -> add edge r2 --> r1
+                graph.addEdge(expr, register);
 
-                } else if (expr instanceof Address) {
-                    // r = &a
-                    graph.addAddress(register, (Address) expr);
-                    variables.add(register);
-                }
+            } else if (expr instanceof Address) {
+                // r = &a
+                graph.addAddress(register, (Address) expr);
+                variables.add(register);
             }
         }
     }
 
     private void cfsProcessRegs(Program program) {
-        for (Event ev : program.getCache().getEvents(FilterBasic.get(EType.LOCAL))) {
-            if(ev instanceof Local) {
-                Local e = (Local) ev;
-                Register register = e.getResultRegister();
-                int id = ssaMap.get(register).get(e) + 1;
-                SSAReg ssaReg1 = graph.getSSAReg(register, id);
-                ExprInterface expr = e.getExpr();
+        for (Local e : program.getCache().getEvents(Local.class)) {
+            Register register = e.getResultRegister();
+            int id = ssaMap.get(register).get(e) + 1;
+            SSAReg ssaReg1 = graph.getSSAReg(register, id);
+            ExprInterface expr = e.getExpr();
 
-                if (expr instanceof Register) {
-                    // r1 = r2 -> add edge r2 --> r1
-                    Register register2 = (Register) expr;
-                    SSAReg ssaReg2 = graph.getSSAReg(register2, ssaMap.get(register2).get(e));
-                    graph.addEdge(ssaReg2, ssaReg1);
+            if (expr instanceof Register) {
+                // r1 = r2 -> add edge r2 --> r1
+                Register register2 = (Register) expr;
+                SSAReg ssaReg2 = graph.getSSAReg(register2, ssaMap.get(register2).get(e));
+                graph.addEdge(ssaReg2, ssaReg1);
 
-                } else if (expr instanceof Address) {
-                    // r = &a
-                    graph.addAddress(ssaReg1, (Address) expr);
-                    variables.add(ssaReg1);
-                }
+            } else if (expr instanceof Address) {
+                // r = &a
+                graph.addAddress(ssaReg1, (Address) expr);
+                variables.add(ssaReg1);
             }
         }
     }
@@ -253,13 +243,13 @@ public class AliasAnalysis {
     }
 
     private void processResults(Program program) {
-        for (Event e : program.getCache().getEvents(FilterBasic.get(EType.MEMORY))) {
-            IExpr address = ((MemEvent) e).getAddress();
+        for (MemEvent e : program.getCache().getEvents(MemEvent.class)) {
+            IExpr address = e.getAddress();
             Set<Address> adresses;
             if (address instanceof Register) {
-                adresses = graph.getAddresses(((Register) address));
+                adresses = graph.getAddresses(address);
             } else if (address instanceof Address) {
-                    adresses = ImmutableSet.of(((Address) address));
+                adresses = ImmutableSet.of((Address) address);
             } else {
                 adresses = maxAddressSet;
             }
@@ -267,18 +257,18 @@ public class AliasAnalysis {
                 adresses = maxAddressSet;
             }
             ImmutableSet<Address> addr = ImmutableSet.copyOf(adresses);
-            ((MemEvent) e).setMaxAddressSet(addr);
+            e.setMaxAddressSet(addr);
         }
     }
 
     private void calculateLocationSetsNoAlias(Program program) {
         ImmutableSet<Address> maxAddressSet = program.getMemory().getAllAddresses();
-        for (Event e : program.getCache().getEvents(FilterBasic.get(EType.MEMORY))) {
-            IExpr address = ((MemEvent) e).getAddress();
+        for (MemEvent e : program.getCache().getEvents(MemEvent.class)) {
+            IExpr address = e.getAddress();
             if (address instanceof Address) {
-                ((MemEvent) e).setMaxAddressSet(ImmutableSet.of((Address) address));
+                e.setMaxAddressSet(ImmutableSet.of((Address) address));
             } else {
-                ((MemEvent) e).setMaxAddressSet(maxAddressSet);
+                e.setMaxAddressSet(maxAddressSet);
             }
         }
     }
@@ -287,7 +277,7 @@ public class AliasAnalysis {
         Map<Register, Map<Event, Integer>> ssaMap = new HashMap<>();
         Map<Register, Integer> indexMap = new HashMap<>();
         for(Thread thread : program.getThreads()){
-            List<Event> events = thread.getCache().getEvents(FilterBasic.get(EType.ANY));
+            List<Event> events = thread.getCache().getEvents(Event.class);
             mkSsaIndices(events, ssaMap, indexMap);
         }
         return ssaMap;

@@ -4,8 +4,6 @@ import com.dat3m.dartagnan.parsers.program.ProgramParser;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.utils.Settings;
-import com.dat3m.dartagnan.program.utils.EType;
-import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.dat3m.dartagnan.parsers.cat.ParserCat;
@@ -153,7 +151,7 @@ public class PorthosTest {
             ctx.close();
 
             for(Thread thread : pSource.getThreads()){
-                List<Event> events = thread.getCache().getEvents(FilterBasic.get(EType.ANY));
+                List<Event> events = thread.getCache().getEvents(Event.class);
                 Event lastEvent = events.get(0);
                 for(int i = 1; i < events.size(); i++){
                     Event thisEvent = events.get(i);
@@ -165,7 +163,7 @@ public class PorthosTest {
             }
 
             for(Thread thread : pTarget.getThreads()){
-                List<Event> events = thread.getCache().getEvents(FilterBasic.get(EType.ANY));
+                List<Event> events = thread.getCache().getEvents(Event.class);
                 Event lastEvent = events.get(0);
                 for(int i = 1; i < events.size(); i++){
                     Event thisEvent = events.get(i);

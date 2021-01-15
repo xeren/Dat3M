@@ -1,17 +1,14 @@
 package com.dat3m.dartagnan.wmm.relation.base.memory;
 
+import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.utils.Settings;
-import com.dat3m.dartagnan.wmm.filter.FilterBasic;
-import com.dat3m.dartagnan.wmm.filter.FilterMinus;
-import com.microsoft.z3.BitVecExpr;
-import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.IntExpr;
-import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import com.microsoft.z3.BitVecExpr;
+import com.microsoft.z3.BoolExpr;
+import com.microsoft.z3.IntExpr;
 
 import java.util.*;
 
@@ -29,24 +26,21 @@ public class RelRf extends Relation {
         if(maxTupleSet == null){
             maxTupleSet = new TupleSet();
 
-            List<Event> eventsLoad = program.getCache().getEvents(FilterBasic.get(EType.READ));
-            List<Event> eventsInit = program.getCache().getEvents(FilterBasic.get(EType.INIT));
-            List<Event> eventsStore = program.getCache().getEvents(FilterMinus.get(
-                    FilterBasic.get(EType.WRITE),
-                    FilterBasic.get(EType.INIT)
-            ));
+            List<Load> eventsLoad = program.getCache().getEvents(Load.class);
+            List<Init> eventsInit = program.getCache().getEvents(Init.class);
+            List<Store> eventsStore = program.getCache().getEvents(Store.class);
 
-            for(Event e1 : eventsInit){
-                for(Event e2 : eventsLoad){
-                    if(MemEvent.canAddressTheSameLocation((MemEvent) e1, (MemEvent) e2)){
+            for(Init e1 : eventsInit){
+                for(Load e2 : eventsLoad){
+                    if(MemEvent.canAddressTheSameLocation(e1, e2)){
                         maxTupleSet.add(new Tuple(e1, e2));
                     }
                 }
             }
 
-            for(Event e1 : eventsStore){
-                for(Event e2 : eventsLoad){
-                    if(MemEvent.canAddressTheSameLocation((MemEvent) e1, (MemEvent) e2)){
+            for(Store e1 : eventsStore){
+                for(Load e2 : eventsLoad){
+                    if(MemEvent.canAddressTheSameLocation(e1, e2)){
                     	maxTupleSet.add(new Tuple(e1, e2));
                     }
                 }

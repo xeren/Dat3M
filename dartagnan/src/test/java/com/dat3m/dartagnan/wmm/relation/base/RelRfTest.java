@@ -4,11 +4,9 @@ import com.dat3m.dartagnan.parsers.cat.ParserCat;
 import com.dat3m.dartagnan.parsers.program.ProgramParser;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.utils.ResourceHelper;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.Wmm;
-import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.utils.alias.Alias;
@@ -45,15 +43,15 @@ public class RelRfTest {
         Wmm wmm = new ParserCat().parse(new File(wmmPath));
 
         settings.setFlag(Settings.FLAG_USE_SEQ_ENCODING_REL_RF, false);
-        assertTrue(runAnalysis(solver, ctx, p1, wmm, p1.getArch(), settings).equals(FAIL));
+        assertEquals(runAnalysis(solver, ctx, p1, wmm, p1.getArch(), settings), FAIL);
         solver.reset();
-        assertTrue(runAnalysis(solver, ctx, p2, wmm, p2.getArch(), settings).equals(FAIL));
+        assertEquals(runAnalysis(solver, ctx, p2, wmm, p2.getArch(), settings), FAIL);
         solver.reset();
 
         settings.setFlag(Settings.FLAG_USE_SEQ_ENCODING_REL_RF, true);
-        assertTrue(runAnalysis(solver, ctx, p1, wmm, p1.getArch(), settings).equals(FAIL));
+        assertEquals(runAnalysis(solver, ctx, p1, wmm, p1.getArch(), settings), FAIL);
         solver.reset();
-        assertTrue(runAnalysis(solver, ctx, p2, wmm, p2.getArch(), settings).equals(FAIL));
+        assertEquals(runAnalysis(solver, ctx, p2, wmm, p2.getArch(), settings), FAIL);
         ctx.close();
     }
 
@@ -121,7 +119,7 @@ public class RelRfTest {
     }
 
     private void extractEvents(Program program, Map<Integer, Event> events){
-        for(Event e : program.getCache().getEvents(FilterBasic.get(EType.ANY))){
+        for(Event e : program.getCache().getEvents(Event.class)){
             for(int id : events.keySet()){
                 if(e.getCId() == id){
                     events.put(id, e);

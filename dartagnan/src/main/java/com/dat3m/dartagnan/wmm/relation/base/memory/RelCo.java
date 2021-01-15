@@ -1,19 +1,19 @@
 package com.dat3m.dartagnan.wmm.relation.base.memory;
 
-import com.dat3m.dartagnan.program.utils.EType;
-import com.dat3m.dartagnan.wmm.filter.FilterBasic;
-import com.dat3m.dartagnan.wmm.filter.FilterMinus;
+import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.program.event.Init;
+import com.dat3m.dartagnan.program.event.MemEvent;
+import com.dat3m.dartagnan.program.event.Store;
+import com.dat3m.dartagnan.program.memory.Address;
+import com.dat3m.dartagnan.wmm.Filter;
+import com.dat3m.dartagnan.wmm.relation.Relation;
+import com.dat3m.dartagnan.wmm.utils.Utils;
+import com.dat3m.dartagnan.wmm.utils.Tuple;
+import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.BitVecExpr;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Expr;
 import com.microsoft.z3.IntExpr;
-import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.MemEvent;
-import com.dat3m.dartagnan.program.memory.Address;
-import com.dat3m.dartagnan.wmm.utils.Utils;
-import com.dat3m.dartagnan.wmm.relation.Relation;
-import com.dat3m.dartagnan.wmm.utils.Tuple;
-import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,23 +32,20 @@ public class RelCo extends Relation {
     public TupleSet getMaxTupleSet(){
         if(maxTupleSet == null){
             maxTupleSet = new TupleSet();
-            List<Event> eventsInit = program.getCache().getEvents(FilterBasic.get(EType.INIT));
-            List<Event> eventsStore = program.getCache().getEvents(FilterMinus.get(
-                    FilterBasic.get(EType.WRITE),
-                    FilterBasic.get(EType.INIT)
-            ));
+            List<Init> eventsInit = program.getCache().getEvents(Init.class);
+            List<Store> eventsStore = program.getCache().getEvents(Store.class);
 
-            for(Event e1 : eventsInit){
-                for(Event e2 : eventsStore){
-                    if(MemEvent.canAddressTheSameLocation((MemEvent) e1, (MemEvent)e2)){
+            for(Init e1 : eventsInit){
+                for(Store e2 : eventsStore){
+                    if(MemEvent.canAddressTheSameLocation(e1, e2)){
                         maxTupleSet.add(new Tuple(e1, e2));
                     }
                 }
             }
 
-            for(Event e1 : eventsStore){
-                for(Event e2 : eventsStore){
-                    if(e1.getCId() != e2.getCId() && MemEvent.canAddressTheSameLocation((MemEvent) e1, (MemEvent)e2)){
+            for(Store e1 : eventsStore){
+                for(Store e2 : eventsStore){
+                    if(e1.getCId() != e2.getCId() && MemEvent.canAddressTheSameLocation(e1, e2)){
                         maxTupleSet.add(new Tuple(e1, e2));
                     }
                 }
@@ -61,25 +58,22 @@ public class RelCo extends Relation {
     protected BoolExpr encodeApprox() {
         BoolExpr enc = ctx.mkTrue();
 
-        List<Event> eventsInit = program.getCache().getEvents(FilterBasic.get(EType.INIT));
-        List<Event> eventsStore = program.getCache().getEvents(FilterMinus.get(
-                FilterBasic.get(EType.WRITE),
-                FilterBasic.get(EType.INIT)
-        ));
+        List<Init> eventsInit = program.getCache().getEvents(Init.class);
+        List<Store> eventsStore = program.getCache().getEvents(Store.class);
 
-        for(Event e : eventsInit) {
+        for(Init e : eventsInit) {
             enc = ctx.mkAnd(enc, ctx.mkEq(intVar("co", e, ctx), ctx.mkInt(0)));
         }
 
         List<IntExpr> intVars = new ArrayList<>();
-        for(Event w : eventsStore) {
+        for(Store w : eventsStore) {
             IntExpr coVar = intVar("co", w, ctx);
             enc = ctx.mkAnd(enc, ctx.mkGt(coVar, ctx.mkInt(0)));
             intVars.add(coVar);
         }
         enc = ctx.mkAnd(enc, ctx.mkDistinct(intVars.toArray(new IntExpr[0])));
 
-        for(Event w :  program.getCache().getEvents(FilterBasic.get(EType.WRITE))){
+        for(Event w :  program.getCache().getEvents(Filter.Atom.write)){
             MemEvent w1 = (MemEvent)w;
             BoolExpr lastCo = w1.exec();
 

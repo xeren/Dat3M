@@ -2,8 +2,8 @@ package com.dat3m.dartagnan.wmm.relation;
 
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.wmm.Filter;
 import com.dat3m.dartagnan.wmm.utils.Utils;
-import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
@@ -17,10 +17,10 @@ public class EdgeTestHelper {
 
     private Program program;
     private Relation relation;
-    private FilterAbstract filter1;
-    private FilterAbstract filter2;
+    private Filter filter1;
+    private Filter filter2;
 
-    public EdgeTestHelper(Program program, Relation relation, FilterAbstract filter1, FilterAbstract filter2){
+    public EdgeTestHelper(Program program, Relation relation, Filter filter1, Filter filter2){
         this.program = program;
         this.relation = relation;
         this.filter1 = filter1;

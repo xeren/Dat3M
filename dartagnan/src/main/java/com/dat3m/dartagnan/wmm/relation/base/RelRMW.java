@@ -7,9 +7,7 @@ import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.program.event.RMWStore;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.utils.Settings;
-import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
-import com.dat3m.dartagnan.wmm.filter.FilterBasic;
-import com.dat3m.dartagnan.wmm.filter.FilterIntersection;
+import com.dat3m.dartagnan.wmm.Filter;
 import com.dat3m.dartagnan.wmm.relation.base.stat.StaticRelation;
 import com.dat3m.dartagnan.wmm.utils.Flag;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
@@ -21,15 +19,9 @@ import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 
 public class RelRMW extends StaticRelation {
 
-    private final FilterAbstract loadFilter  = FilterIntersection.get(
-            FilterBasic.get(EType.EXCLUSIVE),
-            FilterBasic.get(EType.READ)
-    );
+    private final Filter loadFilter  = Filter.And.of(Filter.of(EType.EXCLUSIVE), Filter.Atom.read);
 
-    private final FilterAbstract storeFilter = FilterIntersection.get(
-            FilterBasic.get(EType.EXCLUSIVE),
-            FilterBasic.get(EType.WRITE)
-    );
+    private final Filter storeFilter = Filter.And.of(Filter.of(EType.EXCLUSIVE), Filter.Atom.write);
 
     // Set without exclusive events
     private TupleSet baseMaxTupleSet;
