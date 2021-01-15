@@ -8,9 +8,7 @@ import static com.microsoft.z3.Status.SATISFIABLE;
 
 import com.dat3m.dartagnan.asserts.AssertTrue;
 import com.dat3m.dartagnan.program.Program;
-import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.MemEvent;
-import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.Wmm;
@@ -100,7 +98,7 @@ public class Base {
             solver.add(program.getAssFilter().encode(ctx));
         }
 
-        Result res = UNKNOWN;
+        Result res;
 		if(solver.check() == SATISFIABLE) {
         	solver.add(program.encodeNoBoundEventExec(ctx));
 			res = solver.check() == SATISFIABLE ? FAIL : UNKNOWN;
@@ -164,20 +162,18 @@ public class Base {
 
 			Map<Boolean, List<Event>> executed = program.getEvents().stream()
 				.collect(Collectors.groupingBy(e->m.getConstInterp(e.exec()).isTrue()));
-			List<MemEvent> loads = executed.get(true).stream()
-				.filter(e->e.is(EType.READ))
-				.filter(MemEvent.class::isInstance)
-				.map(MemEvent.class::cast)
+			List<Load> loads = executed.get(true).stream()
+				.filter(Load.class::isInstance)
+				.map(Load.class::cast)
 				.collect(Collectors.toList());
-			List<MemEvent> stores = executed.get(true).stream()
-				.filter(e->e.is(EType.WRITE))
-				.filter(MemEvent.class::isInstance)
-				.map(MemEvent.class::cast)
+			List<InitOrStore> stores = executed.get(true).stream()
+				.filter(InitOrStore.class::isInstance)
+				.map(InitOrStore.class::cast)
 				.collect(Collectors.toList());
 			Stream.concat(loads.stream(), stores.stream()).map(MemEvent::getMemAddressExpr).filter(e->null==m.getConstInterp(e)).forEach(System.err::println);
 			Map<Expr,List<MemEvent>> loc = Stream.concat(loads.stream(), stores.stream())
 				.collect(Collectors.groupingBy(e->m.getConstInterp(e.getMemAddressExpr())));
-			Map<MemEvent,MemEvent> rf = loads.stream()
+			Map<Load,InitOrStore> rf = loads.stream()
 				.collect(Collectors.toMap(
 					r->r,
 					r->stores.stream()
@@ -208,7 +204,7 @@ public class Base {
 					}
 				}
 			}
-			for(MemEvent r: loads) {
+			for(Load r: loads) {
 				BoolExpr literal = edge("rf", rf.get(r), r, ctx);
 				track.put(literal, literal);
 			}

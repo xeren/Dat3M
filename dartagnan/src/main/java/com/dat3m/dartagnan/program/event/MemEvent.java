@@ -71,12 +71,7 @@ public abstract class MemEvent extends Event {
 	public boolean canRace() {
 		//TODO associate tags with data race inability
 		HashSet<String> f = new HashSet<>(filter);
-		f.remove(EType.ANY);
-		f.remove(EType.MEMORY);
 		f.remove(EType.RMW);
-		f.remove(EType.READ);
-		f.remove(EType.WRITE);
-		f.remove(EType.INIT);
 		f.remove(EType.EXCLUSIVE);
 		return f.isEmpty();
 	}

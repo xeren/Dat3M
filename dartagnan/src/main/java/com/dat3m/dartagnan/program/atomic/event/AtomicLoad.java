@@ -23,7 +23,7 @@ public class AtomicLoad extends Event {
 		this.address = address;
 		this.resultRegister = register;
 		this.mo = mo;
-		addFilters(EType.ANY, EType.VISIBLE, EType.MEMORY, EType.READ);
+		addFilters(EType.VISIBLE);
 	}
 
 	private AtomicLoad(AtomicLoad other) {

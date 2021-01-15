@@ -5,7 +5,7 @@ import com.dat3m.dartagnan.program.utils.EType;
 public class Fence extends Event {
 
 	public Fence(String... tag) {
-		addFilters(EType.ANY, EType.VISIBLE, EType.FENCE);
+		addFilters(EType.VISIBLE);
 		addFilters(tag);
 	}
 

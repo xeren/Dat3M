@@ -2,7 +2,6 @@ package com.dat3m.dartagnan.program.event;
 
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.utils.EType;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
@@ -15,7 +14,6 @@ public class Assume extends Event implements RegReaderData {
 	public Assume(ExprInterface e) {
 		condition = e;
 		registers = e.getRegs();
-        addFilters(EType.ANY);
 	}
 
 	protected Assume(Assume other) {

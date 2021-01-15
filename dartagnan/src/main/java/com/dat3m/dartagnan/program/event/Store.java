@@ -8,7 +8,7 @@ import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 
-public class Store extends MemEvent implements RegReaderData {
+public class Store extends InitOrStore implements RegReaderData {
 
 	protected final ExprInterface value;
 	private final ImmutableSet<Register> dataRegs;
@@ -17,7 +17,7 @@ public class Store extends MemEvent implements RegReaderData {
 		super(address);
 		this.value = value;
 		dataRegs = value.getRegs();
-		addFilters(EType.ANY, EType.VISIBLE, EType.MEMORY, EType.WRITE);
+		addFilters(EType.VISIBLE);
 		addFilters(tag);
 	}
 

@@ -22,7 +22,7 @@ public class AtomicStore extends Event {
 		this.value = value;
 		dataRegs = value.getRegs();
 		this.mo = mo;
-		addFilters(EType.ANY, EType.VISIBLE, EType.MEMORY, EType.WRITE);
+		addFilters(EType.VISIBLE);
 	}
 
 	private AtomicStore(AtomicStore other) {

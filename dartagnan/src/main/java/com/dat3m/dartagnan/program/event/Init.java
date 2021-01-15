@@ -6,14 +6,14 @@ import com.dat3m.dartagnan.program.utils.EType;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 
-public class Init extends MemEvent {
+public class Init extends InitOrStore {
 
 	private final IConst value;
 
 	public Init(Address address, IConst value) {
 		super(address);
 		this.value = value;
-		addFilters(EType.ANY, EType.VISIBLE, EType.MEMORY, EType.WRITE, EType.INIT);
+		addFilters(EType.VISIBLE);
 	}
 
 	private Init(Init other) {

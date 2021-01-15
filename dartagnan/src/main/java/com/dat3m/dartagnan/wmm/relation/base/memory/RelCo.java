@@ -1,9 +1,6 @@
 package com.dat3m.dartagnan.wmm.relation.base.memory;
 
-import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.Init;
-import com.dat3m.dartagnan.program.event.MemEvent;
-import com.dat3m.dartagnan.program.event.Store;
+import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.wmm.Filter;
 import com.dat3m.dartagnan.wmm.relation.Relation;
@@ -73,8 +70,7 @@ public class RelCo extends Relation {
         }
         enc = ctx.mkAnd(enc, ctx.mkDistinct(intVars.toArray(new IntExpr[0])));
 
-        for(Event w :  program.getCache().getEvents(Filter.Atom.write)){
-            MemEvent w1 = (MemEvent)w;
+        for(InitOrStore w1 :  program.getCache().getEvents(InitOrStore.class)){
             BoolExpr lastCo = w1.exec();
 
             for(Tuple t : maxTupleSet.getByFirst(w1)){

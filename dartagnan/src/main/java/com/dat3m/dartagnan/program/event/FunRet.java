@@ -1,14 +1,11 @@
 package com.dat3m.dartagnan.program.event;
 
-import com.dat3m.dartagnan.program.utils.EType;
-
 public class FunRet extends Event {
 
 	String funName;
 
 	public FunRet(String funName) {
 		this.funName = funName;
-		addFilters(EType.ANY);
 	}
 
 	protected FunRet(FunRet other) {

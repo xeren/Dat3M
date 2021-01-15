@@ -27,12 +27,7 @@ public interface Filter {
 		any("_", Event.class),
 		local("T", Local.class),
 		read("R", Load.class),
-		write("W", Store.class) {
-			@Override
-			public boolean filter(Event e) {
-				return e instanceof Store || e instanceof Init;
-			}
-		},
+		write("W", InitOrStore.class),
 		branch("B", CondJump.class),
 		memory("M", MemEvent.class),
 		fence("F", Fence.class),

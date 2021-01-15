@@ -15,7 +15,7 @@ public class Load extends MemEvent implements RegWriter {
     public Load(Register register, IExpr address, String... tag) {
         super(address);
         this.resultRegister = register;
-        addFilters(EType.ANY, EType.VISIBLE, EType.MEMORY, EType.READ);
+        addFilters(EType.VISIBLE);
         addFilters(tag);
     }
 

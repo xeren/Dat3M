@@ -3,7 +3,6 @@ package com.dat3m.dartagnan.program.event;
 import com.dat3m.dartagnan.expression.BConst;
 import com.dat3m.dartagnan.expression.BExpr;
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.utils.EType;
 import com.google.common.collect.ImmutableSet;
 
 public class CondJump extends Event implements RegReaderData {
@@ -22,7 +21,6 @@ public class CondJump extends Event implements RegReaderData {
 		this.label = label;
 		this.expr = expr;
 		dataRegs = expr.getRegs();
-		addFilters(EType.ANY, EType.BRANCH);
 	}
 
 	/**

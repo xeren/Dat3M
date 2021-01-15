@@ -3,10 +3,7 @@ package com.dat3m.dartagnan.utils;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
-import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.Init;
-import com.dat3m.dartagnan.program.event.Load;
-import com.dat3m.dartagnan.program.event.MemEvent;
+import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.memory.Location;
 import com.dat3m.dartagnan.wmm.Filter;
 import com.dat3m.dartagnan.wmm.utils.Utils;
@@ -169,9 +166,9 @@ public class Graph {
         String edge = " " + getEdgeDef("co") + ";\n";
 
         Map<Integer, Set<Event>> mapAddressEvent = new HashMap<>();
-        for(Event e : program.getCache().getEvents(Filter.Atom.write)){
+        for(InitOrStore e : program.getCache().getEvents(InitOrStore.class)){
             if(model.getConstInterp(e.exec()).isTrue()){
-                int address = ((MemEvent)e).getAddress().getIntValue(e, model, ctx);
+                int address = e.getAddress().getIntValue(e, model, ctx);
                 mapAddressEvent.putIfAbsent(address, new HashSet<>());
                 mapAddressEvent.get(address).add(e);
             }
