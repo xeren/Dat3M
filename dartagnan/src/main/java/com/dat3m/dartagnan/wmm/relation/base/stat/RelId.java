@@ -1,8 +1,6 @@
 package com.dat3m.dartagnan.wmm.relation.base.stat;
 
-import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.utils.EType;
-import com.dat3m.dartagnan.wmm.Filter;
+import com.dat3m.dartagnan.program.event.Visible;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
@@ -16,7 +14,7 @@ public class RelId extends StaticRelation {
     public TupleSet getMaxTupleSet(){
         if(maxTupleSet == null){
             maxTupleSet = new TupleSet();
-            for(Event e : program.getCache().getEvents(Filter.of(EType.VISIBLE))){
+            for(Visible e : program.getCache().getEvents(Visible.class)){
                 maxTupleSet.add(new Tuple(e, e));
             }
         }

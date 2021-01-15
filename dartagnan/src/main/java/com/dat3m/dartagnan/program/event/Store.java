@@ -3,7 +3,6 @@ package com.dat3m.dartagnan.program.event;
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.utils.EType;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
@@ -17,7 +16,6 @@ public class Store extends InitOrStore implements RegReaderData {
 		super(address);
 		this.value = value;
 		dataRegs = value.getRegs();
-		addFilters(EType.VISIBLE);
 		addFilters(tag);
 	}
 

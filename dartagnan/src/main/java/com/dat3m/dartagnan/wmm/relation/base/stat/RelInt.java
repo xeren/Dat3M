@@ -1,9 +1,7 @@
 package com.dat3m.dartagnan.wmm.relation.base.stat;
 
 import com.dat3m.dartagnan.program.Thread;
-import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.utils.EType;
-import com.dat3m.dartagnan.wmm.Filter;
+import com.dat3m.dartagnan.program.event.Visible;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
@@ -21,13 +19,13 @@ public class RelInt extends StaticRelation {
         if(maxTupleSet == null){
             maxTupleSet = new TupleSet();
             for(Thread t : program.getThreads()) {
-                List<Event> events = t.getCache().getEvents(Filter.of(EType.VISIBLE));
-                ListIterator<Event> it1 = events.listIterator();
+                List<Visible> events = t.getCache().getEvents(Visible.class);
+                ListIterator<Visible> it1 = events.listIterator();
                 while (it1.hasNext()) {
-                    Event e1 = it1.next();
-                    ListIterator<Event> it2 = events.listIterator(it1.nextIndex());
+                    Visible e1 = it1.next();
+                    ListIterator<Visible> it2 = events.listIterator(it1.nextIndex());
                     while (it2.hasNext()) {
-                        Event e2 = it2.next();
+                        Visible e2 = it2.next();
                         maxTupleSet.add(new Tuple(e1, e2));
                         maxTupleSet.add(new Tuple(e2, e1));
                     }

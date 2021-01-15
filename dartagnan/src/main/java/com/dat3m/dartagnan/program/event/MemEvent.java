@@ -12,7 +12,7 @@ import com.microsoft.z3.Expr;
 
 import java.util.HashSet;
 
-public abstract class MemEvent extends Event {
+public abstract class MemEvent extends Visible {
 
 	protected final IExpr address;
 	protected Expr memAddressExpr;

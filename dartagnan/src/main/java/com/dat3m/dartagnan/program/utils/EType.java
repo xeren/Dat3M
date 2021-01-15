@@ -3,7 +3,6 @@ package com.dat3m.dartagnan.program.utils;
 public class EType {
 
     public static final String RMW          = "A";
-    public static final String VISIBLE      = "V";
     public static final String ASSERTION    = "ASS";
     public static final String EXCLUSIVE    = "arm.exclusive";
     public static final String RELAXED      = "relaxed";

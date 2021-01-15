@@ -5,7 +5,6 @@ import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.memory.Location;
-import com.dat3m.dartagnan.wmm.Filter;
 import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.microsoft.z3.*;
 
@@ -13,8 +12,6 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
-import static com.dat3m.dartagnan.program.utils.EType.VISIBLE;
 
 public class Graph {
 
@@ -117,7 +114,7 @@ public class Graph {
                 sb.append(L3).append(e.repr()).append(" ").append(getEventDef(label)).append(";\n");
             } else {
                 sb.append(L2).append("subgraph cluster_Thread_").append(t.getId()).append(" { ").append(getThreadDef(tId++)).append("\n");
-                for(Event e : t.getCache().getEvents(Filter.of(VISIBLE))) {
+                for(Visible e : t.getCache().getEvents(Visible.class)) {
                     if(model.getConstInterp(e.exec()).isTrue()){
                         String label = e.toString();
                         if(e instanceof MemEvent) {
@@ -146,8 +143,8 @@ public class Graph {
         String edge = " " + getEdgeDef("po") + ";\n";
 
         for(Thread thread : program.getThreads()) {
-            List<Event> events = thread.getCache()
-                    .getEvents(Filter.of(VISIBLE))
+            List<Visible> events = thread.getCache()
+                    .getEvents(Visible.class)
                     .stream()
                     .filter(e -> model.getConstInterp(e.exec()).isTrue())
                     .collect(Collectors.toList());
@@ -201,8 +198,8 @@ public class Graph {
     private StringBuilder buildRelations(Program program){
         StringBuilder sb = new StringBuilder();
 
-        List<Event> events = program.getCache()
-                .getEvents(Filter.of(VISIBLE))
+        List<Visible> events = program.getCache()
+                .getEvents(Visible.class)
                 .stream()
                 .filter(e -> model.getConstInterp(e.exec()).isTrue())
                 .collect(Collectors.toList());

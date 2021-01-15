@@ -2,7 +2,6 @@ package com.dat3m.dartagnan.program.event;
 
 import com.dat3m.dartagnan.expression.IConst;
 import com.dat3m.dartagnan.program.memory.Address;
-import com.dat3m.dartagnan.program.utils.EType;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 
@@ -13,7 +12,6 @@ public class Init extends InitOrStore {
 	public Init(Address address, IConst value) {
 		super(address);
 		this.value = value;
-		addFilters(EType.VISIBLE);
 	}
 
 	private Init(Init other) {

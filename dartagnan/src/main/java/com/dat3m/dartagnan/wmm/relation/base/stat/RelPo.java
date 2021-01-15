@@ -2,8 +2,7 @@ package com.dat3m.dartagnan.wmm.relation.base.stat;
 
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.utils.EType;
-import com.dat3m.dartagnan.wmm.Filter;
+import com.dat3m.dartagnan.program.event.Visible;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
@@ -12,7 +11,7 @@ import java.util.ListIterator;
 
 public class RelPo extends StaticRelation {
 
-    private Filter filter;
+    private final Class<?extends Event> filter;
 
     public RelPo(){
         this(false);
@@ -21,10 +20,10 @@ public class RelPo extends StaticRelation {
     public RelPo(boolean includeLocalEvents){
         if(includeLocalEvents){
             term = "_po";
-            filter = Filter.Atom.any;
+            filter = Event.class;
         } else {
             term = "po";
-            filter = Filter.of(EType.VISIBLE);
+            filter = Visible.class;
         }
     }
 
@@ -33,12 +32,12 @@ public class RelPo extends StaticRelation {
         if(maxTupleSet == null){
             maxTupleSet = new TupleSet();
             for(Thread t : program.getThreads()){
-                List<Event> events = t.getCache().getEvents(filter);
+                List<?extends Event> events = t.getCache().getEvents(filter);
 
-                ListIterator<Event> it1 = events.listIterator();
+                ListIterator<?extends Event> it1 = events.listIterator();
                 while(it1.hasNext()){
                     Event e1 = it1.next();
-                    ListIterator<Event> it2 = events.listIterator(it1.nextIndex());
+                    ListIterator<?extends Event> it2 = events.listIterator(it1.nextIndex());
                     while(it2.hasNext()){
                         maxTupleSet.add(new Tuple(e1, it2.next()));
                     }

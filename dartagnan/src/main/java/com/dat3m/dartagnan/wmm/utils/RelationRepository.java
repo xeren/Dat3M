@@ -183,9 +183,15 @@ public class RelationRepository {
             case "lwsync":
                 return getRelation(RelFencerel.class,"Lwsync");
             case "ctrlisync":
-                return getRelation(RelIntersection.class, getRelation("ctrl"), getRelation("isync")).setName("ctrlisync");
+                return getRelation(RelComposition.class,
+                    getRelation(RelComposition.class,
+                        getRelation("ctrl"),
+                        getRelation("_po")),
+                    getRelation(RelComposition.class,
+                        getRelation(RelSetIdentity.class, Filter.of("Isync")),
+                        getRelation("_po"))).setName("ctrlisync");
             case "ctrlisb":
-                return getRelation(RelIntersection.class, getRelation("ctrl"), getRelation("isb")).setName("ctrlisb");
+                return getRelation(RelComposition.class, getRelation("ctrl"), getRelation("isb")).setName("ctrlisb");
             default:
                 return null;
         }

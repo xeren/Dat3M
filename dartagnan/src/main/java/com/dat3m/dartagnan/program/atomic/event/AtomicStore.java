@@ -22,7 +22,6 @@ public class AtomicStore extends Event {
 		this.value = value;
 		dataRegs = value.getRegs();
 		this.mo = mo;
-		addFilters(EType.VISIBLE);
 	}
 
 	private AtomicStore(AtomicStore other) {
