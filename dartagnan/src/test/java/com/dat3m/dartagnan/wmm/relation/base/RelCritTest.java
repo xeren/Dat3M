@@ -27,61 +27,61 @@ import static org.junit.Assert.*;
 @RunWith(Parameterized.class)
 public class RelCritTest {
 
-    @Parameterized.Parameters(name = "{index}: {0}")
-    public static Iterable<Object[]> data() throws IOException {
-        Wmm wmm = new ParserCat().parse(new File(ResourceHelper.CAT_RESOURCE_PATH + "cat/linux-kernel.cat"));
-        String path = ResourceHelper.TEST_RESOURCE_PATH + "wmm/relation/basic/crit/";
+	@Parameterized.Parameters(name = "{index}: {0}")
+	public static Iterable<Object[]> data() throws IOException {
+		Wmm wmm = new ParserCat().parse(new File(ResourceHelper.CAT_RESOURCE_PATH + "cat/linux-kernel.cat"));
+		String path = ResourceHelper.TEST_RESOURCE_PATH + "wmm/relation/basic/crit/";
 
-        List<Object[]> data = new ArrayList<>();
-        data.add(new Object[]{path + "C-crit-01.litmus", wmm, new int[]{2, 3, 4, 5}});
-        data.add(new Object[]{path + "C-crit-02.litmus", wmm, new int[]{2, 5, 3, 4}});
-        data.add(new Object[]{path + "C-crit-03.litmus", wmm, new int[]{3, 4}});
-        data.add(new Object[]{path + "C-crit-04.litmus", wmm, new int[]{3, 4}});
-        data.add(new Object[]{path + "C-crit-05.litmus", wmm, new int[]{2, 3, 5, 8, 6, 7}});
-        data.add(new Object[]{path + "C-crit-06.litmus", wmm, new int[]{2, 11, 3, 6, 4, 5, 7, 10, 8, 9}});
-        data.add(new Object[]{path + "C-crit-07.litmus", wmm, new int[]{2, 4}});
-        data.add(new Object[]{path + "C-crit-08.litmus", wmm, new int[]{2, 6}});
-        data.add(new Object[]{path + "C-crit-09.litmus", wmm, new int[]{2, 7, 8, 10}});
-        return data;
-    }
+		List<Object[]> data = new ArrayList<>();
+		data.add(new Object[]{path + "C-crit-01.litmus", wmm, new int[]{2, 3, 4, 5}});
+		data.add(new Object[]{path + "C-crit-02.litmus", wmm, new int[]{2, 5, 3, 4}});
+		data.add(new Object[]{path + "C-crit-03.litmus", wmm, new int[]{3, 4}});
+		data.add(new Object[]{path + "C-crit-04.litmus", wmm, new int[]{3, 4}});
+		data.add(new Object[]{path + "C-crit-05.litmus", wmm, new int[]{2, 3, 5, 8, 6, 7}});
+		data.add(new Object[]{path + "C-crit-06.litmus", wmm, new int[]{2, 11, 3, 6, 4, 5, 7, 10, 8, 9}});
+		data.add(new Object[]{path + "C-crit-07.litmus", wmm, new int[]{2, 4}});
+		data.add(new Object[]{path + "C-crit-08.litmus", wmm, new int[]{2, 6}});
+		data.add(new Object[]{path + "C-crit-09.litmus", wmm, new int[]{2, 7, 8, 10}});
+		return data;
+	}
 
-    private String path;
-    private Wmm wmm;
-    private int[] expectedEdges;
+	private final String path;
+	private final Wmm wmm;
+	private final int[] expectedEdges;
 
-    public RelCritTest(String path, Wmm wmm, int[] expectedEdges) {
-        this.path = path;
-        this.wmm = wmm;
-        this.expectedEdges = expectedEdges;
-    }
+	public RelCritTest(String path, Wmm wmm, int[] expectedEdges) {
+		this.path = path;
+		this.wmm = wmm;
+		this.expectedEdges = expectedEdges;
+	}
 
-    @Test
-    public void test() {
-        try{
-            // Force encoding all possible "crit" relations
-            Settings settings = new Settings(Mode.KNASTER, Alias.CFIS, 1, true, "crit");
+	@Test
+	public void test() {
+		try {
+			// Force encoding all possible "crit" relations
+			Settings settings = new Settings(Mode.KNASTER, Alias.CFIS, 1, true, "crit");
 
-            Context ctx = new Context();
-            Solver solver = ctx.mkSolver(ctx.mkTactic(Settings.TACTIC));
-            Program program = new ProgramParser().parse(new File(path));
+			Context ctx = new Context();
+			Solver solver = ctx.mkSolver(ctx.mkTactic(Settings.TACTIC));
+			Program program = new ProgramParser().parse(new File(path));
 
-            // Sanity check, can be skipped
-            assertEquals(runAnalysis(solver, ctx, program, wmm, program.getArch(), settings), FAIL);
+			// Sanity check, can be skipped
+			assertEquals(runAnalysis(solver, ctx, program, wmm, settings), FAIL);
 
-            // Test edges
-            EdgeTestHelper helper = new EdgeTestHelper(
-                    program,
-                    wmm.getRelationRepository().getRelation("crit"),
-                    Filter.of(EType.RCU_LOCK),
-                    Filter.of(EType.RCU_UNLOCK)
-            );
-            solver.add(helper.encodeIllegalEdges(expectedEdges, ctx));
-            assertSame(Status.UNSATISFIABLE, solver.check());
+			// Test edges
+			EdgeTestHelper helper = new EdgeTestHelper(
+				program,
+				wmm.getRelationRepository().getRelation("crit"),
+				Filter.of(EType.RCU_LOCK),
+				Filter.of(EType.RCU_UNLOCK)
+			);
+			solver.add(helper.encodeIllegalEdges(expectedEdges, ctx));
+			assertSame(Status.UNSATISFIABLE, solver.check());
 
-            ctx.close();
+			ctx.close();
 
-        } catch (IOException e){
-            fail("Missing resource file");
-        }
-    }
+		} catch(IOException e) {
+			fail("Missing resource file");
+		}
+	}
 }

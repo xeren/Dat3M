@@ -4,7 +4,6 @@ import com.dat3m.dartagnan.asserts.AbstractAssert;
 import com.dat3m.dartagnan.asserts.AssertCompositeOr;
 import com.dat3m.dartagnan.asserts.AssertInline;
 import com.dat3m.dartagnan.asserts.AssertTrue;
-import com.dat3m.dartagnan.parsers.program.Arch;
 import com.dat3m.dartagnan.program.event.BoundEvent;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Local;
@@ -27,21 +26,12 @@ public class Program {
 	private final List<Thread> threads;
 	private final ImmutableSet<Location> locations;
 	private final Memory memory;
-	private Arch arch;
 	private ThreadCache cache;
 
 	public Program(Memory memory, ImmutableSet<Location> locations) {
 		this.memory = memory;
 		this.locations = locations;
 		this.threads = new ArrayList<>();
-	}
-
-	public void setArch(Arch arch) {
-		this.arch = arch;
-	}
-
-	public Arch getArch() {
-		return arch;
 	}
 
 	public Memory getMemory() {
@@ -86,7 +76,7 @@ public class Program {
 	public List<Event> getEvents() {
 		List<Event> events = new ArrayList<>();
 		for(Thread t : threads)
-			events.addAll(Arrays.asList(t.compiled));
+			events.addAll(Arrays.asList(t.unrolled));
 		return events;
 	}
 
@@ -115,20 +105,6 @@ public class Program {
 			thread.unroll(bound);
 			for(Event event : thread.unrolled)
 				event.setUId(nextId++);
-		}
-		cache = null;
-		return nextId;
-	}
-
-
-	// Compilation
-	// -----------------------------------------------------------------------------------------------------------------
-
-	public int compile(Arch target, int nextId) {
-		for(Thread thread : threads) {
-			thread.compile(target);
-			Event.setCId(thread.compiled, nextId);
-			nextId += thread.compiled.length;
 		}
 		cache = null;
 		return nextId;

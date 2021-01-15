@@ -1,6 +1,5 @@
 package com.dat3m.dartagnan;
 
-import com.dat3m.dartagnan.parsers.program.Arch;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.parsers.program.ProgramParser;
 import com.dat3m.dartagnan.utils.Result;
@@ -26,57 +25,55 @@ import static org.junit.Assert.*;
 @RunWith(Parameterized.class)
 public abstract class AbstractSvCompTest {
 
-    private String path;
-    private Wmm wmm;
-    private Settings settings;
-    private Result expected;
+	private final String path;
+	private final Wmm wmm;
+	private final Settings settings;
+	private Result expected;
 
-    public AbstractSvCompTest(String path, Wmm wmm, Settings settings) {
-        this.path = path;
-        this.wmm = wmm;
-        this.settings = settings;
-    }
+	public AbstractSvCompTest(String path, Wmm wmm, Settings settings) {
+		this.path = path;
+		this.wmm = wmm;
+		this.settings = settings;
+	}
 
-    @Test(timeout = 180000)
-    public void test() {
-        try {
-        	String property = path.substring(0, path.lastIndexOf("-")) + ".yml";
-        	expected = readExptected(property);
-            Program program = new ProgramParser().parse(new File(path));
-            Context ctx = new Context();
-            Solver solver = ctx.mkSolver();
-            assertTrue(runAnalysis(solver, ctx, program, wmm, Arch.NONE, settings).equals(expected));
-            ctx.close();
-        } catch (IOException e){
-            fail("Missing resource file");
-        }
-    }
+	@Test(timeout = 180000)
+	public void test() {
+		try {
+			String property = path.substring(0, path.lastIndexOf("-")) + ".yml";
+			expected = readExptected(property);
+			Program program = new ProgramParser().parse(new File(path));
+			Context ctx = new Context();
+			Solver solver = ctx.mkSolver();
+			assertEquals(runAnalysis(solver, ctx, program, wmm, settings), expected);
+			ctx.close();
+		} catch(IOException e) {
+			fail("Missing resource file");
+		}
+	}
 
-    @Test(timeout = 180000)
-    public void testIncremental() {
-        try {
-        	String property = path.substring(0, path.lastIndexOf("-")) + ".yml";
-        	expected = readExptected(property);
-            Program program = new ProgramParser().parse(new File(path));
-            Context ctx = new Context();
-            Solver solver = ctx.mkSolver();
-            assertTrue(runAnalysisIncrementalSolver(solver, ctx, program, wmm, Arch.NONE, settings).equals(expected));
-            ctx.close();
-        } catch (IOException e){
-            fail("Missing resource file");
-        }
-    }
+	@Test(timeout = 180000)
+	public void testIncremental() {
+		try {
+			String property = path.substring(0, path.lastIndexOf("-")) + ".yml";
+			expected = readExptected(property);
+			Program program = new ProgramParser().parse(new File(path));
+			Context ctx = new Context();
+			Solver solver = ctx.mkSolver();
+			assertEquals(runAnalysisIncrementalSolver(solver, ctx, program, wmm, settings), expected);
+			ctx.close();
+		} catch(IOException e) {
+			fail("Missing resource file");
+		}
+	}
 
 	private Result readExptected(String property) {
-		try (BufferedReader br = new BufferedReader(new FileReader(new File(property)))) {
-		    while (!(br.readLine()).contains("unreach-call.prp")) {
-		       continue;
-		    }
-		    return br.readLine().contains("false") ? FAIL : PASS;
+		try(BufferedReader br = new BufferedReader(new FileReader(new File(property)))) {
+			while(!(br.readLine()).contains("unreach-call.prp")) ;
+			return br.readLine().contains("false") ? FAIL : PASS;
 
-		} catch (Exception e) {
+		} catch(Exception e) {
 			System.out.println(e.getMessage());
-            System.exit(0);
+			System.exit(0);
 		}
 		return null;
 	}

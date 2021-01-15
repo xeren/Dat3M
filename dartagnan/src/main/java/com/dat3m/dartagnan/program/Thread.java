@@ -15,7 +15,6 @@ public class Thread implements Iterable<Event> {
 	private final int id;
 	private final Event[] original;
 	Event[] unrolled;
-	Event[] compiled;
 
 	private ThreadCache cache;
 
@@ -41,7 +40,7 @@ public class Thread implements Iterable<Event> {
 
 	public ThreadCache getCache() {
 		if(cache == null) {
-			List<Event> events = Arrays.asList(compiled);
+			List<Event> events = Arrays.asList(unrolled);
 			cache = new ThreadCache(events);
 		}
 		return cache;
@@ -49,7 +48,7 @@ public class Thread implements Iterable<Event> {
 
 	@Override
 	public Iterator<Event> iterator() {
-		return Arrays.asList(compiled).iterator();
+		return Arrays.asList(unrolled).iterator();
 	}
 
 	@Override
@@ -138,33 +137,6 @@ public class Thread implements Iterable<Event> {
 	}
 
 
-	// Compilation
-	// -----------------------------------------------------------------------------------------------------------------
-
-	/**
-	Tries to substitutes all abstract events that can be expressed alternatively in a give architecture.
-	The result is stored in this instance.
-	@param target
-	Describes an instruction set.
-	*/
-	void compile(Arch target) {
-		ArrayList<Event> r = new ArrayList<>();
-		for(Event e : unrolled) {
-			Event[] substitute = e.compile(target);
-			if(null == substitute)
-				r.add(e);
-			else for(Event c : substitute) {
-				c.setOId(e.getOId());
-				c.setCLine(e.getCLine());
-				c.setUId(e.getUId());
-				r.add(c);
-			}
-		}
-		compiled = r.toArray(new Event[0]);
-		cache = null;
-	}
-
-
 	// Encoding
 	// -----------------------------------------------------------------------------------------------------------------
 
@@ -179,7 +151,7 @@ public class Thread implements Iterable<Event> {
 		ArrayList<BoolExpr> out = new ArrayList<>();
 		HashMap<Integer,LinkedList<BoolExpr>> message = new HashMap<>();
 		BoolExpr cf = context.mkTrue();
-		for(Event e : compiled) {
+		for(Event e : unrolled) {
 			LinkedList<BoolExpr> m = message.remove(e.getCId());
 			if(null != m) {
 				if(null != cf)

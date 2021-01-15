@@ -10,19 +10,17 @@ import org.antlr.v4.runtime.*;
 
 class ParserLitmusC implements ParserInterface {
 
-    @Override
-    public Program parse(CharStream charStream) {
-        LitmusCLexer lexer = new LitmusCLexer(charStream);
-        CommonTokenStream tokenStream = new CommonTokenStream(lexer);
+	@Override
+	public Program parse(CharStream charStream) {
+		LitmusCLexer lexer = new LitmusCLexer(charStream);
+		CommonTokenStream tokenStream = new CommonTokenStream(lexer);
 
-        LitmusCParser parser = new LitmusCParser(tokenStream);
-        parser.setErrorHandler(new BailErrorStrategy());
-        ProgramBuilder pb = new ProgramBuilder();
-        ParserRuleContext parserEntryPoint = parser.main();
-        VisitorLitmusC visitor = new VisitorLitmusC(pb);
+		LitmusCParser parser = new LitmusCParser(tokenStream);
+		parser.setErrorHandler(new BailErrorStrategy());
+		ProgramBuilder pb = new ProgramBuilder();
+		ParserRuleContext parserEntryPoint = parser.main();
+		VisitorLitmusC visitor = new VisitorLitmusC(pb);
 
-        Program program = (Program) parserEntryPoint.accept(visitor);
-        program.setArch(Arch.NONE);
-        return program;
-    }
+		return (Program) parserEntryPoint.accept(visitor);
+	}
 }

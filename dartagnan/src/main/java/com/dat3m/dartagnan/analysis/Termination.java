@@ -4,7 +4,6 @@ import static com.dat3m.dartagnan.utils.Result.PASS;
 import static com.dat3m.dartagnan.utils.Result.UNKNOWN;
 import static com.microsoft.z3.Status.SATISFIABLE;
 
-import com.dat3m.dartagnan.parsers.program.Arch;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.utils.Settings;
@@ -14,10 +13,9 @@ import com.microsoft.z3.Solver;
 
 public class Termination {
 
-    public static Result runAnalysis(Solver s, Context ctx, Program program, Wmm wmm, Arch target, Settings settings) {
+    public static Result runAnalysis(Solver s, Context ctx, Program program, Wmm wmm, Settings settings) {
     	program.unroll(settings.getBound(), 0);
-        program.compile(target, 0);
-        
+
 		s.add(program.encodeCF(ctx));
 		s.add(program.encodeFinalRegisterValues(ctx));
 		s.add(wmm.encode(program, ctx, settings));

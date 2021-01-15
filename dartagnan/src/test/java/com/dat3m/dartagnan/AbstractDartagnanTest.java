@@ -72,7 +72,7 @@ public abstract class AbstractDartagnanTest {
 			if(program.getAss() != null) {
 				Context ctx = new Context();
 				Solver solver = ctx.mkSolver(ctx.mkTactic(Settings.TACTIC));
-				assertEquals(expected, runAnalysis(solver, ctx, program, wmm, target, settings));
+				assertEquals(expected, runAnalysis(solver, ctx, program, wmm, settings));
 				ctx.close();
 			}
 		} catch(IOException e) {

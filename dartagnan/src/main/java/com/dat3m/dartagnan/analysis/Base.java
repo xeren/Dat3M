@@ -7,7 +7,6 @@ import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 import static com.microsoft.z3.Status.SATISFIABLE;
 
 import com.dat3m.dartagnan.asserts.AssertTrue;
-import com.dat3m.dartagnan.parsers.program.Arch;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.utils.Result;
@@ -24,96 +23,93 @@ import java.util.stream.Stream;
 
 public class Base {
 
-    public static Result runAnalysis(Solver s1, Context ctx, Program program, Wmm wmm, Arch target, Settings settings) {
-    	program.unroll(settings.getBound(), 0);
-        program.compile(target, 0);
-        // AssertionInline depends on compiled events (copies)
-        // Thus we need to set the assertion after compilation
-        program.updateAssertion();
-       	if(program.getAss() instanceof AssertTrue) {
-       		return PASS;
-       	}
-       	
-        // Using two solvers can be faster than using
-        // an incremental solver or check-sat-assuming
-        Solver s2 = ctx.mkSolver();
-        
-        BoolExpr encodeCF = program.encodeCF(ctx);
+	public static Result runAnalysis(Solver s1, Context ctx, Program program, Wmm wmm, Settings settings) {
+		program.unroll(settings.getBound(), 0);
+		// AssertionInline depends on compiled events (copies)
+		// Thus we need to set the assertion after compilation
+		program.updateAssertion();
+		if(program.getAss() instanceof AssertTrue) {
+			return PASS;
+		}
+
+		// Using two solvers can be faster than using
+		// an incremental solver or check-sat-assuming
+		Solver s2 = ctx.mkSolver();
+
+		BoolExpr encodeCF = program.encodeCF(ctx);
 		s1.add(encodeCF);
-        s2.add(encodeCF);
-        
-        BoolExpr encodeFinalRegisterValues = program.encodeFinalRegisterValues(ctx);
+		s2.add(encodeCF);
+
+		BoolExpr encodeFinalRegisterValues = program.encodeFinalRegisterValues(ctx);
 		s1.add(encodeFinalRegisterValues);
-        s2.add(encodeFinalRegisterValues);
-        
-        BoolExpr encodeWmm = wmm.encode(program, ctx, settings);
+		s2.add(encodeFinalRegisterValues);
+
+		BoolExpr encodeWmm = wmm.encode(program, ctx, settings);
 		s1.add(encodeWmm);
-        s2.add(encodeWmm);
-        
-        BoolExpr encodeConsistency = wmm.consistent(program, ctx);
+		s2.add(encodeWmm);
+
+		BoolExpr encodeConsistency = wmm.consistent(program, ctx);
 		s1.add(encodeConsistency);
-        s2.add(encodeConsistency);
-       	
-        s1.add(program.getAss().encode(ctx));
-        if(program.getAssFilter() != null){
-            BoolExpr encodeFilter = program.getAssFilter().encode(ctx);
+		s2.add(encodeConsistency);
+
+		s1.add(program.getAss().encode(ctx));
+		if(program.getAssFilter() != null) {
+			BoolExpr encodeFilter = program.getAssFilter().encode(ctx);
 			s1.add(encodeFilter);
-            s2.add(encodeFilter);
-        }
+			s2.add(encodeFilter);
+		}
 
-        BoolExpr encodeNoBoundEventExec = program.encodeNoBoundEventExec(ctx);
+		BoolExpr encodeNoBoundEventExec = program.encodeNoBoundEventExec(ctx);
 
-        Result res;
+		Result res;
 		if(s1.check() == SATISFIABLE) {
 			s1.add(encodeNoBoundEventExec);
-			res = s1.check() == SATISFIABLE ? FAIL : UNKNOWN;	
+			res = s1.check() == SATISFIABLE ? FAIL : UNKNOWN;
 		} else {
 			s2.add(ctx.mkNot(encodeNoBoundEventExec));
-			res = s2.check() == SATISFIABLE ? UNKNOWN : PASS;	
+			res = s2.check() == SATISFIABLE ? UNKNOWN : PASS;
 		}
-        
+
 		if(program.getAss().getInvert()) {
 			res = res.invert();
 		}
 		return res;
-    }
-	
-    public static Result runAnalysisIncrementalSolver(Solver solver, Context ctx, Program program, Wmm wmm, Arch target, Settings settings) {
-    	program.unroll(settings.getBound(), 0);
-        program.compile(target, 0);
-        // AssertionInline depends on compiled events (copies)
-        // Thus we need to update the assertion after compilation
-        program.updateAssertion();
-       	if(program.getAss() instanceof AssertTrue) {
-       		return PASS;
-       	}
+	}
 
-        solver.add(program.encodeCF(ctx));
-        solver.add(program.encodeFinalRegisterValues(ctx));
-        solver.add(wmm.encode(program, ctx, settings));
-        solver.add(wmm.consistent(program, ctx));  
-        solver.push();
-        solver.add(program.getAss().encode(ctx));
-        if(program.getAssFilter() != null){
-            solver.add(program.getAssFilter().encode(ctx));
-        }
-
-        Result res;
-		if(solver.check() == SATISFIABLE) {
-        	solver.add(program.encodeNoBoundEventExec(ctx));
-			res = solver.check() == SATISFIABLE ? FAIL : UNKNOWN;
-        } else {
-        	solver.pop();
-			solver.add(ctx.mkNot(program.encodeNoBoundEventExec(ctx)));
-        	res = solver.check() == SATISFIABLE ? UNKNOWN : PASS;
-        }
-
-        return program.getAss().getInvert() ? res.invert() : res;
-    }
-
-	public static Result runRefining(Solver s1, Context ctx, Program program, Wmm wmm, Arch target, Settings settings) {
+	public static Result runAnalysisIncrementalSolver(Solver solver, Context ctx, Program program, Wmm wmm, Settings settings) {
 		program.unroll(settings.getBound(), 0);
-		program.compile(target, 0);
+		// AssertionInline depends on compiled events (copies)
+		// Thus we need to update the assertion after compilation
+		program.updateAssertion();
+		if(program.getAss() instanceof AssertTrue) {
+			return PASS;
+		}
+
+		solver.add(program.encodeCF(ctx));
+		solver.add(program.encodeFinalRegisterValues(ctx));
+		solver.add(wmm.encode(program, ctx, settings));
+		solver.add(wmm.consistent(program, ctx));
+		solver.push();
+		solver.add(program.getAss().encode(ctx));
+		if(program.getAssFilter() != null) {
+			solver.add(program.getAssFilter().encode(ctx));
+		}
+
+		Result res;
+		if(solver.check() == SATISFIABLE) {
+			solver.add(program.encodeNoBoundEventExec(ctx));
+			res = solver.check() == SATISFIABLE ? FAIL : UNKNOWN;
+		} else {
+			solver.pop();
+			solver.add(ctx.mkNot(program.encodeNoBoundEventExec(ctx)));
+			res = solver.check() == SATISFIABLE ? UNKNOWN : PASS;
+		}
+
+		return program.getAss().getInvert() ? res.invert() : res;
+	}
+
+	public static Result runRefining(Solver s1, Context ctx, Program program, Wmm wmm, Settings settings) {
+		program.unroll(settings.getBound(), 0);
 		// AssertionInline depends on compiled events (copies)
 		// Thus we need to set the assertion after compilation
 		program.updateAssertion();
@@ -149,7 +145,7 @@ public class Base {
 
 		BoolExpr encodeAssertion = program.getAss().encode(ctx);
 		s1.add(encodeAssertion);
-		if(program.getAssFilter() != null){
+		if(program.getAssFilter() != null) {
 			BoolExpr encodeFilter = program.getAssFilter().encode(ctx);
 			s1.add(encodeFilter);
 			s2.add(encodeFilter);
@@ -170,10 +166,10 @@ public class Base {
 				.filter(InitOrStore.class::isInstance)
 				.map(InitOrStore.class::cast)
 				.collect(Collectors.toList());
-			Stream.concat(loads.stream(), stores.stream()).map(MemEvent::getMemAddressExpr).filter(e->null==m.getConstInterp(e)).forEach(System.err::println);
-			Map<Expr,List<MemEvent>> loc = Stream.concat(loads.stream(), stores.stream())
+			Stream.concat(loads.stream(), stores.stream()).map(MemEvent::getMemAddressExpr).filter(e->null == m.getConstInterp(e)).forEach(System.err::println);
+			Map<Expr, List<MemEvent>> loc = Stream.concat(loads.stream(), stores.stream())
 				.collect(Collectors.groupingBy(e->m.getConstInterp(e.getMemAddressExpr())));
-			Map<Load,InitOrStore> rf = loads.stream()
+			Map<Load, InitOrStore> rf = loads.stream()
 				.collect(Collectors.toMap(
 					r->r,
 					r->stores.stream()
@@ -186,15 +182,15 @@ public class Base {
 			s3.add(encodeConsistency);
 
 			HashMap<BoolExpr,BoolExpr> track = new HashMap<>();
-			for(Event e: executed.get(true)) {
+			for(Event e : executed.get(true)) {
 				track.put(e.exec(), e.exec());
 			}
 			//NOTE sometimes all events are executed
-			for(Event e: executed.getOrDefault(false, Collections.emptyList())) {
+			for(Event e : executed.getOrDefault(false, Collections.emptyList())) {
 				BoolExpr notExec = ctx.mkNot(e.exec());
 				track.put(notExec, notExec);
 			}
-			for(List<MemEvent> l: loc.values()) {
+			for(List<MemEvent> l : loc.values()) {
 				for(int i = 0; i < l.size(); i++) {
 					MemEvent st2 = l.get(i);
 					for(int j = 0; j < i; j++) {
@@ -204,7 +200,7 @@ public class Base {
 					}
 				}
 			}
-			for(Load r: loads) {
+			for(Load r : loads) {
 				BoolExpr literal = edge("rf", rf.get(r), r, ctx);
 				track.put(literal, literal);
 			}

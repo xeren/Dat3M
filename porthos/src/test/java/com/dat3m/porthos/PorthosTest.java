@@ -116,13 +116,13 @@ public class PorthosTest {
         });
     }
 
-    private String programFilePath;
-    private boolean expected;
-    private Arch source;
-    private Arch target;
-    private Wmm sourceWmm;
-    private Wmm targetWmm;
-    private Settings settings;
+    private final String programFilePath;
+    private final boolean expected;
+    private final Arch source;
+    private final Arch target;
+    private final Wmm sourceWmm;
+    private final Wmm targetWmm;
+    private final Settings settings;
 
     public PorthosTest(String path, boolean expected, Arch source, Arch target, Wmm sourceWmm, Wmm targetWmm, Settings settings) {
         this.programFilePath = path;
@@ -137,16 +137,15 @@ public class PorthosTest {
     @Test
     public void test() {
         try {
-            ProgramParser programParser = new ProgramParser();
-            Program pSource = programParser.parse(new File(programFilePath));
-            Program pTarget = programParser.parse(new File(programFilePath));
+            Program pSource = new ProgramParser(source).parse(new File(programFilePath));
+            Program pTarget = new ProgramParser(target).parse(new File(programFilePath));
 
             Context ctx = new Context();
             
             Solver s1 = ctx.mkSolver(ctx.mkTactic(Settings.TACTIC));
             Solver s2 = ctx.mkSolver(ctx.mkTactic(Settings.TACTIC));
             PorthosResult result = Porthos.testProgram(s1, s2, ctx, pSource, pTarget,
-                    source, target, sourceWmm, targetWmm, settings);
+                    sourceWmm, targetWmm, settings);
             assertEquals(expected, result.getIsPortable());
             ctx.close();
 
@@ -155,7 +154,7 @@ public class PorthosTest {
                 Event lastEvent = events.get(0);
                 for(int i = 1; i < events.size(); i++){
                     Event thisEvent = events.get(i);
-                    if(lastEvent.getUId() > thisEvent.getUId() || lastEvent.getCId() >= thisEvent.getCId()){
+                    if(lastEvent.getCId() >= thisEvent.getCId()){
                         fail("Malformed thread " + thread.getId() + " in program compiled to " + source);
                     }
                     lastEvent = thisEvent;
@@ -167,7 +166,7 @@ public class PorthosTest {
                 Event lastEvent = events.get(0);
                 for(int i = 1; i < events.size(); i++){
                     Event thisEvent = events.get(i);
-                    if(lastEvent.getUId() > thisEvent.getUId() || lastEvent.getCId() >= thisEvent.getCId()){
+                    if(lastEvent.getCId() >= thisEvent.getCId()){
                         fail("Malformed thread " + thread.getId() + " in program compiled to " + target);
                     }
                     lastEvent = thisEvent;

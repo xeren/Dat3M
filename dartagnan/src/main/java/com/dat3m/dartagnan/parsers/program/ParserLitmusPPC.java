@@ -11,20 +11,18 @@ import org.antlr.v4.runtime.*;
 
 class ParserLitmusPPC implements ParserInterface {
 
-    @Override
-    public Program parse(CharStream charStream) {
-        LitmusPPCLexer lexer = new LitmusPPCLexer(charStream);
-        CommonTokenStream tokenStream = new CommonTokenStream(lexer);
+	@Override
+	public Program parse(CharStream charStream) {
+		LitmusPPCLexer lexer = new LitmusPPCLexer(charStream);
+		CommonTokenStream tokenStream = new CommonTokenStream(lexer);
 
-        LitmusPPCParser parser = new LitmusPPCParser(tokenStream);
-        parser.addErrorListener(new DiagnosticErrorListener(true));
-        parser.addErrorListener(new ParserErrorListener());
-        ProgramBuilder pb = new ProgramBuilder();
-        ParserRuleContext parserEntryPoint = parser.main();
-        VisitorLitmusPPC visitor = new VisitorLitmusPPC(pb);
+		LitmusPPCParser parser = new LitmusPPCParser(tokenStream);
+		parser.addErrorListener(new DiagnosticErrorListener(true));
+		parser.addErrorListener(new ParserErrorListener());
+		ProgramBuilder pb = new ProgramBuilder();
+		ParserRuleContext parserEntryPoint = parser.main();
+		VisitorLitmusPPC visitor = new VisitorLitmusPPC(pb);
 
-        Program program = (Program) parserEntryPoint.accept(visitor);
-        program.setArch(Arch.POWER);
-        return program;
-    }
+		return (Program) parserEntryPoint.accept(visitor);
+	}
 }

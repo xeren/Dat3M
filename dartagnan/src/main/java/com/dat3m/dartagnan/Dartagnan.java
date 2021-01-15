@@ -9,7 +9,6 @@ import com.dat3m.dartagnan.analysis.Termination;
 import com.dat3m.dartagnan.asserts.AbstractAssert;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.parsers.cat.ParserCat;
-import com.dat3m.dartagnan.parsers.program.Arch;
 import com.dat3m.dartagnan.parsers.program.ProgramParser;
 import com.dat3m.dartagnan.utils.Graph;
 import com.dat3m.dartagnan.utils.Result;
@@ -44,21 +43,11 @@ public class Dartagnan {
 		Wmm mcm = new ParserCat().parse(new File(options.getTargetModelFilePath()));
 		Program p = new ProgramParser(options.getTarget()).parse(new File(options.getProgramFilePath()));
 
-		Arch target = p.getArch();
-		if(target == null) {
-			target = options.getTarget();
-		}
-		if(target == null) {
-			System.out.println("Compilation target cannot be inferred");
-			System.exit(0);
-			return;
-		}
-
 		Settings settings = options.getSettings();
 		Context ctx = new Context();
 		Solver s = ctx.mkSolver();
 
-		Result result = selectAndRunAnalysis(options, mcm, p, target, settings, ctx, s);
+		Result result = selectAndRunAnalysis(options, mcm, p, settings, ctx, s);
 
 		if(options.getProgramFilePath().endsWith(".litmus")) {
 			System.out.println("Settings: " + options.getSettings());
@@ -84,18 +73,18 @@ public class Dartagnan {
 		ctx.close();
 	}
 
-	private static Result selectAndRunAnalysis(DartagnanOptions options, Wmm mcm, Program p, Arch target, Settings settings, Context ctx, Solver s) {
+	private static Result selectAndRunAnalysis(DartagnanOptions options, Wmm mcm, Program p, Settings settings, Context ctx, Solver s) {
 		switch(options.getAnalysis()) {
 			case RACES:
-				return checkForRaces(s, ctx, p, mcm, target, settings);
+				return checkForRaces(s, ctx, p, mcm, settings);
 			case TERMINATION:
-				return Termination.runAnalysis(s, ctx, p, mcm, target, settings);
+				return Termination.runAnalysis(s, ctx, p, mcm, settings);
 			case REACHABILITY:
 				return options.useISolver()
-					? runAnalysisIncrementalSolver(s, ctx, p, mcm, target, settings)
+					? runAnalysisIncrementalSolver(s, ctx, p, mcm, settings)
 					: options.useCore()
-					? runRefining(s, ctx, p, mcm, target, settings)
-					: runAnalysis(s, ctx, p, mcm, target, settings);
+					? runRefining(s, ctx, p, mcm, settings)
+					: runAnalysis(s, ctx, p, mcm, settings);
 			default:
 				throw new RuntimeException("Unrecognized analysis");
 		}

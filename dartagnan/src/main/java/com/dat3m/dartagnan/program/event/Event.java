@@ -1,6 +1,5 @@
 package com.dat3m.dartagnan.program.event;
 
-import com.dat3m.dartagnan.parsers.program.Arch;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 
@@ -8,15 +7,14 @@ import java.util.*;
 
 public abstract class Event implements Comparable<Event> {
 
-	protected int oId = -1;        // ID after parsing (original)
-	protected int uId = -1;        // ID after unrolling
-	protected int cId = -1;        // ID after compilation
+	private int oId = -1;        // ID after parsing (original)
+	private int uId = -1;        // ID after unrolling
 
-	protected int cLine = -1;    // line in the original C program
+	private int cLine = -1;    // line in the original C program
 
 	protected final Set<String> filter;
 
-	protected transient BoolExpr execVar;
+	private transient BoolExpr execVar;
 
 	protected Event() {
 		filter = new HashSet<>();
@@ -25,7 +23,6 @@ public abstract class Event implements Comparable<Event> {
 	protected Event(Event other) {
 		this.oId = other.oId;
 		this.uId = other.uId;
-		this.cId = other.cId;
 		this.cLine = other.cLine;
 		this.filter = other.filter;
 	}
@@ -38,12 +35,8 @@ public abstract class Event implements Comparable<Event> {
 		this.oId = id;
 	}
 
-	public int getUId() {
-		return uId;
-	}
-
 	public int getCId() {
-		return cId;
+		return uId;
 	}
 
 	public int getCLine() {
@@ -82,30 +75,11 @@ public abstract class Event implements Comparable<Event> {
 	}
 
 
-	// Compilation
-	// -----------------------------------------------------------------------------------------------------------------
-
-	public static void setCId(Event[] event, int nextId) {
-		for(Event e : event)
-			e.cId = nextId++;
-	}
-
-	/**
-	Given an architecture, simplify this event into smaller events defined by the architecture such that all guarantees are satisfied.
-	@return
-	Array of events to substitute.
-	{@code null} if no substitution should take place.
-	*/
-	public Event[] compile(Arch target) {
-		return null;
-	}
-
-
 	// Encoding
 	// -----------------------------------------------------------------------------------------------------------------
 
 	public String repr() {
-		return "E" + cId;
+		return "E" + uId;
 	}
 
 	public BoolExpr exec() {
@@ -131,23 +105,17 @@ public abstract class Event implements Comparable<Event> {
 
 	@Override
 	public int compareTo(Event e) {
-		int result = Integer.compare(cId, e.cId);
-		if(result == 0) {
-			result = Integer.compare(uId, e.uId);
-			if(result == 0) {
-				result = Integer.compare(oId, e.oId);
-			}
-		}
-		return result;
+		int result = Integer.compare(uId, e.uId);
+		return 0 != result ? result : Integer.compare(oId, e.oId);
 	}
 
 	@Override
 	public int hashCode() {
-		return cId;
+		return uId;
 	}
 
 	@Override
 	public String toString() {
-		return cId + " " + getClass().getSimpleName() + label() + filter;
+		return uId + " " + getClass().getSimpleName() + label() + filter;
 	}
 }

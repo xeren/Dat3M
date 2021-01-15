@@ -3,7 +3,6 @@ package com.dat3m.porthos;
 import com.dat3m.dartagnan.Dartagnan;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.parsers.cat.ParserCat;
-import com.dat3m.dartagnan.parsers.program.Arch;
 import com.dat3m.dartagnan.parsers.program.ProgramParser;
 import com.dat3m.dartagnan.utils.Graph;
 import com.dat3m.dartagnan.utils.Settings;
@@ -47,12 +46,10 @@ public class Porthos {
         Solver s1 = ctx.mkSolver(ctx.mkTactic(Settings.TACTIC));
         Solver s2 = ctx.mkSolver(ctx.mkTactic(Settings.TACTIC));
 
-        Arch source = options.getSource();
-        Arch target = options.getTarget();
         Settings settings = options.getSettings();
         System.out.println("Settings: " + options.getSettings());
 
-        PorthosResult result = testProgram(s1, s2, ctx, pSource, pTarget, source, target, mcmS, mcmT, settings);
+        PorthosResult result = testProgram(s1, s2, ctx, pSource, pTarget, mcmS, mcmT, settings);
 
         if(result.getIsPortable()){
             System.out.println("The program is state-portable");
@@ -71,13 +68,9 @@ public class Porthos {
         ctx.close();
     }
 
-    public static PorthosResult testProgram(Solver s1, Solver s2, Context ctx, Program pSource, Program pTarget, Arch source, Arch target,
+    public static PorthosResult testProgram(Solver s1, Solver s2, Context ctx, Program pSource, Program pTarget,
                                      Wmm sourceWmm, Wmm targetWmm, Settings settings){
-    	pSource.unroll(settings.getBound(), 0);
-        pTarget.unroll(settings.getBound(), 0);
-
-        int nextId = pSource.compile(source, 0);
-        pTarget.compile(target, nextId);
+        pTarget.unroll(settings.getBound(), pSource.unroll(settings.getBound(), 0));
 
 		BoolExpr sourceCF = pSource.encodeCF(ctx);
         BoolExpr sourceFV = pSource.encodeFinalRegisterValues(ctx);

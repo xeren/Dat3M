@@ -11,20 +11,18 @@ import org.antlr.v4.runtime.*;
 
 class ParserLitmusAArch64 implements ParserInterface {
 
-    @Override
-    public Program parse(CharStream charStream) {
-        LitmusAArch64Lexer lexer = new LitmusAArch64Lexer(charStream);
-        CommonTokenStream tokenStream = new CommonTokenStream(lexer);
+	@Override
+	public Program parse(CharStream charStream) {
+		LitmusAArch64Lexer lexer = new LitmusAArch64Lexer(charStream);
+		CommonTokenStream tokenStream = new CommonTokenStream(lexer);
 
-        LitmusAArch64Parser parser = new LitmusAArch64Parser(tokenStream);
-        parser.addErrorListener(new DiagnosticErrorListener(true));
-        parser.addErrorListener(new ParserErrorListener());
-        ProgramBuilder pb = new ProgramBuilder();
-        ParserRuleContext parserEntryPoint = parser.main();
-        VisitorLitmusAArch64 visitor = new VisitorLitmusAArch64(pb);
+		LitmusAArch64Parser parser = new LitmusAArch64Parser(tokenStream);
+		parser.addErrorListener(new DiagnosticErrorListener(true));
+		parser.addErrorListener(new ParserErrorListener());
+		ProgramBuilder pb = new ProgramBuilder();
+		ParserRuleContext parserEntryPoint = parser.main();
+		VisitorLitmusAArch64 visitor = new VisitorLitmusAArch64(pb);
 
-        Program program = (Program) parserEntryPoint.accept(visitor);
-        program.setArch(Arch.ARM8);
-        return program;
-    }
+		return (Program) parserEntryPoint.accept(visitor);
+	}
 }

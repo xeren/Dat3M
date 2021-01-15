@@ -8,7 +8,6 @@ import static com.dat3m.dartagnan.wmm.utils.Utils.intVar;
 import static com.microsoft.z3.Status.SATISFIABLE;
 
 import com.dat3m.dartagnan.expression.BConst;
-import com.dat3m.dartagnan.parsers.program.Arch;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Init;
@@ -27,9 +26,8 @@ public class DataRaces {
 	// This analysis assumes that CAT file defining the memory model has a happens-before 
 	// relation named hb: it should contain the following axiom "acyclic hb"
 
-	public static Result checkForRaces(Solver solver, Context ctx, Program program, Wmm wmm, Arch target, Settings settings) {
+	public static Result checkForRaces(Solver solver, Context ctx, Program program, Wmm wmm, Settings settings) {
     	program.unroll(settings.getBound(), 0);
-        program.compile(target, 0);
         program.updateAssertion();
 
         solver.add(program.encodeCF(ctx));

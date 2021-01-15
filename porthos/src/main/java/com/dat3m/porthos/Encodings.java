@@ -36,7 +36,8 @@ class Encodings {
             Event e1 = it1.next();
             Event e2 = it2.next();
 
-            if(e1.getUId() != e2.getUId()){
+            //TODO
+            if(e1.getCId() != e2.getCId()){
                 throw new RuntimeException("Invalid unrolled Id");
             }
             enc = ctx.mkAnd(enc, ctx.mkEq(e1.exec(), e2.exec()));
