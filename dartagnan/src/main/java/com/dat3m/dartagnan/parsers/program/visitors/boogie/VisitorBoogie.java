@@ -12,7 +12,6 @@ import static com.dat3m.dartagnan.parsers.program.visitors.boogie.StdProcedures.
 import static com.dat3m.dartagnan.parsers.program.visitors.boogie.StdProcedures.handleStdFunction;
 import static com.dat3m.dartagnan.parsers.program.visitors.boogie.SvcompProcedures.SVCOMPPROCEDURES;
 import static com.dat3m.dartagnan.parsers.program.visitors.boogie.SvcompProcedures.handleSvcompFunction;
-import static com.dat3m.dartagnan.program.utils.EType.SC;
 import static com.dat3m.dartagnan.program.llvm.utils.LlvmFunctions.LLVMFUNCTIONS;
 import static com.dat3m.dartagnan.program.llvm.utils.LlvmFunctions.llvmFunction;
 import static com.dat3m.dartagnan.program.llvm.utils.LlvmPredicates.LLVMPREDICATES;
@@ -86,8 +85,6 @@ import com.dat3m.dartagnan.boogie.Scope;
 import com.dat3m.dartagnan.parsers.program.utils.ParsingException;
 import com.dat3m.dartagnan.parsers.program.utils.ProgramBuilder;
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.atomic.event.AtomicLoad;
-import com.dat3m.dartagnan.program.atomic.event.AtomicStore;
 import com.dat3m.dartagnan.program.event.Assume;
 import com.dat3m.dartagnan.program.event.CondJump;
 import com.dat3m.dartagnan.program.event.Event;
@@ -266,7 +263,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 				// Used to allow execution of threads after they have been created (pthread_create)
 				Location loc = programBuilder.getOrCreateLocation(pool.getPtrFromInt(threadCount) + "_active", -1);
 				Register reg = thread.register(null, -1);
-				thread.add(new AtomicLoad(reg, loc.getAddress(), SC));
+				arch.store(thread, reg, loc.getAddress());
 				thread.add(new Assume(new Atom(reg, EQ, new IConst(1, -1))));
 			}
 		}
@@ -324,7 +321,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 		if(create && threadCount != 1) {
 			// Used to mark the end of the execution of a thread (used by pthread_join)
 			Location loc = programBuilder.getOrCreateLocation(pool.getPtrFromInt(threadCount) + "_active", -1);
-			thread.add(new AtomicStore(loc.getAddress(), new IConst(0, -1), SC));
+			arch.store(thread, loc.getAddress(), new IConst(0, -1));
 		}
 
 	}

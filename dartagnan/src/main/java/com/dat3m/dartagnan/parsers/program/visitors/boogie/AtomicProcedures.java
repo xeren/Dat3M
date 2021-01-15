@@ -6,12 +6,12 @@ import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.expression.IExprBin;
 import com.dat3m.dartagnan.expression.op.IOpBin;
 import com.dat3m.dartagnan.parsers.BoogieParser.Call_cmdContext;
+import com.dat3m.dartagnan.parsers.BoogieParser.ExprContext;
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.atomic.event.AtomicLoad;
-import com.dat3m.dartagnan.program.atomic.event.AtomicStore;
-import com.dat3m.dartagnan.program.atomic.event.AtomicThreadFence;
+import com.dat3m.dartagnan.program.event.Fence;
 import com.dat3m.dartagnan.program.event.Load;
-import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.program.event.Store;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -61,34 +61,42 @@ public class AtomicProcedures {
 	}
 
 	private static void atomicStore(VisitorBoogie visitor, Call_cmdContext ctx) {
-		IExpr add = (IExpr)ctx.call_params().exprs().expr().get(0).accept(visitor);
-		ExprInterface value = (ExprInterface)ctx.call_params().exprs().expr().get(1).accept(visitor);
-		String mo = null;
-		if(ctx.call_params().exprs().expr().size() > 2) {
-			mo = intToMo(((IConst)ctx.call_params().exprs().expr().get(2).accept(visitor)).getValue());			
+		List<ExprContext> arg = ctx.call_params().exprs().expr();
+		IExpr add = (IExpr)arg.get(0).accept(visitor);
+		ExprInterface value = (ExprInterface)arg.get(1).accept(visitor);
+		int mo = arg.size() <= 2 ? 5 : ((IConst)arg.get(2).accept(visitor)).getValue();
+		Store store;
+		switch(mo) {
+			case 0:
+			case 1:
+			case 2:
+			store = visitor.thread.store(add, value);
+			break;
+			case 3:
+			case 4:
+			store = visitor.arch.storeRelease(visitor.thread, add, value);
+			break;
+			case 5:
+			store = visitor.arch.store(visitor.thread, add, value);
+			break;
+			default:
+			throw new UnsupportedOperationException("The memory order is not recognized");
 		}
-		AtomicStore child = new AtomicStore(add, value, mo);
-		child.setCLine(visitor.currentLine);
-		visitor.thread.add(child);
+		store.setCLine(visitor.currentLine);
 	}
 
 	private static void atomicLoad(VisitorBoogie visitor, Call_cmdContext ctx) {
 		Register reg = visitor.thread.register(visitor.currentScope.getID() + ":" + ctx.call_params().Ident(0).getText(), -1);
 		IExpr add = (IExpr)ctx.call_params().exprs().expr().get(0).accept(visitor);
-		String mo = null;
-		if(ctx.call_params().exprs().expr().size() > 1) {
-			mo = intToMo(((IConst)ctx.call_params().exprs().expr().get(1).accept(visitor)).getValue());			
-		}
-		AtomicLoad child = new AtomicLoad(reg, add, mo);
-		child.setCLine(visitor.currentLine);
-		visitor.thread.add(child);
+		int mo = ctx.call_params().exprs().expr().size() <= 1 ? 5 : ((IConst)ctx.call_params().exprs().expr().get(1).accept(visitor)).getValue();
+		load(visitor, mo, reg, add);
 	}
 
 	private static void atomicFetchOp(VisitorBoogie visitor, Call_cmdContext ctx) {
 		Register reg = visitor.thread.register(visitor.currentScope.getID() + ":" + ctx.call_params().Ident(0).getText(), -1);
-		IExpr add = (IExpr)ctx.call_params().exprs().expr().get(0).accept(visitor);
-		ExprInterface value = (IExpr)ctx.call_params().exprs().expr().get(1).accept(visitor);
-		String mo = null;
+		List<ExprContext> arg = ctx.call_params().exprs().expr();
+		IExpr add = (IExpr)arg.get(0).accept(visitor);
+		ExprInterface value = (IExpr)arg.get(1).accept(visitor);
 		IOpBin op;
 		if(ctx.getText().contains("_add")) {
 			op = IOpBin.PLUS;
@@ -103,50 +111,88 @@ public class AtomicProcedures {
 		} else {
 			throw new RuntimeException("AtomicFetchOp operation cannot be handled");
 		}
-		if(ctx.call_params().exprs().expr().size() > 2) {
-			mo = intToMo(((IConst)ctx.call_params().exprs().expr().get(2).accept(visitor)).getValue());			
-		}
-		Load load = visitor.thread.load(reg, add, mo);
-		load.setCLine(visitor.currentLine);
-		visitor.thread.store(load, new IExprBin(reg, op, value), mo).setCLine(visitor.currentLine);
+		int mo = arg.size() <= 2 ? 5 : ((IConst)arg.get(2).accept(visitor)).getValue();
+		store(visitor, mo, load(visitor, mo, reg, add), new IExprBin(reg, op, value));
 	}
 
 	private static void atomicXchg(VisitorBoogie visitor, Call_cmdContext ctx) {
 		Register reg = visitor.thread.register(visitor.currentScope.getID() + ":" + ctx.call_params().Ident(0).getText(), -1);
-		IExpr add = (IExpr)ctx.call_params().exprs().expr().get(0).accept(visitor);
-		ExprInterface value = (ExprInterface)ctx.call_params().exprs().expr().get(1).accept(visitor);
-		String mo = null;
-		if(ctx.call_params().exprs().expr().size() > 2) {
-			mo = intToMo(((IConst)ctx.call_params().exprs().expr().get(2).accept(visitor)).getValue());			
-		}
-		Load load = visitor.thread.load(reg, add, mo);
-		load.setCLine(visitor.currentLine);
-		visitor.thread.store(load, value, mo).setCLine(visitor.currentLine);
+		List<ExprContext> arg = ctx.call_params().exprs().expr();
+		IExpr add = (IExpr)arg.get(0).accept(visitor);
+		ExprInterface value = (ExprInterface)arg.get(1).accept(visitor);
+		int mo = arg.size() <= 2 ? 5 : ((IConst)arg.get(2).accept(visitor)).getValue();
+		Register dummy = new Register(".dummy", reg.getThreadId(), reg.getPrecision());
+		visitor.thread.local(dummy, value);
+		store(visitor, mo, load(visitor, mo, reg, add), dummy);
 	}
 
 	private static void atomicThreadFence(VisitorBoogie visitor, Call_cmdContext ctx) {
-		String mo = intToMo(((IConst)ctx.call_params().exprs().expr().get(0).accept(visitor)).getValue());
-		AtomicThreadFence child = new AtomicThreadFence(mo);
-		child.setCLine(visitor.currentLine);
-		visitor.thread.add(child);
+		Fence fence = null;
+		switch(((IConst)ctx.call_params().exprs().expr().get(0).accept(visitor)).getValue()) {
+			case 0:
+			case 1:
+			break;
+			case 2:
+			fence = visitor.arch.fenceAcquire(visitor.thread);
+			break;
+			case 3:
+			fence = visitor.arch.fenceRelease(visitor.thread);
+			break;
+			case 4:
+			fence = visitor.arch.fenceAcquireRelease(visitor.thread);
+			break;
+			case 5:
+			fence = visitor.arch.fence(visitor.thread);
+			break;
+			default:
+			throw new UnsupportedOperationException("The memory order is not recognized");
+		}
+		if(null != fence)
+			fence.setCLine(visitor.currentLine);
 	}
 
-	private static String intToMo(int i) {
-		switch(i) {
+	private static Load load(VisitorBoogie visitor, int memoryOrder, Register register, IExpr address) {
+		Load load;
+		switch(memoryOrder) {
 			case 0:
-				return EType.RELAXED;
-			case 1:
-				return EType.CONSUME;
-			case 2:
-				return EType.ACQUIRE;
 			case 3:
-				return EType.RELEASE;
+			load = visitor.thread.load(register, address);
+			break;
+			case 1:
+			load = visitor.arch.loadConsume(visitor.thread, register, address);
+			break;
+			case 2:
 			case 4:
-				return EType.ACQ_REL;
+			load = visitor.arch.loadAcquire(visitor.thread, register, address);
+			break;
 			case 5:
-				return EType.SC;
+			load = visitor.arch.load(visitor.thread, register, address);
+			break;
 			default:
-				throw new UnsupportedOperationException("The memory order is not recognized");
+			throw new UnsupportedOperationException();
 		}
+		load.setCLine(visitor.currentLine);
+		return load;
+	}
+
+	private static void store(VisitorBoogie visitor, int memoryOrder, Load load, ExprInterface value) {
+		Store store;
+		switch(memoryOrder) {
+			case 0:
+			case 1:
+			case 2:
+			store = visitor.thread.store(load, value);
+			break;
+			case 3:
+			case 4:
+			store = visitor.arch.storeRelease(visitor.thread, load, value);
+			break;
+			case 5:
+			store = visitor.arch.store(visitor.thread, load, value);
+			break;
+			default:
+			throw new UnsupportedOperationException("The memory order is not recognized");
+		}
+		store.setCLine(visitor.currentLine);
 	}
 }

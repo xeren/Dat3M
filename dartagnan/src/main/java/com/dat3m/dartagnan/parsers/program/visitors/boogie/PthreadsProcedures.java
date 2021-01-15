@@ -15,11 +15,8 @@ import com.dat3m.dartagnan.parsers.BoogieParser.Call_cmdContext;
 import com.dat3m.dartagnan.parsers.BoogieParser.ExprContext;
 import com.dat3m.dartagnan.parsers.program.utils.ParsingException;
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.atomic.event.AtomicLoad;
-import com.dat3m.dartagnan.program.atomic.event.AtomicStore;
 import com.dat3m.dartagnan.program.event.Assume;
 import com.dat3m.dartagnan.program.event.Load;
-import com.dat3m.dartagnan.program.event.Store;
 import com.dat3m.dartagnan.program.memory.Location;
 
 public class PthreadsProcedures {
@@ -109,9 +106,7 @@ public class PthreadsProcedures {
 		visitor.threadCallingValues.get(visitor.currentThread).add(callingValue);
 		visitor.pool.add(threadPtr, threadName);
 		Location loc = visitor.programBuilder.getOrCreateLocation(threadPtr + "_active", -1);
-		AtomicStore child = new AtomicStore(loc.getAddress(), new IConst(1, -1), SC);
-		child.setCLine(visitor.currentLine);
-		visitor.thread.add(child);
+		visitor.arch.store(visitor.thread, loc.getAddress(), new IConst(1, -1)).setCLine(visitor.currentLine);
 	}
 
 	private static void pthread_join(VisitorBoogie visitor, Call_cmdContext ctx) {
@@ -123,7 +118,7 @@ public class PthreadsProcedures {
 		}
 		Location loc = visitor.programBuilder.getOrCreateLocation(visitor.pool.getPtrFromReg(callReg) + "_active", -1);
 		Register reg = visitor.thread.register(null, -1);
-		visitor.thread.add(new AtomicLoad(reg, loc.getAddress(), SC));
+		visitor.arch.store(visitor.thread, reg, loc.getAddress());
 		visitor.thread.add(new Assume(new Atom(reg, EQ, new IConst(0, -1))));
 	}
 
@@ -133,7 +128,7 @@ public class PthreadsProcedures {
 		IExpr lockAddress = (IExpr) lock.accept(visitor);
 		IExpr val = (IExpr) value.accept(visitor);
 		if(lockAddress != null) {
-			visitor.thread.add(new Store(lockAddress, val, SC));
+			visitor.thread.store(lockAddress, val);
 		}
 	}
 

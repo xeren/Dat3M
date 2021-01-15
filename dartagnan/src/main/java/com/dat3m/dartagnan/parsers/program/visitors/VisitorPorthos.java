@@ -7,12 +7,12 @@ import com.dat3m.dartagnan.parsers.PorthosParser;
 import com.dat3m.dartagnan.parsers.PorthosVisitor;
 import com.dat3m.dartagnan.parsers.program.Arch;
 import com.dat3m.dartagnan.parsers.program.utils.AssertionHelper;
+import com.dat3m.dartagnan.parsers.program.utils.ParsingException;
 import com.dat3m.dartagnan.parsers.program.utils.ProgramBuilder;
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.atomic.event.AtomicLoad;
-import com.dat3m.dartagnan.program.atomic.event.AtomicStore;
 import com.dat3m.dartagnan.program.event.Label;
 import com.dat3m.dartagnan.program.memory.Location;
+import com.dat3m.dartagnan.program.utils.EType;
 import org.antlr.v4.runtime.misc.Interval;
 
 public class VisitorPorthos extends PorthosBaseVisitor<Object> implements PorthosVisitor<Object> {
@@ -110,15 +110,47 @@ public class VisitorPorthos extends PorthosBaseVisitor<Object> implements Portho
 	public Object visitInstructionRead(PorthosParser.InstructionReadContext ctx) {
 		Register register = thread.register(ctx.register().getText(), -1);
 		Location location = programBuilder.getOrErrorLocation(ctx.location().getText());
-		thread.add(new AtomicLoad(register, location.getAddress(), ctx.MemoryOrder().getText()));
+		switch(ctx.MemoryOrder().getText()) {
+			case EType.RELAXED:
+			case EType.RELEASE:
+			thread.load(register, location.getAddress());
+			break;
+			case EType.CONSUME:
+			arch.loadConsume(thread, register, location.getAddress());
+			break;
+			case EType.ACQUIRE:
+			case EType.ACQ_REL:
+			arch.loadAcquire(thread, register, location.getAddress());
+			break;
+			case EType.SC:
+			arch.load(thread, register, location.getAddress());
+			break;
+			default:
+			throw new ParsingException("unrecognised memory order \"" + ctx.MemoryOrder().getText() + "\"");
+		}
 		return null;
 	}
 
 	@Override
 	public Object visitInstructionWrite(PorthosParser.InstructionWriteContext ctx) {
-		IExpr e = (IExpr)ctx.arithExpr().accept(this);
+		IExpr value = (IExpr)ctx.arithExpr().accept(this);
 		Location location = programBuilder.getOrErrorLocation(ctx.location().getText());
-		thread.add(new AtomicStore(location.getAddress(), e, ctx.MemoryOrder().getText()));
+		switch(ctx.MemoryOrder().getText()) {
+			case EType.RELAXED:
+			case EType.CONSUME:
+			case EType.ACQUIRE:
+			thread.store(location.getAddress(), value);
+			break;
+			case EType.RELEASE:
+			case EType.ACQ_REL:
+			arch.storeRelease(thread, location.getAddress(), value);
+			break;
+			case EType.SC:
+			arch.store(thread, location.getAddress(), value);
+			break;
+			default:
+			throw new ParsingException("unrecognised memory order \"" + ctx.MemoryOrder().getText() + "\"");
+		}
 		return null;
 	}
 
