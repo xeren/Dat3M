@@ -1,14 +1,14 @@
 package com.dat3m.dartagnan.program.atomic.event;
 
-import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.wmm.utils.Arch;
-import com.google.common.collect.ImmutableSet;
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IExpr;
+import com.dat3m.dartagnan.parsers.program.Arch;
 import com.dat3m.dartagnan.program.Register;
+import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Fence;
 import com.dat3m.dartagnan.program.event.Store;
 import com.dat3m.dartagnan.program.utils.EType;
+import com.google.common.collect.ImmutableSet;
 
 public class AtomicStore extends Event {
 

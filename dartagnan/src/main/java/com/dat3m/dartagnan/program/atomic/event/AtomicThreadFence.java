@@ -1,8 +1,8 @@
 package com.dat3m.dartagnan.program.atomic.event;
 
+import com.dat3m.dartagnan.parsers.program.Arch;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Fence;
-import com.dat3m.dartagnan.wmm.utils.Arch;
 
 import static com.dat3m.dartagnan.program.utils.EType.ACQUIRE;
 import static com.dat3m.dartagnan.program.utils.EType.ACQ_REL;

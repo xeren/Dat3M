@@ -152,7 +152,7 @@ public class Dat3M extends JFrame implements ActionListener {
 			testResult = null;
 			try {
 				Editor programEditor = editorsPane.getEditor(EditorCode.PROGRAM);
-				Program program = new ProgramParser().parse(programEditor.getEditorPane().getText(), programEditor.getLoadedFormat());
+				Program program = new ProgramParser(options.getTarget()).parse(programEditor.getEditorPane().getText(), programEditor.getLoadedFormat());
 				try {
 					Wmm targetModel = new ParserCat().parse(editorsPane.getEditor(EditorCode.TARGET_MM).getEditorPane().getText());
 					if(options.getTask() == Task.REACHABILITY){
@@ -163,7 +163,7 @@ public class Dat3M extends JFrame implements ActionListener {
 								showError("PORTHOS only supports *.pts files", "Loading error");
 								return;
 							}
-							Program sourceProgram = new ProgramParser().parse(programEditor.getEditorPane().getText(), programEditor.getLoadedFormat());
+							Program sourceProgram = new ProgramParser(options.getSource()).parse(programEditor.getEditorPane().getText(), programEditor.getLoadedFormat());
 							Wmm sourceModel = new ParserCat().parse(editorsPane.getEditor(EditorCode.SOURCE_MM).getEditorPane().getText());
 							testResult = new PortabilityResult(sourceProgram, program, sourceModel, targetModel, options);
 						} catch (Exception e){

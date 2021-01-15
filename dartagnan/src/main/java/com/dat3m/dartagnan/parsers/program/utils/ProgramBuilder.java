@@ -1,18 +1,18 @@
 package com.dat3m.dartagnan.parsers.program.utils;
 
+import com.dat3m.dartagnan.asserts.AbstractAssert;
 import com.dat3m.dartagnan.expression.BExpr;
 import com.dat3m.dartagnan.expression.ExprInterface;
+import com.dat3m.dartagnan.expression.IConst;
 import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.*;
-import com.google.common.collect.ImmutableSet;
-import com.dat3m.dartagnan.asserts.AbstractAssert;
-import com.dat3m.dartagnan.expression.IConst;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.program.memory.Location;
 import com.dat3m.dartagnan.program.memory.Memory;
+import com.google.common.collect.ImmutableSet;
 
 import java.util.*;
 

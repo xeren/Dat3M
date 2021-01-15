@@ -1,7 +1,7 @@
 package com.dat3m.porthos.utils.options;
 
 import com.dat3m.dartagnan.utils.options.BaseOptions;
-import com.dat3m.dartagnan.wmm.utils.Arch;
+import com.dat3m.dartagnan.parsers.program.Arch;
 import com.google.common.collect.ImmutableSet;
 
 import java.util.Arrays;

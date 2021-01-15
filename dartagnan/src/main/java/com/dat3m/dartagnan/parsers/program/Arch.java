@@ -1,4 +1,4 @@
-package com.dat3m.dartagnan.wmm.utils;
+package com.dat3m.dartagnan.parsers.program;
 
 public enum Arch {
     NONE, ARM, ARM8, POWER, TSO;

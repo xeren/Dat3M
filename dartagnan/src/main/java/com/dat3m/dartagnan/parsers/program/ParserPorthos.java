@@ -10,6 +10,12 @@ import org.antlr.v4.runtime.*;
 
 class ParserPorthos implements ParserInterface{
 
+    private final Arch arch;
+
+    public ParserPorthos(Arch a) {
+        arch = a;
+    }
+
     @Override
     public Program parse(CharStream charStream) {
         PorthosLexer lexer = new PorthosLexer(charStream);
@@ -20,7 +26,7 @@ class ParserPorthos implements ParserInterface{
         parser.addErrorListener(new ParserErrorListener());
         ProgramBuilder pb = new ProgramBuilder();
         ParserRuleContext parserEntryPoint = parser.main();
-        VisitorPorthos visitor = new VisitorPorthos(pb);
+        VisitorPorthos visitor = new VisitorPorthos(arch, pb);
 
         return (Program) parserEntryPoint.accept(visitor);
     }

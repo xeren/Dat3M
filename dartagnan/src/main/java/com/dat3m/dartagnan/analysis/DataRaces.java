@@ -8,6 +8,7 @@ import static com.dat3m.dartagnan.wmm.utils.Utils.intVar;
 import static com.microsoft.z3.Status.SATISFIABLE;
 
 import com.dat3m.dartagnan.expression.BConst;
+import com.dat3m.dartagnan.parsers.program.Arch;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Init;
@@ -17,7 +18,6 @@ import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.Wmm;
-import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.Solver;

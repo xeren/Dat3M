@@ -7,6 +7,7 @@ import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 import static com.microsoft.z3.Status.SATISFIABLE;
 
 import com.dat3m.dartagnan.asserts.AssertTrue;
+import com.dat3m.dartagnan.parsers.program.Arch;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.utils.Result;
@@ -15,7 +16,6 @@ import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.relation.base.local.RelAddrDirect;
 import com.dat3m.dartagnan.wmm.relation.base.local.RelIdd;
 import com.dat3m.dartagnan.wmm.relation.base.memory.RelRf;
-import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.microsoft.z3.*;
 
 import java.util.*;

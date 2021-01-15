@@ -9,20 +9,25 @@ import com.dat3m.dartagnan.program.Program;
 
 import org.antlr.v4.runtime.*;
 
-class ParserBoogie implements ParserInterface{
+class ParserBoogie implements ParserInterface {
 
-    @Override
-    public Program parse(CharStream charStream) {
-        BoogieLexer lexer = new BoogieLexer(charStream);
-        CommonTokenStream tokenStream = new CommonTokenStream(lexer);
+	private final Arch arch;
 
-        BoogieParser parser = new BoogieParser(tokenStream);
-        parser.addErrorListener(new ParserErrorListener());
-        ProgramBuilder pb = new ProgramBuilder();
-        ParserRuleContext parserEntryPoint = parser.main();
-        VisitorBoogie visitor = new VisitorBoogie(pb);
+	public ParserBoogie(Arch a) {
+		arch = a;
+	}
 
-        Program program = (Program) parserEntryPoint.accept(visitor);
-        return program;
-    }
+	@Override
+	public Program parse(CharStream charStream) {
+		BoogieLexer lexer = new BoogieLexer(charStream);
+		CommonTokenStream tokenStream = new CommonTokenStream(lexer);
+
+		BoogieParser parser = new BoogieParser(tokenStream);
+		parser.addErrorListener(new ParserErrorListener());
+		ProgramBuilder pb = new ProgramBuilder();
+		ParserRuleContext parserEntryPoint = parser.main();
+		VisitorBoogie visitor = new VisitorBoogie(arch, pb);
+
+		return (Program) parserEntryPoint.accept(visitor);
+	}
 }

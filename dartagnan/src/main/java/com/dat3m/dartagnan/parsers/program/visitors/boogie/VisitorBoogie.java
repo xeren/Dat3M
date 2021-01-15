@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.dat3m.dartagnan.parsers.program.Arch;
 import org.antlr.v4.runtime.tree.ParseTree;
 import com.dat3m.dartagnan.expression.Atom;
 import com.dat3m.dartagnan.expression.BConst;
@@ -102,6 +103,7 @@ import com.dat3m.dartagnan.program.utils.EType;
 
 public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVisitor<Object> {
 
+	final Arch arch;
 	protected final ProgramBuilder programBuilder;
 	protected int threadCount = 0;
 	protected int currentThread = 0;
@@ -139,8 +141,9 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 
 	private final List<String> smackDummyVariables = Arrays.asList("$GLOBALS_BOTTOM", "$EXTERNS_BOTTOM", "$MALLOC_TOP", "__SMACK_code", "__SMACK_decls", "__SMACK_top_decl", "$1024.ref", "$0.ref", "$1.ref", ".str.1", "env_value_str", ".str.1.3", ".str.19", "errno_global", "$CurrAddr");
 
-	public VisitorBoogie(ProgramBuilder pb) {
-		this.programBuilder = pb;
+	public VisitorBoogie(Arch a, ProgramBuilder pb) {
+		arch = a;
+		programBuilder = pb;
 		thread = pb.thread(0);
 	}
 

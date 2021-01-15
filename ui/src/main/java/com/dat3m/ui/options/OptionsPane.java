@@ -1,9 +1,9 @@
 package com.dat3m.ui.options;
 
+import com.dat3m.dartagnan.parsers.program.Arch;
 import com.dat3m.dartagnan.utils.Settings;
-import com.dat3m.dartagnan.wmm.utils.alias.Alias;
-import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.dat3m.dartagnan.wmm.utils.Mode;
+import com.dat3m.dartagnan.wmm.utils.alias.Alias;
 import com.dat3m.ui.button.ClearButton;
 import com.dat3m.ui.button.GraphButton;
 import com.dat3m.ui.button.RelsButton;

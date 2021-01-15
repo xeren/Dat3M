@@ -5,6 +5,7 @@ import com.dat3m.dartagnan.expression.op.BOpUn;
 import com.dat3m.dartagnan.parsers.PorthosBaseVisitor;
 import com.dat3m.dartagnan.parsers.PorthosParser;
 import com.dat3m.dartagnan.parsers.PorthosVisitor;
+import com.dat3m.dartagnan.parsers.program.Arch;
 import com.dat3m.dartagnan.parsers.program.utils.AssertionHelper;
 import com.dat3m.dartagnan.parsers.program.utils.ProgramBuilder;
 import com.dat3m.dartagnan.program.Register;
@@ -16,11 +17,13 @@ import org.antlr.v4.runtime.misc.Interval;
 
 public class VisitorPorthos extends PorthosBaseVisitor<Object> implements PorthosVisitor<Object> {
 
+	private final Arch arch;
 	private final ProgramBuilder programBuilder;
 	private ProgramBuilder.T thread;
 
-	public VisitorPorthos(ProgramBuilder pb){
-		this.programBuilder = pb;
+	public VisitorPorthos(Arch a, ProgramBuilder pb){
+		arch = a;
+		programBuilder = pb;
 	}
 
 	@Override

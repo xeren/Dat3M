@@ -2,6 +2,7 @@ package com.dat3m.dartagnan.program.atomic.event;
 
 import com.dat3m.dartagnan.expression.Atom;
 import com.dat3m.dartagnan.expression.IExpr;
+import com.dat3m.dartagnan.parsers.program.Arch;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.CondJump;
 import com.dat3m.dartagnan.program.event.Event;
@@ -9,7 +10,6 @@ import com.dat3m.dartagnan.program.event.Fence;
 import com.dat3m.dartagnan.program.event.Label;
 import com.dat3m.dartagnan.program.event.Load;
 import com.dat3m.dartagnan.program.utils.EType;
-import com.dat3m.dartagnan.wmm.utils.Arch;
 
 import static com.dat3m.dartagnan.expression.op.COpBin.EQ;
 
