@@ -4,10 +4,7 @@ import com.dat3m.dartagnan.asserts.AbstractAssert;
 import com.dat3m.dartagnan.asserts.AssertCompositeOr;
 import com.dat3m.dartagnan.asserts.AssertInline;
 import com.dat3m.dartagnan.asserts.AssertTrue;
-import com.dat3m.dartagnan.program.event.BoundEvent;
-import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.Local;
-import com.dat3m.dartagnan.program.event.RegWriter;
+import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.memory.Location;
 import com.dat3m.dartagnan.program.memory.Memory;
 import com.dat3m.dartagnan.program.utils.EType;
@@ -22,16 +19,20 @@ import java.util.*;
 public class Program {
 
 	private AbstractAssert ass;
-	private AbstractAssert assFilter;
+	private final AbstractAssert assFilter;
 	private final List<Thread> threads;
+	private final List<Init> init;
 	private final ImmutableSet<Location> locations;
 	private final Memory memory;
 	private ThreadCache cache;
 
-	public Program(Memory memory, ImmutableSet<Location> locations) {
+	public Program(Memory memory, ImmutableSet<Location> location, List<Thread> thread, List<Init> init, AbstractAssert assertion, AbstractAssert filter) {
 		this.memory = memory;
-		this.locations = locations;
-		this.threads = new ArrayList<>();
+		this.locations = location;
+		this.threads = thread;
+		this.init = init;
+		this.ass = assertion;
+		this.assFilter = filter;
 	}
 
 	public Memory getMemory() {
@@ -42,20 +43,8 @@ public class Program {
 		return ass;
 	}
 
-	public void setAss(AbstractAssert ass) {
-		this.ass = ass;
-	}
-
 	public AbstractAssert getAssFilter() {
 		return assFilter;
-	}
-
-	public void setAssFilter(AbstractAssert ass) {
-		this.assFilter = ass;
-	}
-
-	public void add(Thread t) {
-		threads.add(t);
 	}
 
 	public ThreadCache getCache() {
@@ -74,7 +63,7 @@ public class Program {
 	}
 
 	public List<Event> getEvents() {
-		List<Event> events = new ArrayList<>();
+		List<Event> events = new ArrayList<>(init);
 		for(Thread t : threads)
 			events.addAll(Arrays.asList(t.unrolled));
 		return events;
@@ -101,6 +90,8 @@ public class Program {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	public int unroll(int bound, int nextId) {
+		for(Init i : init)
+			i.setUId(nextId++);
 		for(Thread thread : threads) {
 			thread.unroll(bound);
 			for(Event event : thread.unrolled)
@@ -114,12 +105,14 @@ public class Program {
 	// Encoding
 	// -----------------------------------------------------------------------------------------------------------------
 
-	public BoolExpr encodeCF(Context ctx) {
-		BoolExpr enc = memory.encode(ctx);
-		for(Thread t : threads) {
-			enc = ctx.mkAnd(enc, t.encodeCF(ctx));
-		}
-		return enc;
+	public BoolExpr encodeCF(Context context) {
+		ArrayList<BoolExpr> enc = new ArrayList<>();
+		enc.add(memory.encode(context));
+		for(Init i : init)
+			i.encode(context, enc::add, context.mkTrue());
+		for(Thread t : threads)
+			enc.add(t.encodeCF(context));
+		return context.mkAnd(enc.toArray(new BoolExpr[0]));
 	}
 
 	public BoolExpr encodeFinalRegisterValues(Context ctx) {

@@ -69,8 +69,8 @@ public class EdgeTestHelper {
 
         Set<Tuple> result = new HashSet<>();
         for(Tuple tuple : all){
-            int id1 = tuple.getFirst().getOId();
-            int id2 = tuple.getSecond().getOId();
+            int id1 = tuple.getFirst().getCId();
+            int id2 = tuple.getSecond().getCId();
             if(map.containsEntry(id1, id2)){
                 result.add(tuple);
             }

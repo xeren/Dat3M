@@ -33,15 +33,15 @@ public class RelCritTest {
 		String path = ResourceHelper.TEST_RESOURCE_PATH + "wmm/relation/basic/crit/";
 
 		List<Object[]> data = new ArrayList<>();
-		data.add(new Object[]{path + "C-crit-01.litmus", wmm, new int[]{2, 3, 4, 5}});
-		data.add(new Object[]{path + "C-crit-02.litmus", wmm, new int[]{2, 5, 3, 4}});
-		data.add(new Object[]{path + "C-crit-03.litmus", wmm, new int[]{3, 4}});
-		data.add(new Object[]{path + "C-crit-04.litmus", wmm, new int[]{3, 4}});
-		data.add(new Object[]{path + "C-crit-05.litmus", wmm, new int[]{2, 3, 5, 8, 6, 7}});
-		data.add(new Object[]{path + "C-crit-06.litmus", wmm, new int[]{2, 11, 3, 6, 4, 5, 7, 10, 8, 9}});
-		data.add(new Object[]{path + "C-crit-07.litmus", wmm, new int[]{2, 4}});
-		data.add(new Object[]{path + "C-crit-08.litmus", wmm, new int[]{2, 6}});
-		data.add(new Object[]{path + "C-crit-09.litmus", wmm, new int[]{2, 7, 8, 10}});
+		data.add(new Object[]{path + "C-crit-01.litmus", wmm, new int[]{1, 2, 3, 4}});
+		data.add(new Object[]{path + "C-crit-02.litmus", wmm, new int[]{1, 4, 2, 3}});
+		data.add(new Object[]{path + "C-crit-03.litmus", wmm, new int[]{2, 3}});
+		data.add(new Object[]{path + "C-crit-04.litmus", wmm, new int[]{2, 3}});
+		data.add(new Object[]{path + "C-crit-05.litmus", wmm, new int[]{1, 2, 4, 7, 5, 6}});
+		data.add(new Object[]{path + "C-crit-06.litmus", wmm, new int[]{1, 10, 2, 5, 3, 4, 6, 9, 7, 8}});
+		data.add(new Object[]{path + "C-crit-07.litmus", wmm, new int[]{1, 3}});
+		data.add(new Object[]{path + "C-crit-08.litmus", wmm, new int[]{1, 6}});
+		data.add(new Object[]{path + "C-crit-09.litmus", wmm, new int[]{1, 7, 8, 10}});
 		return data;
 	}
 

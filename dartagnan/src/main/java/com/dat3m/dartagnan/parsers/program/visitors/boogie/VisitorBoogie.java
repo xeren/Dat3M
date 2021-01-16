@@ -286,9 +286,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 						int precision = type.contains("bv") ? Integer.parseInt(type.split("bv")[1]) : -1;
 						Register register = thread.register(currentScope.getID() + ":" + ident.getText(), precision);
 						ExprInterface value = callingValues.get(index);
-						Local child = new Local(register, value);
-						child.setCLine(currentLine);
-						thread.add(child);
+						thread.local(register, value).setCLine(currentLine);
 						index++;
 					}
 				}
@@ -336,7 +334,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 		ExprInterface expr = (ExprInterface) ctx.proposition().expr().accept(this);
 		Register ass = thread.register("assert_" + assertionIndex, expr.getPrecision());
 		assertionIndex++;
-		Local event = new Local(ass, expr);
+		Local event = thread.local(ass, expr);
 		event.addFilters(EType.ASSERTION);
 		event.setCLine(currentLine);
 		thread.add(event);
@@ -365,10 +363,9 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 		if(name.equals("reach_error")) {
 			Register ass = thread.register("assert_" + assertionIndex, -1);
 			assertionIndex++;
-			Local event = new Local(ass, new BConst(false));
+			Local event = thread.local(ass, new BConst(false));
 			event.addFilters(EType.ASSERTION);
 			event.setCLine(currentLine);
-			thread.add(event);
 			return null;
 		}
 
@@ -506,9 +503,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 					thread.add(child);
 					continue;
 				}
-				Local child = new Local(register, value);
-				child.setCLine(currentLine);
-				thread.add(child);
+				thread.local(register, value).setCLine(currentLine);
 				continue;
 			}
 			Location location = programBuilder.getLocation(name);
@@ -521,9 +516,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 			if(currentReturnName.equals(name)) {
 				if(!returnRegister.isEmpty()) {
 					Register ret = returnRegister.remove(returnRegister.size() - 1);
-					Local child = new Local(ret, value);
-					child.setCLine(currentLine);
-					thread.add(child);
+					thread.local(ret, value).setCLine(currentLine);
 				}
 				continue;
 			}

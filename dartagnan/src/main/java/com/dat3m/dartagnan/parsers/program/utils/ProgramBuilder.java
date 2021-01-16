@@ -15,6 +15,7 @@ import com.dat3m.dartagnan.program.memory.Memory;
 import com.google.common.collect.ImmutableSet;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class ProgramBuilder {
 
@@ -30,13 +31,12 @@ public class ProgramBuilder {
 	private AbstractAssert assFilter;
 
 	public Program build() {
-		Program program = new Program(memory, ImmutableSet.copyOf(locations.values()));
-		buildInitThreads(program);
 		for(T t : threads.values()) {
 			if(!t.labelPending.isEmpty()) {
 				throw new ParsingException("Unassigned labels " + t.labelPending.keySet());
 			}
 		}
+		List<Thread> threadList = new ArrayList<>();
 		int o = 0;
 		for(T t : threads.values()){
 			if(t.event.isEmpty())
@@ -48,11 +48,10 @@ public class ProgramBuilder {
 				Event next = t.event.get(i + 1);
 				next.setOId(o++);
 			}
-			program.add(thread);
+			threadList.add(thread);
 		}
-		program.setAss(ass);
-		program.setAssFilter(assFilter);
-		return program;
+		List<Init> initList = iValueMap.entrySet().stream().map(e->new Init(e.getKey(), e.getValue())).collect(Collectors.toList());
+		return new Program(memory, ImmutableSet.copyOf(locations.values()), threadList, initList, ass, assFilter);
 	}
 
 	public T thread(String name, int id) {
@@ -160,25 +159,6 @@ public class ProgramBuilder {
 
 	public Address getPointer(String name) {
 		return pointers.get(name);
-	}
-
-	// ----------------------------------------------------------------------------------------------------------------
-	// Private utility
-
-	private int nextThreadId() {
-		int maxId = -1;
-		for(int key : threads.keySet()) {
-			maxId = Integer.max(maxId, key);
-		}
-		return maxId + 1;
-	}
-
-	private void buildInitThreads(Program program) {
-		int nextThreadId = nextThreadId();
-		for(Map.Entry<Address,IConst> entry : iValueMap.entrySet()) {
-			program.add(new Thread(String.valueOf(nextThreadId), nextThreadId, new Event[]{new Init(entry.getKey(), entry.getValue())}));
-			nextThreadId++;
-		}
 	}
 
 	/**

@@ -37,7 +37,7 @@ public class ExclusivePairsTest {
 		String path = ResourceHelper.TEST_RESOURCE_PATH + "wmm/relation/basic/rmw/aarch64/";
 
 		List<Object[]> data = new ArrayList<>();
-		data.add(new Object[]{path + "AArch64-exclusive-01.litmus", wmm, settings, FAIL, false, new int[]{2, 4}});
+		data.add(new Object[]{path + "AArch64-exclusive-01.litmus", wmm, settings, FAIL, false, new int[]{2, 6}});
 		data.add(new Object[]{path + "AArch64-exclusive-02.litmus", wmm, settings, FAIL, false, new int[]{}});
 		data.add(new Object[]{path + "AArch64-exclusive-03.litmus", wmm, settings, FAIL, true, new int[]{}});
 		data.add(new Object[]{path + "AArch64-exclusive-04.litmus", wmm, settings, FAIL, true, new int[]{}});
@@ -46,10 +46,10 @@ public class ExclusivePairsTest {
 		data.add(new Object[]{path + "AArch64-exclusive-07.litmus", wmm, settings, FAIL, false, new int[]{}});
 		data.add(new Object[]{path + "AArch64-exclusive-08.litmus", wmm, settings, FAIL, false, new int[]{}});
 		data.add(new Object[]{path + "AArch64-exclusive-09.litmus", wmm, settings, PASS, false, null});
-		data.add(new Object[]{path + "AArch64-exclusive-10.litmus", wmm, settings, FAIL, false, new int[]{4, 5}});
-		data.add(new Object[]{path + "AArch64-exclusive-11.litmus", wmm, settings, FAIL, false, new int[]{5, 6}});
+		data.add(new Object[]{path + "AArch64-exclusive-10.litmus", wmm, settings, FAIL, false, new int[]{4, 7}});
+		data.add(new Object[]{path + "AArch64-exclusive-11.litmus", wmm, settings, FAIL, false, new int[]{6, 9}});
 		data.add(new Object[]{path + "AArch64-exclusive-12.litmus", wmm, settings, PASS, false, null});
-		data.add(new Object[]{path + "AArch64-exclusive-13.litmus", wmm, settings, FAIL, false, new int[]{4, 5}});
+		data.add(new Object[]{path + "AArch64-exclusive-13.litmus", wmm, settings, FAIL, false, new int[]{5, 8}});
 		data.add(new Object[]{path + "AArch64-exclusive-14.litmus", wmm, settings, FAIL, true, null});
 		data.add(new Object[]{path + "AArch64-exclusive-15.litmus", wmm, settings, FAIL, true, null});
 		return data;

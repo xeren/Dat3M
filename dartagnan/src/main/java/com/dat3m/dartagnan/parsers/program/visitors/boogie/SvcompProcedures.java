@@ -87,10 +87,9 @@ public class SvcompProcedures {
 	private static void __VERIFIER_error(VisitorBoogie visitor) {
     	Register ass = visitor.thread.register("assert_" + visitor.assertionIndex, -1);
     	visitor.assertionIndex++;
-    	Local event = new Local(ass, new BConst(false));
+    	Local event = visitor.thread.local(ass, new BConst(false));
 		event.addFilters(EType.ASSERTION);
 		event.setCLine(visitor.currentLine);
-		visitor.thread.add(event);
 	}
 	
 	private static void __VERIFIER_assert(VisitorBoogie visitor, Call_cmdContext ctx) {
@@ -100,10 +99,9 @@ public class SvcompProcedures {
     	if(expr instanceof IConst && ((IConst)expr).getValue() == 1) {
     		return;
     	}
-    	Local event = new Local(ass, expr);
+    	Local event = visitor.thread.local(ass, expr);
 		event.addFilters(EType.ASSERTION);
 		event.setCLine(visitor.currentLine);
-		visitor.thread.add(event);
 	}
 	
 	public static void __VERIFIER_atomic(VisitorBoogie visitor, boolean begin) {
@@ -138,9 +136,8 @@ public class SvcompProcedures {
 		String registerName = ctx.call_params().Ident(0).getText();
 		Register register = visitor.thread.register(visitor.currentScope.getID() + ":" + registerName);
 	    if(register != null){
-	    	Local child = new Local(register, new INonDet(type, register.getPrecision()));
+	    	Local child = visitor.thread.local(register, new INonDet(type, register.getPrecision()));
 	    	child.setCLine(visitor.currentLine);
-			visitor.thread.add(child);
 	    }
 	}
 
@@ -148,9 +145,8 @@ public class SvcompProcedures {
 		String registerName = ctx.call_params().Ident(0).getText();
 		Register register = visitor.thread.register(visitor.currentScope.getID() + ":" + registerName);
 	    if(register != null){
-	    	Local child = new Local(register, new BNonDet(register.getPrecision()));
+	    	Local child = visitor.thread.local(register, new BNonDet(register.getPrecision()));
 	    	child.setCLine(visitor.currentLine);
-			visitor.thread.add(child);
 	    }
 	}
 }

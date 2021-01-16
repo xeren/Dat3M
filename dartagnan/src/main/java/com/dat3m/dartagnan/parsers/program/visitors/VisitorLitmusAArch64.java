@@ -186,7 +186,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 		Register address = thread.registerOrError(ctx.address().id);
 		if(ctx.offset() != null)
 			address = visitOffset(ctx.offset(), address);
-		thread.local(statusReg, new BNonDet(1));
+		thread.local(statusReg, new BNonDet(statusReg.getPrecision()));
 		Label next = new Label();
 		thread.jump(next, new Atom(statusReg, COpBin.NEQ, new IConst(0, -1)));
 		if(ctx.storeExclusiveInstruction().release)
