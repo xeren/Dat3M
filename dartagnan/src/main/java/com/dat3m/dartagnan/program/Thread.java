@@ -1,6 +1,5 @@
 package com.dat3m.dartagnan.program;
 
-import com.dat3m.dartagnan.parsers.program.Arch;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.utils.ThreadCache;
 import com.microsoft.z3.BoolExpr;

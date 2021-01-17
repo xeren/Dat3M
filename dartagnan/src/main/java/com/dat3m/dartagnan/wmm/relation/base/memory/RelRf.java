@@ -15,119 +15,113 @@ import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 
 public class RelRf extends Relation {
 
-    public RelRf(){
-        term = "rf";
-        forceDoEncode = true;
-    }
+	public RelRf() {
+		term = "rf";
+		forceDoEncode = true;
+	}
 
-    @Override
-    public TupleSet getMaxTupleSet(){
-        if(maxTupleSet == null){
-            maxTupleSet = new TupleSet();
+	@Override
+	public TupleSet getMaxTupleSet() {
+		if(maxTupleSet == null) {
+			maxTupleSet = new TupleSet();
 
-            List<Load> eventsLoad = program.getCache().getEvents(Load.class);
-            List<Init> eventsInit = program.getCache().getEvents(Init.class);
-            List<Store> eventsStore = program.getCache().getEvents(Store.class);
+			List<Load> eventsLoad = program.getCache().getEvents(Load.class);
+			List<Init> eventsInit = program.getCache().getEvents(Init.class);
+			List<Store> eventsStore = program.getCache().getEvents(Store.class);
 
-            for(Init e1 : eventsInit){
-                for(Load e2 : eventsLoad){
-                    if(MemEvent.canAddressTheSameLocation(e1, e2)){
-                        maxTupleSet.add(new Tuple(e1, e2));
-                    }
-                }
-            }
+			for(Init e1 : eventsInit) {
+				for(Load e2 : eventsLoad) {
+					if(MemEvent.canAddressTheSameLocation(e1, e2)) {
+						maxTupleSet.add(new Tuple(e1, e2));
+					}
+				}
+			}
 
-            for(Store e1 : eventsStore){
-                for(Load e2 : eventsLoad){
-                    if(MemEvent.canAddressTheSameLocation(e1, e2)){
-                    	maxTupleSet.add(new Tuple(e1, e2));
-                    }
-                }
-            }
-        }
-        return maxTupleSet;
-    }
+			for(Store e1 : eventsStore) {
+				for(Load e2 : eventsLoad) {
+					if(MemEvent.canAddressTheSameLocation(e1, e2)) {
+						maxTupleSet.add(new Tuple(e1, e2));
+					}
+				}
+			}
+		}
+		return maxTupleSet;
+	}
 
-    @Override
-    protected BoolExpr encodeApprox() {
-        BoolExpr enc = ctx.mkTrue();
-        Map<MemEvent, List<BoolExpr>> edgeMap = new HashMap<>();
-        Map<MemEvent, BoolExpr> memInitMap = new HashMap<>();
+	@Override
+	protected BoolExpr encodeApprox() {
+		BoolExpr enc = ctx.mkTrue();
+		Map<MemEvent, List<BoolExpr>> edgeMap = new HashMap<>();
+		Map<MemEvent, BoolExpr> memInitMap = new HashMap<>();
 
-        boolean canAccNonInitMem = settings.getFlag(Settings.FLAG_CAN_ACCESS_UNINITIALIZED_MEMORY);
-        boolean useSeqEncoding = settings.getFlag(Settings.FLAG_USE_SEQ_ENCODING_REL_RF);
+		boolean canAccNonInitMem = settings.getFlag(Settings.FLAG_CAN_ACCESS_UNINITIALIZED_MEMORY);
+		boolean useSeqEncoding = settings.getFlag(Settings.FLAG_USE_SEQ_ENCODING_REL_RF);
 
-        for(Tuple tuple : maxTupleSet){
-            MemEvent w = (MemEvent) tuple.getFirst();
-            MemEvent r = (MemEvent) tuple.getSecond();
-            BoolExpr edge = edge(term, w, r, ctx);
-            
-            IntExpr a1 = w.getMemAddressExpr().isBV() ? ctx.mkBV2Int((BitVecExpr)w.getMemAddressExpr(), false) : (IntExpr)w.getMemAddressExpr();
-            IntExpr a2 = r.getMemAddressExpr().isBV() ? ctx.mkBV2Int((BitVecExpr)r.getMemAddressExpr(), false) : (IntExpr)r.getMemAddressExpr();
-            BoolExpr sameAddress = ctx.mkEq(a1, a2);
-            
-            IntExpr v1 = w.getMemValueExpr().isBV() ? ctx.mkBV2Int((BitVecExpr)w.getMemValueExpr(), false) : (IntExpr)w.getMemValueExpr();
-            IntExpr v2 = r.getMemValueExpr().isBV() ? ctx.mkBV2Int((BitVecExpr)r.getMemValueExpr(), false) : (IntExpr)r.getMemValueExpr();
-            BoolExpr sameValue = ctx.mkEq(v1, v2);
+		for(Tuple tuple : maxTupleSet) {
+			MemEvent w = (MemEvent) tuple.getFirst();
+			MemEvent r = (MemEvent) tuple.getSecond();
+			BoolExpr edge = edge(term, w, r, ctx);
 
-            edgeMap.putIfAbsent(r, new ArrayList<>());
-            edgeMap.get(r).add(edge);
-            if(canAccNonInitMem && w instanceof Init){
-                memInitMap.put(r, ctx.mkOr(memInitMap.getOrDefault(r, ctx.mkFalse()), sameAddress));
-            }
-            enc = ctx.mkAnd(enc, ctx.mkImplies(edge, ctx.mkAnd(w.exec(), r.exec(), sameAddress, sameValue)));
-        }
+			IntExpr a1 = w.getMemAddressExpr().isBV() ? ctx.mkBV2Int((BitVecExpr) w.getMemAddressExpr(), false) : (IntExpr) w.getMemAddressExpr();
+			IntExpr a2 = r.getMemAddressExpr().isBV() ? ctx.mkBV2Int((BitVecExpr) r.getMemAddressExpr(), false) : (IntExpr) r.getMemAddressExpr();
+			BoolExpr sameAddress = ctx.mkEq(a1, a2);
 
-        for(MemEvent r : edgeMap.keySet()){
-            enc = ctx.mkAnd(enc, useSeqEncoding
-                    ? encodeEdgeSeq(r, memInitMap.get(r), edgeMap.get(r))
-                    : encodeEdgeNaive(r, memInitMap.get(r), edgeMap.get(r)));
-        }
-        return enc;
-    }
+			IntExpr v1 = w.getMemValueExpr().isBV() ? ctx.mkBV2Int((BitVecExpr) w.getMemValueExpr(), false) : (IntExpr) w.getMemValueExpr();
+			IntExpr v2 = r.getMemValueExpr().isBV() ? ctx.mkBV2Int((BitVecExpr) r.getMemValueExpr(), false) : (IntExpr) r.getMemValueExpr();
+			BoolExpr sameValue = ctx.mkEq(v1, v2);
 
-    private BoolExpr encodeEdgeNaive(Event read, BoolExpr isMemInit, List<BoolExpr> edges){
-        BoolExpr atMostOne = ctx.mkTrue();
-        BoolExpr atLeastOne = ctx.mkFalse();
-        for(int i = 0; i < edges.size(); i++){
-            atLeastOne = ctx.mkOr(atLeastOne, edges.get(i));
-            for(int j = i + 1; j < edges.size(); j++){
-                atMostOne = ctx.mkAnd(atMostOne, ctx.mkNot(ctx.mkAnd(edges.get(i), edges.get(j))));
-            }
-        }
+			edgeMap.putIfAbsent(r, new ArrayList<>());
+			edgeMap.get(r).add(edge);
+			if(canAccNonInitMem && w instanceof Init) {
+				memInitMap.put(r, ctx.mkOr(memInitMap.getOrDefault(r, ctx.mkFalse()), sameAddress));
+			}
+			enc = ctx.mkAnd(enc, ctx.mkImplies(edge, ctx.mkAnd(w.exec(), r.exec(), sameAddress, sameValue)));
+		}
 
-        if(settings.getFlag(Settings.FLAG_CAN_ACCESS_UNINITIALIZED_MEMORY)) {
-            atLeastOne = ctx.mkImplies(ctx.mkAnd(read.exec(), isMemInit), atLeastOne);
-        } else {
-            atLeastOne = ctx.mkImplies(read.exec(), atLeastOne);
-        }
-        return ctx.mkAnd(atMostOne, atLeastOne);
-    }
+		for(MemEvent r : edgeMap.keySet()) {
+			enc = ctx.mkAnd(enc, useSeqEncoding
+				? encodeEdgeSeq(r, memInitMap.get(r), edgeMap.get(r))
+				: encodeEdgeNaive(r, memInitMap.get(r), edgeMap.get(r)));
+		}
+		return enc;
+	}
 
-    private BoolExpr encodeEdgeSeq(Event read, BoolExpr isMemInit, List<BoolExpr> edges){
-        int num = edges.size();
-        int readId = read.getCId();
-        BoolExpr lastSeqVar = mkSeqVar(readId, 0);
-        BoolExpr newSeqVar = lastSeqVar;
-        BoolExpr atMostOne = ctx.mkEq(lastSeqVar, edges.get(0));
+	private BoolExpr encodeEdgeNaive(Event read, BoolExpr isMemInit, List<BoolExpr> edges) {
+		int num = edges.size();
+		ArrayList<BoolExpr> atMostOne = new ArrayList<>();
+		ArrayList<BoolExpr> atLeastOne = new ArrayList<>();
+		atLeastOne.add(ctx.mkNot(read.exec()));
+		for(int i = 0; i < num; i++) {
+			BoolExpr edge = edges.get(i);
+			atLeastOne.add(edge);
+			for(int j = i + 1; j < num; j++) {
+				atMostOne.add(ctx.mkNot(ctx.mkAnd(edge, edges.get(j))));
+			}
+		}
+		if(settings.getFlag(Settings.FLAG_CAN_ACCESS_UNINITIALIZED_MEMORY)) {
+			atLeastOne.add(ctx.mkNot(isMemInit));
+		}
+		atMostOne.add(ctx.mkOr(atLeastOne.toArray(new BoolExpr[0])));
+		return ctx.mkAnd(atMostOne.toArray(new BoolExpr[0]));
+	}
 
-        for(int i = 1; i < num; i++){
-            newSeqVar = mkSeqVar(readId, i);
-            atMostOne = ctx.mkAnd(atMostOne, ctx.mkEq(newSeqVar, ctx.mkOr(lastSeqVar, edges.get(i))));
-            atMostOne = ctx.mkAnd(atMostOne, ctx.mkNot(ctx.mkAnd(edges.get(i), lastSeqVar)));
-            lastSeqVar = newSeqVar;
-        }
-        BoolExpr atLeastOne = ctx.mkOr(newSeqVar, edges.get(edges.size() - 1));
-
-        if(settings.getFlag(Settings.FLAG_CAN_ACCESS_UNINITIALIZED_MEMORY)) {
-            atLeastOne = ctx.mkImplies(ctx.mkAnd(read.exec(), isMemInit), atLeastOne);
-        } else {
-            atLeastOne = ctx.mkImplies(read.exec(), atLeastOne);
-        }
-        return ctx.mkAnd(atMostOne, atLeastOne);
-    }
-
-    private BoolExpr mkSeqVar(int readId, int i) {
-        return (BoolExpr) ctx.mkConst("s(" + term + ",E" + readId + "," + i + ")", ctx.mkBoolSort());
-    }
+	private BoolExpr encodeEdgeSeq(Event read, BoolExpr isMemInit, List<BoolExpr> edges) {
+		int num = edges.size() - 1;
+		int readId = read.getCId();
+		ArrayList<BoolExpr> atMostOne = new ArrayList<>();
+		BoolExpr lastSeqVar = edges.get(0);
+		for(int i = 1; i < num; i++) {
+			atMostOne.add(ctx.mkNot(ctx.mkAnd(edges.get(i), lastSeqVar)));
+			BoolExpr newSeqVar = ctx.mkBoolConst("rf seq " + readId + " " + i);
+			atMostOne.add(ctx.mkEq(newSeqVar, ctx.mkOr(lastSeqVar, edges.get(i))));
+			lastSeqVar = newSeqVar;
+		}
+		BoolExpr atLeastOne = ctx.mkOr(ctx.mkNot(read.exec()), lastSeqVar, edges.get(edges.size() - 1));
+		if(settings.getFlag(Settings.FLAG_CAN_ACCESS_UNINITIALIZED_MEMORY)) {
+			atMostOne.add(ctx.mkImplies(isMemInit, atLeastOne));
+		} else {
+			atMostOne.add(atLeastOne);
+		}
+		return ctx.mkAnd(atMostOne.toArray(new BoolExpr[0]));
+	}
 }
