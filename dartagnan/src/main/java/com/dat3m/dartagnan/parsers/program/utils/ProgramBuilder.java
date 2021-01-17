@@ -251,7 +251,7 @@ public class ProgramBuilder {
 			}
 			Label l = labelPending.remove(name);
 			if(null == l) {
-				l = new Label(name);
+				l = new Label();
 			}
 			label.put(name, l);
 			event.add(l);
@@ -262,12 +262,12 @@ public class ProgramBuilder {
 		 * Creates a new instance marked as pending if not already exists.
 		 * @param name
 		 * Identifier for the label.
+		 * @return
+		 * Describes a position in the program.
 		 */
 		public Label label(String name) {
-			if(null == name)
-				return new Label(null);
 			Label l = label.get(name);
-			return null != l ? l : labelPending.computeIfAbsent(name, Label::new);
+			return null != l ? l : labelPending.computeIfAbsent(name, k->new Label());
 		}
 
 		/**

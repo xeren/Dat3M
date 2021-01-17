@@ -428,8 +428,8 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 	@Override
 	public Object visitWhile_cmd(While_cmdContext ctx) {
 		ExprInterface expr = (ExprInterface) ctx.guard().expr().accept(this);
-		Label begin = new Label(".continue");
-		Label end = new Label(".break");
+		Label begin = new Label();
+		Label end = new Label();
 		thread.add(begin);
 		thread.add(new CondJump(new BExprUn(NOT, expr), end));
 		visitChildren(ctx.stmt_list());
@@ -441,10 +441,9 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 	@Override
 	public Object visitIf_cmd(If_cmdContext ctx) {
 		ExprInterface expr = (ExprInterface) ctx.guard().expr().accept(this);
-		Label exitMainBranch = thread.label(null);
-		Label exitElseBranch = thread.label(null);
-		CondJump ifEvent = new CondJump(new BExprUn(NOT, expr), exitMainBranch);
-		thread.add(ifEvent);
+		Label exitMainBranch = new Label();
+		Label exitElseBranch = new Label();
+		thread.jump(exitMainBranch, new BExprUn(NOT, expr));
 		visitChildren(ctx.stmt_list(0));
 		thread.add(new CondJump(new BConst(true), exitElseBranch));
 		thread.add(exitMainBranch);

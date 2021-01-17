@@ -125,7 +125,7 @@ public enum Arch {
 		@Override
 		public Load load(T t, Register r, IExpr a) {
 			Load l = t.load(r, a);
-			Label x = new Label(".mandatory");
+			Label x = new Label();
 			t.jump(x, new Atom(r, EQ, r));
 			t.add(x);
 			t.fence("Isync");

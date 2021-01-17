@@ -57,8 +57,8 @@ public class VisitorPorthos extends PorthosBaseVisitor<Object> implements Portho
 	@Override
 	public Object visitExpressionWhile(PorthosParser.ExpressionWhileContext ctx) {
 		ExprInterface expr = (ExprInterface)ctx.boolExpr().accept(this);
-		Label begin = new Label(".continue");
-		Label end = new Label(".break");
+		Label begin = new Label();
+		Label end = new Label();
 		thread.add(begin);
 		thread.jump(end, new BExprUn(BOpUn.NOT, expr));
 		ctx.expressionSequence().accept(this);
@@ -70,8 +70,8 @@ public class VisitorPorthos extends PorthosBaseVisitor<Object> implements Portho
 	@Override
 	public Object visitExpressionIf(PorthosParser.ExpressionIfContext ctx) {
 		ExprInterface expr = (ExprInterface)ctx.boolExpr().accept(this);
-		Label exitMainBranch = thread.label(null);
-		Label exitElseBranch = thread.label(null);
+		Label exitMainBranch = new Label();
+		Label exitElseBranch = new Label();
 		thread.jump(exitMainBranch, new BExprUn(BOpUn.NOT, expr));
 		ctx.expressionSequence(0).accept(this);
 		thread.jump(exitElseBranch, new BConst(true));

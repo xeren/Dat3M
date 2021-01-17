@@ -182,8 +182,8 @@ public class VisitorLitmusC
     @Override
     public Object visitWhileExpression(LitmusCParser.WhileExpressionContext ctx) {
         ExprInterface expr = (ExprInterface) ctx.re().accept(this);
-        Label begin = new Label(".continue");
-        Label end = new Label(".break");
+        Label begin = new Label();
+        Label end = new Label();
         thread.add(begin);
         thread.jump(end, new BExprUn(BOpUn.NOT, expr));
         for(LitmusCParser.ExpressionContext expressionContext : ctx.expression())
@@ -196,8 +196,8 @@ public class VisitorLitmusC
 	@Override
 	public Object visitIfExpression(LitmusCParser.IfExpressionContext ctx) {
 		ExprInterface expr = (ExprInterface) ctx.re().accept(this);
-		Label exitMainBranch = thread.label(null);
-		Label exitElseBranch = thread.label(null);
+		Label exitMainBranch = new Label();
+		Label exitElseBranch = new Label();
 		thread.jump(exitMainBranch, new BExprUn(BOpUn.NOT, expr));
 		for(LitmusCParser.ExpressionContext expressionContext : ctx.expression())
 			expressionContext.accept(this);
@@ -273,7 +273,7 @@ public class VisitorLitmusC
 		Register dummy = thread.register(null, register.getPrecision());
 		addFence();
 		Load load = thread.load(dummy, address, EType.RELAXED);
-		Label l = thread.label(null);
+		Label l = new Label();
 		thread.jump(l, new Atom(dummy, COpBin.EQ, cmp));
 		thread.store(load, new IExprBin(dummy, IOpBin.PLUS, value), EType.RELAXED);
 		thread.add(l);
@@ -309,7 +309,7 @@ public class VisitorLitmusC
 		if(EType.MB.equals(ctx.mo))
 			addFence();
 		Load load = thread.load(dummy, address, loadMO(ctx.mo));
-		Label l = thread.label(".skip");
+		Label l = new Label();
 		thread.jump(l, new Atom(dummy, COpBin.NEQ, cmp));
 		thread.store(load, value, storeMO(ctx.mo));
 		if(dummy != register)
