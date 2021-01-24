@@ -12,7 +12,6 @@ import com.dat3m.dartagnan.parsers.program.utils.ProgramBuilder;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Label;
 import com.dat3m.dartagnan.program.memory.Location;
-import com.dat3m.dartagnan.program.utils.EType;
 import org.antlr.v4.runtime.misc.Interval;
 
 public class VisitorPorthos extends PorthosBaseVisitor<Object> implements PorthosVisitor<Object> {
@@ -111,18 +110,18 @@ public class VisitorPorthos extends PorthosBaseVisitor<Object> implements Portho
 		Register register = thread.register(ctx.register().getText(), -1);
 		Location location = programBuilder.getOrErrorLocation(ctx.location().getText());
 		switch(ctx.MemoryOrder().getText()) {
-			case EType.RELAXED:
-			case EType.RELEASE:
+			case "_na":
+			case "_rx":
+			case "_rel":
 			thread.load(register, location.getAddress());
 			break;
-			case EType.CONSUME:
+			case "_con":
 			arch.loadConsume(thread, register, location.getAddress());
 			break;
-			case EType.ACQUIRE:
-			case EType.ACQ_REL:
+			case "_acq":
 			arch.loadAcquire(thread, register, location.getAddress());
 			break;
-			case EType.SC:
+			case "_sc":
 			arch.load(thread, register, location.getAddress());
 			break;
 			default:
@@ -136,16 +135,15 @@ public class VisitorPorthos extends PorthosBaseVisitor<Object> implements Portho
 		IExpr value = (IExpr)ctx.arithExpr().accept(this);
 		Location location = programBuilder.getOrErrorLocation(ctx.location().getText());
 		switch(ctx.MemoryOrder().getText()) {
-			case EType.RELAXED:
-			case EType.CONSUME:
-			case EType.ACQUIRE:
+			case "_na":
+			case "_con":
+			case "_acq":
 			thread.store(location.getAddress(), value);
 			break;
-			case EType.RELEASE:
-			case EType.ACQ_REL:
+			case "_rel":
 			arch.storeRelease(thread, location.getAddress(), value);
 			break;
-			case EType.SC:
+			case "_sc":
 			arch.store(thread, location.getAddress(), value);
 			break;
 			default:

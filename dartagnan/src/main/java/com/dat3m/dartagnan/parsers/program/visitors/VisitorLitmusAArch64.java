@@ -10,10 +10,12 @@ import com.dat3m.dartagnan.parsers.program.utils.AssertionHelper;
 import com.dat3m.dartagnan.parsers.program.utils.ParsingException;
 import com.dat3m.dartagnan.parsers.program.utils.ProgramBuilder;
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.program.event.Cmp;
 import com.dat3m.dartagnan.program.event.Label;
 import org.antlr.v4.runtime.misc.Interval;
+
+import static com.dat3m.dartagnan.parsers.program.Arch.ARM8;
+import static com.dat3m.dartagnan.program.utils.EType.EXCLUSIVE;
 
 public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 	implements LitmusAArch64Visitor<Object> {
@@ -145,7 +147,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 			address = visitOffset(ctx.offset(), address);
 		}
 		if(ctx.loadInstruction().acquire)
-			thread.load(register, address, EType.ACQUIRE);
+			ARM8.loadAcquire(thread, register, address);
 		else
 			thread.load(register, address);
 		return null;
@@ -159,9 +161,9 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 			address = visitOffset(ctx.offset(), address);
 		}
 		if(ctx.loadExclusiveInstruction().acquire)
-			thread.load(register, address, EType.EXCLUSIVE, EType.ACQUIRE);
+			ARM8.loadAcquire(thread, register, address).addFilters(EXCLUSIVE);
 		else
-			thread.load(register, address, EType.EXCLUSIVE);
+			thread.load(register, address).addFilters(EXCLUSIVE);
 		return null;
 	}
 
@@ -173,7 +175,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 			address = visitOffset(ctx.offset(), address);
 		}
 		if(ctx.storeInstruction().release)
-			thread.store(address, register, EType.RELEASE);
+			ARM8.storeRelease(thread, address, register);
 		else
 			thread.store(address, register);
 		return null;
@@ -190,9 +192,9 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 		Label next = new Label();
 		thread.jump(next, new Atom(statusReg, COpBin.NEQ, new IConst(0, -1)));
 		if(ctx.storeExclusiveInstruction().release)
-			thread.store(address, register, EType.EXCLUSIVE, EType.RELEASE);
+			ARM8.storeRelease(thread, address, register).addFilters(EXCLUSIVE);
 		else
-			thread.store(address, register, EType.EXCLUSIVE);
+			thread.store(address, register).addFilters(EXCLUSIVE);
 		thread.add(next);
 		return null;
 	}

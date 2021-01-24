@@ -526,7 +526,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 
 	@Override
 	public Object visitReturn_cmd(Return_cmdContext ctx) {
-		thread.add(new CondJump(new BConst(true), thread.label("END_OF_" + currentScope.getID())));
+		thread.jump(thread.label("END_OF_" + currentScope.getID()), new BConst(true));
 		return null;
 	}
 
@@ -545,7 +545,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 			}
 			BExpr c = (BExpr)ctx.proposition().expr().accept(this);
 			if(c != null) {
-				thread.add(new CondJump(new BExprUn(NOT, c), pairingLabel));
+				thread.jump(pairingLabel, new BExprUn(NOT, c));
 			}
 		}
 		return null;
@@ -565,11 +565,11 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 	public Object visitGoto_cmd(Goto_cmdContext ctx) {
 		String labelName = currentScope.getID() + ":" + ctx.idents().children.get(0).getText();
 		boolean loop = thread.hasLabel(labelName);
-		thread.add(new CondJump(new BConst(true), thread.label(labelName)));
+		thread.jump(thread.label(labelName), new BConst(true));
 		// If there is a loop, we return if the loop is not completely unrolled.
 		// SMACK will take care of another escape if the loop is completely unrolled.
 		if(loop) {
-			thread.add(new CondJump(new BConst(true), thread.label("END_OF_" + currentScope.getID())));
+			thread.jump(thread.label("END_OF_" + currentScope.getID()), new BConst(true));
 		}
 		if(ctx.idents().children.size() > 1) {
 			for(int index = 2; index < ctx.idents().children.size(); index = index + 2) {
