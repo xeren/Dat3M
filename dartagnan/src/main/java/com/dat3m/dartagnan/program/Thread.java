@@ -6,7 +6,6 @@ import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 
 import java.util.*;
-import java.util.stream.IntStream;
 
 public class Thread implements Iterable<Event> {
 
@@ -76,13 +75,6 @@ public class Thread implements Iterable<Event> {
 	Amount of backwards-jumps allowed for executions of this program.
 	*/
 	void unroll(int bound) {
-		if(Arrays.stream(original).noneMatch(e->e instanceof CondJump && e.getOId() < ((CondJump)e).getLabel().getOId())) {
-			unrolled = original;
-			cache = null;
-			return;
-		}
-		int start = original[0].getOId();
-		assert IntStream.range(0, original.length).allMatch(i->start+i==original[i].getOId());
 		Label[] e = new Label[original.length];
 		ArrayList<Event> r = new ArrayList<>(bound * e.length);
 		boolean reachable = true;
@@ -98,7 +90,11 @@ public class Thread implements Iterable<Event> {
 					if(original[i] instanceof CondJump) {
 						CondJump c = (CondJump) original[i];
 						Label l = c.getLabel();
-						int j = l.getOId() - start;
+						int j = 0;
+						while(l != original[j]) {
+							++j;
+							assert j < original.length;
+						}
 						assert l == original[j];
 						if(null == e[j])
 							e[j] = l.getCopy();
@@ -108,7 +104,7 @@ public class Thread implements Iterable<Event> {
 					else if(original[i] instanceof RMWStore) {
 						RMWStore s = (RMWStore) original[i];
 						//latest load event is a copy of s.loadEvent
-						assert null != latest && latest.getOId() == s.loadEvent.getOId();
+						assert null != latest;
 						r.add(new RMWStore(s, latest));
 					}
 					else {

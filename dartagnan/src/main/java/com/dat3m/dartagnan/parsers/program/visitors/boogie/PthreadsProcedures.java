@@ -1,7 +1,7 @@
 package com.dat3m.dartagnan.parsers.program.visitors.boogie;
 
 import static com.dat3m.dartagnan.expression.op.COpBin.EQ;
-import static com.dat3m.dartagnan.program.utils.EType.SC;
+import static com.dat3m.dartagnan.program.utils.EType.ASSERTION;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -137,9 +137,9 @@ public class PthreadsProcedures {
 		IExpr lockAddress = (IExpr) ctx.call_params().exprs().accept(visitor);
 		if(null == lockAddress)
 			return;
-		Load load = visitor.thread.load(register, lockAddress, SC);
+		Load load = visitor.arch.loadAcquire(visitor.thread, register, lockAddress);
 		visitor.thread.add(new Assume(new Atom(register, EQ, new IConst(0, -1))));
-		visitor.thread.store(load, new IConst(1, -1), SC);
+		visitor.thread.store(load, new IConst(1, -1));
 	}
 
 	private static void mutexUnlock(VisitorBoogie visitor, Call_cmdContext ctx) {
@@ -147,8 +147,8 @@ public class PthreadsProcedures {
 		IExpr lockAddress = (IExpr) ctx.call_params().exprs().accept(visitor);
 		if(null == lockAddress)
 			return;
-		Load load = visitor.thread.load(register, lockAddress, SC);
-		visitor.thread.add(new Assume(new Atom(register, EQ, new IConst(1, -1))));
-		visitor.thread.store(load, new IConst(0, -1), SC);
+		Load load = visitor.thread.load(register, lockAddress);
+		visitor.thread.local(register, new Atom(register, EQ, new IConst(0, -1))).addFilters(ASSERTION);
+		visitor.arch.storeRelease(visitor.thread, load, new IConst(0, -1));
 	}
 }

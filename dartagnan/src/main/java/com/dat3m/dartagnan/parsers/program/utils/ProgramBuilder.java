@@ -37,19 +37,9 @@ public class ProgramBuilder {
 			}
 		}
 		List<Thread> threadList = new ArrayList<>();
-		int o = 0;
-		for(T t : threads.values()){
-			if(t.event.isEmpty())
-				continue;
-			t.event.get(0).setOId(o++);
-			Thread thread = new Thread(t.name, t.id, t.event.toArray(new Event[0]));
-			int end = t.event.size() - 1;
-			for(int i = 0; i < end; i++) {
-				Event next = t.event.get(i + 1);
-				next.setOId(o++);
-			}
-			threadList.add(thread);
-		}
+		for(T t : threads.values())
+			if(!t.event.isEmpty())
+				threadList.add(new Thread(t.name, t.id, t.event.toArray(new Event[0])));
 		List<Init> initList = iValueMap.entrySet().stream().map(e->new Init(e.getKey(), e.getValue())).collect(Collectors.toList());
 		return new Program(memory, ImmutableSet.copyOf(locations.values()), threadList, initList, ass, assFilter);
 	}

@@ -7,7 +7,6 @@ import java.util.*;
 
 public abstract class Event implements Comparable<Event> {
 
-	private int oId = -1;        // ID after parsing (original)
 	private int uId = -1;        // ID after unrolling
 
 	private int cLine = -1;    // line in the original C program
@@ -21,18 +20,9 @@ public abstract class Event implements Comparable<Event> {
 	}
 
 	protected Event(Event other) {
-		this.oId = other.oId;
 		this.uId = other.uId;
 		this.cLine = other.cLine;
 		this.filter = other.filter;
-	}
-
-	public int getOId() {
-		return oId;
-	}
-
-	public void setOId(int id) {
-		this.oId = id;
 	}
 
 	public int getCId() {
@@ -105,8 +95,7 @@ public abstract class Event implements Comparable<Event> {
 
 	@Override
 	public int compareTo(Event e) {
-		int result = Integer.compare(uId, e.uId);
-		return 0 != result ? result : Integer.compare(oId, e.oId);
+		return Integer.compare(uId, e.uId);
 	}
 
 	@Override
