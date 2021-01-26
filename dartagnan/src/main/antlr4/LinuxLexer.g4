@@ -51,25 +51,15 @@ AtomicDecAndTest        :   'atomic_dec_and_test';
 
 AtomicAddUnless         :   'atomic_add_unless';
 
-AtomicCmpXchgRelaxed    :   'atomic_cmpxchg_relaxed';
-AtomicCmpXchgAcquire    :   'atomic_cmpxchg_acquire';
-AtomicCmpXchgRelease    :   'atomic_cmpxchg_release';
-AtomicCmpXchg           :   'atomic_cmpxchg';
+CmpXchgRelaxed          :   'cmpxchg_relaxed' | 'atomic_cmpxchg_relaxed';
+CmpXchgAcquire          :   'cmpxchg_acquire' | 'atomic_cmpxchg_acquire';
+CmpXchgRelease          :   'cmpxchg_release' | 'atomic_cmpxchg_release';
+CmpXchg                 :   'cmpxchg' | 'atomic_cmpxchg';
 
-CmpXchgRelaxed          :   'cmpxchg_relaxed';
-CmpXchgAcquire          :   'cmpxchg_acquire';
-CmpXchgRelease          :   'cmpxchg_release';
-CmpXchg                 :   'cmpxchg';
-
-AtomicXchgRelaxed       :   'atomic_xchg_relaxed';
-AtomicXchgAcquire       :   'atomic_xchg_acquire';
-AtomicXchgRelease       :   'atomic_xchg_release';
-AtomicXchg              :   'atomic_xchg';
-
-XchgRelaxed             :   'xchg_relaxed';
-XchgAcquire             :   'xchg_acquire';
-XchgRelease             :   'xchg_release';
-Xchg                    :   'xchg';
+XchgRelaxed             :   'xchg_relaxed' | 'atomic_xchg_relaxed';
+XchgAcquire             :   'xchg_acquire' | 'atomic_xchg_acquire';
+XchgRelease             :   'xchg_release' | 'atomic_xchg_release';
+Xchg                    :   'xchg' | 'atomic_xchg';
 
 AtomicReadAcquire       :   'atomic_read_acquire';
 AtomicRead              :   'atomic_read';
