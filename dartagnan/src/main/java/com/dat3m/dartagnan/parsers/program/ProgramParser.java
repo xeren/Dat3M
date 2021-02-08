@@ -73,6 +73,6 @@ public class ProgramParser {
 	}
 
 	private static boolean startsWithIgnoreCase(String string, String pattern) {
-		return string.substring(0, pattern.length()).equalsIgnoreCase(pattern);
+		return string.length() >= pattern.length() && string.substring(0, pattern.length()).equalsIgnoreCase(pattern);
 	}
 }
