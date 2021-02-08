@@ -3,12 +3,10 @@ package com.dat3m.dartagnan.program.event;
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.program.Register;
 import com.google.common.collect.ImmutableSet;
-import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 
 public class Assume extends Event implements RegReaderData {
 
-	private final ExprInterface condition;
+	public final ExprInterface condition;
 	private final ImmutableSet<Register> registers;
 
 	public Assume(ExprInterface e) {
@@ -38,14 +36,5 @@ public class Assume extends Event implements RegReaderData {
 	@Override
 	public Assume getCopy() {
 		return new Assume(this);
-	}
-
-    // Compilation
-    // -----------------------------------------------------------------------------------------------------------------
-
-	@Override
-	public void encode(Context c, RuleAcceptor out, BoolExpr in) {
-		super.encode(c, out, in);
-		out.add(c.mkEq(in, condition.toZ3Bool(this, c)));
 	}
 }

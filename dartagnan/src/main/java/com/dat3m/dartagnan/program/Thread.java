@@ -162,6 +162,10 @@ public class Thread implements Iterable<Event> {
 				message.computeIfAbsent(1 + e.getCId(), k->new LinkedList<>()).add(context.mkAnd(cf, context.mkNot(condition)));
 				cf = null;
 			}
+			else if(e instanceof Assume) {
+				message.computeIfAbsent(1 + e.getCId(), k->new LinkedList<>()).add(context.mkAnd(cf, ((Assume) e).condition.toZ3Bool(e, context)));
+				cf = null;
+			}
 		}
 		return context.mkAnd(out.toArray(new BoolExpr[0]));
 	}
