@@ -1,18 +1,17 @@
 package com.dat3m.dartagnan.wmm;
 
 import com.dat3m.dartagnan.utils.Settings;
-import com.dat3m.dartagnan.wmm.utils.*;
-import com.dat3m.dartagnan.wmm.utils.alias.AliasAnalysis;
-import com.google.common.collect.ImmutableSet;
-import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
 import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.relation.RecursiveRelation;
 import com.dat3m.dartagnan.wmm.relation.Relation;
-
+import com.dat3m.dartagnan.wmm.utils.*;
+import com.dat3m.dartagnan.wmm.utils.alias.AliasAnalysis;
+import com.google.common.collect.ImmutableSet;
+import com.microsoft.z3.BoolExpr;
+import com.microsoft.z3.Context;
 import java.util.*;
 
 /**
@@ -91,6 +90,7 @@ public class Wmm {
         }
 
         for(RecursiveGroup recursiveGroup : recursiveGroups){
+            recursiveGroup.initMinTupleSets();
             recursiveGroup.initMaxTupleSets();
         }
 

@@ -12,6 +12,11 @@ public class RelEmpty extends Relation {
     }
 
     @Override
+    public TupleSet getMinTupleSet() {
+        return minTupleSet = getMaxTupleSet();
+    }
+
+    @Override
     public TupleSet getMaxTupleSet(){
         if(maxTupleSet == null){
             maxTupleSet = new TupleSet();

@@ -1,13 +1,12 @@
 package com.dat3m.dartagnan.wmm.relation;
 
+import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.utils.Mode;
-import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
-import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
-
+import com.microsoft.z3.BoolExpr;
+import com.microsoft.z3.Context;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -30,6 +29,7 @@ public abstract class Relation {
 
     protected boolean isEncoded;
 
+    protected TupleSet minTupleSet;
     protected TupleSet maxTupleSet;
     protected TupleSet encodeTupleSet;
 
@@ -62,8 +62,15 @@ public abstract class Relation {
         this.ctx = ctx;
         this.settings = settings;
         this.maxTupleSet = null;
+        minTupleSet = null;
         this.isEncoded = false;
         encodeTupleSet = new TupleSet();
+    }
+
+    public abstract TupleSet getMinTupleSet();
+
+    public TupleSet getMinTupleSetRecursive(){
+        return getMinTupleSet();
     }
 
     public abstract TupleSet getMaxTupleSet();
@@ -148,14 +155,23 @@ public abstract class Relation {
 
     protected BoolExpr doEncode(){
         BoolExpr enc = encodeNegations();
+
+        TupleSet min = new TupleSet();
+        min.addAll(getMinTupleSet());
+        min.retainAll(encodeTupleSet);
+        encodeTupleSet.removeAll(min);
+        for(Tuple t : min)
+            enc = ctx.mkAnd(enc,ctx.mkEq(edge(getName(),t.getFirst(),t.getSecond(),ctx),ctx.mkAnd(t.getFirst().exec(),t.getSecond().exec())));
+
         if(!encodeTupleSet.isEmpty() || forceDoEncode){
-            if(settings.getMode() == Mode.KLEENE) {
-                return ctx.mkAnd(enc, encodeLFP());
-            } else if(settings.getMode() == Mode.IDL) {
-                return ctx.mkAnd(enc, encodeIDL());
-            }
-            return ctx.mkAnd(enc, encodeApprox());
+            if(settings.getMode() == Mode.KLEENE)
+                enc = ctx.mkAnd(enc, encodeLFP());
+            else if(settings.getMode() == Mode.IDL)
+                enc = ctx.mkAnd(enc, encodeIDL());
+            else
+                enc = ctx.mkAnd(enc, encodeApprox());
         }
+        encodeTupleSet.addAll(min);
         return enc;
     }
 

@@ -29,6 +29,14 @@ public class RelCo extends Relation {
     }
 
     @Override
+    public TupleSet getMinTupleSet() {
+        if(null == minTupleSet) {
+            minTupleSet = new TupleSet();
+        }
+        return minTupleSet;
+    }
+
+    @Override
     public TupleSet getMaxTupleSet(){
         if(maxTupleSet == null){
             maxTupleSet = new TupleSet();

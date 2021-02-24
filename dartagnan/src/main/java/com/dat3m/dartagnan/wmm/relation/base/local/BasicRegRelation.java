@@ -20,6 +20,26 @@ abstract class BasicRegRelation extends Relation {
     abstract Collection<Register> getRegisters(Event regReader);
 
     @Override
+    public TupleSet getMinTupleSet() {
+        if(null == minTupleSet) {
+            minTupleSet = new TupleSet();
+            for(Event r : getEvents()) {
+                for(Register register : getRegisters(r)) {
+                    Event latest = null;
+                    for(Event w : program.getCache().getRegWriterMap().getOrDefault(register, ImmutableList.of())) {
+                        if(r.getCId() <= w.getCId())
+                            break;
+                        latest = w;
+                    }
+                    if(null != latest)
+                        minTupleSet.add(new Tuple(latest, r));
+                }
+            }
+        }
+        return minTupleSet;
+    }
+
+    @Override
     public TupleSet getMaxTupleSet(){
         if(maxTupleSet == null) {
             maxTupleSet = new TupleSet();

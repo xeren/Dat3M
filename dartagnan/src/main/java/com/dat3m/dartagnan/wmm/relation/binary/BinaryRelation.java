@@ -41,6 +41,15 @@ public abstract class BinaryRelation extends Relation {
     protected abstract void compute(TupleSet out, TupleSet in1, TupleSet in2);
 
     @Override
+    public TupleSet getMinTupleSet() {
+        if(null == minTupleSet) {
+            minTupleSet = new TupleSet();
+            compute(minTupleSet,r1.getMinTupleSet(),r2.getMinTupleSet());
+        }
+        return minTupleSet;
+    }
+
+    @Override
     public TupleSet getMaxTupleSet() {
         if(null == maxTupleSet) {
             maxTupleSet = new TupleSet();

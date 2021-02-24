@@ -25,6 +25,11 @@ public class RelRf extends Relation {
     }
 
     @Override
+    public TupleSet getMinTupleSet() {
+        return minTupleSet = null != minTupleSet ? minTupleSet : new TupleSet();
+    }
+
+    @Override
     public TupleSet getMaxTupleSet(){
         if(maxTupleSet == null){
             maxTupleSet = new TupleSet();

@@ -70,6 +70,18 @@ public class RelTrans extends UnaryRelation {
     }
 
     @Override
+    public TupleSet getMinTupleSet() {
+        if(null == minTupleSet) {
+            minTupleSet = new TupleSet();
+            minTupleSet.addAll(r1.getMinTupleSet());
+            if(isClosedReflexively)
+                for(Event e : program.getCache().getEvents(FilterBasic.get(EType.ANY)))
+                    minTupleSet.add(new Tuple(e,e));
+        }
+        return minTupleSet;
+    }
+
+    @Override
     public void addEncodeTupleSet(TupleSet tuples){
         TupleSet activeSet = new TupleSet();
         activeSet.addAll(tuples);
@@ -95,11 +107,6 @@ public class RelTrans extends UnaryRelation {
 
             Event e1 = tuple.getFirst();
             Event e2 = tuple.getSecond();
-
-            if(isClosedReflexively && e1.getCId() == e2.getCId()) {
-                enc = ctx.mkAnd(Utils.edge(getName(),e1,e2,ctx));
-                continue;
-            }
 
             if(r1.getMaxTupleSet().contains(new Tuple(e1, e2))){
                 orClause = ctx.mkOr(orClause, Utils.edge(r1.getName(), e1, e2, ctx));
@@ -129,11 +136,6 @@ public class RelTrans extends UnaryRelation {
         for(Tuple tuple : fullEncodeTupleSet){
             Event e1 = tuple.getFirst();
             Event e2 = tuple.getSecond();
-
-            if(isClosedReflexively && e1.getCId() == e2.getCId()) {
-                enc = ctx.mkAnd(Utils.edge(getName(),e1,e2,ctx));
-                continue;
-            }
 
             BoolExpr orClause = ctx.mkFalse();
             for(Tuple tuple2 : fullEncodeTupleSet.getByFirst(e1)){
@@ -244,11 +246,6 @@ public class RelTrans extends UnaryRelation {
         for(Tuple tuple : encodeTupleSet){
             Event e1 = tuple.getFirst();
             Event e2 = tuple.getSecond();
-
-            if(isClosedReflexively && e1.getCId() == e2.getCId()) {
-                enc = ctx.mkAnd(Utils.edge(getName(),e1,e2,ctx));
-                continue;
-            }
 
             enc = ctx.mkAnd(enc, ctx.mkEq(
                     Utils.edge(getName(), e1, e2, ctx),

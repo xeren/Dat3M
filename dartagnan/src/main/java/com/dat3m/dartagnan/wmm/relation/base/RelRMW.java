@@ -32,9 +32,6 @@ public class RelRMW extends Relation {
             FilterBasic.get(EType.WRITE)
     );
 
-    // Set without exclusive events
-    private TupleSet baseMaxTupleSet;
-
     public RelRMW(){
         term = "rmw";
         forceDoEncode = true;
@@ -43,17 +40,22 @@ public class RelRMW extends Relation {
     @Override
     public void initialise(Program program, Context ctx, Settings settings){
         super.initialise(program, ctx, settings);
-        this.baseMaxTupleSet = null;
+    }
+
+    @Override
+    public TupleSet getMinTupleSet() {
+        getMaxTupleSet();
+        return minTupleSet;
     }
 
     @Override
     public TupleSet getMaxTupleSet(){
         if(maxTupleSet == null){
-            baseMaxTupleSet = new TupleSet();
+            minTupleSet = new TupleSet();
             FilterAbstract filter = FilterIntersection.get(FilterBasic.get(EType.RMW), FilterBasic.get(EType.WRITE));
             for(Event store : program.getCache().getEvents(filter)){
             	if(store instanceof RMWStore) {
-                    baseMaxTupleSet.add(new Tuple(((RMWStore)store).getLoadEvent(), store));            		
+                    minTupleSet.add(new Tuple(((RMWStore)store).getLoadEvent(), store));
             	}
             }
 
@@ -62,14 +64,14 @@ public class RelRMW extends Relation {
             	if(e instanceof Load) {
             		Event next = e.getSuccessor();
             		Event nnext = next.getSuccessor();
-            		baseMaxTupleSet.add(new Tuple(e, next));
-            		baseMaxTupleSet.add(new Tuple(e, nnext));
-            		baseMaxTupleSet.add(new Tuple(next, nnext));
+                    minTupleSet.add(new Tuple(e, next));
+                    minTupleSet.add(new Tuple(e, nnext));
+                    minTupleSet.add(new Tuple(next, nnext));
             	}
             }
 
             maxTupleSet = new TupleSet();
-            maxTupleSet.addAll(baseMaxTupleSet);
+            maxTupleSet.addAll(minTupleSet);
 
             for(Thread thread : program.getThreads()){
                 for(Event load : thread.getCache().getEvents(loadFilter)){
@@ -80,18 +82,13 @@ public class RelRMW extends Relation {
                     }
                 }
             }
-        }       	
+        }
         return maxTupleSet;
     }
 
     @Override
     protected BoolExpr encodeApprox() {
-        // Encode base (not exclusive pairs) RMW
         BoolExpr enc = ctx.mkTrue();
-        for(Tuple tuple : baseMaxTupleSet) {
-            BoolExpr rel = edge(getName(), tuple.getFirst(), tuple.getSecond(), ctx);
-            enc = ctx.mkAnd(enc, ctx.mkEq(rel, ctx.mkAnd(tuple.getFirst().exec(), tuple.getSecond().exec())));
-        }
 
         // Encode RMW for exclusive pairs
         BoolExpr unpredictable = ctx.mkFalse();

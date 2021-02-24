@@ -1,10 +1,9 @@
 package com.dat3m.dartagnan.wmm.utils;
 
-import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.wmm.relation.RecursiveRelation;
 import com.dat3m.dartagnan.wmm.relation.Relation;
-
+import com.microsoft.z3.BoolExpr;
+import com.microsoft.z3.Context;
 import java.util.*;
 
 public class RecursiveGroup {
@@ -46,6 +45,20 @@ public class RecursiveGroup {
         }
 
         return enc;
+    }
+
+    public void initMinTupleSets(){
+        boolean changed = true;
+        while(changed){
+            changed = false;
+            for(RecursiveRelation relation : relations){
+                relation.setDoRecurse();
+                int oldSize = relation.getMinTupleSet().size();
+                if(oldSize != relation.getMinTupleSetRecursive().size()){
+                    changed = true;
+                }
+            }
+        }
     }
 
     public void initMaxTupleSets(){

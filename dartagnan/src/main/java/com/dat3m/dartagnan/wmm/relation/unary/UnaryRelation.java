@@ -34,6 +34,15 @@ public abstract class UnaryRelation extends Relation {
     protected abstract void compute(TupleSet out, TupleSet in);
 
     @Override
+    public TupleSet getMinTupleSet() {
+        if(null == minTupleSet) {
+            minTupleSet = new TupleSet();
+            compute(minTupleSet,r1.getMinTupleSet());
+        }
+        return minTupleSet;
+    }
+
+    @Override
     public TupleSet getMaxTupleSet() {
         if(null == maxTupleSet){
             maxTupleSet = new TupleSet();

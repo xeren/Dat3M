@@ -1,12 +1,12 @@
 package com.dat3m.dartagnan.wmm.relation;
 
-import com.dat3m.dartagnan.utils.Settings;
-import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.Program;
+import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import com.microsoft.z3.BoolExpr;
+import com.microsoft.z3.Context;
 
 /**
  *
@@ -44,6 +44,23 @@ public class RecursiveRelation extends Relation {
 
     public void setDoRecurse(){
         doRecurse = true;
+    }
+
+    @Override
+    public TupleSet getMinTupleSet() {
+        if(minTupleSet == null)
+            minTupleSet = new TupleSet();
+        return minTupleSet;
+    }
+
+    @Override
+    public TupleSet getMinTupleSetRecursive(){
+        if(doRecurse){
+            doRecurse = false;
+            minTupleSet = r1.getMaxTupleSetRecursive();
+            return minTupleSet;
+        }
+        return getMinTupleSet();
     }
 
     @Override

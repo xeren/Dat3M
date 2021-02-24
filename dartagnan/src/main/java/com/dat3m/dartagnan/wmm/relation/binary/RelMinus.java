@@ -44,6 +44,17 @@ public class RelMinus extends BinaryRelation {
     }
 
     @Override
+    public TupleSet getMinTupleSet() {
+        if(null == minTupleSet) {
+            minTupleSet = new TupleSet();
+            minTupleSet.addAll(r1.getMinTupleSet());
+            r2.getMinTupleSet();
+            minTupleSet.removeAll(r2.getMaxTupleSet());
+        }
+        return minTupleSet;
+    }
+
+    @Override
     protected BoolExpr encodeApprox() {
         BoolExpr enc = ctx.mkTrue();
         for(Tuple tuple : encodeTupleSet){
