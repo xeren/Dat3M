@@ -1,7 +1,9 @@
 package com.dat3m.dartagnan.wmm.relation.unary;
 
+import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.program.Program;
+import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.event.Event;
@@ -24,20 +26,30 @@ import static com.dat3m.dartagnan.wmm.utils.Utils.intCount;
  */
 public class RelTrans extends UnaryRelation {
 
-    Map<Event, Set<Event>> transitiveReachabilityMap;
     private TupleSet fullEncodeTupleSet;
+    protected final boolean isClosedReflexively;
 
     public static String makeTerm(Relation r1){
         return r1.getName() + "^+";
     }
 
-    public RelTrans(Relation r1) {
+    protected RelTrans(boolean ref, Relation r1) {
         super(r1);
+        isClosedReflexively = ref;
+    }
+
+    protected RelTrans(boolean ref, Relation r1, String name) {
+        super(r1,name);
+        isClosedReflexively = ref;
+    }
+
+    public RelTrans(Relation r1) {
+        this(false,r1);
         term = makeTerm(r1);
     }
 
     public RelTrans(Relation r1, String name) {
-        super(r1, name);
+        this(false,r1,name);
         term = makeTerm(r1);
     }
 
@@ -45,21 +57,16 @@ public class RelTrans extends UnaryRelation {
     public void initialise(Program program, Context ctx, Settings settings){
         super.initialise(program, ctx, settings);
         fullEncodeTupleSet = new TupleSet();
-        transitiveReachabilityMap = null;
     }
 
     @Override
-    public TupleSet getMaxTupleSet(){
-        if(maxTupleSet == null){
-            transitiveReachabilityMap = r1.getMaxTupleSet().transMap();
-            maxTupleSet = new TupleSet();
-            for(Event e1 : transitiveReachabilityMap.keySet()){
-                for(Event e2 : transitiveReachabilityMap.get(e1)){
-                    maxTupleSet.add(new Tuple(e1, e2));
-                }
-            }
-        }
-        return maxTupleSet;
+    protected void compute(TupleSet s, TupleSet s1) {
+        for(Map.Entry<Event,Set<Event>> e : s1.transMap().entrySet())
+            for(Event e2 : e.getValue())
+                s.add(new Tuple(e.getKey(),e2));
+        if(isClosedReflexively)
+            for(Event e : program.getCache().getEvents(FilterBasic.get(EType.ANY)))
+                s.add(new Tuple(e,e));
     }
 
     @Override
@@ -73,6 +80,8 @@ public class RelTrans extends UnaryRelation {
         TupleSet fullActiveSet = getFullEncodeTupleSet(activeSet);
         if(fullEncodeTupleSet.addAll(fullActiveSet)){
             fullActiveSet.retainAll(r1.getMaxTupleSet());
+            if(isClosedReflexively)
+                fullActiveSet.removeIf(t->t.getFirst().getCId()==t.getSecond().getCId());
             r1.addEncodeTupleSet(fullActiveSet);
         }
     }
@@ -87,12 +96,18 @@ public class RelTrans extends UnaryRelation {
             Event e1 = tuple.getFirst();
             Event e2 = tuple.getSecond();
 
+            if(isClosedReflexively && e1.getCId() == e2.getCId()) {
+                enc = ctx.mkAnd(Utils.edge(getName(),e1,e2,ctx));
+                continue;
+            }
+
             if(r1.getMaxTupleSet().contains(new Tuple(e1, e2))){
                 orClause = ctx.mkOr(orClause, Utils.edge(r1.getName(), e1, e2, ctx));
             }
 
-            for(Event e3 : transitiveReachabilityMap.get(e1)){
-                if(e3.getCId() != e1.getCId() && e3.getCId() != e2.getCId() && transitiveReachabilityMap.get(e3).contains(e2)){
+            for(Tuple t : maxTupleSet.getByFirst(e1)){
+                Event e3 = t.getSecond();
+                if(e3.getCId() != e1.getCId() && e3.getCId() != e2.getCId() && maxTupleSet.contains(new Tuple(e3,e2))){
                     orClause = ctx.mkOr(orClause, ctx.mkAnd(Utils.edge(this.getName(), e1, e3, ctx), Utils.edge(this.getName(), e3, e2, ctx)));
                 }
             }
@@ -115,17 +130,20 @@ public class RelTrans extends UnaryRelation {
             Event e1 = tuple.getFirst();
             Event e2 = tuple.getSecond();
 
+            if(isClosedReflexively && e1.getCId() == e2.getCId()) {
+                enc = ctx.mkAnd(Utils.edge(getName(),e1,e2,ctx));
+                continue;
+            }
+
             BoolExpr orClause = ctx.mkFalse();
             for(Tuple tuple2 : fullEncodeTupleSet.getByFirst(e1)){
-                if (!tuple2.equals(tuple)) {
-                    Event e3 = tuple2.getSecond();
-                    if (transitiveReachabilityMap.get(e3).contains(e2)) {
-                        orClause = ctx.mkOr(orClause, ctx.mkAnd(
-                                edge(this.getName(), e1, e3, ctx),
-                                edge(this.getName(), e3, e2, ctx),
-                                ctx.mkGt(intCount(this.idlConcatName(), e1, e2, ctx), intCount(this.getName(), e1, e3, ctx)),
-                                ctx.mkGt(intCount(this.idlConcatName(), e1, e2, ctx), intCount(this.getName(), e3, e2, ctx))));
-                    }
+                Event e3 = tuple2.getSecond();
+                if (e1.getCId() != e3.getCId() && e3.getCId() != e2.getCId() && maxTupleSet.contains(new Tuple(e3,e2))) {
+                    orClause = ctx.mkOr(orClause, ctx.mkAnd(
+                            edge(this.getName(), e1, e3, ctx),
+                            edge(this.getName(), e3, e2, ctx),
+                            ctx.mkGt(intCount(this.idlConcatName(), e1, e2, ctx), intCount(this.getName(), e1, e3, ctx)),
+                            ctx.mkGt(intCount(this.idlConcatName(), e1, e2, ctx), intCount(this.getName(), e3, e2, ctx))));
                 }
             }
 
@@ -133,13 +151,11 @@ public class RelTrans extends UnaryRelation {
 
             orClause = ctx.mkFalse();
             for(Tuple tuple2 : fullEncodeTupleSet.getByFirst(e1)){
-                if (!tuple2.equals(tuple)) {
-                    Event e3 = tuple2.getSecond();
-                    if (transitiveReachabilityMap.get(e3).contains(e2)) {
-                        orClause = ctx.mkOr(orClause, ctx.mkAnd(
-                                edge(this.getName(), e1, e3, ctx),
-                                edge(this.getName(), e3, e2, ctx)));
-                    }
+                Event e3 = tuple2.getSecond();
+                if (e1.getCId() != e3.getCId() && e3.getCId() != e2.getCId() && maxTupleSet.contains(new Tuple(e3,e2))) {
+                    orClause = ctx.mkOr(orClause, ctx.mkAnd(
+                            edge(this.getName(), e1, e3, ctx),
+                            edge(this.getName(), e3, e2, ctx)));
                 }
             }
 
@@ -226,9 +242,17 @@ public class RelTrans extends UnaryRelation {
 
         // Encode that transitive relation equals the relation at the last iteration
         for(Tuple tuple : encodeTupleSet){
+            Event e1 = tuple.getFirst();
+            Event e2 = tuple.getSecond();
+
+            if(isClosedReflexively && e1.getCId() == e2.getCId()) {
+                enc = ctx.mkAnd(Utils.edge(getName(),e1,e2,ctx));
+                continue;
+            }
+
             enc = ctx.mkAnd(enc, ctx.mkEq(
-                    Utils.edge(getName(), tuple.getFirst(), tuple.getSecond(), ctx),
-                    Utils.edge(r1.getName() + "_" + iteration, tuple.getFirst(), tuple.getSecond(), ctx)
+                    Utils.edge(getName(), e1, e2, ctx),
+                    Utils.edge(r1.getName() + "_" + iteration, e1, e2, ctx)
             ));
         }
 
@@ -249,9 +273,9 @@ public class RelTrans extends UnaryRelation {
             for (Tuple tuple : processNow) {
                 Event e1 = tuple.getFirst();
                 Event e2 = tuple.getSecond();
-                for (Event e3 : transitiveReachabilityMap.get(e1)) {
-                    if (e3.getCId() != e1.getCId() && e3.getCId() != e2.getCId()
-                            && transitiveReachabilityMap.get(e3).contains(e2)) {
+                for (Tuple t : maxTupleSet.getByFirst(e1)) {
+                    Event e3 = t.getSecond();
+                    if (e3.getCId() != e1.getCId() && e3.getCId() != e2.getCId() && maxTupleSet.contains(new Tuple(e3,e2))) {
                         processNext.add(new Tuple(e1, e3));
                         processNext.add(new Tuple(e3, e2));
                     }

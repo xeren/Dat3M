@@ -31,14 +31,9 @@ public class RelInverse extends UnaryRelation {
     }
 
     @Override
-    public TupleSet getMaxTupleSet(){
-        if(maxTupleSet == null){
-            maxTupleSet = new TupleSet();
-            for(Tuple pair : r1.getMaxTupleSet()){
-                maxTupleSet.add(new Tuple(pair.getSecond(), pair.getFirst()));
-            }
-        }
-        return maxTupleSet;
+    protected void compute(TupleSet s, TupleSet s1) {
+        for(Tuple t : s1)
+            s.add(new Tuple(t.getSecond(),t.getFirst()));
     }
 
     @Override
