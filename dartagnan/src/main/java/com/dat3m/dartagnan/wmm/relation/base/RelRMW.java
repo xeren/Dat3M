@@ -11,7 +11,7 @@ import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.filter.FilterIntersection;
-import com.dat3m.dartagnan.wmm.relation.base.stat.StaticRelation;
+import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Flag;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -20,7 +20,7 @@ import com.microsoft.z3.Context;
 
 import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 
-public class RelRMW extends StaticRelation {
+public class RelRMW extends Relation {
 
     private final FilterAbstract loadFilter  = FilterIntersection.get(
             FilterBasic.get(EType.EXCL),
@@ -87,10 +87,11 @@ public class RelRMW extends StaticRelation {
     @Override
     protected BoolExpr encodeApprox() {
         // Encode base (not exclusive pairs) RMW
-        TupleSet origEncodeTupleSet = encodeTupleSet;
-        encodeTupleSet = baseMaxTupleSet;
-        BoolExpr enc = super.encodeApprox();
-        encodeTupleSet = origEncodeTupleSet;
+        BoolExpr enc = ctx.mkTrue();
+        for(Tuple tuple : baseMaxTupleSet) {
+            BoolExpr rel = edge(getName(), tuple.getFirst(), tuple.getSecond(), ctx);
+            enc = ctx.mkAnd(enc, ctx.mkEq(rel, ctx.mkAnd(tuple.getFirst().exec(), tuple.getSecond().exec())));
+        }
 
         // Encode RMW for exclusive pairs
         BoolExpr unpredictable = ctx.mkFalse();

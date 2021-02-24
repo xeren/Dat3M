@@ -5,10 +5,7 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
-import com.dat3m.dartagnan.wmm.utils.TupleSet;
-import com.microsoft.z3.BoolExpr;
-
-import java.util.*;
+import java.util.Collection;
 
 public class RelIdd extends BasicRegRelation {
 
@@ -18,16 +15,8 @@ public class RelIdd extends BasicRegRelation {
     }
 
     @Override
-    public TupleSet getMaxTupleSet(){
-        if(maxTupleSet == null){
-            mkMaxTupleSet(program.getCache().getEvents(FilterBasic.get(EType.REG_READER)));
-        }
-        return maxTupleSet;
-    }
-
-    @Override
-    protected BoolExpr encodeApprox() {
-        return doEncodeApprox(program.getCache().getEvents(FilterBasic.get(EType.REG_READER)));
+    Collection<Event> getEvents() {
+        return program.getCache().getEvents(FilterBasic.get(EType.REG_READER));
     }
 
     @Override

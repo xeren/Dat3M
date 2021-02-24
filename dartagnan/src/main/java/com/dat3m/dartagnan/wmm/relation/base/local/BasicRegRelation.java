@@ -1,43 +1,49 @@
 package com.dat3m.dartagnan.wmm.relation.base.local;
 
 import com.dat3m.dartagnan.expression.IConst;
-import com.dat3m.dartagnan.wmm.relation.base.stat.StaticRelation;
+import com.dat3m.dartagnan.program.Register;
+import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.program.event.utils.RegWriter;
+import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.microsoft.z3.BoolExpr;
-import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.utils.RegWriter;
-
 import java.util.*;
 
-abstract class BasicRegRelation extends StaticRelation {
+abstract class BasicRegRelation extends Relation {
+
+    abstract Collection<Event> getEvents();
 
     abstract Collection<Register> getRegisters(Event regReader);
 
-    void mkMaxTupleSet(Collection<Event> regReaders){
-        maxTupleSet = new TupleSet();
-        ImmutableMap<Register, ImmutableList<Event>> regWriterMap = program.getCache().getRegWriterMap();
-        for(Event regReader : regReaders){
-            for(Register register : getRegisters(regReader)){
-                for(Event regWriter : regWriterMap.getOrDefault(register, ImmutableList.of())){
-                    if(regWriter.getCId() >= regReader.getCId()){
-                        break;
+    @Override
+    public TupleSet getMaxTupleSet(){
+        if(maxTupleSet == null) {
+            maxTupleSet = new TupleSet();
+            ImmutableMap<Register, ImmutableList<Event>> regWriterMap = program.getCache().getRegWriterMap();
+            for(Event regReader : getEvents()){
+                for(Register register : getRegisters(regReader)){
+                    for(Event regWriter : regWriterMap.getOrDefault(register, ImmutableList.of())){
+                        if(regWriter.getCId() >= regReader.getCId()){
+                            break;
+                        }
+                        maxTupleSet.add(new Tuple(regWriter, regReader));
                     }
-                    maxTupleSet.add(new Tuple(regWriter, regReader));
                 }
             }
         }
+        return maxTupleSet;
     }
 
-    BoolExpr doEncodeApprox(Collection<Event> regReaders) {
+    @Override
+    protected BoolExpr encodeApprox() {
         BoolExpr enc = ctx.mkTrue();
         ImmutableMap<Register, ImmutableList<Event>> regWriterMap = program.getCache().getRegWriterMap();
 
-        for (Event regReader : regReaders) {
+        for (Event regReader : getEvents()) {
             for (Register register : getRegisters(regReader)) {
                 List<Event> writers = regWriterMap.getOrDefault(register, ImmutableList.of());
                 if(writers.isEmpty() || writers.get(0).getCId() >= regReader.getCId()){

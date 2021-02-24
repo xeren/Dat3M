@@ -4,14 +4,14 @@ import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.arch.linux.utils.EType;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
-import com.dat3m.dartagnan.wmm.relation.base.stat.StaticRelation;
+import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.BoolExpr;
 
 import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 
-public class RelCrit extends StaticRelation {
+public class RelCrit extends Relation {
 
     public RelCrit(){
         term = "crit";
