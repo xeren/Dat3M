@@ -23,6 +23,9 @@ public class RelLoc extends Relation {
     public TupleSet getMinTupleSet() {
         if(null == minTupleSet) {
             minTupleSet = new TupleSet();
+            for(Event x : program.getCache().getEvents(FilterBasic.get(EType.MEMORY)))
+                for(Event y : program.location(x))
+                    minTupleSet.add(new Tuple(x,y));
         }
         return minTupleSet;
     }

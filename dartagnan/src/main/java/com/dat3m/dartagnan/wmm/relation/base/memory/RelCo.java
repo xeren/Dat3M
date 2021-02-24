@@ -32,6 +32,10 @@ public class RelCo extends Relation {
     public TupleSet getMinTupleSet() {
         if(null == minTupleSet) {
             minTupleSet = new TupleSet();
+            for(Event i: program.getCache().getEvents(FilterBasic.get(EType.INIT)))
+                for(Event w: program.location(i))
+                    if(w.is(EType.WRITE) && !w.is(EType.INIT))
+                        minTupleSet.add(new Tuple(i,w));
         }
         return minTupleSet;
     }

@@ -1,5 +1,16 @@
 package com.dat3m.dartagnan.program;
 
+import com.dat3m.dartagnan.asserts.AbstractAssert;
+import com.dat3m.dartagnan.asserts.AssertCompositeOr;
+import com.dat3m.dartagnan.asserts.AssertInline;
+import com.dat3m.dartagnan.asserts.AssertTrue;
+import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.program.event.Local;
+import com.dat3m.dartagnan.program.event.MemEvent;
+import com.dat3m.dartagnan.program.event.utils.RegWriter;
+import com.dat3m.dartagnan.program.memory.Address;
+import com.dat3m.dartagnan.program.memory.Location;
+import com.dat3m.dartagnan.program.memory.Memory;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.program.utils.ThreadCache;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
@@ -7,16 +18,6 @@ import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
-import com.dat3m.dartagnan.asserts.AbstractAssert;
-import com.dat3m.dartagnan.asserts.AssertCompositeOr;
-import com.dat3m.dartagnan.asserts.AssertInline;
-import com.dat3m.dartagnan.asserts.AssertTrue;
-import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.Local;
-import com.dat3m.dartagnan.program.event.utils.RegWriter;
-import com.dat3m.dartagnan.program.memory.Location;
-import com.dat3m.dartagnan.program.memory.Memory;
-
 import java.util.*;
 
 public class Program {
@@ -225,5 +226,16 @@ public class Program {
         	enc = ctx.mkAnd(enc, ctx.mkNot(e.exec()));
         }
         return enc;
+    }
+
+    /**
+    Under-approximates event pairs accessing same location.
+    @param event
+    Some event of this program.
+    @return
+    Set of events for which if both them and {@code event} are executed, they access the same location.
+    */
+    public Set<Event> location(Event event) {
+        return ImmutableSet.of(event);
     }
 }
