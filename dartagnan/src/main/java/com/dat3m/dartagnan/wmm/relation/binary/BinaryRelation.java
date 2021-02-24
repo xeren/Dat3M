@@ -29,6 +29,35 @@ public abstract class BinaryRelation extends Relation {
         this.r2 = r2;
     }
 
+    /**
+    Updates the tuple set.
+    @param out
+    Associated with this relation.
+    @param in1
+    Associated with the first direct child.
+    @param in2
+    Associated with the second direct child.
+    */
+    protected abstract void compute(TupleSet out, TupleSet in1, TupleSet in2);
+
+    @Override
+    public TupleSet getMaxTupleSet() {
+        if(null == maxTupleSet) {
+            maxTupleSet = new TupleSet();
+            compute(maxTupleSet, r1.getMaxTupleSet(),r2.getMaxTupleSet());
+        }
+        return maxTupleSet;
+    }
+
+    @Override
+    public TupleSet getMaxTupleSetRecursive() {
+        if(recursiveGroupId > 0 && null != maxTupleSet) {
+            compute(maxTupleSet, r1.getMaxTupleSetRecursive(), r2.getMaxTupleSetRecursive());
+            return maxTupleSet;
+        }
+        return getMaxTupleSet();
+    }
+
     @Override
     public int updateRecursiveGroupId(int parentId){
         if(recursiveGroupId == 0 || forceUpdateRecursiveGroupId){

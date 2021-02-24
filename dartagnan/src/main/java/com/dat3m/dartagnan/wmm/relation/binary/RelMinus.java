@@ -39,22 +39,8 @@ public class RelMinus extends BinaryRelation {
     }
 
     @Override
-    public TupleSet getMaxTupleSet(){
-        if(maxTupleSet == null){
-            maxTupleSet = new TupleSet();
-            maxTupleSet.addAll(r1.getMaxTupleSet());
-            r2.getMaxTupleSet();
-        }
-        return maxTupleSet;
-    }
-
-    @Override
-    public TupleSet getMaxTupleSetRecursive(){
-        if(recursiveGroupId > 0 && maxTupleSet != null){
-            maxTupleSet.addAll(r1.getMaxTupleSetRecursive());
-            return maxTupleSet;
-        }
-        return getMaxTupleSet();
+    protected void compute(TupleSet s, TupleSet s1, TupleSet s2) {
+        s.addAll(s1);
     }
 
     @Override

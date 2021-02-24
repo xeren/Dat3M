@@ -33,33 +33,10 @@ public class RelComposition extends BinaryRelation {
     }
 
     @Override
-    public TupleSet getMaxTupleSet(){
-        if(maxTupleSet == null){
-            maxTupleSet = new TupleSet();
-            TupleSet set1 = r1.getMaxTupleSet();
-            TupleSet set2 = r2.getMaxTupleSet();
-            for(Tuple rel1 : set1){
-                for(Tuple rel2 : set2.getByFirst(rel1.getSecond())){
-                    maxTupleSet.add(new Tuple(rel1.getFirst(), rel2.getSecond()));
-                }
-            }
-        }
-        return maxTupleSet;
-    }
-
-    @Override
-    public TupleSet getMaxTupleSetRecursive(){
-        if(recursiveGroupId > 0 && maxTupleSet != null){
-            TupleSet set1 = r1.getMaxTupleSetRecursive();
-            TupleSet set2 = r2.getMaxTupleSetRecursive();
-            for(Tuple rel1 : set1){
-                for(Tuple rel2 : set2.getByFirst(rel1.getSecond())){
-                    maxTupleSet.add(new Tuple(rel1.getFirst(), rel2.getSecond()));
-                }
-            }
-            return maxTupleSet;
-        }
-        return getMaxTupleSet();
+    protected void compute(TupleSet s, TupleSet s1, TupleSet s2) {
+        for(Tuple t1 : s1)
+            for(Tuple t2 : s2.getByFirst(t1.getSecond()))
+                s.add(new Tuple(t1.getFirst(), t2.getSecond()));
     }
 
     @Override
