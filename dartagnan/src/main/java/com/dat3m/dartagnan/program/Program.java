@@ -15,6 +15,8 @@ import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.program.utils.ThreadCache;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.utils.Arch;
+import com.dat3m.dartagnan.wmm.utils.alias.Alias;
+import com.dat3m.dartagnan.wmm.utils.alias.AliasAnalysis;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
@@ -30,6 +32,7 @@ public class Program {
 	private Memory memory;
 	private Arch arch;
     private ThreadCache cache;
+    private AliasAnalysis analysis;
     private boolean isUnrolled;
     private boolean isCompiled;
 
@@ -184,6 +187,15 @@ public class Program {
 
     // Encoding
     // -----------------------------------------------------------------------------------------------------------------
+
+    /**
+    Relates events with the addresses they may access.
+    @param alias
+    Depth of analysis to perform.
+    */
+    public void analyse(Alias alias) {
+        analysis = new AliasAnalysis(this,alias);
+    }
 
     public BoolExpr encodeCF(Context ctx) {
         for(Event e : getEvents()){

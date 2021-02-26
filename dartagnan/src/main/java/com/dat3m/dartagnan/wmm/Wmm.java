@@ -8,7 +8,6 @@ import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.relation.RecursiveRelation;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.*;
-import com.dat3m.dartagnan.wmm.utils.alias.AliasAnalysis;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
@@ -67,7 +66,7 @@ public class Wmm {
 
     public BoolExpr encode(Program program, Context ctx, Settings settings) {
         this.program = program;
-        new AliasAnalysis().calculateLocationSets(this.program, settings.getAlias());
+        program.analyse(settings.getAlias());
 
         for(String relName : baseRelations){
             relationRepository.getRelation(relName);
