@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan.utils;
 
 import static com.dat3m.dartagnan.utils.Result.PASS;
-import static com.dat3m.dartagnan.wmm.utils.Utils.intVar;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -27,19 +26,22 @@ import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.program.memory.Address;
+import com.dat3m.dartagnan.wmm.axiom.Acyclic;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.Expr;
 import com.microsoft.z3.Model;
 import com.microsoft.z3.Solver;
 
 public class Witness {
-	
+
+	private final Acyclic hb;
 	private Program program;
 	private String path;
 	
 	private Map<Event, Integer> eventThreadMap = new HashMap<>();
 
-	public Witness(Program program, String path) {
+	public Witness(Acyclic hb, Program program, String path) {
+		this.hb = hb;
 		this.program = program;
 		this.path = path;
 	}
@@ -168,14 +170,12 @@ public class Witness {
 		Model model = solver.getModel();
 		List<Event> exec = new ArrayList<Event>();
 		Map<Integer, Set<Event>> map = new HashMap<Integer, Set<Event>>();
-        for(Event e : program.getEvents()) {
-        	Expr var = model.getConstInterp(intVar("hb", e, ctx));
-        	if(model.getConstInterp(e.exec()).isTrue() && e.getCLine() > -1 && var != null) {
-        		int key = Integer.parseInt(var.toString());
-				if(!map.containsKey(key)) {
-					map.put(key, new HashSet<Event>());
+		if(null != hb) {
+			for(Event e : program.getEvents()) {
+				Expr var = model.getConstInterp(hb.intVar(e, ctx));
+				if(model.getConstInterp(e.exec()).isTrue() && e.getCLine() > -1 && var != null) {
+					map.computeIfAbsent(Integer.parseInt(var.toString()),k->new HashSet<>()).add(e);
 				}
-        		map.get(key).add(e);
         	}
         }
         if(map.keySet().isEmpty()) {

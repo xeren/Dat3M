@@ -11,14 +11,9 @@ import com.dat3m.dartagnan.wmm.filter.FilterMinus;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
-import com.microsoft.z3.BitVecExpr;
-import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Expr;
+import com.microsoft.z3.*;
 import java.util.List;
 import java.util.ListIterator;
-
-import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
-import static com.dat3m.dartagnan.wmm.utils.Utils.intVar;
 
 public class RelCo extends Relation {
 
@@ -26,6 +21,10 @@ public class RelCo extends Relation {
         term = "co";
         forceDoEncode = true;
     }
+
+	public IntExpr intVar(Event event) {
+		return ctx.mkIntConst("co "+event.getCId());
+	}
 
     @Override
     public TupleSet getMaxTupleSet(){
@@ -86,16 +85,16 @@ public class RelCo extends Relation {
 			assert x.is(EType.WRITE);
 			Event y = t.getSecond();
 			assert y.is(EType.WRITE) && !y.is(EType.INIT);
-			BoolExpr edge = edge("co",x,y,ctx);
+			BoolExpr edge = edge(x,y);
 			BoolExpr order;
 			if(maxTupleSet.contains(new Tuple(y,x))){
 				assert!x.is(EType.INIT);
-				order = ctx.mkLt(intVar("co",x,ctx),intVar("co",y,ctx));
+				order = ctx.mkLt(intVar(x),intVar(y));
 			}
 			else{
 				order = ctx.mkTrue();
 				if(!x.is(EType.INIT))
-					enc = ctx.mkAnd(enc,ctx.mkImplies(edge,ctx.mkLt(intVar("co",x,ctx),intVar("co",y,ctx))));
+					enc = ctx.mkAnd(enc,ctx.mkImplies(edge,ctx.mkLt(intVar(x),intVar(y))));
 			}
 			enc = ctx.mkAnd(enc,ctx.mkEq(edge,ctx.mkAnd(
 				x.exec(),
@@ -105,7 +104,7 @@ public class RelCo extends Relation {
 		}
 
 		enc = ctx.mkAnd(enc,ctx.mkDistinct(program.getCache().getEvents(FilterBasic.get(EType.WRITE)).stream()
-			.map(e->intVar("co",e,ctx)).toArray(Expr[]::new)));
+			.map(this::intVar).toArray(Expr[]::new)));
 
         for(Event w :  program.getCache().getEvents(FilterBasic.get(EType.WRITE))){
             MemEvent w1 = (MemEvent)w;
@@ -113,17 +112,17 @@ public class RelCo extends Relation {
 
             for(Tuple t : maxTupleSet.getByFirst(w1)){
                 MemEvent w2 = (MemEvent)t.getSecond();
-                lastCo = ctx.mkAnd(lastCo, ctx.mkNot(edge("co", w1, w2, ctx)));
+				lastCo = ctx.mkAnd(lastCo,ctx.mkNot(edge(w1,w2)));
             }
 
             BoolExpr lastCoExpr = ctx.mkBoolConst("co_last(" + w1.repr() + ")");
             enc = ctx.mkAnd(enc, ctx.mkEq(lastCoExpr, lastCo));
 
             for(Address address : w1.getMaxAddressSet()){
-            	Expr a1 = toInt(w1.getMemAddressExpr());
-            	Expr a2 = toInt(address.toZ3Int(ctx));
+				Expr a1 = toInt(w1.getMemAddressExpr());
+				Expr a2 = toInt(address.toZ3Int(ctx));
 				Expr v1 = toInt(address.getLastMemValueExpr(ctx));
-                Expr v2 = toInt(w1.getMemValueExpr());
+				Expr v2 = toInt(w1.getMemValueExpr());
 				enc = ctx.mkAnd(enc, ctx.mkImplies(ctx.mkAnd(lastCoExpr, ctx.mkEq(a1, a2)),ctx.mkEq(v1, v2)));
             }
         }

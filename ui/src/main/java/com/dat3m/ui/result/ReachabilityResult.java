@@ -45,7 +45,7 @@ public class ReachabilityResult implements Dat3mResult {
             Result result = runAnalysisIncrementalSolver(solver, ctx, program, wmm, options.getTarget(), options.getSettings());
             buildVerdict(result);
             if(options.getSettings().getDrawGraph() && Dartagnan.canDrawGraph(program.getAss(), result == FAIL)){
-                graph = new Graph(solver.getModel(), ctx, program, options.getSettings().getGraphRelations());
+                graph = new Graph(solver.getModel(), ctx, wmm, program, options.getSettings().getGraphRelations());
             }
             ctx.close();
         }

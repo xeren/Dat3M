@@ -16,7 +16,6 @@ import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import java.util.*;
 
 import static com.dat3m.dartagnan.utils.Settings.FLAG_CURRENT_MODEL_LOCAL_RF;
-import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 
 public class RelRf extends Relation {
 
@@ -75,7 +74,7 @@ public class RelRf extends Relation {
         for(Tuple tuple : maxTupleSet){
             MemEvent w = (MemEvent) tuple.getFirst();
             MemEvent r = (MemEvent) tuple.getSecond();
-            BoolExpr edge = edge(term, w, r, ctx);
+            BoolExpr edge = edge(w, r);
             
             IntExpr a1 = w.getMemAddressExpr().isBV() ? ctx.mkBV2Int((BitVecExpr)w.getMemAddressExpr(), false) : (IntExpr)w.getMemAddressExpr();
             IntExpr a2 = r.getMemAddressExpr().isBV() ? ctx.mkBV2Int((BitVecExpr)r.getMemAddressExpr(), false) : (IntExpr)r.getMemAddressExpr();

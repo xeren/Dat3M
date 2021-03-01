@@ -1,18 +1,17 @@
 package com.dat3m.dartagnan.wmm.relation;
 
+import com.dat3m.dartagnan.program.Program;
+import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.utils.Mode;
-import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
-import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
-
+import com.microsoft.z3.BoolExpr;
+import com.microsoft.z3.Context;
+import com.microsoft.z3.IntExpr;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
-import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 
 /**
  *
@@ -101,6 +100,34 @@ public abstract class Relation {
         return name != null;
     }
 
+    private BoolExpr edge(int first, int second) {
+        return ctx.mkBoolConst("edge "+getName()+" "+first+" "+second);
+    }
+
+    public BoolExpr edge(Event first, Event second) {
+        return edge(first.getCId(),second.getCId());
+    }
+
+    public BoolExpr edge(Tuple tuple) {
+        return edge(tuple.getFirst(),tuple.getSecond());
+    }
+
+    private BoolExpr edge(int iteration, int first, int second) {
+        return ctx.mkBoolConst("edge"+iteration+" "+getName()+" "+first+" "+second);
+    }
+
+    public BoolExpr edge(int iteration, Event first, Event second) {
+        return edge(iteration,first.getCId(),second.getCId());
+    }
+
+    public BoolExpr edge(int iteration, Tuple tuple) {
+        return edge(iteration,tuple.getFirst(),tuple.getSecond());
+    }
+
+    public IntExpr intCount(Event first, Event second) {
+        return ctx.mkIntConst("level "+getName()+" "+first.getCId()+" "+second.getCId());
+    }
+
 	public boolean[][] test(Map<Relation,boolean[][]> binding, int size){
 		return binding.computeIfAbsent(this,k->new boolean[size][size]);
 	}
@@ -170,7 +197,7 @@ public abstract class Relation {
             Set<Tuple> negations = new HashSet<>(encodeTupleSet);
             negations.removeAll(maxTupleSet);
             for(Tuple tuple : negations){
-                enc = ctx.mkAnd(enc, ctx.mkNot(edge(this.getName(), tuple.getFirst(), tuple.getSecond(), ctx)));
+                enc = ctx.mkAnd(enc, ctx.mkNot(edge(tuple)));
             }
             encodeTupleSet.removeAll(negations);
         }

@@ -9,8 +9,8 @@ import com.dat3m.dartagnan.utils.ResourceHelper;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
+import com.dat3m.dartagnan.wmm.relation.base.memory.RelRf;
 import com.dat3m.dartagnan.wmm.utils.Mode;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.utils.alias.Alias;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
@@ -109,11 +109,11 @@ public class RelRfTest {
 
         assertEquals(Status.SATISFIABLE, solver.check());
 
-        BoolExpr edge1 = Utils.edge("rf", events.get(5), events.get(2), ctx);
+        BoolExpr edge1 = wmm.getRelationRepository().getRelation(RelRf.class).edge(events.get(5), events.get(2));
         solver.add(edge1);
         assertEquals(Status.SATISFIABLE, solver.check());
 
-        BoolExpr edge2 = Utils.edge("rf", events.get(8), events.get(2), ctx);
+        BoolExpr edge2 = wmm.getRelationRepository().getRelation(RelRf.class).edge(events.get(8), events.get(2));
         solver.add(edge2);
         assertEquals(Status.UNSATISFIABLE, solver.check());
 

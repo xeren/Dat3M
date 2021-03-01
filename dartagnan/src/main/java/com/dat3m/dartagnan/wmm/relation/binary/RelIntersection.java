@@ -1,11 +1,11 @@
 package com.dat3m.dartagnan.wmm.relation.binary;
 
-import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import com.microsoft.z3.BoolExpr;
+import java.util.function.BiFunction;
 
 import java.util.Map;
 
@@ -68,10 +68,7 @@ public class RelIntersection extends BinaryRelation {
         for(Tuple tuple : encodeTupleSet){
             Event e1 = tuple.getFirst();
             Event e2 = tuple.getSecond();
-
-            BoolExpr opt1 = Utils.edge(r1.getName(), e1, e2, ctx);
-            BoolExpr opt2 = Utils.edge(r2.getName(), e1, e2, ctx);
-            enc = ctx.mkAnd(enc, ctx.mkEq(Utils.edge(this.getName(), e1, e2, ctx), ctx.mkAnd(opt1, opt2)));
+            enc = ctx.mkAnd(enc, ctx.mkEq(edge(e1,e2), ctx.mkAnd(r1.edge(e1,e2), r2.edge(e1,e2))));
         }
         return enc;
     }
@@ -91,17 +88,17 @@ public class RelIntersection extends BinaryRelation {
             Event e1 = tuple.getFirst();
             Event e2 = tuple.getSecond();
 
-            BoolExpr opt1 = Utils.edge(r1.getName(), e1, e2, ctx);
-            BoolExpr opt2 = Utils.edge(r2.getName(), e1, e2, ctx);
-            enc = ctx.mkAnd(enc, ctx.mkEq(Utils.edge(this.getName(), e1, e2, ctx), ctx.mkAnd(opt1, opt2)));
+            BoolExpr opt1 = r1.edge(e1,e2);
+            BoolExpr opt2 = r2.edge(e1,e2);
+            enc = ctx.mkAnd(enc, ctx.mkEq(edge(e1,e2), ctx.mkAnd(opt1, opt2)));
 
             if(recurseInR1){
-                opt1 = ctx.mkAnd(opt1, ctx.mkGt(Utils.intCount(this.getName(), e1, e2, ctx), Utils.intCount(r1.getName(), e1, e2, ctx)));
+                opt1 = ctx.mkAnd(opt1, ctx.mkGt(intCount(e1, e2), r1.intCount(e1, e2)));
             }
             if(recurseInR2){
-                opt2 = ctx.mkAnd(opt2, ctx.mkGt(Utils.intCount(this.getName(), e1, e2, ctx), Utils.intCount(r2.getName(), e1, e2, ctx)));
+                opt2 = ctx.mkAnd(opt2, ctx.mkGt(intCount(e1, e2), r2.intCount(e1, e2)));
             }
-            enc = ctx.mkAnd(enc, ctx.mkEq(Utils.edge(this.getName(), e1, e2, ctx), ctx.mkAnd(opt1, opt2)));
+            enc = ctx.mkAnd(enc, ctx.mkEq(edge(e1,e2), ctx.mkAnd(opt1, opt2)));
         }
         return enc;
     }
@@ -113,11 +110,9 @@ public class RelIntersection extends BinaryRelation {
         if((groupId & recursiveGroupId) > 0 && iteration > lastEncodedIteration){
             lastEncodedIteration = iteration;
 
-            String name = this.getName() + "_" + iteration;
-
             if(iteration == 0 && isRecursive){
                 for(Tuple tuple : encodeTupleSet){
-                    enc = ctx.mkAnd(ctx.mkNot(Utils.edge(name, tuple.getFirst(), tuple.getSecond(), ctx)));
+                    enc = ctx.mkAnd(ctx.mkNot(edge(iteration,tuple)));
                 }
             } else {
                 int childIteration = isRecursive ? iteration - 1 : iteration;
@@ -125,14 +120,14 @@ public class RelIntersection extends BinaryRelation {
                 boolean recurseInR1 = (r1.getRecursiveGroupId() & groupId) > 0;
                 boolean recurseInR2 = (r2.getRecursiveGroupId() & groupId) > 0;
 
-                String r1Name = recurseInR1 ? r1.getName() + "_" + childIteration : r1.getName();
-                String r2Name = recurseInR2 ? r2.getName() + "_" + childIteration : r2.getName();
+                BiFunction<Event,Event,BoolExpr> r1Edge = recurseInR1 ? (x,y)->r1.edge(childIteration,x,y) : r1::edge;
+                BiFunction<Event,Event,BoolExpr> r2Edge = recurseInR1 ? (x,y)->r2.edge(childIteration,x,y) : r2::edge;
 
                 for(Tuple tuple : encodeTupleSet){
-                    BoolExpr edge = Utils.edge(name, tuple.getFirst(), tuple.getSecond(), ctx);
-                    BoolExpr opt1 = Utils.edge(r1Name, tuple.getFirst(), tuple.getSecond(), ctx);
-                    BoolExpr opt2 = Utils.edge(r2Name, tuple.getFirst(), tuple.getSecond(), ctx);
-                    enc = ctx.mkAnd(enc, ctx.mkEq(edge, ctx.mkAnd(opt1, opt2)));
+                    Event e1 = tuple.getFirst();
+                    Event e2 = tuple.getSecond();
+                    enc = ctx.mkAnd(enc, ctx.mkEq(edge(iteration,e1,e2),
+                        ctx.mkAnd(r1Edge.apply(e1,e2),r2Edge.apply(e1,e2))));
                 }
 
                 if(recurseInR1){

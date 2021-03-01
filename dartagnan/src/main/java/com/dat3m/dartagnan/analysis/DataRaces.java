@@ -3,8 +3,6 @@ package com.dat3m.dartagnan.analysis;
 import static com.dat3m.dartagnan.utils.Result.FAIL;
 import static com.dat3m.dartagnan.utils.Result.PASS;
 import static com.dat3m.dartagnan.utils.Result.UNKNOWN;
-import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
-import static com.dat3m.dartagnan.wmm.utils.Utils.intVar;
 import static com.microsoft.z3.Status.SATISFIABLE;
 
 import com.dat3m.dartagnan.expression.BConst;
@@ -16,6 +14,7 @@ import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.Wmm;
+import com.dat3m.dartagnan.wmm.axiom.Acyclic;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.filter.FilterMinus;
 import com.dat3m.dartagnan.wmm.utils.Arch;
@@ -38,7 +37,7 @@ public class DataRaces {
         solver.add(wmm.encode(program, ctx, settings));
         solver.add(wmm.consistent(program, ctx));
         solver.push();
-        solver.add(encodeRaces(program, ctx));
+        solver.add(encodeRaces(program, wmm.getHappensBefore(), ctx));
         
 		if(solver.check() == SATISFIABLE) {
         	solver.add(program.encodeNoBoundEventExec(ctx));
@@ -50,7 +49,9 @@ public class DataRaces {
         }
     }
     
-    private static BoolExpr encodeRaces(Program p, Context ctx) {
+    private static BoolExpr encodeRaces(Program p, Acyclic hb, Context ctx) {
+		if(null == hb)
+			throw new RuntimeException("no happens-before relation");
     	BoolExpr enc = ctx.mkFalse();
     	for(Thread t1 : p.getThreads()) {
     		for(Thread t2 : p.getThreads()) {
@@ -72,9 +73,8 @@ public class DataRaces {
     						continue;
     					}
     					if(w.canRace() && m.canRace() && MemEvent.canAddressTheSameLocation(w, m)) {
-        					BoolExpr conflict = ctx.mkAnd(m.exec(), w.exec(), ctx.mkEq(w.getMemAddressExpr(), m.getMemAddressExpr()), 
-        							edge("hb", m, w, ctx), ctx.mkEq(intVar("hb", w, ctx), ctx.mkAdd(intVar("hb", m, ctx), ctx.mkInt(1))));
-    						enc = ctx.mkOr(enc, conflict);
+							enc = ctx.mkOr(enc, ctx.mkAnd(m.exec(), w.exec(), ctx.mkEq(w.getMemAddressExpr(), m.getMemAddressExpr()),
+									hb.getRel().edge(m, w), ctx.mkEq(hb.intVar(w, ctx), ctx.mkAdd(hb.intVar(m, ctx), ctx.mkInt(1)))));
     					}
     				}
     			}
