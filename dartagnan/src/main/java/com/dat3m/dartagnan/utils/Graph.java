@@ -1,17 +1,18 @@
 package com.dat3m.dartagnan.utils;
 
-import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.event.Load;
-import com.dat3m.dartagnan.program.utils.EType;
-import com.dat3m.dartagnan.wmm.filter.FilterBasic;
-import com.dat3m.dartagnan.wmm.utils.Utils;
-import com.microsoft.z3.*;
 import com.dat3m.dartagnan.program.Program;
+import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Init;
+import com.dat3m.dartagnan.program.event.Load;
 import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.program.memory.Location;
+import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.wmm.Wmm;
+import com.dat3m.dartagnan.wmm.filter.FilterBasic;
+import com.dat3m.dartagnan.wmm.relation.Relation;
+import com.microsoft.z3.*;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -49,14 +50,14 @@ public class Graph {
 
     private final String DEFAULT_EDGE_COLOR = "indigo";
 
-    public Graph(Model model, Context ctx, Program program, Collection<String> relations){
+    public Graph(Model model, Context ctx, Wmm wmm, Program program, Collection<String> relations){
         this(model, ctx, relations);
-        build(program);
+        build(wmm, program);
     }
 
-    public Graph(Model model, Context ctx, Program pSource, Program pTarget, Collection<String> relations){
+    public Graph(Model model, Context ctx, Wmm mSource, Wmm mTarget, Program pSource, Program pTarget, Collection<String> relations){
         this(model, ctx, relations);
-        build(pSource, pTarget);
+        build(mSource, mTarget, pSource, pTarget);
     }
 
     private Graph(Model model, Context ctx, Collection<String> relations){
@@ -73,37 +74,37 @@ public class Graph {
         return buffer.toString();
     }
 
-    private void build(Program program){
+    private void build(Wmm wmm, Program program){
         buffer = new StringBuilder();
         buffer.append("digraph G {\n")
         		.append(L1).append("subgraph cluster_Target { ").append(getProgramDef(targetLabel)).append("\n")
-                .append(buildProgramGraph(program))
+                .append(buildProgramGraph(wmm, program))
                 .append(L1).append("}\n")
                 .append("}\n");
     }
 
-    private void build(Program pSource, Program pTarget){
+    private void build(Wmm mSource, Wmm mTarget, Program pSource, Program pTarget){
         buffer = new StringBuilder();
         buffer.append("digraph G {\n");
 
         buffer.append(L1).append("subgraph cluster_Source { ").append(getProgramDef(sourceLabel)).append("\n")
-                .append(buildProgramGraph(pSource))
+                .append(buildProgramGraph(mSource, pSource))
                 .append(buildCycle())
                 .append(L1).append("}\n");
 
         buffer.append(L1).append("subgraph cluster_Target { ").append(getProgramDef(targetLabel)).append("\n")
-                .append(buildProgramGraph(pTarget))
+                .append(buildProgramGraph(mTarget, pTarget))
                 .append(L1).append("}\n");
 
         buffer.append("}\n");
     }
 
-    private StringBuilder buildProgramGraph(Program program){
+    private StringBuilder buildProgramGraph(Wmm wmm, Program program){
         buildAddressLocationMap(program);
         return buildEvents(program)
                 .append(buildPo(program))
-                .append(buildCo(program))
-                .append(buildRelations(program));
+                .append(buildCo(wmm.getRelationRepository().getRelation("co"),program))
+                .append(buildRelations(wmm,program));
     }
 
     private StringBuilder buildEvents(Program program){
@@ -163,7 +164,7 @@ public class Graph {
         return sb;
     }
 
-    private StringBuilder buildCo(Program program){
+    private StringBuilder buildCo(Relation co, Program program){
         StringBuilder sb = new StringBuilder();
         String edge = " " + getEdgeDef("co") + ";\n";
 
@@ -181,7 +182,7 @@ public class Graph {
             for(Event e2 : mapAddressEvent.get(address)){
                 map.put(e2, 0);
                 for(Event e1 : mapAddressEvent.get(address)){
-                    Expr expr = model.getConstInterp(Utils.edge("co", e1, e2, ctx));
+                    Expr expr = model.getConstInterp(co.edge(e1, e2));
                     if(expr != null && expr.isTrue()){
                         map.put(e2, map.get(e2) + 1);
                     }
@@ -200,7 +201,7 @@ public class Graph {
         return sb;
     }
 
-    private StringBuilder buildRelations(Program program){
+    private StringBuilder buildRelations(Wmm wmm, Program program){
         StringBuilder sb = new StringBuilder();
 
         List<Event> events = program.getCache()
@@ -210,10 +211,11 @@ public class Graph {
                 .collect(Collectors.toList());
 
         for(String relName : relations) {
+            Relation r = wmm.getRelationRepository().getRelation(relName);
             String edge = " " + getEdgeDef(relName) + ";\n";
             for(Event e1 : events) {
                 for(Event e2 : events) {
-                    Expr expr = model.getConstInterp(Utils.edge(relName, e1, e2, ctx));
+                    Expr expr = model.getConstInterp(r.edge(e1, e2));
                     if(expr != null && expr.isTrue()){
                         sb.append("      ").append(e1.repr()).append(" -> ").append(e2.repr()).append(edge);
                     }

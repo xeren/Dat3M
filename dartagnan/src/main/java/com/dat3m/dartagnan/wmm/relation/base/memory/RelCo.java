@@ -3,14 +3,10 @@ package com.dat3m.dartagnan.wmm.relation.base.memory;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.filter.FilterMinus;
-import com.microsoft.z3.BitVecExpr;
-import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Expr;
-import com.microsoft.z3.IntExpr;
+import com.microsoft.z3.*;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.program.memory.Address;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -18,14 +14,15 @@ import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
-import static com.dat3m.dartagnan.wmm.utils.Utils.intVar;
-
 public class RelCo extends Relation {
 
     public RelCo(){
         term = "co";
         forceDoEncode = true;
+    }
+
+    public IntExpr intVar(Event event) {
+        return ctx.mkIntConst("co "+event.getCId());
     }
 
     @Override
@@ -68,12 +65,12 @@ public class RelCo extends Relation {
         ));
 
         for(Event e : eventsInit) {
-            enc = ctx.mkAnd(enc, ctx.mkEq(intVar("co", e, ctx), ctx.mkInt(0)));
+            enc = ctx.mkAnd(enc, ctx.mkEq(intVar(e), ctx.mkInt(0)));
         }
 
         List<IntExpr> intVars = new ArrayList<>();
         for(Event w : eventsStore) {
-            IntExpr coVar = intVar("co", w, ctx);
+            IntExpr coVar = intVar(w);
             enc = ctx.mkAnd(enc, ctx.mkGt(coVar, ctx.mkInt(0)));
             intVars.add(coVar);
         }
@@ -85,14 +82,14 @@ public class RelCo extends Relation {
 
             for(Tuple t : maxTupleSet.getByFirst(w1)){
                 MemEvent w2 = (MemEvent)t.getSecond();
-                BoolExpr relation = edge("co", w1, w2, ctx);
-                lastCo = ctx.mkAnd(lastCo, ctx.mkNot(edge("co", w1, w2, ctx)));
+                BoolExpr relation = edge(w1, w2);
+                lastCo = ctx.mkAnd(lastCo, ctx.mkNot(edge(w1, w2)));
 
                 Expr a1 = w1.getMemAddressExpr().isBV() ? ctx.mkBV2Int((BitVecExpr)w1.getMemAddressExpr(), false) : w1.getMemAddressExpr();
                 Expr a2 = w2.getMemAddressExpr().isBV() ? ctx.mkBV2Int((BitVecExpr)w2.getMemAddressExpr(), false) : w2.getMemAddressExpr();
                 enc = ctx.mkAnd(enc, ctx.mkEq(relation, ctx.mkAnd(
                         ctx.mkAnd(ctx.mkAnd(w1.exec(), w2.exec()), ctx.mkEq(a1, a2)),
-                        ctx.mkLt(Utils.intVar("co", w1, ctx), Utils.intVar("co", w2, ctx))
+                        ctx.mkLt(intVar(w1), intVar(w2))
                 )));
             }
 

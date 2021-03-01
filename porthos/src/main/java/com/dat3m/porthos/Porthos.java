@@ -63,7 +63,7 @@ public class Porthos {
             System.out.println("Iterations: " + result.getIterations());
             if(settings.getDrawGraph()) {
                 ctx.setPrintMode(Z3_ast_print_mode.Z3_PRINT_SMTLIB_FULL);
-                Dartagnan.drawGraph(new Graph(s1.getModel(), ctx, pSource, pTarget, settings.getGraphRelations()), options.getGraphFilePath());
+                Dartagnan.drawGraph(new Graph(s1.getModel(), ctx, mcmS, mcmT, pSource, pTarget, settings.getGraphRelations()), options.getGraphFilePath());
                 System.out.println("Execution graph is written to " + options.getGraphFilePath());
             }
         }
@@ -93,7 +93,7 @@ public class Porthos {
         s1.add(sourceMM);
         s1.add(sourceWmm.inconsistent(pSource, ctx));
 
-        s1.add(encodeCommonExecutions(pTarget, pSource, ctx));
+        s1.add(encodeCommonExecutions(targetWmm, sourceWmm, pTarget, pSource, ctx));
 
         s2.add(sourceCF);
         s2.add(sourceFV);

@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan.wmm.relation.unary;
 
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -58,9 +57,9 @@ public class RelDomainIdentity extends UnaryRelation {
             Event e = tuple1.getFirst();
             BoolExpr opt = ctx.mkFalse();
             for(Tuple tuple2 : r1.getMaxTupleSet().getByFirst(e)){
-                opt = ctx.mkOr(Utils.edge(r1.getName(), e, tuple2.getSecond(), ctx));
+                opt = ctx.mkOr(r1.edge(tuple2));
             }
-            enc = ctx.mkAnd(enc, ctx.mkEq(Utils.edge(this.getName(), e, e, ctx), opt));
+            enc = ctx.mkAnd(enc, ctx.mkEq(edge(e, e), opt));
         }
         return enc;
     }

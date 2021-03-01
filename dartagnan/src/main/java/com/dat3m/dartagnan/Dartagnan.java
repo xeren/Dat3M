@@ -74,12 +74,12 @@ public class Dartagnan {
         }
 
         if(options.createWitness() != null) {
-        	new Witness(p, options.createWitness()).write(ctx, s, result);
+        	new Witness(mcm.getHappensBefore(), p, options.createWitness()).write(ctx, s, result);
         }
         
         if(settings.getDrawGraph() && canDrawGraph(p.getAss(), result.equals(FAIL))) {
         	ctx.setPrintMode(Z3_PRINT_SMTLIB_FULL);
-            drawGraph(new Graph(s.getModel(), ctx, p, settings.getGraphRelations()), options.getGraphFilePath());
+            drawGraph(new Graph(s.getModel(), ctx, mcm, p, settings.getGraphRelations()), options.getGraphFilePath());
             System.out.println("Execution graph is written to " + options.getGraphFilePath());
         }
 

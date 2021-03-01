@@ -3,16 +3,14 @@ package com.dat3m.dartagnan.wmm.axiom;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import com.microsoft.z3.IntExpr;
 
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
-import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 
 /**
  *
@@ -26,6 +24,10 @@ public class Acyclic extends Axiom {
 
     public Acyclic(Relation rel, boolean negate) {
         super(rel, negate);
+    }
+
+    public IntExpr intVar(Event event, Context context) {
+        return context.mkIntConst(rel.getName()+" "+event.getCId());
     }
 
     @Override
@@ -59,8 +61,8 @@ public class Acyclic extends Axiom {
         for(Tuple tuple : rel.getEncodeTupleSet()){
             Event e1 = tuple.getFirst();
             Event e2 = tuple.getSecond();
-            enc = ctx.mkAnd(enc, ctx.mkImplies(e1.exec(), ctx.mkGt(Utils.intVar(rel.getName(), e1, ctx), ctx.mkInt(0))));
-            enc = ctx.mkAnd(enc, ctx.mkImplies(Utils.edge(rel.getName(), e1, e2, ctx), ctx.mkLt(Utils.intVar(rel.getName(), e1, ctx), Utils.intVar(rel.getName(), e2, ctx))));
+            enc = ctx.mkAnd(enc, ctx.mkImplies(e1.exec(), ctx.mkGt(intVar(e1, ctx), ctx.mkInt(0))));
+            enc = ctx.mkAnd(enc, ctx.mkImplies(rel.edge(tuple), ctx.mkLt(intVar(e1, ctx), intVar(e2, ctx))));
         }
         return enc;
     }
@@ -103,7 +105,7 @@ public class Acyclic extends Axiom {
                     ctx.mkAnd(
                             e1.exec(),
                             e2.exec(),
-                            edge(name, e1, e2, ctx),
+                            rel.edge(t),
                             cycleVar(name, e1, ctx),
                             cycleVar(name, e2, ctx)
             )));
