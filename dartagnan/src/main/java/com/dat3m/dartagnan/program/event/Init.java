@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.program.event;
 
 import com.dat3m.dartagnan.expression.IConst;
+import com.dat3m.dartagnan.program.ControlBlock;
 import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.microsoft.z3.Context;
@@ -25,9 +26,9 @@ public class Init extends MemEvent {
 	}
 
 	@Override
-	public void initialise(Context ctx) {
-		super.initialise(ctx);
-		memValueExpr = value.toZ3Int(ctx);
+	public ControlBlock initialise(Context c, ControlBlock b, ControlMessage m) {
+		memValueExpr = value.toZ3Int(c);
+		return super.initialise(c,b,m);
 	}
 
 	@Override

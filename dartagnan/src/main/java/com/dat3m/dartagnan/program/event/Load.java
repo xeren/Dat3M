@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.program.event;
 
+import com.dat3m.dartagnan.program.ControlBlock;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.Expr;
 import com.dat3m.dartagnan.expression.ExprInterface;
@@ -23,11 +24,11 @@ public class Load extends MemEvent implements RegWriter {
         this.resultRegister = other.resultRegister;
     }
 
-    @Override
-    public void initialise(Context ctx) {
-        super.initialise(ctx);
-        memValueExpr = resultRegister.toZ3IntResult(this, ctx);
-    }
+	@Override
+	public ControlBlock initialise(Context c, ControlBlock b, ControlMessage m) {
+		memValueExpr = resultRegister.toZ3IntResult(this,c);
+		return super.initialise(c,b,m);
+	}
 
     @Override
     public Register getResultRegister(){

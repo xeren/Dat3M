@@ -2,6 +2,7 @@ package com.dat3m.dartagnan.program.event.rmw.cond;
 
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IExpr;
+import com.dat3m.dartagnan.program.ControlBlock;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
@@ -13,11 +14,11 @@ public class RMWReadCondUnless extends RMWReadCond implements RegWriter, RegRead
         super(reg, cmp, address, mo);
     }
 
-    @Override
-    public void initialise(Context ctx) {
-        super.initialise(ctx);
-        this.z3Cond = ctx.mkNot(z3Cond);
-    }
+	@Override
+	public ControlBlock initialise(Context c, ControlBlock b, ControlMessage m) {
+		z3Cond = c.mkNot(z3Cond);
+		return super.initialise(c,b,m);
+	}
 
     @Override
     public String condToString(){

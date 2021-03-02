@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.program.event;
 
+import com.dat3m.dartagnan.program.ControlBlock;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.expression.ExprInterface;
@@ -26,11 +27,11 @@ public class Store extends MemEvent implements RegReaderData {
         dataRegs = other.dataRegs;
     }
 
-    @Override
-    public void initialise(Context ctx) {
-        super.initialise(ctx);
-        memValueExpr = value.toZ3Int(this, ctx);
-    }
+	@Override
+	public ControlBlock initialise(Context c, ControlBlock b, ControlMessage m) {
+		memValueExpr = value.toZ3Int(this,c);
+		return super.initialise(c,b,m);
+	}
 
     @Override
     public ImmutableSet<Register> getDataRegs(){
