@@ -103,8 +103,6 @@ public class Acyclic extends Axiom {
             enc = ctx.mkAnd(enc, ctx.mkImplies(
                     cycleEdge(name, e1, e2, ctx),
                     ctx.mkAnd(
-                            e1.exec(),
-                            e2.exec(),
                             rel.edge(t),
                             cycleVar(name, e1, ctx),
                             cycleVar(name, e2, ctx)

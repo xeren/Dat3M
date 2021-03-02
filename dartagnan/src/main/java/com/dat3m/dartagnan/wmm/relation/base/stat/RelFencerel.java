@@ -77,7 +77,7 @@ public class RelFencerel extends Relation {
                 }
             }
 
-            enc = ctx.mkAnd(enc, ctx.mkEq(edge(tuple), ctx.mkAnd(e1.exec(), e2.exec(), orClause)));
+            enc = ctx.mkAnd(enc, ctx.mkEq(edge(tuple), ctx.mkAnd(program.executesBoth(ctx,e1,e2), orClause)));
         }
 
         return enc;

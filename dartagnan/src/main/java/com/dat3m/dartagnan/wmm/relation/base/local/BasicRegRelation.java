@@ -51,7 +51,7 @@ abstract class BasicRegRelation extends StaticRelation {
                         }
 
                         // RegReader uses the value of RegWriter if it is executed ..
-                        BoolExpr clause = ctx.mkAnd(regWriter.exec(), regReader.exec());
+                        BoolExpr clause = program.executesBoth(ctx,regWriter,regReader);
                         BoolExpr edge = edge(regWriter,regReader);
 
                         // .. and no other write to the same register is executed in between
