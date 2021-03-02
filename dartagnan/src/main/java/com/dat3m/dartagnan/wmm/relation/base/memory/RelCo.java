@@ -73,14 +73,14 @@ public class RelCo extends Relation {
     protected BoolExpr encodeApprox() {
         BoolExpr enc = ctx.mkTrue();
 
-		for(Tuple t: maxTupleSet){
+		for(Tuple t: getMaxTupleSet()){
 			Event x = t.getFirst();
 			assert x.is(EType.WRITE);
 			Event y = t.getSecond();
 			assert y.is(EType.WRITE) && !y.is(EType.INIT);
 			BoolExpr edge = edge(x,y);
 			BoolExpr order;
-			if(maxTupleSet.contains(new Tuple(y,x))){
+			if(contains(y,x)){
 				assert!x.is(EType.INIT);
 				order = ctx.mkLt(intVar(x),intVar(y));
 			}
@@ -90,8 +90,7 @@ public class RelCo extends Relation {
 					enc = ctx.mkAnd(enc,ctx.mkImplies(edge,ctx.mkLt(intVar(x),intVar(y))));
 			}
 			enc = ctx.mkAnd(enc,ctx.mkEq(edge,ctx.mkAnd(
-				x.exec(),
-				y.exec(),
+				program.executesBoth(ctx,x,y),
 				ctx.mkEq(toInt(((MemEvent)x).getMemAddressExpr()),toInt(((MemEvent)y).getMemAddressExpr())),
 				order)));
 		}

@@ -208,4 +208,21 @@ public class Program {
         }
         return enc;
     }
+
+	/**
+	Proposes that both passed events are executed.
+	May take into account if their control variables coincide, imply one another or exclude each other.
+	@param context
+	Builder for expressions.
+	@param first
+	Some event of this program.
+	@param second
+	Another event of this program.
+	@return
+	Proposition that the modelled execution include both events.
+	False proposition, if both events exclude each other.
+	*/
+	public BoolExpr executesBoth(Context context, Event first, Event second) {
+		return context.mkAnd(first.exec(),second.exec());
+	}
 }
