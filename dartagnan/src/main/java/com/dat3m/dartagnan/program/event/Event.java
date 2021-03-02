@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.program.event;
 
+import com.dat3m.dartagnan.program.ControlBlock;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
@@ -196,12 +197,18 @@ public abstract class Event implements Comparable<Event> {
 	// Encoding
 	// -----------------------------------------------------------------------------------------------------------------
 
-	public void initialise(Context ctx){
+	@FunctionalInterface
+	public interface ControlMessage {
+		void send(int destination, ControlBlock content);
+	}
+
+	public ControlBlock initialise(Context ctx, ControlBlock ctrl, ControlMessage message){
 		if(cId < 0){
 			throw new RuntimeException("Event ID is not set in " + this);
 		}
 		execVar = ctx.mkBoolConst("exec(" + repr() + ")");
 		cfVar = ctx.mkBoolConst("cf(" + repr() + ")");
+		return ctrl;
 	}
 
 	public String repr() {

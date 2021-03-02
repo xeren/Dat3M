@@ -167,8 +167,20 @@ public class Program {
     // -----------------------------------------------------------------------------------------------------------------
 
     public BoolExpr encodeCF(Context ctx) {
+		ControlBlock control = new ControlBlock(null,ctx.mkTrue());
+		TreeMap<Integer,LinkedList<ControlBlock>> message = new TreeMap<>();
         for(Event e : getEvents()){
-            e.initialise(ctx);
+			if(!message.isEmpty()) {
+				assert e.getCId() >= message.firstKey();
+				if(e.getCId() == message.firstKey()) {
+					LinkedList<ControlBlock> in = message.pollFirstEntry().getValue();
+					assert !in.isEmpty();
+					if(!control.variable.isFalse())
+						in.add(control);
+					control = ControlBlock.join(ctx.mkBoolConst("join"+e.getCId()),in);
+				}
+			}
+			control = e.initialise(ctx,control,(i,b)->message.computeIfAbsent(i,k->new LinkedList<>()).add(b));
         }
         BoolExpr enc = memory.encode(ctx);
         for(Thread t : threads){

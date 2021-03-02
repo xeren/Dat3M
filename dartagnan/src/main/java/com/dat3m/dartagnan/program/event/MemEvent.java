@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.program.event;
 
+import com.dat3m.dartagnan.program.ControlBlock;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.microsoft.z3.Context;
@@ -34,11 +35,11 @@ public abstract class MemEvent extends Event {
         this.mo = other.mo;
     }
 
-    @Override
-    public void initialise(Context ctx) {
-        super.initialise(ctx);
-        memAddressExpr = address.toZ3Int(this, ctx);
-    }
+	@Override
+	public ControlBlock initialise(Context c, ControlBlock b, ControlMessage m) {
+		memAddressExpr = address.toZ3Int(this,c);
+		return super.initialise(c,b,m);
+	}
 
     public Expr getMemAddressExpr(){
         if(memAddressExpr != null){
