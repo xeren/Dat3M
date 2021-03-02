@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.program.event;
 
+import com.dat3m.dartagnan.program.ControlBlock;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
@@ -34,9 +35,9 @@ public class Local extends Event implements RegWriter, RegReaderData {
 	}
 
 	@Override
-	public void initialise(Context ctx) {
-		super.initialise(ctx);
-		regResultExpr = register.toZ3IntResult(this, ctx);
+	public ControlBlock initialise(Context c, ControlBlock b, ControlMessage m) {
+		regResultExpr = register.toZ3IntResult(this,c);
+		return super.initialise(c,b,m);
 	}
 
 	public ExprInterface getExpr(){
