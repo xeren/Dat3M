@@ -8,6 +8,7 @@ import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -54,6 +55,17 @@ public class RelInverse extends UnaryRelation {
             r1.addEncodeTupleSet(invSet);
         }
     }
+
+	@Override
+	public boolean[][] test(Map<Relation,boolean[][]> b, int n) {
+		boolean[][] r = b.computeIfAbsent(this,k->new boolean[n][n]);
+		boolean[][] c = r1.test(b,n);
+		for(int i=0; i<n; ++i)
+			for(int j=0; j<n; ++j)
+				if(c[i][j])
+					r[j][i] = true;
+		return r;
+	}
 
     @Override
     protected BoolExpr encodeApprox() {

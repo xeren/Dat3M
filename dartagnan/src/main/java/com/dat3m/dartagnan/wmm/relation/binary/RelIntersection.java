@@ -7,6 +7,8 @@ import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
+import java.util.Map;
+
 /**
  *
  * @author Florian Furbach
@@ -46,6 +48,18 @@ public class RelIntersection extends BinaryRelation {
         }
         return getMaxTupleSet();
     }
+
+	@Override
+	public boolean[][] test(Map<Relation,boolean[][]> b, int n) {
+		boolean[][] r = b.computeIfAbsent(this,k->new boolean[n][n]);
+		boolean[][] c = r1.test(b,n);
+		boolean[][] d = r2.test(b,n);
+		for(int i=0; i<n; ++i)
+			for(int j=0; j<n; ++j)
+				if(c[i][j] && d[i][j])
+					r[i][j] = true;
+		return r;
+	}
 
     @Override
     public BoolExpr encodeApprox() {

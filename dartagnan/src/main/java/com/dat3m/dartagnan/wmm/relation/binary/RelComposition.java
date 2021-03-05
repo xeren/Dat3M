@@ -99,6 +99,22 @@ public class RelComposition extends BinaryRelation {
         }
     }
 
+	@Override
+	public boolean[][] test(Map<Relation,boolean[][]> b, int n) {
+		boolean[][] r = b.computeIfAbsent(this,k->new boolean[n][n]);
+		boolean[][] c = r1.test(b,n);
+		boolean[][] d = r2.test(b,n);
+		for(int i=0; i<n; ++i)
+			for(int j=0; j<n; ++j)
+				if(!r[i][j])
+					for(int l=0; l<n; ++l)
+						if(c[i][l] && d[l][j]) {
+							r[i][j] = true;
+							break;
+						}
+		return r;
+	}
+
     @Override
     protected BoolExpr encodeApprox() {
         BoolExpr enc = ctx.mkTrue();

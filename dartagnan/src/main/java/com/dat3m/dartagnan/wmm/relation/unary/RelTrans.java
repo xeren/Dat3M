@@ -77,6 +77,33 @@ public class RelTrans extends UnaryRelation {
         }
     }
 
+	@Override
+	public boolean[][] test(Map<Relation,boolean[][]> b, int n) {
+		boolean[][] r = b.computeIfAbsent(this,k->new boolean[n][n]);
+		boolean[][] c = r1.test(b,n);
+		boolean change = false;
+		for(int i=0; i<n; ++i)
+			for(int j=0; j<n; ++j)
+				if(!r[i][j] && c[i][j])
+					change = r[i][j] = true;
+		if(!change)
+			return r;
+		for(int k=0;;++k){
+			assert k<1+n;
+			change = false;
+			for(int i=0; i<n; ++i)
+				for(int j=0; j<n; ++j)
+					if(!r[i][j])
+						for(int l=0; l<n; ++l)
+							if(r[i][l] && r[l][j]){
+								change = r[i][j] = true;
+								break;
+							}
+			if(!change)
+				return r;
+		}
+	}
+
     @Override
     protected BoolExpr encodeApprox() {
         BoolExpr enc = ctx.mkTrue();

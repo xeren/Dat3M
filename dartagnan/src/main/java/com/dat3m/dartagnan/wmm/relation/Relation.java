@@ -9,6 +9,7 @@ import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
@@ -99,6 +100,10 @@ public abstract class Relation {
     public boolean getIsNamed(){
         return name != null;
     }
+
+	public boolean[][] test(Map<Relation,boolean[][]> binding, int size){
+		return binding.computeIfAbsent(this,k->new boolean[size][size]);
+	}
 
     @Override
     public String toString(){

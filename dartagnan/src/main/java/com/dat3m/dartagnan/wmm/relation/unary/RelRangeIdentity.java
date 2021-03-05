@@ -8,6 +8,7 @@ import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.BoolExpr;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 public class RelRangeIdentity extends UnaryRelation {
@@ -50,6 +51,22 @@ public class RelRangeIdentity extends UnaryRelation {
             r1.addEncodeTupleSet(r1Set);
         }
     }
+
+	@Override
+	public boolean[][] test(Map<Relation,boolean[][]> b, int n) {
+		boolean[][] r = b.computeIfAbsent(this,k->new boolean[n][n]);
+		boolean[][] c = r1.test(b,n);
+		for(int i=0; i<n; ++i){
+			if(r[i][i])
+				continue;
+			for(int j=0; j<n; ++j)
+				if(c[j][i]){
+					r[i][i] = true;
+					break;
+				}
+		}
+		return r;
+	}
 
     @Override
     protected BoolExpr encodeApprox() {

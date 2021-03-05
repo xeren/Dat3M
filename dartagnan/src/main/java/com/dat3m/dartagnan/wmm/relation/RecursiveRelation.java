@@ -7,6 +7,7 @@ import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import java.util.Map;
 
 /**
  *
@@ -74,6 +75,26 @@ public class RecursiveRelation extends Relation {
             r1.addEncodeTupleSet(encodeTupleSet);
         }
     }
+
+	@Override
+	public boolean[][] test(Map<Relation,boolean[][]> b, int n){
+		boolean[][] r = b.computeIfAbsent(this,k->new boolean[n][n]);
+		boolean[][] c = b.get(r1);
+		//stops recursion
+		if(c==null)
+			c = r1.test(b,n);
+		for(int k=0;;++k){
+			assert k<n*n;
+			boolean change = false;
+			for(int i=0; i<n; ++i)
+				for(int j=0; j<n; ++j)
+					if(!r[i][j] && c[i][j])
+						change = r[i][j] = true;
+			if(!change)
+				return r;
+			c = r1.test(b,n);
+		}
+	}
 
     @Override
     public void setRecursiveGroupId(int id){
