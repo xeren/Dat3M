@@ -32,7 +32,15 @@ public class Irreflexive extends Axiom {
         return set;
     }
 
-    @Override
+	@Override
+	public boolean test(boolean[][] edge) {
+		for(int i=0; i<edge.length; ++i)
+			if(edge[i][i])
+				return false;
+		return true;
+	}
+
+	@Override
     protected BoolExpr _consistent(Context ctx) {
         BoolExpr enc = ctx.mkTrue();
         for(Tuple tuple : rel.getEncodeTupleSet()){

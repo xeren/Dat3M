@@ -53,7 +53,35 @@ public class Acyclic extends Axiom {
         return result;
     }
 
-    @Override
+	@Override
+	public boolean test(boolean[][] e){
+		int n = e.length;
+		boolean[][] r = new boolean[n][n];
+		for(int i=0; i<n; ++i){
+			assert n<=e[i].length;
+			if(e[i][i])
+				return false;
+			System.arraycopy(e[i],0,r[i],0,n);
+		}
+		for(int m=0;;++m){
+			assert m<1+n;
+			boolean change = false;
+			for(int i=0; i<n; ++i)
+				for(int j=0; j<n; ++j)
+					if(!r[i][j])
+						for(int k=0; k<n; ++k)
+							if(r[i][k] && r[k][j]){
+								if(i==j)
+									return false;
+								change = r[i][j] = true;
+								break;
+							}
+			if(!change)
+				return true;
+		}
+	}
+
+	@Override
     protected BoolExpr _consistent(Context ctx) {
         BoolExpr enc = ctx.mkTrue();
         for(Tuple tuple : rel.getEncodeTupleSet()){

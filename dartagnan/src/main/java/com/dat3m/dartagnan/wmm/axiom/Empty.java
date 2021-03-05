@@ -22,7 +22,16 @@ public class Empty extends Axiom {
         return rel.getMaxTupleSet();
     }
 
-    @Override
+	@Override
+	public boolean test(boolean[][] e) {
+		for(boolean[] a: e)
+			for(boolean b: a)
+				if(b)
+					return false;
+		return true;
+	}
+
+	@Override
     protected BoolExpr _consistent(Context ctx) {
         BoolExpr enc = ctx.mkTrue();
         for(Tuple tuple : rel.getEncodeTupleSet()){

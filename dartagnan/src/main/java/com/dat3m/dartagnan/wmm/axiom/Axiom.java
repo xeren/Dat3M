@@ -5,6 +5,8 @@ import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
+import java.util.Map;
+
 /**
  *
  * @author Florian Furbach
@@ -27,6 +29,8 @@ public abstract class Axiom {
     public Relation getRel() {
         return rel;
     }
+
+	public abstract boolean test(boolean[][] edge);
 
     public BoolExpr encodeRelAndConsistency(Context ctx) {
     	return ctx.mkAnd(rel.encode(), consistent(ctx));
