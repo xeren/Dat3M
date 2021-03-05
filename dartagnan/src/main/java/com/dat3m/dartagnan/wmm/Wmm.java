@@ -1,6 +1,9 @@
 package com.dat3m.dartagnan.wmm;
 
+import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.utils.Settings;
+import com.dat3m.dartagnan.wmm.relation.base.stat.RelCartesian;
+import com.dat3m.dartagnan.wmm.relation.base.stat.RelSetIdentity;
 import com.dat3m.dartagnan.wmm.utils.*;
 import com.dat3m.dartagnan.wmm.utils.alias.AliasAnalysis;
 import com.google.common.collect.ImmutableSet;
@@ -65,6 +68,29 @@ public class Wmm {
         }
         recursiveGroups.add(new RecursiveGroup(id, recursiveGroup));
     }
+
+	public boolean isLocalConsistent(){
+		HashMap<Relation,boolean[][]> binding = new HashMap<>();
+		boolean[][] co = binding.computeIfAbsent(relationRepository.getRelation("co"),k->new boolean[2][2]);
+		boolean[][] loc = binding.computeIfAbsent(relationRepository.getRelation("loc"),k->new boolean[2][2]);
+		boolean[][] po = binding.computeIfAbsent(relationRepository.getRelation("po"),k->new boolean[2][2]);
+		boolean[][] int_ = binding.computeIfAbsent(relationRepository.getRelation("int"),k->new boolean[2][2]);
+		po[0][1] = int_[0][1] = int_[1][0] = true;
+		co[1][0] = loc[0][0] = loc[0][1] = loc[1][0] = loc[1][1] = true;
+		FilterBasic[] filter = new FilterBasic[]{FilterBasic.get(EType.WRITE),FilterBasic.get(EType.MEMORY),FilterBasic.get(EType.ANY)};
+		for(FilterBasic a : filter){
+			for(FilterBasic b : filter){
+				boolean[][] r = binding.computeIfAbsent(relationRepository.getRelation(RelCartesian.class,a,b),k->new boolean[2][2]);
+				r[0][0] = r[0][1] = r[1][0] = r[1][1] = true;
+			}
+			boolean[][] r = binding.computeIfAbsent(relationRepository.getRelation(RelSetIdentity.class,a),k->new boolean[2][2]);
+			r[0][0] = r[1][1] = true;
+		}
+		for(Axiom a: axioms)
+			if(!a.test(a.getRel().test(binding,2)))
+				return true;
+		return false;
+	}
 
     public BoolExpr encode(Program program, Context ctx, Settings settings) {
         this.program = program;
