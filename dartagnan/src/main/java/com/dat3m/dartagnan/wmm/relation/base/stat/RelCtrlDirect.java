@@ -2,7 +2,6 @@ package com.dat3m.dartagnan.wmm.relation.base.stat;
 
 import com.dat3m.dartagnan.program.event.CondJump;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.If;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
@@ -10,23 +9,14 @@ import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 public class RelCtrlDirect extends StaticRelation {
 
-    public RelCtrlDirect(){
-        term = "ctrlDirect";
-    }
+	public RelCtrlDirect(){
+		term = "ctrlDirect";
+	}
 
-    @Override
-    public TupleSet getMaxTupleSet(){
-        if(maxTupleSet == null){
-            maxTupleSet = new TupleSet();
-
-                for(Event e1 : program.getCache().getEvents(FilterBasic.get(EType.CMP))){
-                    for(Event e2 : ((If) e1).getMainBranchEvents()){
-                        maxTupleSet.add(new Tuple(e1, e2));
-                    }
-                    for(Event e2 : ((If) e1).getElseBranchEvents()){
-                        maxTupleSet.add(new Tuple(e1, e2));
-                    }
-                }
+	@Override
+	public TupleSet getMaxTupleSet(){
+		if(maxTupleSet == null){
+			maxTupleSet = new TupleSet();
 			for(Event jump : program.getCache().getEvents(FilterBasic.get(EType.JUMP))){
 				Event label = ((CondJump)jump).getLabel();
 				assert null!=label && jump.getCId() < label.getCId();
@@ -35,7 +25,7 @@ public class RelCtrlDirect extends StaticRelation {
 				for(Event e = label; null != e && !(e instanceof CondJump.End); e = e.getSuccessor())
 					maxTupleSet.add(new Tuple(jump,e));
 			}
-        }
-        return maxTupleSet;
-    }
+		}
+		return maxTupleSet;
+	}
 }
