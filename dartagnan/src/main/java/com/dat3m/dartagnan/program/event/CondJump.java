@@ -16,6 +16,7 @@ public class CondJump extends Event implements RegReaderData {
     private Label label4Copy;
     private final BExpr expr;
     private final ImmutableSet<Register> dataRegs;
+	private transient CondJump copy;
 
     public CondJump(BExpr expr, Label label){
         if(label == null){
@@ -38,6 +39,7 @@ public class CondJump extends Event implements RegReaderData {
 		this.dataRegs = other.dataRegs;
 		Event notifier = label != null ? label : other.label;
 		notifier.addListener(this);
+		copy = other.copy;
     }
     
     public Label getLabel(){
@@ -89,10 +91,10 @@ public class CondJump extends Event implements RegReaderData {
     }
 
 
-    @Override
-    public CondJump getCopy(){
-    	return new CondJump(this);
-    }
+	@Override
+	public CondJump getCopy(){
+		return copy = new CondJump(this);
+	}
 
     
     // Compilation
@@ -122,4 +124,28 @@ public class CondJump extends Event implements RegReaderData {
         }
         return cfEnc;
     }
+
+	/**
+	Marks a program location where all branches join.
+	Control dependency supported by the associated branching event shall not surpass this event.
+	*/
+	public static final class End extends Event{
+
+		public End(){
+		}
+
+		public End(End other){
+			super(other);
+		}
+
+		@Override
+		public End getCopy(){
+			return new End(this);
+		}
+
+		@Override
+		public String label(){
+			return "kill dependency";
+		}
+	}
 }
