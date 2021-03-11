@@ -114,7 +114,7 @@ public class RelUnion extends BinaryRelation {
                 boolean recurseInR2 = (r2.getRecursiveGroupId() & groupId) > 0;
 
                 BiFunction<Event,Event,BoolExpr> r1Edge = recurseInR1 ? (x,y)->r1.edge(childIteration,x,y) : r1::edge;
-                BiFunction<Event,Event,BoolExpr> r2Edge = recurseInR1 ? (x,y)->r2.edge(childIteration,x,y) : r2::edge;
+                BiFunction<Event,Event,BoolExpr> r2Edge = recurseInR2 ? (x,y)->r2.edge(childIteration,x,y) : r2::edge;
 
                 for(Tuple tuple : encodeTupleSet){
                     Event e1 = tuple.getFirst();
