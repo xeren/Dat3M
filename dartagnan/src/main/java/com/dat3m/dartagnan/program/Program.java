@@ -167,31 +167,35 @@ public class Program {
     // -----------------------------------------------------------------------------------------------------------------
 
     public BoolExpr encodeCF(Context ctx) {
+		ArrayList<BoolExpr> enc = new ArrayList<>();
 		ControlBlock cfTrue = new ControlBlock(null,ctx.mkTrue());
 		for(Thread t : threads) {
 			TreeMap<Integer,LinkedList<ControlBlock>> message = new TreeMap<>();
 			ControlBlock control = cfTrue;
 			for(Event e : t.getEntry().getSuccessors()) {
 				if(!message.isEmpty()) {
-					assert e.getCId() >= message.firstKey();
+					assert e.getCId() <= message.firstKey();
 					if(e.getCId() == message.firstKey()) {
 						LinkedList<ControlBlock> in = message.pollFirstEntry().getValue();
 						assert !in.isEmpty();
 						if(!control.variable.isFalse())
 							in.add(control);
 						control = ControlBlock.join(ctx.mkBoolConst("join"+e.getCId()),in);
+						enc.add(ctx.mkEq(control.variable,
+							ctx.mkOr(in.stream().map(b->b.variable).toArray(BoolExpr[]::new))));
 					}
 				}
 				control = e.initialise(ctx,control,(i,b)->message.computeIfAbsent(i,k->new LinkedList<>()).add(b));
 			}
 			assert message.isEmpty();
-        }
-        BoolExpr enc = memory.encode(ctx);
-        for(Thread t : threads){
-            enc = ctx.mkAnd(enc, t.encodeCF(ctx));
-        }
-        return enc;
-    }
+		}
+		enc.add(memory.encode(ctx));
+		for(Thread t : threads){
+			for(Event e = t.getEntry(); null!=e; e = e.getSuccessor())
+				e.encode(ctx,enc::add);
+		}
+		return ctx.mkAnd(enc.toArray(new BoolExpr[0]));
+	}
 
     public BoolExpr encodeFinalRegisterValues(Context ctx){
         Map<Register, List<Event>> eMap = new HashMap<>();
