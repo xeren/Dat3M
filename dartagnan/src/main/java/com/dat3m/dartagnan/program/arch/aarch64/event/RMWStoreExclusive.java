@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.program.arch.aarch64.event;
 
+import com.dat3m.dartagnan.program.ControlBlock;
 import com.dat3m.dartagnan.program.arch.aarch64.utils.EType;
 import com.dat3m.dartagnan.program.event.Store;
 import com.microsoft.z3.BoolExpr;
@@ -24,6 +25,13 @@ public class RMWStoreExclusive extends Store implements RegReaderData {
     public String toString(){
         return String.format("%1$-" + Event.PRINT_PAD_EXTRA + "s", super.toString()) + "# opt";
     }
+
+	@Override
+	public ControlBlock initialise(Context c, ControlBlock b, ControlMessage m){
+		ControlBlock r = super.initialise(c,b,m);
+		execVar = c.mkBoolConst("exec("+repr()+")");
+		return r;
+	}
 
     @Override
     protected BoolExpr encodeExec(Context ctx){

@@ -195,11 +195,8 @@ public abstract class Event implements Comparable<Event> {
 	}
 
 	public ControlBlock initialise(Context ctx, ControlBlock ctrl, ControlMessage message){
-		if(cId < 0){
-			throw new RuntimeException("Event ID is not set in " + this);
-		}
-		execVar = ctx.mkBoolConst("exec(" + repr() + ")");
-		cfVar = ctx.mkBoolConst("cf(" + repr() + ")");
+		assert 0 <= cId;
+		execVar = cfVar = ctx.mkBoolConst("cf(" + repr() + ")");
 		return ctrl;
 	}
 
@@ -232,6 +229,6 @@ public abstract class Event implements Comparable<Event> {
 	}
 
 	protected BoolExpr encodeExec(Context ctx){
-		return ctx.mkEq(execVar, cfVar);
+		return ctx.mkTrue();
 	}
 }
