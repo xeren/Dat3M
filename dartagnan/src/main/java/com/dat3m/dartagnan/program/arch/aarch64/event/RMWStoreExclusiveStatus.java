@@ -24,8 +24,10 @@ public class RMWStoreExclusiveStatus extends Event implements RegWriter {
 
 	@Override
 	public ControlBlock initialise(Context c, ControlBlock b, ControlMessage m) {
+		ControlBlock r = super.initialise(c,b,m);
 		regResultExpr = register.toZ3IntResult(this,c);
-		return super.initialise(c,b,m);
+		execVar = c.mkBoolConst("exec("+repr()+")");
+		return r;
 	}
 
     @Override
