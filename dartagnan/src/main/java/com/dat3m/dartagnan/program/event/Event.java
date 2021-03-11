@@ -25,7 +25,6 @@ public abstract class Event implements Comparable<Event> {
     protected transient BoolExpr cfCond;
 
 	protected transient BoolExpr cfVar;
-	protected transient BoolExpr execVar;
 
 	protected Set<Event> listeners = new HashSet<>();
 	
@@ -196,7 +195,7 @@ public abstract class Event implements Comparable<Event> {
 
 	public ControlBlock initialise(Context ctx, ControlBlock ctrl, ControlMessage message){
 		assert 0 <= cId;
-		execVar = cfVar = ctx.mkBoolConst("cf(" + repr() + ")");
+		cfVar = ctx.mkBoolConst("cf(" + repr() + ")");
 		return ctrl;
 	}
 
@@ -205,7 +204,7 @@ public abstract class Event implements Comparable<Event> {
 	}
 
 	public BoolExpr exec(){
-		return execVar;
+		return cfVar;
 	}
 
 	public BoolExpr cf(){
