@@ -2,12 +2,12 @@ package com.dat3m.dartagnan.program.event;
 
 import com.dat3m.dartagnan.expression.BConst;
 import com.dat3m.dartagnan.expression.BExpr;
+import com.dat3m.dartagnan.program.ControlBlock;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.google.common.collect.ImmutableSet;
-import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 
 public class CondJump extends Event implements RegReaderData {
@@ -17,6 +17,8 @@ public class CondJump extends Event implements RegReaderData {
     private final BExpr expr;
     private final ImmutableSet<Register> dataRegs;
 	private transient CondJump copy;
+	private transient ControlBlock controlThen;
+	private transient ControlBlock controlElse;
 
     public CondJump(BExpr expr, Label label){
         if(label == null){
@@ -113,17 +115,29 @@ public class CondJump extends Event implements RegReaderData {
     // Encoding
     // -----------------------------------------------------------------------------------------------------------------
 
-    @Override
-    public BoolExpr encodeCF(Context ctx, BoolExpr cond) {
-        if(cfEnc == null){
-            cfCond = (cfCond == null) ? cond : ctx.mkOr(cfCond, cond);
-            BoolExpr ifCond = expr.toZ3Bool(this, ctx);
-            label.addCfCond(ctx, ctx.mkAnd(ifCond, cfVar));
-            cfEnc = ctx.mkAnd(ctx.mkEq(cfVar, cfCond), encodeExec(ctx));
-            cfEnc = ctx.mkAnd(cfEnc, successor.encodeCF(ctx, ctx.mkAnd(ctx.mkNot(ifCond), cfVar)));
-        }
-        return cfEnc;
-    }
+	@Override
+	public ControlBlock initialise(Context c, ControlBlock b, ControlMessage m){
+		ControlBlock bb = super.initialise(c,b,m);
+		assert b == bb;
+		if(expr instanceof BConst && ((BConst)expr).getValue()){
+			controlThen = b;
+			controlElse = new ControlBlock(b,c.mkFalse());
+		}
+		else{
+			controlThen = new ControlBlock(b,c.mkBoolConst("then"+cId));
+			controlElse = new ControlBlock(b,controlThen,c.mkBoolConst("else"+cId));
+		}
+		m.send(label.getCId(),controlThen);
+		return controlElse;
+	}
+
+	@Override
+	public void encode(Context c, Constraint o){
+		if(null!=controlElse){
+			o.add(c.mkEq(controlThen.variable,c.mkAnd(control.variable,expr.toZ3Bool(this,c))));
+			o.add(c.mkEq(controlElse.variable,c.mkAnd(control.variable,c.mkNot(controlThen.variable))));
+		}
+	}
 
 	/**
 	Marks a program location where all branches join.

@@ -40,10 +40,11 @@ public class RMWStoreExclusive extends Store implements RegReaderData {
 		return execVar;
 	}
 
-    @Override
-    protected BoolExpr encodeExec(Context ctx){
-        return ctx.mkImplies(execVar, cfVar);
-    }
+	@Override
+	public void encode(Context c, Constraint o){
+		super.encode(c,o);
+		o.add(c.mkImplies(execVar,control.variable));
+	}
 
     // Unrolling
     // -----------------------------------------------------------------------------------------------------------------
