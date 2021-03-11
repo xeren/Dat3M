@@ -51,15 +51,13 @@ public class RMWStoreExclusiveStatus extends Event implements RegWriter {
         return register + " <- status(" + storeEvent.toStringBase() + ")";
     }
 
-    @Override
-    protected BoolExpr encodeExec(Context ctx){
-        int precision = register.getPrecision();
-		BoolExpr enc = ctx.mkAnd(
-                ctx.mkImplies(storeEvent.exec(), ctx.mkEq(regResultExpr, new IConst(0, precision).toZ3Int(this, ctx))),
-                ctx.mkImplies(ctx.mkNot(storeEvent.exec()), ctx.mkEq(regResultExpr, new IConst(1, precision).toZ3Int(this, ctx)))
-        );
-        return ctx.mkAnd(super.encodeExec(ctx), enc);
-    }
+	@Override
+	public void encode(Context c, Constraint o){
+		super.encode(c,o);
+		int precision = register.getPrecision();
+		o.add(c.mkImplies(storeEvent.exec(),c.mkEq(regResultExpr,new IConst(0,precision).toZ3Int(this,c))));
+		o.add(c.mkOr(storeEvent.exec(),c.mkEq(regResultExpr,new IConst(1,precision).toZ3Int(this,c))));
+	}
 
     // Unrolling
     // -----------------------------------------------------------------------------------------------------------------

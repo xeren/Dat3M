@@ -21,10 +21,7 @@ public abstract class Event implements Comparable<Event> {
 
 	protected transient Event successor;
 
-    protected transient BoolExpr cfEnc;
-    protected transient BoolExpr cfCond;
-
-	protected transient BoolExpr cfVar;
+	protected transient ControlBlock control;
 
 	protected Set<Event> listeners = new HashSet<>();
 	
@@ -195,7 +192,7 @@ public abstract class Event implements Comparable<Event> {
 
 	public ControlBlock initialise(Context ctx, ControlBlock ctrl, ControlMessage message){
 		assert 0 <= cId;
-		cfVar = ctx.mkBoolConst("cf(" + repr() + ")");
+		control = ctrl;
 		return ctrl;
 	}
 
@@ -204,30 +201,18 @@ public abstract class Event implements Comparable<Event> {
 	}
 
 	public BoolExpr exec(){
-		return cfVar;
+		return control.variable;
 	}
 
 	public BoolExpr cf(){
-		return cfVar;
+		return control.variable;
 	}
 
-	public void addCfCond(Context ctx, BoolExpr cond){
-		cfCond = (cfCond == null) ? cond : ctx.mkOr(cfCond, cond);
+	@FunctionalInterface
+	public interface Constraint{
+		void add(BoolExpr constraint);
 	}
 
-	public BoolExpr encodeCF(Context ctx, BoolExpr cond) {
-		if(cfEnc == null){
-			cfCond = (cfCond == null) ? cond : ctx.mkOr(cfCond, cond);
-			cfEnc = ctx.mkEq(cfVar, cfCond);
-			cfEnc = ctx.mkAnd(cfEnc, encodeExec(ctx));
-			if(successor != null){
-				cfEnc = ctx.mkAnd(cfEnc, successor.encodeCF(ctx, cfVar));
-			}
-		}
-		return cfEnc;
-	}
-
-	protected BoolExpr encodeExec(Context ctx){
-		return ctx.mkTrue();
+	public void encode(Context context, Constraint out){
 	}
 }

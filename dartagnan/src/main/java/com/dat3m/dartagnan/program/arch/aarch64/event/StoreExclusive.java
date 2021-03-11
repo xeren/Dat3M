@@ -9,8 +9,6 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
 import com.dat3m.dartagnan.wmm.utils.Arch;
-import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
 
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -61,14 +59,5 @@ public class StoreExclusive extends Store implements RegWriter, RegReaderData {
             return compileSequence(target, nextId, predecessor, events);
         }
         throw new RuntimeException("Compilation of StoreExclusive is not implemented for " + target);
-    }
-
-
-    // Encoding
-    // -----------------------------------------------------------------------------------------------------------------
-
-    @Override
-    public BoolExpr encodeCF(Context ctx, BoolExpr cond) {
-        throw new RuntimeException("StoreExclusive event must be compiled before encoding");
     }
 }
