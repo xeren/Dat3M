@@ -16,8 +16,9 @@ public class RMWReadCondUnless extends RMWReadCond implements RegWriter, RegRead
 
 	@Override
 	public ControlBlock initialise(Context c, ControlBlock b, ControlMessage m) {
+		ControlBlock r = super.initialise(c,b,m);
 		z3Cond = c.mkNot(z3Cond);
-		return super.initialise(c,b,m);
+		return r;
 	}
 
     @Override
