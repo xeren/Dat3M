@@ -85,18 +85,24 @@ public final class ControlBlock {
 		HashSet<ControlBlock> t = new HashSet<>();
 		LinkedList<ControlBlock> r = new LinkedList<>();
 		for(ControlBlock j : jump)
-			(null==j.alternative ? t : r).add(j);
+			joinAdd(t,r,j);
 		Iterator<ControlBlock> i = r.iterator();
 		while(i.hasNext()) {
 			ControlBlock b = i.next();
 			if(t.remove(b.alternative)) {
 				i.remove();
-				(null==b.in.alternative ? t : r).add(b.in);
+				joinAdd(t,r,b.in);
 				i = r.iterator();
 			}
 		}
 		r.addAll(t);
 		assert !r.isEmpty();
 		return 1 == r.size() ? r.getFirst() : new ControlBlock(r.toArray(new ControlBlock[0]),var);
+	}
+
+	private static void joinAdd(HashSet<ControlBlock> t, LinkedList<ControlBlock> r, ControlBlock b){
+		assert null==b.joined || Arrays.stream(b.joined).allMatch(jj->null==jj.joined);
+		for(ControlBlock j : null!=b.joined ? b.joined : new ControlBlock[]{b})
+			(null==j.alternative ? t : r).add(j);
 	}
 }
