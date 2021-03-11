@@ -92,13 +92,10 @@ import com.dat3m.dartagnan.program.event.Assume;
 import com.dat3m.dartagnan.program.event.CondJump;
 import com.dat3m.dartagnan.program.event.FunCall;
 import com.dat3m.dartagnan.program.event.FunRet;
-import com.dat3m.dartagnan.program.event.If;
 import com.dat3m.dartagnan.program.event.Label;
 import com.dat3m.dartagnan.program.event.Load;
 import com.dat3m.dartagnan.program.event.Local;
-import com.dat3m.dartagnan.program.event.Skip;
 import com.dat3m.dartagnan.program.event.Store;
-import com.dat3m.dartagnan.program.event.While;
 import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.program.memory.Location;
 import com.dat3m.dartagnan.program.utils.EType;
@@ -143,6 +140,8 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 	private Call_cmdContext atomicMode = null;
 	 
 	private List<String> smackDummyVariables = Arrays.asList("$GLOBALS_BOTTOM", "$EXTERNS_BOTTOM", "$MALLOC_TOP", "__SMACK_code", "__SMACK_decls", "__SMACK_top_decl", "$1024.ref", "$0.ref", "$1.ref", ".str.1", "env_value_str", ".str.1.3", ".str.19", "errno_global", "$CurrAddr");
+
+	private int countLabel = 0;
 
 	public VisitorBoogie(ProgramBuilder pb) {
 		this.programBuilder = pb;
@@ -438,25 +437,28 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 	@Override
 	public Object visitWhile_cmd(While_cmdContext ctx) {
         ExprInterface expr = (ExprInterface)ctx.guard().expr().accept(this);
-        Skip exitEvent = new Skip();
-        While whileEvent = new While(expr, exitEvent);
-        programBuilder.addChild(threadCount, whileEvent);
-
+		Label loop = programBuilder.getOrCreateLabel(".loop."+countLabel);
+		Label exit = programBuilder.getOrCreateLabel(".exit."+countLabel);
+		++countLabel;
+		programBuilder.addChild(threadCount,loop);
+		programBuilder.addChild(threadCount,new CondJump(new BExprUn(NOT,expr),exit));
         visitChildren(ctx.stmt_list());
-        return programBuilder.addChild(threadCount, exitEvent);
+		programBuilder.addChild(threadCount,new CondJump(new BConst(true),loop));
+		programBuilder.addChild(threadCount,exit);
+		programBuilder.addChild(threadCount,new CondJump.End());
+		return null;
 	}
 
 	@Override
 	public Object visitIf_cmd(If_cmdContext ctx) {
         ExprInterface expr = (ExprInterface)ctx.guard().expr().accept(this);
-        Skip exitMainBranch = new Skip();
-        Skip exitElseBranch = new Skip();
-        If ifEvent = new If(expr, exitMainBranch, exitElseBranch);
-        programBuilder.addChild(threadCount, ifEvent);
-        
+		Label skip = programBuilder.getOrCreateLabel(".else."+countLabel);
+		Label exit = programBuilder.getOrCreateLabel(".exit."+countLabel);
+		++countLabel;
+		programBuilder.addChild(threadCount,new CondJump(new BExprUn(NOT,expr),skip));
         visitChildren(ctx.stmt_list(0));
-        programBuilder.addChild(threadCount, exitMainBranch);
-
+		programBuilder.addChild(threadCount,new CondJump(new BConst(true),exit));
+		programBuilder.addChild(threadCount,skip);
         // case when the else branch is a stmt list
         if(ctx.stmt_list().size() > 1){
             visitChildren(ctx.stmt_list(1));
@@ -466,8 +468,8 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
         if(ctx.if_cmd() != null) {
             visitChildren(ctx.if_cmd());
         }
-        
-        programBuilder.addChild(threadCount, exitElseBranch);
+		programBuilder.addChild(threadCount,exit);
+		programBuilder.addChild(threadCount,new CondJump.End());
         return null;
 
 	}
