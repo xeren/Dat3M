@@ -33,10 +33,11 @@ public class FenceCond extends Fence {
 		return execVar;
 	}
 
-    @Override
-    protected BoolExpr encodeExec(Context ctx){
-        return ctx.mkEq(execVar, ctx.mkAnd(cfVar, loadEvent.getCond()));
-    }
+	@Override
+	public void encode(Context c, Constraint o){
+		super.encode(c,o);
+		o.add(c.mkEq(execVar,c.mkAnd(control.variable,loadEvent.getCond())));
+	}
 
     // Unrolling
     // -----------------------------------------------------------------------------------------------------------------

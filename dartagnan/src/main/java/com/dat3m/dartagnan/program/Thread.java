@@ -138,7 +138,10 @@ public class Thread {
     // Encoding
     // -----------------------------------------------------------------------------------------------------------------
 
-    public BoolExpr encodeCF(Context ctx){
-        return entry.encodeCF(ctx, ctx.mkTrue());
-    }
+	public BoolExpr encodeCF(Context ctx){
+		ArrayList<BoolExpr> enc = new ArrayList<>();
+		for(Event e = entry; null!=e; e = e.getSuccessor())
+			e.encode(ctx,enc::add);
+		return ctx.mkAnd(enc.toArray(new BoolExpr[0]));
+	}
 }
