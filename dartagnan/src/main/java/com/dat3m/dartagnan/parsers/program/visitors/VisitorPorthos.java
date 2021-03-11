@@ -12,11 +12,13 @@ import com.dat3m.dartagnan.program.arch.pts.event.Read;
 import com.dat3m.dartagnan.program.arch.pts.event.Write;
 import com.dat3m.dartagnan.program.memory.Location;
 import org.antlr.v4.runtime.misc.Interval;
+import static com.dat3m.dartagnan.expression.op.BOpUn.NOT;
 
 public class VisitorPorthos extends PorthosBaseVisitor<Object> implements PorthosVisitor<Object> {
 
     private ProgramBuilder programBuilder;
     private int currentThread;
+	private int countLabel = 0;
 
     public VisitorPorthos(ProgramBuilder pb){
         this.programBuilder = pb;
@@ -53,28 +55,33 @@ public class VisitorPorthos extends PorthosBaseVisitor<Object> implements Portho
     @Override
     public Event visitExpressionWhile(PorthosParser.ExpressionWhileContext ctx) {
         ExprInterface expr = (ExprInterface)ctx.boolExpr().accept(this);
-        Skip exitEvent = new Skip();
-        While whileEvent = new While(expr, exitEvent);
-        programBuilder.addChild(currentThread, whileEvent);
+		Label loop = programBuilder.getOrCreateLabel(".loop."+countLabel);
+		Label exit = programBuilder.getOrCreateLabel(".exit."+countLabel);
+		++countLabel;
+		programBuilder.addChild(currentThread,loop);
+		programBuilder.addChild(currentThread,new CondJump(new BExprUn(NOT,expr),exit));
         ctx.expressionSequence().accept(this);
-        return programBuilder.addChild(currentThread, exitEvent);
+		programBuilder.addChild(currentThread,new CondJump(new BConst(true),loop));
+		programBuilder.addChild(currentThread,exit);
+		programBuilder.addChild(currentThread,new CondJump.End());
+		return null;
     }
 
     @Override
     public Object visitExpressionIf(PorthosParser.ExpressionIfContext ctx) {
         ExprInterface expr = (ExprInterface)ctx.boolExpr().accept(this);
-        Skip exitMainBranch = new Skip();
-        Skip exitElseBranch = new Skip();
-        If ifEvent = new If(expr, exitMainBranch, exitElseBranch);
-        programBuilder.addChild(currentThread, ifEvent);
-
+		Label skip = programBuilder.getOrCreateLabel(".else."+countLabel);
+		Label exit = programBuilder.getOrCreateLabel(".exit."+countLabel);
+		++countLabel;
+		programBuilder.addChild(currentThread,new CondJump(new BExprUn(NOT,expr),skip));
         ctx.expressionSequence(0).accept(this);
-        programBuilder.addChild(currentThread, exitMainBranch);
-
+		programBuilder.addChild(currentThread,new CondJump(new BConst(true),exit));
+		programBuilder.addChild(currentThread,skip);
         if(ctx.expressionSequence(1) != null){
             ctx.expressionSequence(1).accept(this);
         }
-        programBuilder.addChild(currentThread, exitElseBranch);
+		programBuilder.addChild(currentThread,exit);
+		programBuilder.addChild(currentThread,new CondJump.End());
         return null;
     }
 

@@ -26,6 +26,7 @@ public class VisitorLitmusC
     private int currentThread;
     private int scope;
     private Register returnRegister;
+	private int countLabel = 0;
 
     public VisitorLitmusC(ProgramBuilder pb){
         this.programBuilder = pb;
@@ -181,32 +182,35 @@ public class VisitorLitmusC
     @Override
     public Object visitWhileExpression(LitmusCParser.WhileExpressionContext ctx) {
         ExprInterface expr = (ExprInterface) ctx.re().accept(this);
-        Skip exitEvent = new Skip();
-        While whileEvent = new While(expr, exitEvent);
-        programBuilder.addChild(currentThread, whileEvent);
-
+		Label loop = programBuilder.getOrCreateLabel(".loop."+countLabel);
+		Label exit = programBuilder.getOrCreateLabel(".exit."+countLabel);
+		++countLabel;
+		programBuilder.addChild(currentThread,loop);
+		programBuilder.addChild(currentThread,new CondJump(new BExprUn(BOpUn.NOT,expr),exit));
         for(LitmusCParser.ExpressionContext expressionContext : ctx.expression())
             expressionContext.accept(this);
-
-        return programBuilder.addChild(currentThread, exitEvent);
+		programBuilder.addChild(currentThread,new CondJump(new BConst(true),loop));
+		programBuilder.addChild(currentThread,exit);
+		programBuilder.addChild(currentThread,new CondJump.End());
+		return null;
     }
 
     @Override
     public Object visitIfExpression(LitmusCParser.IfExpressionContext ctx) {
         ExprInterface expr = (ExprInterface) ctx.re().accept(this);
-        Skip exitMainBranch = new Skip();
-        Skip exitElseBranch = new Skip();
-        If ifEvent = new If(expr, exitMainBranch, exitElseBranch);
-        programBuilder.addChild(currentThread, ifEvent);
-
+		Label skip = programBuilder.getOrCreateLabel(".else."+countLabel);
+		Label exit = programBuilder.getOrCreateLabel(".exit."+countLabel);
+		++countLabel;
+		programBuilder.addChild(currentThread,new CondJump(new BExprUn(BOpUn.NOT,expr),skip));
         for(LitmusCParser.ExpressionContext expressionContext : ctx.expression())
             expressionContext.accept(this);
-        programBuilder.addChild(currentThread, exitMainBranch);
-
+		programBuilder.addChild(currentThread,new CondJump(new BConst(true),exit));
+		programBuilder.addChild(currentThread,skip);
         if(ctx.elseExpression() != null){
             ctx.elseExpression().accept(this);
         }
-        programBuilder.addChild(currentThread, exitElseBranch);
+		programBuilder.addChild(currentThread,exit);
+		programBuilder.addChild(currentThread,new CondJump.End());
         return null;
     }
 
