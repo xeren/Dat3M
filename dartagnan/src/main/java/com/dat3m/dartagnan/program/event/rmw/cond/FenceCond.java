@@ -9,6 +9,7 @@ import com.dat3m.dartagnan.program.event.Fence;
 public class FenceCond extends Fence {
 
     private final RMWReadCond loadEvent;
+	private BoolExpr execVar;
 
     public FenceCond (RMWReadCond loadEvent, String name){
         super(name);
@@ -25,6 +26,11 @@ public class FenceCond extends Fence {
 		ControlBlock r = super.initialise(c,b,m);
 		execVar = c.mkBoolConst("exec(" + repr() + ")");
 		return r;
+	}
+
+	@Override
+	public BoolExpr exec() {
+		return execVar;
 	}
 
     @Override

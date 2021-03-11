@@ -15,6 +15,7 @@ public class RMWStoreExclusiveStatus extends Event implements RegWriter {
     private final Register register;
     private final RMWStoreExclusive storeEvent;
     private Expr regResultExpr;
+	private BoolExpr execVar;
 
     RMWStoreExclusiveStatus(Register register, RMWStoreExclusive storeEvent){
         this.register = register;
@@ -28,6 +29,11 @@ public class RMWStoreExclusiveStatus extends Event implements RegWriter {
 		regResultExpr = register.toZ3IntResult(this,c);
 		execVar = c.mkBoolConst("exec("+repr()+")");
 		return r;
+	}
+
+	@Override
+	public BoolExpr exec() {
+		return execVar;
 	}
 
     @Override

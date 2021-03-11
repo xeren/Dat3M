@@ -12,6 +12,8 @@ import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 
 public class RMWStoreExclusive extends Store implements RegReaderData {
 
+	private BoolExpr execVar;
+
     RMWStoreExclusive(IExpr address, ExprInterface value, String mo){
         super(address, value, mo);
         addFilters(EType.EXCL);
@@ -31,6 +33,11 @@ public class RMWStoreExclusive extends Store implements RegReaderData {
 		ControlBlock r = super.initialise(c,b,m);
 		execVar = c.mkBoolConst("exec("+repr()+")");
 		return r;
+	}
+
+	@Override
+	public BoolExpr exec() {
+		return execVar;
 	}
 
     @Override
