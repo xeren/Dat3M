@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.program.event.rmw.cond;
 
+import com.dat3m.dartagnan.program.ControlBlock;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.event.Event;
@@ -18,6 +19,13 @@ public class FenceCond extends Fence {
     public String toString(){
         return String.format("%1$-" + Event.PRINT_PAD_EXTRA + "s", super.toString()) + loadEvent.condToString();
     }
+
+	@Override
+	public ControlBlock initialise(Context c, ControlBlock b, ControlMessage m) {
+		ControlBlock r = super.initialise(c,b,m);
+		execVar = c.mkBoolConst("exec(" + repr() + ")");
+		return r;
+	}
 
     @Override
     protected BoolExpr encodeExec(Context ctx){
