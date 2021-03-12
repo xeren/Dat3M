@@ -243,6 +243,6 @@ public class Program {
 	False proposition, if both events exclude each other.
 	*/
 	public BoolExpr executesBoth(Context context, Event first, Event second) {
-		return context.mkAnd(first.exec(),second.exec());
+		return first.exec(context,second);
 	}
 }

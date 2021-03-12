@@ -13,6 +13,8 @@ public final class ControlBlock {
 	private final ControlBlock alternative;
 	private final ControlBlock[] joined;
 	public final BoolExpr variable;
+	private final HashSet<ControlBlock> implied = new HashSet<>();
+	private final HashSet<ControlBlock> excluded = new HashSet<>();
 
 	/**
 	Creates a new control block.
@@ -64,6 +66,17 @@ public final class ControlBlock {
 		}
 	}
 
+	public boolean implies(ControlBlock other) {
+		initialise();
+		return implied.contains(other);
+	}
+
+	public boolean excludes(ControlBlock other) {
+		initialise();
+		other.initialise();
+		return !Collections.disjoint(excluded,other.implied);
+	}
+
 	/**
 	Creates a new control block if necessary.
 	@param var
@@ -97,5 +110,24 @@ public final class ControlBlock {
 		assert null==b.joined || Arrays.stream(b.joined).allMatch(jj->null==jj.joined);
 		for(ControlBlock j : null!=b.joined ? b.joined : new ControlBlock[]{b})
 			(null==j.alternative ? t : r).add(j);
+	}
+
+	private void initialise() {
+		if(!implied.isEmpty())
+			return;
+		if(null!=alternative)
+			excluded.add(alternative);
+		if(null!=in){
+			implied.add(in);
+			in.initialise();
+			implied.addAll(in.implied);
+			excluded.addAll(in.excluded);
+		}
+		if(null!=out){
+			implied.add(out);
+			out.initialise();
+			implied.addAll(out.implied);
+			excluded.addAll(out.excluded);
+		}
 	}
 }

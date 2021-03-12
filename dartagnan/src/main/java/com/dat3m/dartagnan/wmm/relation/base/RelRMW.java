@@ -142,7 +142,7 @@ public class RelRMW extends StaticRelation {
     }
 
     private BoolExpr pairingCond(Thread thread, Event load, Event store){
-        BoolExpr pairingCond = ctx.mkAnd(load.exec(), store.cf());
+        BoolExpr pairingCond = ctx.mkAnd(load.exec(), store.cf().variable);
 
         for (Event otherLoad : thread.getCache().getEvents(loadFilter)) {
             if (otherLoad.getCId() > load.getCId() && otherLoad.getCId() < store.getCId()) {
@@ -151,7 +151,7 @@ public class RelRMW extends StaticRelation {
         }
         for (Event otherStore : thread.getCache().getEvents(storeFilter)) {
             if (otherStore.getCId() > load.getCId() && otherStore.getCId() < store.getCId()) {
-                pairingCond = ctx.mkAnd(pairingCond, ctx.mkNot(otherStore.cf()));
+                pairingCond = ctx.mkAnd(pairingCond, ctx.mkNot(otherStore.cf().variable));
             }
         }
         return pairingCond;
