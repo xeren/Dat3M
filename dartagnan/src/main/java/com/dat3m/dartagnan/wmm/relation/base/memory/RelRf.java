@@ -80,7 +80,7 @@ public class RelRf extends Relation {
             if(canAccNonInitMem && w.is(EType.INIT)){
                 memInitMap.put(r, ctx.mkOr(memInitMap.getOrDefault(r, ctx.mkFalse()), sameAddress));
             }
-            enc = ctx.mkAnd(enc, ctx.mkImplies(edge, ctx.mkAnd(program.executesBoth(ctx,w,r), sameAddress, sameValue)));
+            enc = ctx.mkAnd(enc, ctx.mkImplies(edge, ctx.mkAnd(w.exec(ctx,r), sameAddress, sameValue)));
         }
 
         for(MemEvent r : edgeMap.keySet()){

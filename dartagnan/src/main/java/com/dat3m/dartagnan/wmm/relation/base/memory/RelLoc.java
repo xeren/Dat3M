@@ -38,7 +38,7 @@ public class RelLoc extends Relation {
         BoolExpr enc = ctx.mkTrue();
         for(Tuple tuple : encodeTupleSet) {
             enc = ctx.mkAnd(enc, ctx.mkEq(edge(tuple), ctx.mkAnd(
-                    program.executesBoth(ctx,tuple.getFirst(),tuple.getSecond()),
+                tuple.getFirst().exec(ctx,tuple.getSecond()),
                     ctx.mkEq(((MemEvent)tuple.getFirst()).getMemAddressExpr(), ((MemEvent)tuple.getSecond()).getMemAddressExpr())
             )));
         }

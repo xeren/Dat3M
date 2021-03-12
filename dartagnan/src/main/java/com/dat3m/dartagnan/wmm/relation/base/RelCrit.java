@@ -43,7 +43,7 @@ public class RelCrit extends StaticRelation {
                     if(lock.getCId() < unlock.getCId()){
                         Tuple tuple = new Tuple(lock, unlock);
                         if(encodeTupleSet.contains(tuple)){
-                            BoolExpr relation = program.executesBoth(ctx,lock,unlock);
+                            BoolExpr relation = lock.exec(ctx,unlock);
                             for(Event otherLock : thread.getCache().getEvents(FilterBasic.get(EType.RCU_LOCK))){
                                 if(otherLock.getCId() > lock.getCId() && otherLock.getCId() < unlock.getCId()){
                                     relation = ctx.mkAnd(relation, ctx.mkNot(edge(otherLock, unlock)));
