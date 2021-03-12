@@ -83,7 +83,7 @@ public class RelCo extends Relation {
                 Expr a1 = w1.getMemAddressExpr().isBV() ? ctx.mkBV2Int((BitVecExpr)w1.getMemAddressExpr(), false) : w1.getMemAddressExpr();
                 Expr a2 = w2.getMemAddressExpr().isBV() ? ctx.mkBV2Int((BitVecExpr)w2.getMemAddressExpr(), false) : w2.getMemAddressExpr();
                 enc = ctx.mkAnd(enc, ctx.mkEq(relation, ctx.mkAnd(
-                        ctx.mkAnd(program.executesBoth(ctx,w1,w2), ctx.mkEq(a1, a2)),
+                        ctx.mkAnd(w1.exec(ctx,w2), ctx.mkEq(a1, a2)),
                         ctx.mkLt(intVar(w1), intVar(w2))
                 )));
             }

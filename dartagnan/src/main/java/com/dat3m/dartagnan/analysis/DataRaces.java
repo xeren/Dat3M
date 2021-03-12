@@ -73,7 +73,7 @@ public class DataRaces {
     						continue;
     					}
     					if(w.canRace() && m.canRace() && MemEvent.canAddressTheSameLocation(w, m)) {
-							enc = ctx.mkOr(enc, ctx.mkAnd(p.executesBoth(ctx,m,w), ctx.mkEq(w.getMemAddressExpr(), m.getMemAddressExpr()),
+							enc = ctx.mkOr(enc, ctx.mkAnd(m.exec(ctx, w), ctx.mkEq(w.getMemAddressExpr(), m.getMemAddressExpr()),
 									hb.getRel().edge(m, w), ctx.mkEq(hb.intVar(w, ctx), ctx.mkAdd(hb.intVar(m, ctx), ctx.mkInt(1)))));
     					}
     				}
