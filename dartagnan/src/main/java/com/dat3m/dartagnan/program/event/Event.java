@@ -204,8 +204,20 @@ public abstract class Event implements Comparable<Event> {
 		return control.variable;
 	}
 
-	public BoolExpr cf(){
-		return control.variable;
+	public final ControlBlock cf(){
+		return control;
+	}
+
+	public final BoolExpr exec(Context context, Event other) {
+		if(control.excludes(other.control) || other.control.excludes(control))
+			return context.mkFalse();
+		if(control.variable==exec() && other.control.variable==other.exec()){
+			if(control==other.control || control.implies(other.control))
+				return exec();
+			if(other.control.implies(control))
+				return other.exec();
+		}
+		return context.mkAnd(exec(),other.exec());
 	}
 
 	@FunctionalInterface
