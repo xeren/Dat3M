@@ -208,6 +208,17 @@ public abstract class Event implements Comparable<Event> {
 		return control;
 	}
 
+	/**
+	Proposes that both passed events are executed.
+	May take into account if their control variables coincide, imply one another or exclude each other.
+	@param context
+	Builder for expressions.
+	@param other
+	Another event of the program.
+	@return
+	Proposition that the modelled execution include both events.
+	False proposition, if both events exclude each other.
+	*/
 	public final BoolExpr exec(Context context, Event other) {
 		if(control.excludes(other.control) || other.control.excludes(control))
 			return context.mkFalse();

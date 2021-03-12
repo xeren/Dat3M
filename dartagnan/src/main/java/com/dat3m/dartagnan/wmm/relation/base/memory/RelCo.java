@@ -90,7 +90,7 @@ public class RelCo extends Relation {
 					enc = ctx.mkAnd(enc,ctx.mkImplies(edge,ctx.mkLt(intVar(x),intVar(y))));
 			}
 			enc = ctx.mkAnd(enc,ctx.mkEq(edge,ctx.mkAnd(
-				program.executesBoth(ctx,x,y),
+				x.exec(ctx,y),
 				ctx.mkEq(toInt(((MemEvent)x).getMemAddressExpr()),toInt(((MemEvent)y).getMemAddressExpr())),
 				order)));
 		}

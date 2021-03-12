@@ -52,7 +52,7 @@ abstract class BasicRegRelation extends Relation {
                         }
 
                         // RegReader uses the value of RegWriter if it is executed ..
-                        BoolExpr clause = program.executesBoth(ctx,regWriter,regReader);
+                        BoolExpr clause = regWriter.exec(ctx,regReader);
                         BoolExpr edge = edge(regWriter,regReader);
 
                         // .. and no other write to the same register is executed in between
