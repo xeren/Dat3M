@@ -1,8 +1,6 @@
 package com.dat3m.dartagnan.program;
 
-import com.dat3m.dartagnan.program.event.Event;
 import com.microsoft.z3.BoolExpr;
-
 import java.util.*;
 
 /**
@@ -10,9 +8,8 @@ Collects events that are always passed through together.
 */
 public final class ControlBlock {
 
-	private final ArrayList<Event> event = new ArrayList<>();
-
 	private final ControlBlock in;
+	private ControlBlock out;
 	private final ControlBlock alternative;
 	private final ControlBlock[] joined;
 	public final BoolExpr variable;
@@ -36,7 +33,6 @@ public final class ControlBlock {
 
 	/**
 	Creates the control block for an else statement.
-	TODO whenever this and the alternative rejoin in some block, that block is also implied by parent.
 	@param parent
 	Directly implied by this, contains the conditional branch that issues this creation.
 	@param alt
@@ -62,13 +58,10 @@ public final class ControlBlock {
 		alternative = null;
 		joined = parent;
 		variable = var;
-	}
-
-	/**
-	Declares an event as part of this control block.
-	*/
-	public void add(Event e) {
-		event.add(e);
+		for(ControlBlock p : parent){
+			assert null==p.out;
+			p.out = this;
+		}
 	}
 
 	/**
