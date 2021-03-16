@@ -69,25 +69,96 @@ public class Wmm {
         recursiveGroups.add(new RecursiveGroup(id, recursiveGroup));
     }
 
-	public boolean isLocalConsistent(){
+	private boolean[][] compute(HashMap<Relation,boolean[][]> binding, int size, Class<?extends Relation> cls, Object... arg){
+		return binding.computeIfAbsent(relationRepository.getRelation(cls,arg),k->new boolean[size][size]);
+	}
+
+	private boolean[][] compute(HashMap<Relation,boolean[][]> binding, int size, String name){
+		return binding.computeIfAbsent(relationRepository.getRelation(name),k->new boolean[size][size]);
+	}
+
+	private HashMap<Relation,boolean[][]> init(FilterBasic[]... type){
 		HashMap<Relation,boolean[][]> binding = new HashMap<>();
-		boolean[][] co = binding.computeIfAbsent(relationRepository.getRelation("co"),k->new boolean[2][2]);
-		boolean[][] loc = binding.computeIfAbsent(relationRepository.getRelation("loc"),k->new boolean[2][2]);
-		boolean[][] po = binding.computeIfAbsent(relationRepository.getRelation("po"),k->new boolean[2][2]);
-		boolean[][] int_ = binding.computeIfAbsent(relationRepository.getRelation("int"),k->new boolean[2][2]);
-		po[0][1] = int_[0][1] = int_[1][0] = true;
-		co[1][0] = loc[0][0] = loc[0][1] = loc[1][0] = loc[1][1] = true;
-		FilterBasic[] filter = new FilterBasic[]{FilterBasic.get(EType.WRITE),FilterBasic.get(EType.MEMORY),FilterBasic.get(EType.ANY)};
-		for(FilterBasic a : filter){
-			for(FilterBasic b : filter){
-				boolean[][] r = binding.computeIfAbsent(relationRepository.getRelation(RelCartesian.class,a,b),k->new boolean[2][2]);
-				r[0][0] = r[0][1] = r[1][0] = r[1][1] = true;
+		int size = type.length;
+		for(int i = 0; i < size; i++){
+			for(FilterBasic ti : type[i]){
+				for(int j = 0; j < size; j++)
+					for(FilterBasic tj : type[j])
+						compute(binding,size,RelCartesian.class,ti,tj)[i][j] = true;
+				compute(binding,size,RelSetIdentity.class,ti)[i][i] = true;
 			}
-			boolean[][] r = binding.computeIfAbsent(relationRepository.getRelation(RelSetIdentity.class,a),k->new boolean[2][2]);
-			r[0][0] = r[1][1] = true;
 		}
+		return binding;
+	}
+
+	public boolean isLocalConsistentRf(){
+		HashMap<Relation,boolean[][]> binding = init(
+			new FilterBasic[]{FilterBasic.get(EType.READ),FilterBasic.get(EType.MEMORY),FilterBasic.get(EType.ANY)},
+			new FilterBasic[]{FilterBasic.get(EType.WRITE),FilterBasic.get(EType.MEMORY),FilterBasic.get(EType.ANY)});
+		compute(binding,2,"po")[0][1] = true;
+		compute(binding,2,"rf")[1][0] = true;
+		boolean[][] loc = compute(binding,2,"loc");
+		loc[0][0] = loc[0][1] = loc[1][0] = loc[1][1] = true;
+		boolean[][] int_ = compute(binding,2,"int");
+		int_[0][1] = int_[1][0] = true;
 		for(Axiom a: axioms)
 			if(!a.test(a.getRel().test(binding,2)))
+				return true;
+		return false;
+	}
+
+	public boolean isLocalConsistentCo(){
+		FilterBasic[] filter = new FilterBasic[]{FilterBasic.get(EType.WRITE),FilterBasic.get(EType.MEMORY),FilterBasic.get(EType.ANY)};
+		HashMap<Relation,boolean[][]> binding = init(filter,filter);
+		compute(binding,2,"po")[0][1] = true;
+		compute(binding,2,"co")[1][0] = true;
+		boolean[][] loc = compute(binding,2,"loc");
+		loc[0][0] = loc[0][1] = loc[1][0] = loc[1][1] = true;
+		boolean[][] int_ = compute(binding,2,"int");
+		int_[0][1] = int_[1][0] = true;
+		for(Axiom a: axioms)
+			if(!a.test(a.getRel().test(binding,2)))
+				return true;
+		return false;
+	}
+
+	public boolean isLocalConsistentFre(){
+		HashMap<Relation,boolean[][]> binding = init(
+			new FilterBasic[]{FilterBasic.get(EType.WRITE),FilterBasic.get(EType.MEMORY),FilterBasic.get(EType.ANY)},
+			new FilterBasic[]{FilterBasic.get(EType.WRITE),FilterBasic.get(EType.MEMORY),FilterBasic.get(EType.ANY)},
+			new FilterBasic[]{FilterBasic.get(EType.READ),FilterBasic.get(EType.MEMORY),FilterBasic.get(EType.ANY)});
+		compute(binding,3,"co")[0][1] = true;
+		compute(binding,3,"po")[1][2] = true;
+		compute(binding,3,"rf")[0][2] = true;
+		boolean[][] loc = compute(binding,3,"loc");
+		for(int i = 0; i < 3; i++)
+			for(int j = 0; j < 3; j++)
+				loc[i][j] = true;
+		boolean[][] int_ = compute(binding,3,"int");
+		int_[1][2] = int_[2][1] = true;
+		boolean[][] ext = compute(binding,3,"ext");
+		ext[0][1] = ext[0][2] = ext[1][0] = ext[2][0] = true;
+		for(Axiom a: axioms)
+			if(!a.test(a.getRel().test(binding,3)))
+				return true;
+		return false;
+	}
+
+	public boolean isLocalConsistentFri(){
+		HashMap<Relation,boolean[][]> binding = init(
+			new FilterBasic[]{FilterBasic.get(EType.WRITE),FilterBasic.get(EType.MEMORY),FilterBasic.get(EType.ANY)},
+			new FilterBasic[]{FilterBasic.get(EType.WRITE),FilterBasic.get(EType.MEMORY),FilterBasic.get(EType.ANY)},
+			new FilterBasic[]{FilterBasic.get(EType.READ),FilterBasic.get(EType.MEMORY),FilterBasic.get(EType.ANY)});
+		compute(binding,3,"co")[0][1] = true;
+		compute(binding,3,"po")[1][2] = true;
+		compute(binding,3,"rf")[0][2] = true;
+		boolean[][] loc = compute(binding,3,"loc");
+		boolean[][] int_ = compute(binding,3,"int");
+		for(int i = 0; i < 3; i++)
+			for(int j = 0; j < 3; j++)
+				loc[i][j] = int_[i][j] = true;
+		for(Axiom a: axioms)
+			if(!a.test(a.getRel().test(binding,3)))
 				return true;
 		return false;
 	}
@@ -112,7 +183,7 @@ public class Wmm {
             filter.initialise();
         }
 
-		settings.setFlag(Settings.FLAG_CURRENT_MODEL_LOCAL_CONSISTENT,isLocalConsistent());
+		settings.setFlag(Settings.FLAG_CURRENT_MODEL_LOCAL_CONSISTENT,isLocalConsistentCo());
 
         for(Relation relation : relationRepository.getRelations()){
             relation.initialise(program, ctx, settings);

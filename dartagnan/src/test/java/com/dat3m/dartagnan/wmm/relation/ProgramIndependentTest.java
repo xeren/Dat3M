@@ -37,7 +37,22 @@ public class ProgramIndependentTest {
 	}
 
 	@Test
-	public void localConsistent(){
-		assertTrue(model.isLocalConsistent());
+	public void localConsistentRf(){
+		assertTrue(model.isLocalConsistentRf());
+	}
+
+	@Test
+	public void localConsistentCo(){
+		assertTrue(model.isLocalConsistentCo());
+	}
+
+	@Test
+	public void localConsistentFre(){
+		assertTrue(model.isLocalConsistentFre());
+	}
+
+	@Test
+	public void localConsistentFri(){
+		assertTrue(model.isLocalConsistentFri());
 	}
 }
