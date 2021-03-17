@@ -42,7 +42,7 @@ public class RelCo extends Relation {
                 }
             }
 
-			boolean lc = settings.getFlag(Settings.FLAG_CURRENT_MODEL_LOCAL_CONSISTENT);
+			boolean lc = settings.getFlag(Settings.FLAG_CURRENT_MODEL_LOCAL_CO);
 
 			for(ListIterator<Thread> it = program.getThreads().listIterator(); it.hasNext();){
 				List<Event> st = it.next().getCache().getEvents(filterWrite);

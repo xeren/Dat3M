@@ -1,9 +1,9 @@
 package com.dat3m.dartagnan.wmm.relation.base.memory;
 
+import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
-import com.dat3m.dartagnan.wmm.filter.FilterMinus;
 import com.microsoft.z3.BitVecExpr;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.IntExpr;
@@ -15,6 +15,7 @@ import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 import java.util.*;
 
+import static com.dat3m.dartagnan.utils.Settings.FLAG_CURRENT_MODEL_LOCAL_RF;
 import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 
 public class RelRf extends Relation {
@@ -29,27 +30,34 @@ public class RelRf extends Relation {
         if(maxTupleSet == null){
             maxTupleSet = new TupleSet();
 
-            List<Event> eventsLoad = program.getCache().getEvents(FilterBasic.get(EType.READ));
-            List<Event> eventsInit = program.getCache().getEvents(FilterBasic.get(EType.INIT));
-            List<Event> eventsStore = program.getCache().getEvents(FilterMinus.get(
-                    FilterBasic.get(EType.WRITE),
-                    FilterBasic.get(EType.INIT)
-            ));
+			FilterBasic memory = FilterBasic.get(EType.MEMORY);
+			FilterBasic write = FilterBasic.get(EType.WRITE);
+			FilterBasic read = FilterBasic.get(EType.READ);
+			boolean lc = settings.getFlag(FLAG_CURRENT_MODEL_LOCAL_RF);
+			for(Thread i : program.getThreads()){
 
-            for(Event e1 : eventsInit){
-                for(Event e2 : eventsLoad){
-                    if(MemEvent.canAddressTheSameLocation((MemEvent) e1, (MemEvent) e2)){
-                        maxTupleSet.add(new Tuple(e1, e2));
-                    }
-                }
-            }
+				if(lc){
+					List<Event> m = i.getCache().getEvents(memory);
+					for(ListIterator<Event> i1 = m.listIterator(); i1.hasNext();){
+						MemEvent e1 = (MemEvent)i1.next();
+						if(!e1.hasFilter(EType.WRITE))
+							continue;
+						for(ListIterator<Event> i2 = m.listIterator(i1.nextIndex()); i2.hasNext();){
+							MemEvent e2 = (MemEvent)i2.next();
+							if(e2.hasFilter(EType.READ) && MemEvent.canAddressTheSameLocation(e1,e2))
+								maxTupleSet.add(new Tuple(e1,e2));
+						}
+					}
+				}
 
-            for(Event e1 : eventsStore){
-                for(Event e2 : eventsLoad){
-                    if(MemEvent.canAddressTheSameLocation((MemEvent) e1, (MemEvent) e2)){
-                    	maxTupleSet.add(new Tuple(e1, e2));
-                    }
-                }
+				List<Event> ww = i.getCache().getEvents(write);
+				if(!ww.isEmpty())
+					for(Thread j : program.getThreads())
+						if(!lc || !i.equals(j))
+							for(Event r : j.getCache().getEvents(read))
+								for(Event w : ww)
+									if(MemEvent.canAddressTheSameLocation((MemEvent)w,(MemEvent)r))
+										maxTupleSet.add(new Tuple(w,r));
             }
         }
         return maxTupleSet;

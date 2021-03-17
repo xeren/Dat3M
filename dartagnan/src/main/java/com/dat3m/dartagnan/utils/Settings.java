@@ -18,7 +18,10 @@ public class Settings {
     public static final int FLAG_FORCE_PRECISE_EDGES_IN_GRAPHS      = 0;
     public static final int FLAG_USE_SEQ_ENCODING_REL_RF            = 1;
     public static final int FLAG_CAN_ACCESS_UNINITIALIZED_MEMORY    = 2;
-	public static final int FLAG_CURRENT_MODEL_LOCAL_CONSISTENT     = 9600;
+	public static final int FLAG_CURRENT_MODEL_LOCAL_CO             = 9600;
+	public static final int FLAG_CURRENT_MODEL_LOCAL_FRE            = 9601;
+	public static final int FLAG_CURRENT_MODEL_LOCAL_FRI            = 9602;
+	public static final int FLAG_CURRENT_MODEL_LOCAL_RF             = 9603;
 
     private Mode mode;
     private Alias alias;
@@ -31,7 +34,10 @@ public class Settings {
             put(FLAG_FORCE_PRECISE_EDGES_IN_GRAPHS, true);
             put(FLAG_USE_SEQ_ENCODING_REL_RF, true);
             put(FLAG_CAN_ACCESS_UNINITIALIZED_MEMORY, false);
-			put(FLAG_CURRENT_MODEL_LOCAL_CONSISTENT,false);
+			put(FLAG_CURRENT_MODEL_LOCAL_CO,false);
+			put(FLAG_CURRENT_MODEL_LOCAL_FRE,false);
+			put(FLAG_CURRENT_MODEL_LOCAL_FRI,false);
+			put(FLAG_CURRENT_MODEL_LOCAL_RF,false);
     }};
 
     public Settings(Mode mode, Alias alias, int bound){

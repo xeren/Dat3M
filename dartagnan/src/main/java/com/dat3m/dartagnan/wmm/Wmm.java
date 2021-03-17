@@ -183,7 +183,8 @@ public class Wmm {
             filter.initialise();
         }
 
-		settings.setFlag(Settings.FLAG_CURRENT_MODEL_LOCAL_CONSISTENT,isLocalConsistentCo());
+		settings.setFlag(Settings.FLAG_CURRENT_MODEL_LOCAL_CO,isLocalConsistentCo());
+		settings.setFlag(Settings.FLAG_CURRENT_MODEL_LOCAL_RF,isLocalConsistentCo());
 
         for(Relation relation : relationRepository.getRelations()){
             relation.initialise(program, ctx, settings);
