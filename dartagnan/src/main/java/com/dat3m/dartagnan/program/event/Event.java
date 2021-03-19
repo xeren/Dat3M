@@ -201,6 +201,7 @@ public abstract class Event implements Comparable<Event> {
 	}
 
 	public BoolExpr exec(){
+		assert null != control;
 		return control.variable;
 	}
 
