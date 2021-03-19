@@ -172,13 +172,14 @@ public class Program {
 		for(Thread t : threads) {
 			TreeMap<Integer,LinkedList<ControlBlock>> message = new TreeMap<>();
 			ControlBlock control = cfTrue;
-			for(Event e : t.getEntry().getSuccessors()) {
+			for(Event e = t.getEntry(); null != e; e = e.getSuccessor()) {
 				if(!message.isEmpty()) {
 					assert e.getCId() <= message.firstKey();
+					assert null != control || e.getCId() == message.firstKey();
 					if(e.getCId() == message.firstKey()) {
 						LinkedList<ControlBlock> in = message.pollFirstEntry().getValue();
 						assert !in.isEmpty();
-						if(!control.variable.isFalse())
+						if(null != control)
 							in.add(control);
 						control = ControlBlock.join(ctx.mkBoolConst("join"+e.getCId()),in);
 						enc.add(ctx.mkEq(control.variable,
@@ -186,6 +187,14 @@ public class Program {
 					}
 				}
 				control = e.initialise(ctx,control,(i,b)->message.computeIfAbsent(i,k->new LinkedList<>()).add(b));
+				if(null == control) {
+					assert !message.isEmpty();
+					Event ee = e.getSuccessor();
+					while(ee.getCId() < message.firstKey())
+						ee = ee.getSuccessor();
+					assert ee.getCId() == message.firstKey();
+					e.setSuccessor(ee);
+				}
 			}
 			assert message.isEmpty();
 		}

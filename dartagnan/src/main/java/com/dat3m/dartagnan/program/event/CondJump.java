@@ -121,7 +121,7 @@ public class CondJump extends Event implements RegReaderData {
 		assert b == bb;
 		if(expr instanceof BConst && ((BConst)expr).getValue()){
 			controlThen = b;
-			controlElse = new ControlBlock(b,c.mkFalse());
+			controlElse = null;
 		}
 		else{
 			controlThen = new ControlBlock(b,c.mkBoolConst("then"+cId));
