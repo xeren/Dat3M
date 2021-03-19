@@ -20,13 +20,7 @@ public class Base {
     public static Result runAnalysis(Solver s1, Context ctx, Program program, Wmm wmm, Arch target, Settings settings) {
     	program.unroll(settings.getBound(), 0);
         program.compile(target, 0);
-        // AssertionInline depends on compiled events (copies)
-        // Thus we need to set the assertion after compilation
-        program.updateAssertion();
-       	if(program.getAss() instanceof AssertTrue) {
-       		return PASS;
-       	}
-       	
+
         // Using two solvers can be faster than using
         // an incremental solver or check-sat-assuming
         Solver s2 = ctx.mkSolver();
@@ -34,7 +28,14 @@ public class Base {
         BoolExpr encodeCF = program.encodeCF(ctx);
 		s1.add(encodeCF);
         s2.add(encodeCF);
-        
+
+		// AssertionInline depends on compiled events (copies)
+		// Thus we need to set the assertion after compilation
+		program.updateAssertion();
+		if(program.getAss() instanceof AssertTrue) {
+			return PASS;
+		}
+
         BoolExpr encodeFinalRegisterValues = program.encodeFinalRegisterValues(ctx);
 		s1.add(encodeFinalRegisterValues);
         s2.add(encodeFinalRegisterValues);
@@ -74,14 +75,16 @@ public class Base {
     public static Result runAnalysisIncrementalSolver(Solver solver, Context ctx, Program program, Wmm wmm, Arch target, Settings settings) {
     	program.unroll(settings.getBound(), 0);
         program.compile(target, 0);
-        // AssertionInline depends on compiled events (copies)
-        // Thus we need to update the assertion after compilation
-        program.updateAssertion();
-       	if(program.getAss() instanceof AssertTrue) {
-       		return PASS;
-       	}
 
         solver.add(program.encodeCF(ctx));
+
+		// AssertionInline depends on compiled events (copies)
+		// Thus we need to update the assertion after compilation
+		program.updateAssertion();
+		if(program.getAss() instanceof AssertTrue) {
+			return PASS;
+		}
+
         solver.add(program.encodeFinalRegisterValues(ctx));
         solver.add(wmm.encode(program, ctx, settings));
         solver.add(wmm.consistent(program, ctx));  
