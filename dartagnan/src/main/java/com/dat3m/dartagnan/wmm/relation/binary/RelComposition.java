@@ -5,10 +5,7 @@ import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.BoolExpr;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.BiFunction;
 
 /**
@@ -61,9 +58,9 @@ public class RelComposition extends BinaryRelation {
         return getMaxTupleSet();
     }
 
-    @Override
-    public void addEncodeTupleSet(TupleSet tuples){
-        Set<Tuple> activeSet = new HashSet<>(tuples);
+	@Override
+	public void addEncodeTupleSet(Collection<Tuple> tuples){
+		HashSet<Tuple> activeSet = new HashSet<>(tuples);
         activeSet.removeAll(encodeTupleSet);
         encodeTupleSet.addAll(tuples);
         activeSet.retainAll(maxTupleSet);
@@ -72,7 +69,7 @@ public class RelComposition extends BinaryRelation {
             TupleSet r1Set = new TupleSet();
             TupleSet r2Set = new TupleSet();
 
-            Map<Integer, Set<Integer>> myMap = new HashMap<>();
+			HashMap<Integer,HashSet<Integer>> myMap = new HashMap<>();
             for(Tuple tuple : activeSet){
                 int id1 = tuple.getFirst().getCId();
                 int id2 = tuple.getSecond().getCId();
@@ -82,7 +79,7 @@ public class RelComposition extends BinaryRelation {
 
             for(Tuple tuple1 : r1.getMaxTupleSet()){
                 Event e1 = tuple1.getFirst();
-                Set<Integer> ends = myMap.get(e1.getCId());
+				HashSet<Integer> ends = myMap.get(e1.getCId());
                 if(ends == null) continue;
                 for(Tuple tuple2 : r2.getMaxTupleSet().getByFirst(tuple1.getSecond())){
                     Event e2 = tuple2.getSecond();

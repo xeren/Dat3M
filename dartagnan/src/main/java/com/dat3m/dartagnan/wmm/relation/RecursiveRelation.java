@@ -6,6 +6,7 @@ import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import java.util.Collection;
 
 /**
  *
@@ -63,8 +64,8 @@ public class RecursiveRelation extends Relation {
         return getMaxTupleSet();
     }
 
-    @Override
-    public void addEncodeTupleSet(TupleSet tuples){
+	@Override
+	public void addEncodeTupleSet(Collection<Tuple> tuples){
         if(encodeTupleSet != tuples){
             encodeTupleSet.addAll(tuples);
         }

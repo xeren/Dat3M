@@ -5,9 +5,8 @@ import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
-import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.IntExpr;
-
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -33,7 +32,7 @@ public class Acyclic extends Axiom {
 	@Override
 	public void getEncodeTupleSet(){
         Map<Event, Set<Event>> transMap = rel.getMaxTupleSet().transMap();
-        TupleSet result = new TupleSet();
+		HashSet<Tuple> result = new HashSet<>();
 
         for(Event e1 : transMap.keySet()){
             if(transMap.get(e1).contains(e1)){
@@ -78,7 +77,7 @@ public class Acyclic extends Axiom {
     }
 
     private BoolExpr satCycle(Context ctx) {
-        Set<Event> cycleEvents = new HashSet<>();
+		HashSet<Event> cycleEvents = new HashSet<>();
         for(Tuple tuple : rel.getEncodeTupleSet()){
             cycleEvents.add(tuple.getFirst());
         }
@@ -93,8 +92,18 @@ public class Acyclic extends Axiom {
 
     private BoolExpr satCycleDef(Context ctx){
         BoolExpr enc = ctx.mkTrue();
-        Set<Event> encoded = new HashSet<>();
+		HashSet<Event> encoded = new HashSet<>();
         String name = rel.getName();
+
+		HashMap<Event,HashSet<Event>> byFirst = new HashMap<>();
+		HashMap<Event,HashSet<Event>> bySecond = new HashMap<>();
+		HashSet<Event> empty = new HashSet<>();
+		for(Tuple t : rel.getEncodeTupleSet()){
+			Event x = t.getFirst();
+			Event y = t.getSecond();
+			byFirst.computeIfAbsent(x,k->new HashSet<>()).add(y);
+			bySecond.computeIfAbsent(y,k->new HashSet<>()).add(x);
+		}
 
         for(Tuple t : rel.getEncodeTupleSet()){
             Event e1 = t.getFirst();
@@ -114,22 +123,22 @@ public class Acyclic extends Axiom {
                 encoded.add(e1);
 
                 BoolExpr source = ctx.mkFalse();
-                for(Tuple tuple1 : rel.getEncodeTupleSet().getByFirst(e1)){
-                    BoolExpr opt = cycleEdge(name, e1, tuple1.getSecond(), ctx);
-                    for(Tuple tuple2 : rel.getEncodeTupleSet().getByFirst(e1)){
-                        if(tuple1.getSecond().getCId() != tuple2.getSecond().getCId()){
-                            opt = ctx.mkAnd(opt, ctx.mkNot(cycleEdge(name, e1, tuple2.getSecond(), ctx)));
+				for(Event e3 : byFirst.getOrDefault(e1,empty)){
+					BoolExpr opt = cycleEdge(name, e1, e3, ctx);
+					for(Event e4 : byFirst.getOrDefault(e1,empty)){
+						if(e3.getCId() != e4.getCId()){
+							opt = ctx.mkAnd(opt, ctx.mkNot(cycleEdge(name, e1, e4, ctx)));
                         }
                     }
                     source = ctx.mkOr(source, opt);
                 }
 
                 BoolExpr target = ctx.mkFalse();
-                for(Tuple tuple1 : rel.getEncodeTupleSet().getBySecond(e1)){
-                    BoolExpr opt = cycleEdge(name, tuple1.getFirst(), e1, ctx);
-                    for(Tuple tuple2 : rel.getEncodeTupleSet().getBySecond(e1)){
-                        if(tuple1.getFirst().getCId() != tuple2.getFirst().getCId()){
-                            opt = ctx.mkAnd(opt, ctx.mkNot(cycleEdge(name, tuple2.getFirst(), e1, ctx)));
+				for(Event e3 : bySecond.getOrDefault(e1,empty)){
+					BoolExpr opt = cycleEdge(name, e3, e1, ctx);
+					for(Event e4 : bySecond.getOrDefault(e1,empty)){
+						if(e3.getCId() != e4.getCId()){
+							opt = ctx.mkAnd(opt, ctx.mkNot(cycleEdge(name, e4, e1, ctx)));
                         }
                     }
                     target = ctx.mkOr(target, opt);
