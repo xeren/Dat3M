@@ -58,10 +58,13 @@ public class VisitorRelation extends CatBaseVisitor<Relation> implements CatVisi
         return visitUnaryRelation(ctx.e, RelTrans.class);
     }
 
-    @Override
-    public Relation visitExprTransRef(CatParser.ExprTransRefContext ctx) {
-        return visitUnaryRelation(ctx.e, RelTransRef.class);
-    }
+	@Override
+	public Relation visitExprTransRef(CatParser.ExprTransRefContext ctx) {
+		Relation r = ctx.e.accept(this);
+		return null==r ? null : base.relationRepository.getRelation(RelUnion.class,
+			base.relationRepository.getRelation("id"),
+			base.relationRepository.getRelation(RelTrans.class,r));
+	}
 
     @Override
     public Relation visitExprDomainIdentity(CatParser.ExprDomainIdentityContext ctx) {
