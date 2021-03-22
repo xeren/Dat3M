@@ -18,6 +18,7 @@ import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
+import java.util.HashSet;
 
 public class RelRMW extends StaticRelation {
 
@@ -32,7 +33,7 @@ public class RelRMW extends StaticRelation {
     );
 
     // Set without exclusive events
-    private TupleSet baseMaxTupleSet;
+	private HashSet<Tuple> baseMaxTupleSet;
 
     public RelRMW(){
         term = "rmw";
@@ -48,7 +49,7 @@ public class RelRMW extends StaticRelation {
     @Override
     public TupleSet getMaxTupleSet(){
         if(maxTupleSet == null){
-            baseMaxTupleSet = new TupleSet();
+			baseMaxTupleSet = new HashSet<>();
             FilterAbstract filter = FilterIntersection.get(FilterBasic.get(EType.RMW), FilterBasic.get(EType.WRITE));
             for(Event store : program.getCache().getEvents(filter)){
             	if(store instanceof RMWStore) {
@@ -104,7 +105,7 @@ public class RelRMW extends StaticRelation {
     @Override
     protected BoolExpr encodeApprox() {
         // Encode base (not exclusive pairs) RMW
-        TupleSet origEncodeTupleSet = encodeTupleSet;
+		HashSet<Tuple> origEncodeTupleSet = encodeTupleSet;
         encodeTupleSet = baseMaxTupleSet;
         BoolExpr enc = super.encodeApprox();
         encodeTupleSet = origEncodeTupleSet;

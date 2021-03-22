@@ -9,6 +9,7 @@ import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.IntExpr;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -31,7 +32,7 @@ public abstract class Relation {
     protected boolean isEncoded;
 
     protected TupleSet maxTupleSet;
-    protected TupleSet encodeTupleSet;
+	protected HashSet<Tuple> encodeTupleSet;
 
     protected int recursiveGroupId = 0;
     protected boolean forceUpdateRecursiveGroupId = false;
@@ -63,7 +64,7 @@ public abstract class Relation {
         this.settings = settings;
         this.maxTupleSet = null;
         this.isEncoded = false;
-        encodeTupleSet = new TupleSet();
+		encodeTupleSet = new HashSet<>();
     }
 
     public abstract TupleSet getMaxTupleSet();
@@ -72,11 +73,11 @@ public abstract class Relation {
         return getMaxTupleSet();
     }
 
-    public TupleSet getEncodeTupleSet(){
+	public Set<Tuple> getEncodeTupleSet(){
         return encodeTupleSet;
     }
 
-    public void addEncodeTupleSet(TupleSet tuples){
+	public void addEncodeTupleSet(Collection<Tuple> tuples){
         encodeTupleSet.addAll(tuples);
     }
 

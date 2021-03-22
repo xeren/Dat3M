@@ -9,10 +9,7 @@ import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.IntExpr;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  *
@@ -58,15 +55,14 @@ public class RelTrans extends UnaryRelation {
         return maxTupleSet;
     }
 
-    @Override
-    public void addEncodeTupleSet(TupleSet tuples){
-        TupleSet activeSet = new TupleSet();
-        activeSet.addAll(tuples);
+	@Override
+	public void addEncodeTupleSet(Collection<Tuple> tuples){
+		HashSet<Tuple> activeSet = new HashSet<>(tuples);
         activeSet.removeAll(encodeTupleSet);
         encodeTupleSet.addAll(activeSet);
         activeSet.retainAll(maxTupleSet);
 
-        TupleSet fullActiveSet = getFullEncodeTupleSet(activeSet);
+		HashSet<Tuple> fullActiveSet = getFullEncodeTupleSet(activeSet);
         if(fullEncodeTupleSet.addAll(fullActiveSet)){
             fullActiveSet.retainAll(r1.getMaxTupleSet());
             r1.addEncodeTupleSet(fullActiveSet);
@@ -247,15 +243,13 @@ public class RelTrans extends UnaryRelation {
         return enc;
     }
 
-    private TupleSet getFullEncodeTupleSet(TupleSet tuples){
-        TupleSet processNow = new TupleSet();
-        processNow.addAll(tuples);
+	private HashSet<Tuple> getFullEncodeTupleSet(HashSet<Tuple> processNow){
         processNow.retainAll(getMaxTupleSet());
 
-        TupleSet result = new TupleSet();
+		HashSet<Tuple> result = new HashSet<>();
 
         while(!processNow.isEmpty()) {
-            TupleSet processNext = new TupleSet();
+			HashSet<Tuple> processNext = new HashSet<>();
             result.addAll(processNow);
 
             for (Tuple tuple : processNow) {

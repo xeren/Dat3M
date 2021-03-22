@@ -5,10 +5,9 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
-
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 /**
  *
@@ -41,10 +40,10 @@ public class RelInverse extends UnaryRelation {
         return maxTupleSet;
     }
 
-    @Override
-    public void addEncodeTupleSet(TupleSet tuples){
+	@Override
+	public void addEncodeTupleSet(Collection<Tuple> tuples){
         encodeTupleSet.addAll(tuples);
-        Set<Tuple> activeSet = new HashSet<>(tuples);
+		HashSet<Tuple> activeSet = new HashSet<>(tuples);
         activeSet.retainAll(maxTupleSet);
         if(!activeSet.isEmpty()){
             TupleSet invSet = new TupleSet();

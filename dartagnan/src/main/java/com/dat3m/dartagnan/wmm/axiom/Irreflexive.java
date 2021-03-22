@@ -4,7 +4,8 @@ import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
-import com.dat3m.dartagnan.wmm.utils.TupleSet;
+
+import java.util.HashSet;
 
 /**
  *
@@ -22,7 +23,7 @@ public class Irreflexive extends Axiom {
 
 	@Override
 	public void getEncodeTupleSet(){
-        TupleSet set = new TupleSet();
+		HashSet<Tuple> set = new HashSet<>();
         for(Tuple tuple : rel.getMaxTupleSet()){
             if(tuple.getFirst().getCId() == tuple.getSecond().getCId()){
                 set.add(tuple);

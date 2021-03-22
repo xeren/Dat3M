@@ -5,10 +5,9 @@ import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.BoolExpr;
-
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 public class RelDomainIdentity extends UnaryRelation {
 
@@ -37,10 +36,10 @@ public class RelDomainIdentity extends UnaryRelation {
         return maxTupleSet;
     }
 
-    @Override
-    public void addEncodeTupleSet(TupleSet tuples){
+	@Override
+	public void addEncodeTupleSet(Collection<Tuple> tuples){
         encodeTupleSet.addAll(tuples);
-        Set<Tuple> activeSet = new HashSet<>(tuples);
+		HashSet<Tuple> activeSet = new HashSet<>(tuples);
         activeSet.retainAll(maxTupleSet);
         if(!activeSet.isEmpty()){
             TupleSet r1Set = new TupleSet();
