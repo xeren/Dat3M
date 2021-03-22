@@ -20,16 +20,16 @@ public class Irreflexive extends Axiom {
         super(rel, negate);
     }
 
-    @Override
-    public TupleSet getEncodeTupleSet(){
+	@Override
+	public void getEncodeTupleSet(){
         TupleSet set = new TupleSet();
         for(Tuple tuple : rel.getMaxTupleSet()){
             if(tuple.getFirst().getCId() == tuple.getSecond().getCId()){
                 set.add(tuple);
             }
         }
-        return set;
-    }
+		rel.addEncodeTupleSet(set);
+	}
 
 	@Override
 	public boolean test(boolean[][] edge) {

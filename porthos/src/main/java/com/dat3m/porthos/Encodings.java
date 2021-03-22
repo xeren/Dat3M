@@ -14,7 +14,6 @@ import com.dat3m.dartagnan.wmm.filter.FilterUnion;
 import com.dat3m.dartagnan.wmm.relation.base.memory.RelCo;
 import com.dat3m.dartagnan.wmm.relation.base.memory.RelRf;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
-import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.Model;
@@ -38,8 +37,8 @@ class Encodings {
         Iterator<Event> it1 = p1Events.iterator();
         Iterator<Event> it2 = p2Events.iterator();
 
-        Set<Tuple> rTuples = new TupleSet();
-        Set<Tuple> wTuples = new TupleSet();
+		Set<Tuple> rTuples = new HashSet<>();
+		Set<Tuple> wTuples = new HashSet<>();
 
         BoolExpr enc = ctx.mkTrue();
 
