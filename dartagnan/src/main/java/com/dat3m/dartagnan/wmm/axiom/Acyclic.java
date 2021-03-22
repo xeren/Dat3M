@@ -30,8 +30,8 @@ public class Acyclic extends Axiom {
         return context.mkIntConst(rel.getName()+" "+event.getCId());
     }
 
-    @Override
-    public TupleSet getEncodeTupleSet(){
+	@Override
+	public void getEncodeTupleSet(){
         Map<Event, Set<Event>> transMap = rel.getMaxTupleSet().transMap();
         TupleSet result = new TupleSet();
 
@@ -52,8 +52,8 @@ public class Acyclic extends Axiom {
         }
 
         result.retainAll(rel.getMaxTupleSet());
-        return result;
-    }
+		rel.addEncodeTupleSet(result);
+	}
 
     @Override
     protected BoolExpr _consistent(Context ctx) {

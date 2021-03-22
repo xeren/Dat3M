@@ -16,10 +16,10 @@ public class Empty extends Axiom {
         super(rel, negate);
     }
 
-    @Override
-    public TupleSet getEncodeTupleSet(){
-        return rel.getMaxTupleSet();
-    }
+	@Override
+	public void getEncodeTupleSet(){
+		rel.addEncodeTupleSet(rel.getMaxTupleSet());
+	}
 
     @Override
     protected BoolExpr _consistent(Context ctx) {
