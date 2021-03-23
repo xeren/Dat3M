@@ -25,6 +25,6 @@ public class RelSetIdentity extends StaticRelation {
 	@Override
 	protected void mkMaxTupleSet(){
 		for(Event e : program.getCache().getEvents(filter))
-			addMaxTuple(e,e);
+			addMaxTuple(e,e,true);
 	}
 }

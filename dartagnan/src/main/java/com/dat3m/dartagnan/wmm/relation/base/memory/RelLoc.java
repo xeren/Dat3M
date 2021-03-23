@@ -22,7 +22,7 @@ public class RelLoc extends Relation {
             for(Event e1 : events){
                 for(Event e2 : events){
                     if(e1.getCId() != e2.getCId() && MemEvent.canAddressTheSameLocation((MemEvent) e1, (MemEvent)e2)){
-                        addMaxTuple(e1,e2);
+                        addMaxTuple(e1,e2,false);
                     }
                 }
             }

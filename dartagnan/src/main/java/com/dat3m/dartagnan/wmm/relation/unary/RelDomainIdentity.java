@@ -27,7 +27,7 @@ public class RelDomainIdentity extends UnaryRelation {
 	protected void mkMaxTupleSet(){
 		for(Tuple t : r1.getMaxTupleSet()){
 			Event e = t.getFirst();
-			addMaxTuple(e,e);
+			addMaxTuple(e,e,false);
 		}
 	}
 

@@ -43,8 +43,11 @@ public class RelTrans extends UnaryRelation {
 		for(Map.Entry<Event,HashSet<Event>> e : r1.getMaxTupleSetTransitive().entrySet()){
 			Event e1 = e.getKey();
 			for(Event e2 : e.getValue())
-				addMaxTuple(e1,e2);
+				addMaxTuple(e1,e2,false);
 		}
+		for(Tuple t : r1.getMaxTupleSet())
+			if(t.isMinimal())
+				addMaxTuple(t.getFirst(),t.getSecond(),true);
 	}
 
 	@Override

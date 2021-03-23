@@ -106,6 +106,12 @@ public abstract class Relation {
 		return maxTupleSet.values().stream().mapToInt(HashMap::size).sum();
 	}
 
+	public Tuple of(Event first, Event second){
+		initMaxTupleSet();
+		HashMap<Integer,Tuple> s = maxTupleSet.get(first.getCId());
+		return null==s ? null : s.get(second.getCId());
+	}
+
 	public boolean contains(Event first, Event second){
 		initMaxTupleSet();
 		HashMap<Integer,Tuple> s = maxTupleSet.get(first.getCId());
@@ -146,8 +152,10 @@ public abstract class Relation {
 
 	protected abstract void mkMaxTupleSet();
 
-	protected final void addMaxTuple(Event x, Event y){
-		maxTupleSet.computeIfAbsent(x.getCId(),k->new HashMap<>()).computeIfAbsent(y.getCId(),k->new Tuple(x,y));
+	protected final void addMaxTuple(Event x, Event y, boolean minimal){
+		Tuple t = maxTupleSet.computeIfAbsent(x.getCId(),k->new HashMap<>()).computeIfAbsent(y.getCId(),k->new Tuple(x,y));
+		if(minimal)
+			t.setMinimal();
 	}
 
 	protected void updateMaxTupleSetRecursive(){

@@ -36,7 +36,7 @@ public class RelPo extends StaticRelation {
                     Event e1 = it1.next();
                     ListIterator<Event> it2 = events.listIterator(it1.nextIndex());
                     while(it2.hasNext()){
-					addMaxTuple(e1,it2.next());
+					addMaxTuple(e1,it2.next(),true);
                     }
                 }
             }

@@ -6,6 +6,7 @@ public class Tuple implements Comparable<Tuple> {
 
     private Event first;
     private Event second;
+	private transient boolean minimal;
 
     public Tuple(Event first, Event second) {
         this.first = first;
@@ -19,6 +20,14 @@ public class Tuple implements Comparable<Tuple> {
     public Event getSecond(){
         return second;
     }
+
+	public boolean isMinimal(){
+		return minimal;
+	}
+
+	public void setMinimal(){
+		minimal = true;
+	}
 
     public String toString() {
         return "(" + first + ", " + second + ")";

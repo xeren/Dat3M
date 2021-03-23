@@ -32,7 +32,7 @@ public class RelRangeIdentity extends UnaryRelation {
 		bySecond = new HashMap<>();
 		for(Tuple t : r1.getMaxTupleSet()){
 			Event e = t.getSecond();
-			addMaxTuple(e,e);
+			addMaxTuple(e,e,false);
 			bySecond.computeIfAbsent(e.getCId(),k->new ArrayList<>()).add(t);
 		}
 	}

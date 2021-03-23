@@ -20,7 +20,7 @@ public class RelCrit extends StaticRelation {
                 for(Event lock : thread.getCache().getEvents(FilterBasic.get(EType.RCU_LOCK))){
                     for(Event unlock : thread.getCache().getEvents(FilterBasic.get(EType.RCU_UNLOCK))){
                         if(lock.getCId() < unlock.getCId()){
-						addMaxTuple(lock,unlock);
+						addMaxTuple(lock,unlock,false);
                         }
                     }
                 }

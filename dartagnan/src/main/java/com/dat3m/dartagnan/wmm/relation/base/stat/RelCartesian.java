@@ -32,6 +32,6 @@ public class RelCartesian extends StaticRelation {
 		List<Event> l2 = program.getCache().getEvents(filter2);
 		for(Event e1 : l1)
 			for(Event e2 : l2)
-				addMaxTuple(e1,e2);
+				addMaxTuple(e1,e2,true);
 	}
 }

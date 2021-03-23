@@ -31,7 +31,7 @@ public class RelComposition extends BinaryRelation {
 	protected void mkMaxTupleSet(){
 		for(Tuple t1 : r1.getMaxTupleSet())
 			for(Tuple t2 : r2.getMaxTupleSet(t1.getSecond()))
-				addMaxTuple(t1.getFirst(),t2.getSecond());
+				addMaxTuple(t1.getFirst(),t2.getSecond(),false);
 	}
 
 	@Override

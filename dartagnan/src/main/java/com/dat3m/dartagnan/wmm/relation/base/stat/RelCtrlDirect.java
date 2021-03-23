@@ -18,10 +18,10 @@ public class RelCtrlDirect extends StaticRelation {
             for(Thread thread : program.getThreads()){
                 for(Event e1 : thread.getCache().getEvents(FilterBasic.get(EType.CMP))){
                     for(Event e2 : ((If) e1).getMainBranchEvents()){
-					addMaxTuple(e1,e2);
+					addMaxTuple(e1,e2,true);
                     }
                     for(Event e2 : ((If) e1).getElseBranchEvents()){
-					addMaxTuple(e1,e2);
+					addMaxTuple(e1,e2,true);
                     }
                 }
 
@@ -30,7 +30,7 @@ public class RelCtrlDirect extends StaticRelation {
                     for(Event e2 : thread.getCache().getEvents(FilterBasic.get(EType.ANY))){
                         for(Event e1 : condJumps){
                             if(e1.getCId() < e2.getCId()){
-							addMaxTuple(e1,e2);
+							addMaxTuple(e1,e2,true);
                             }
                         }
                     }

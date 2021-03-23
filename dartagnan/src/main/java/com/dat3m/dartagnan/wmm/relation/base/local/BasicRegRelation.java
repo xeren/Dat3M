@@ -26,7 +26,7 @@ abstract class BasicRegRelation extends StaticRelation {
                     if(regWriter.getCId() >= regReader.getCId()){
                         break;
                     }
-					addMaxTuple(regWriter,regReader);
+					addMaxTuple(regWriter,regReader,false);
                 }
             }
         }
