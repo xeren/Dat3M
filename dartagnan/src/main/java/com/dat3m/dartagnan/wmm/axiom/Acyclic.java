@@ -31,7 +31,7 @@ public class Acyclic extends Axiom {
 
 	@Override
 	public void getEncodeTupleSet(){
-        Map<Event, Set<Event>> transMap = rel.getMaxTupleSet().transMap();
+		Map<Event, Set<Event>> transMap = rel.getMaxTupleSetTransitive();
 		HashSet<Tuple> result = new HashSet<>();
 
         for(Event e1 : transMap.keySet()){

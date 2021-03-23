@@ -11,6 +11,7 @@ import com.microsoft.z3.Context;
 import com.microsoft.z3.IntExpr;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -80,6 +81,10 @@ public abstract class Relation {
 			mkMaxTupleSet();
 		}
 		return maxTupleSet.getByFirst(first);
+	}
+
+	public Map<Event,Set<Event>> getMaxTupleSetTransitive(){
+		return maxTupleSet.transMap();
 	}
 
 	protected abstract void mkMaxTupleSet();
