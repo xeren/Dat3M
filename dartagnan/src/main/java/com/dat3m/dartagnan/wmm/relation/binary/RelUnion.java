@@ -4,6 +4,9 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.microsoft.z3.BoolExpr;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.function.BiFunction;
 
 import java.util.Map;
@@ -42,6 +45,23 @@ public class RelUnion extends BinaryRelation {
 	}
 
 	@Override
+	public void addEncodeTupleSet(Collection<Tuple> tuples){
+		HashSet<Tuple> activeSet = new HashSet<>(tuples);
+		activeSet.removeAll(encodeTupleSet);
+		encodeTupleSet.addAll(activeSet);
+		activeSet.retainAll(maxTupleSet);
+		if(!activeSet.isEmpty()){
+			ArrayList<Tuple> a = new ArrayList<>(activeSet.size());
+			for(Tuple t : activeSet)
+				if(r1.contains(t.getFirst(),t.getSecond()))
+					a.add(t);
+			r1.addEncodeTupleSet(a);
+			activeSet.retainAll(r2.getMaxTupleSet());
+			r2.addEncodeTupleSet(activeSet);
+		}
+	}
+
+	@Override
 	public boolean[][] test(Map<Relation,boolean[][]> b, int n) {
 		boolean[][] r = b.computeIfAbsent(this,k->new boolean[n][n]);
 		boolean[][] c = r1.test(b,n);
@@ -61,8 +81,8 @@ public class RelUnion extends BinaryRelation {
             Event e1 = tuple.getFirst();
             Event e2 = tuple.getSecond();
 
-            BoolExpr opt1 = r1.edge(e1, e2);
-            BoolExpr opt2 = r2.edge(e1, e2);
+            BoolExpr opt1 = r1.contains(e1,e2) ? r1.edge(e1,e2) : ctx.mkFalse();
+            BoolExpr opt2 = r2.contains(e1,e2) ? r2.edge(e1,e2) : ctx.mkFalse();
             if (Relation.PostFixApprox) {
                 enc = ctx.mkAnd(enc, ctx.mkImplies(ctx.mkOr(opt1, opt2), edge(e1, e2)));
             } else {
@@ -87,8 +107,8 @@ public class RelUnion extends BinaryRelation {
             Event e1 = tuple.getFirst();
             Event e2 = tuple.getSecond();
 
-            BoolExpr opt1 = r1.edge(e1, e2);
-            BoolExpr opt2 = r2.edge(e1, e2);
+			BoolExpr opt1 = r1.contains(e1,e2) ? r1.edge(e1,e2) : ctx.mkFalse();
+			BoolExpr opt2 = r2.contains(e1,e2) ? r2.edge(e1,e2) : ctx.mkFalse();
             enc = ctx.mkAnd(enc, ctx.mkEq(edge(e1, e2), ctx.mkOr(opt1, opt2)));
 
             if(recurseInR1){
@@ -125,8 +145,9 @@ public class RelUnion extends BinaryRelation {
                 for(Tuple tuple : encodeTupleSet){
                     Event e1 = tuple.getFirst();
                     Event e2 = tuple.getSecond();
-                    enc = ctx.mkAnd(enc, ctx.mkEq(edge(iteration,e1,e2),
-                        ctx.mkOr(r1Edge.apply(e1,e2),r2Edge.apply(e1,e2))));
+					enc = ctx.mkAnd(enc, ctx.mkEq(edge(iteration,e1,e2),ctx.mkOr(
+						r1.contains(e1,e2) ? r1Edge.apply(e1,e2) : ctx.mkFalse(),
+						r2.contains(e1,e2) ? r2Edge.apply(e1,e2) : ctx.mkFalse())));
                 }
 
                 if(recurseInR1){

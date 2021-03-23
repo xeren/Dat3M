@@ -74,12 +74,12 @@ public abstract class Relation {
 		return maxTupleSet;
 	}
 
+	public boolean contains(Event first, Event second){
+		return getMaxTupleSet().contains(new Tuple(first,second));
+	}
+
 	public Collection<Tuple> getMaxTupleSet(Event first){
-		if(null==maxTupleSet){
-			maxTupleSet = new TupleSet();
-			mkMaxTupleSet();
-		}
-		return maxTupleSet.getByFirst(first);
+		return getMaxTupleSet().getByFirst(first);
 	}
 
 	public HashMap<Event,HashSet<Event>> getMaxTupleSetTransitive(){
