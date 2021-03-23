@@ -16,7 +16,6 @@ import java.util.*;
  */
 public class RelTrans extends UnaryRelation {
 
-    Map<Event, Set<Event>> transitiveReachabilityMap;
     private HashSet<Tuple> fullEncodeTupleSet;
 
     public static String makeTerm(Relation r1){
@@ -37,17 +36,15 @@ public class RelTrans extends UnaryRelation {
     public void initialise(Program program, Context ctx, Settings settings){
         super.initialise(program, ctx, settings);
         fullEncodeTupleSet = new HashSet<>();
-        transitiveReachabilityMap = null;
     }
 
 	@Override
 	protected void mkMaxTupleSet(){
-		transitiveReachabilityMap = r1.getMaxTupleSetTransitive();
-            for(Event e1 : transitiveReachabilityMap.keySet()){
-                for(Event e2 : transitiveReachabilityMap.get(e1)){
+		for(Map.Entry<Event,HashSet<Event>> e : r1.getMaxTupleSetTransitive().entrySet()){
+			Event e1 = e.getKey();
+			for(Event e2 : e.getValue())
 				addMaxTuple(e1,e2);
-                }
-            }
+		}
 	}
 
 	@Override
@@ -65,9 +62,9 @@ public class RelTrans extends UnaryRelation {
 			for (Tuple tuple : processNow) {
 				Event e1 = tuple.getFirst();
 				Event e2 = tuple.getSecond();
-				for (Event e3 : transitiveReachabilityMap.get(e1)) {
+				for(Event e3 : r1.getMaxTupleSetTransitive().get(e1)) {
 					if (e3.getCId() != e1.getCId() && e3.getCId() != e2.getCId()
-							&& transitiveReachabilityMap.get(e3).contains(e2)) {
+							&& r1.getMaxTupleSetTransitive().get(e3).contains(e2)) {
 						processNext.add(new Tuple(e1, e3));
 						processNext.add(new Tuple(e3, e2));
 					}
@@ -96,8 +93,8 @@ public class RelTrans extends UnaryRelation {
                 orClause = ctx.mkOr(orClause, r1.edge(e1, e2));
             }
 
-            for(Event e3 : transitiveReachabilityMap.get(e1)){
-                if(e3.getCId() != e1.getCId() && e3.getCId() != e2.getCId() && transitiveReachabilityMap.get(e3).contains(e2)){
+            for(Event e3 : r1.getMaxTupleSetTransitive().get(e1)){
+                if(e3.getCId() != e1.getCId() && e3.getCId() != e2.getCId() && r1.getMaxTupleSetTransitive().get(e3).contains(e2)){
                     orClause = ctx.mkOr(orClause, ctx.mkAnd(edge(e1, e3), edge(e3, e2)));
                 }
             }
@@ -127,7 +124,7 @@ public class RelTrans extends UnaryRelation {
             BoolExpr orClause = ctx.mkFalse();
             for(Event e3 : byFirst.get(e1.getCId())){
                 if(!e3.equals(e2)) {
-                    if (transitiveReachabilityMap.get(e3).contains(e2)) {
+                    if (r1.getMaxTupleSetTransitive().get(e3).contains(e2)) {
                         orClause = ctx.mkOr(orClause, ctx.mkAnd(
                                 edge(e1, e3),
                                 edge(e3, e2),
@@ -142,7 +139,7 @@ public class RelTrans extends UnaryRelation {
             orClause = ctx.mkFalse();
             for(Event e3 : byFirst.get(e1.getCId())){
                 if(!e3.equals(e2)) {
-                    if (transitiveReachabilityMap.get(e3).contains(e2)) {
+                    if (r1.getMaxTupleSetTransitive().get(e3).contains(e2)) {
                         orClause = ctx.mkOr(orClause, ctx.mkAnd(
                                 edge(e1, e3),
                                 edge(e3, e2)));
