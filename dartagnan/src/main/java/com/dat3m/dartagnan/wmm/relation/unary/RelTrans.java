@@ -5,7 +5,6 @@ import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
-import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.IntExpr;
@@ -18,7 +17,7 @@ import java.util.*;
 public class RelTrans extends UnaryRelation {
 
     Map<Event, Set<Event>> transitiveReachabilityMap;
-    private TupleSet fullEncodeTupleSet;
+    private HashSet<Tuple> fullEncodeTupleSet;
 
     public static String makeTerm(Relation r1){
         return r1.getName() + "^+";
@@ -37,7 +36,7 @@ public class RelTrans extends UnaryRelation {
     @Override
     public void initialise(Program program, Context ctx, Settings settings){
         super.initialise(program, ctx, settings);
-        fullEncodeTupleSet = new TupleSet();
+        fullEncodeTupleSet = new HashSet<>();
         transitiveReachabilityMap = null;
     }
 
@@ -58,12 +57,30 @@ public class RelTrans extends UnaryRelation {
         encodeTupleSet.addAll(activeSet);
         activeSet.retainAll(maxTupleSet);
 
-		HashSet<Tuple> fullActiveSet = getFullEncodeTupleSet(activeSet);
-        if(fullEncodeTupleSet.addAll(fullActiveSet)){
-            fullActiveSet.retainAll(r1.getMaxTupleSet());
-            r1.addEncodeTupleSet(fullActiveSet);
-        }
-    }
+		HashSet<Tuple> processNow = activeSet;
+		HashSet<Tuple> result = new HashSet<>();
+		while(!processNow.isEmpty()) {
+			HashSet<Tuple> processNext = new HashSet<>();
+			result.addAll(processNow);
+			for (Tuple tuple : processNow) {
+				Event e1 = tuple.getFirst();
+				Event e2 = tuple.getSecond();
+				for (Event e3 : transitiveReachabilityMap.get(e1)) {
+					if (e3.getCId() != e1.getCId() && e3.getCId() != e2.getCId()
+							&& transitiveReachabilityMap.get(e3).contains(e2)) {
+						processNext.add(new Tuple(e1, e3));
+						processNext.add(new Tuple(e3, e2));
+					}
+				}
+			}
+			processNext.removeAll(result);
+			processNow = processNext;
+		}
+		if(fullEncodeTupleSet.addAll(result)){
+			result.retainAll(r1.getMaxTupleSet());
+			r1.addEncodeTupleSet(result);
+		}
+	}
 
     @Override
     protected BoolExpr encodeApprox() {
@@ -99,14 +116,17 @@ public class RelTrans extends UnaryRelation {
     protected BoolExpr encodeIDL() {
         BoolExpr enc = ctx.mkTrue();
 
+		HashMap<Integer,LinkedList<Event>> byFirst = new HashMap<>();
+		for(Tuple t : fullEncodeTupleSet)
+			byFirst.computeIfAbsent(t.getFirst().getCId(),k->new LinkedList<>()).add(t.getSecond());
+
         for(Tuple tuple : fullEncodeTupleSet){
             Event e1 = tuple.getFirst();
             Event e2 = tuple.getSecond();
 
             BoolExpr orClause = ctx.mkFalse();
-            for(Tuple tuple2 : fullEncodeTupleSet.getByFirst(e1)){
-                if (!tuple2.equals(tuple)) {
-                    Event e3 = tuple2.getSecond();
+            for(Event e3 : byFirst.get(e1.getCId())){
+                if(!e3.equals(e2)) {
                     if (transitiveReachabilityMap.get(e3).contains(e2)) {
                         orClause = ctx.mkOr(orClause, ctx.mkAnd(
                                 edge(e1, e3),
@@ -120,9 +140,8 @@ public class RelTrans extends UnaryRelation {
             enc = ctx.mkAnd(enc, ctx.mkEq(idlConcatEdge(e1, e2), orClause));
 
             orClause = ctx.mkFalse();
-            for(Tuple tuple2 : fullEncodeTupleSet.getByFirst(e1)){
-                if (!tuple2.equals(tuple)) {
-                    Event e3 = tuple2.getSecond();
+            for(Event e3 : byFirst.get(e1.getCId())){
+                if(!e3.equals(e2)) {
                     if (transitiveReachabilityMap.get(e3).contains(e2)) {
                         orClause = ctx.mkOr(orClause, ctx.mkAnd(
                                 edge(e1, e3),
@@ -210,32 +229,6 @@ public class RelTrans extends UnaryRelation {
         }
 
         return enc;
-    }
-
-	private HashSet<Tuple> getFullEncodeTupleSet(HashSet<Tuple> processNow){
-        processNow.retainAll(getMaxTupleSet());
-
-		HashSet<Tuple> result = new HashSet<>();
-
-        while(!processNow.isEmpty()) {
-			HashSet<Tuple> processNext = new HashSet<>();
-            result.addAll(processNow);
-
-            for (Tuple tuple : processNow) {
-                Event e1 = tuple.getFirst();
-                Event e2 = tuple.getSecond();
-                for (Event e3 : transitiveReachabilityMap.get(e1)) {
-                    if (e3.getCId() != e1.getCId() && e3.getCId() != e2.getCId()
-                            && transitiveReachabilityMap.get(e3).contains(e2)) {
-                        processNext.add(new Tuple(e1, e3));
-                        processNext.add(new Tuple(e3, e2));
-                    }
-                }
-            }
-            processNext.removeAll(result);
-            processNow = processNext;
-        }
-        return result;
     }
 
     private BoolExpr idlConcatEdge(Event first, Event second) {
