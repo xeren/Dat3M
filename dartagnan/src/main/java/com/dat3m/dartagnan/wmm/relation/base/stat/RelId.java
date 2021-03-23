@@ -23,6 +23,6 @@ public class RelId extends StaticRelation {
 	@Override
 	protected void mkMaxTupleSet(){
 		for(Event e : program.getCache().getEvents(FilterBasic.get(EType.VISIBLE)))
-			addMaxTuple(e,e);
+			addMaxTuple(e,e,true);
 	}
 }

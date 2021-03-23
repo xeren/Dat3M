@@ -40,7 +40,7 @@ public class RelRf extends Relation {
 					for(ListIterator<Event> i2 = m.listIterator(i1.nextIndex()); i2.hasNext();){
 						MemEvent e2 = (MemEvent)i2.next();
 						if(e2.hasFilter(EType.READ) && MemEvent.canAddressTheSameLocation(e1,e2))
-							addMaxTuple(e1,e2);
+							addMaxTuple(e1,e2,false);
 					}
 				}
 			}
@@ -52,7 +52,7 @@ public class RelRf extends Relation {
 						for(Event r : j.getCache().getEvents(read))
 							for(Event w : ww)
 								if(MemEvent.canAddressTheSameLocation((MemEvent)w,(MemEvent)r))
-									addMaxTuple(w,r);
+									addMaxTuple(w,r,false);
             }
 	}
 

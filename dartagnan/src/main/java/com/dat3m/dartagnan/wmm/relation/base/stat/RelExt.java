@@ -24,8 +24,8 @@ public class RelExt extends StaticRelation {
                     Thread t2 = it2.next();
                     for(Event e1 : t1.getCache().getEvents(FilterBasic.get(EType.VISIBLE))){
                         for(Event e2 : t2.getCache().getEvents(FilterBasic.get(EType.VISIBLE))){
-						addMaxTuple(e1,e2);
-						addMaxTuple(e2,e1);
+						addMaxTuple(e1,e2,true);
+						addMaxTuple(e2,e1,true);
                         }
                     }
                 }

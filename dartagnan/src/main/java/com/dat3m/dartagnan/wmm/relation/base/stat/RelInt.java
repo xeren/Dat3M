@@ -23,8 +23,8 @@ public class RelInt extends StaticRelation {
                     ListIterator<Event> it2 = events.listIterator(it1.nextIndex());
                     while (it2.hasNext()) {
                         Event e2 = it2.next();
-					addMaxTuple(e1,e2);
-					addMaxTuple(e2,e1);
+					addMaxTuple(e1,e2,true);
+					addMaxTuple(e2,e1,true);
                     }
                 }
             }

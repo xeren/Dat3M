@@ -34,9 +34,9 @@ public class RelUnion extends BinaryRelation {
 	@Override
 	protected void mkMaxTupleSet(){
 		for(Tuple t : r1.getMaxTupleSet())
-			addMaxTuple(t.getFirst(),t.getSecond());
+			addMaxTuple(t.getFirst(),t.getSecond(),t.isMinimal());
 		for(Tuple t : r2.getMaxTupleSet())
-			addMaxTuple(t.getFirst(),t.getSecond());
+			addMaxTuple(t.getFirst(),t.getSecond(),t.isMinimal());
 	}
 
 	@Override

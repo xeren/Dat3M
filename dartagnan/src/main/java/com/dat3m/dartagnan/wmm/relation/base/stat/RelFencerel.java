@@ -44,7 +44,7 @@ public class RelFencerel extends Relation {
                             Event e2 = it2.next();
                             for(Event f : fences) {
                                 if(f.getCId() > e1.getCId() && f.getCId() < e2.getCId()){
-								addMaxTuple(e1,e2);
+								addMaxTuple(e1,e2,false);
                                     break;
                                 }
                             }

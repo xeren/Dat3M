@@ -35,8 +35,9 @@ public class RelIntersection extends BinaryRelation {
 		for(Tuple t : r1.getMaxTupleSet()){
 			Event x = t.getFirst();
 			Event y = t.getSecond();
-			if(r2.contains(x,y))
-				addMaxTuple(x,y);
+			Tuple u = r2.of(x,y);
+			if(null!=u)
+				addMaxTuple(x,y,t.isMinimal()&&u.isMinimal());
 		}
 	}
 
