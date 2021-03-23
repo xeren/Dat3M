@@ -5,7 +5,7 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.utils.Mode;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
-import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.IntExpr;
@@ -28,7 +28,7 @@ public abstract class Relation {
 
     protected boolean isEncoded;
 
-	TupleSet maxTupleSet;
+	HashMap<Integer,HashMap<Integer,Tuple>> maxTupleSet;
 	protected HashMap<Event,HashSet<Event>> maxTupleSetTransitive;
 	protected HashSet<Tuple> encodeTupleSet;
 
@@ -68,29 +68,54 @@ public abstract class Relation {
 
 	public void initMaxTupleSet(){
 		if(null==maxTupleSet){
-			maxTupleSet = new TupleSet();
+			maxTupleSet = new HashMap<>();
 			mkMaxTupleSet();
 		}
 	}
 
 	public Iterable<Tuple> getMaxTupleSet(){
 		initMaxTupleSet();
-		return maxTupleSet;
+		return ()->{
+			Iterator<HashMap<Integer,Tuple>> i = maxTupleSet.values().iterator();
+			if(!i.hasNext())
+				return new Iterator<Tuple>() {
+					@Override public boolean hasNext(){return false;}
+					@Override public Tuple next(){return null;}
+				};
+			Iterator<Tuple> jj = i.next().values().iterator();
+			assert jj.hasNext();
+			return new Iterator<Tuple>(){
+				Iterator<Tuple> j = jj;
+				@Override
+				public boolean hasNext(){
+					return i.hasNext() || j.hasNext();
+				}
+				@Override
+				public Tuple next(){
+					Tuple t = j.next();
+					while(!j.hasNext() && i.hasNext())
+						j = i.next().values().iterator();
+					return t;
+				}
+			};
+		};
 	}
 
 	public int size(){
 		initMaxTupleSet();
-		return maxTupleSet.size();
+		return maxTupleSet.values().stream().mapToInt(HashMap::size).sum();
 	}
 
 	public boolean contains(Event first, Event second){
 		initMaxTupleSet();
-		return maxTupleSet.contains(new Tuple(first,second));
+		HashMap<Integer,Tuple> s = maxTupleSet.get(first.getCId());
+		return null!=s && s.containsKey(second.getCId());
 	}
 
 	public Collection<Tuple> getMaxTupleSet(Event first){
 		initMaxTupleSet();
-		return maxTupleSet.getByFirst(first);
+		HashMap<Integer,Tuple> s = maxTupleSet.get(first.getCId());
+		return null==s ? ImmutableSet.of() : s.values();
 	}
 
 	public HashMap<Event,HashSet<Event>> getMaxTupleSetTransitive(){
@@ -98,9 +123,11 @@ public abstract class Relation {
 			return maxTupleSetTransitive;
 		maxTupleSetTransitive = new HashMap<>();
 		initMaxTupleSet();
-		for(Tuple t : maxTupleSet){
-			maxTupleSetTransitive.computeIfAbsent(t.getFirst(),k->new HashSet<>()).add(t.getSecond());
-			maxTupleSetTransitive.computeIfAbsent(t.getSecond(),k->new HashSet<>());
+		for(HashMap<Integer,Tuple> s : maxTupleSet.values()){
+			for(Tuple t : s.values()){
+				maxTupleSetTransitive.computeIfAbsent(t.getFirst(),k->new HashSet<>()).add(t.getSecond());
+				maxTupleSetTransitive.computeIfAbsent(t.getSecond(),k->new HashSet<>());
+			}
 		}
 		boolean changed = true;
 		while(changed){
@@ -120,7 +147,7 @@ public abstract class Relation {
 	protected abstract void mkMaxTupleSet();
 
 	protected final void addMaxTuple(Event x, Event y){
-		maxTupleSet.add(new Tuple(x,y));
+		maxTupleSet.computeIfAbsent(x.getCId(),k->new HashMap<>()).computeIfAbsent(y.getCId(),k->new Tuple(x,y));
 	}
 
 	protected void updateMaxTupleSetRecursive(){
@@ -235,7 +262,8 @@ public abstract class Relation {
     }
 
     protected BoolExpr doEncode(){
-		assert null==maxTupleSet ? encodeTupleSet.isEmpty() : maxTupleSet.containsAll(encodeTupleSet);
+		assert null==maxTupleSet ? encodeTupleSet.isEmpty()
+			: encodeTupleSet.stream().allMatch(t->contains(t.getFirst(),t.getSecond()));
         BoolExpr enc = ctx.mkTrue();
         if(!encodeTupleSet.isEmpty() || forceDoEncode){
             if(settings.getMode() == Mode.KLEENE) {
