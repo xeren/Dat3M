@@ -42,7 +42,7 @@ public class RelTrans extends UnaryRelation {
 
 	@Override
 	protected void mkMaxTupleSet(){
-            transitiveReachabilityMap = r1.getMaxTupleSet().transMap();
+		transitiveReachabilityMap = r1.getMaxTupleSetTransitive();
             for(Event e1 : transitiveReachabilityMap.keySet()){
                 for(Event e2 : transitiveReachabilityMap.get(e1)){
 				addMaxTuple(e1,e2);

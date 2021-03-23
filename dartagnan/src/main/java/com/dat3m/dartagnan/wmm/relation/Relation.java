@@ -83,6 +83,10 @@ public abstract class Relation {
 		return maxTupleSet.getByFirst(first);
 	}
 
+	public Map<Event,Set<Event>> getMaxTupleSetTransitive(){
+		return maxTupleSet.transMap();
+	}
+
 	protected abstract void mkMaxTupleSet();
 
 	protected final void addMaxTuple(Event x, Event y){
