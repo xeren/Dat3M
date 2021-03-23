@@ -8,7 +8,6 @@ public class TupleSet implements Set<Tuple>{
 
     private Set<Tuple> tuples = new HashSet<>();
     private Map<Event, Set<Tuple>> byFirst = new HashMap<>();
-    private Map<Event, Set<Tuple>> bySecond = new HashMap<>();
     private boolean isUpdated = false;
 
     @Override
@@ -116,14 +115,6 @@ public class TupleSet implements Set<Tuple>{
         return byFirst.get(e);
     }
 
-    public Set<Tuple> getBySecond(Event e){
-        if(isUpdated){
-            updateAuxiliary();
-        }
-        bySecond.putIfAbsent(e, new HashSet<>());
-        return bySecond.get(e);
-    }
-
     public Map<Event, Set<Event>> transMap(){
         Map<Event, Set<Event>> map = new HashMap<>();
 
@@ -155,12 +146,9 @@ public class TupleSet implements Set<Tuple>{
 
     private void updateAuxiliary(){
         byFirst.clear();
-        bySecond.clear();
         for(Tuple e : tuples){
             byFirst.putIfAbsent(e.getFirst(), new HashSet<>());
             byFirst.get(e.getFirst()).add(e);
-            bySecond.putIfAbsent(e.getSecond(), new HashSet<>());
-            bySecond.get(e.getSecond()).add(e);
         }
         isUpdated = false;
     }
