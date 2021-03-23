@@ -5,9 +5,6 @@ import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.wmm.relation.Relation;
-import com.dat3m.dartagnan.wmm.utils.Tuple;
-import java.util.Collection;
-import java.util.HashSet;
 
 /**
  *
@@ -46,18 +43,6 @@ public abstract class BinaryRelation extends Relation {
     public void initialise(Program program, Context ctx, Settings settings){
         super.initialise(program, ctx, settings);
         lastEncodedIteration = -1;
-    }
-
-	@Override
-	public void addEncodeTupleSet(Collection<Tuple> tuples){
-		HashSet<Tuple> activeSet = new HashSet<>(tuples);
-        activeSet.removeAll(encodeTupleSet);
-        encodeTupleSet.addAll(activeSet);
-        activeSet.retainAll(maxTupleSet);
-        if(!activeSet.isEmpty()){
-            r1.addEncodeTupleSet(activeSet);
-            r2.addEncodeTupleSet(activeSet);
-        }
     }
 
     @Override
