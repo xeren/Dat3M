@@ -7,6 +7,9 @@ import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
+
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.function.BiFunction;
 
 /**
@@ -49,6 +52,19 @@ public class RelMinus extends BinaryRelation {
 		mkMaxTupleSet();
 	}
 
+	@Override
+	public void addEncodeTupleSet(Collection<Tuple> tuples){
+		HashSet<Tuple> activeSet = new HashSet<>(tuples);
+		activeSet.removeAll(encodeTupleSet);
+		encodeTupleSet.addAll(activeSet);
+		activeSet.retainAll(maxTupleSet);
+		if(!activeSet.isEmpty()){
+			r1.addEncodeTupleSet(activeSet);
+			activeSet.retainAll(r2.getMaxTupleSet());
+			r2.addEncodeTupleSet(activeSet);
+		}
+	}
+
     @Override
     protected BoolExpr encodeApprox() {
         BoolExpr enc = ctx.mkTrue();
@@ -57,7 +73,7 @@ public class RelMinus extends BinaryRelation {
             Event e2 = tuple.getSecond();
 
             BoolExpr opt1 = r1.edge(e1, e2);
-            BoolExpr opt2 = ctx.mkNot(r2.edge(e1, e2));
+            BoolExpr opt2 = not2(e1,e2);
             if (Relation.PostFixApprox) {
                 enc = ctx.mkAnd(enc, ctx.mkImplies(ctx.mkAnd(opt1, opt2), edge(e1, e2)));
             } else {
@@ -80,7 +96,7 @@ public class RelMinus extends BinaryRelation {
             Event e2 = tuple.getSecond();
 
             BoolExpr opt1 = r1.edge(e1, e2);
-            BoolExpr opt2 = ctx.mkNot(r2.edge(e1, e2));
+            BoolExpr opt2 = not2(e1,e2);
             enc = ctx.mkAnd(enc, ctx.mkEq(edge(e1, e2), ctx.mkAnd(opt1, opt2)));
 
             opt1 = ctx.mkAnd(opt1, ctx.mkGt(intCount(e1, e2), r1.intCount(e1, e2)));
@@ -109,7 +125,7 @@ public class RelMinus extends BinaryRelation {
                 for(Tuple tuple : encodeTupleSet){
                     Event e1 = tuple.getFirst();
                     Event e2 = tuple.getSecond();
-                    enc = ctx.mkAnd(enc, ctx.mkEq(edge(iteration,e1,e2),ctx.mkAnd(r1Edge.apply(e1,e2),ctx.mkNot(r2.edge(e1,e2)))));
+                    enc = ctx.mkAnd(enc, ctx.mkEq(edge(iteration,e1,e2),ctx.mkAnd(r1Edge.apply(e1,e2),not2(e1,e2))));
                 }
 
                 if(recurse){
@@ -120,4 +136,8 @@ public class RelMinus extends BinaryRelation {
 
         return enc;
     }
+
+	private BoolExpr not2(Event first, Event second){
+		return r2.contains(first,second) ? ctx.mkNot(r2.edge(first,second)) : ctx.mkTrue();
+	}
 }
