@@ -30,8 +30,12 @@ public class RelIntersection extends BinaryRelation {
 
 	@Override
 	protected void mkMaxTupleSet(){
-		maxTupleSet.addAll(r1.getMaxTupleSet());
-		maxTupleSet.retainAll(r2.getMaxTupleSet());
+		for(Tuple t : r1.getMaxTupleSet()){
+			Event x = t.getFirst();
+			Event y = t.getSecond();
+			if(r2.contains(x,y))
+				addMaxTuple(x,y);
+		}
 	}
 
 	@Override

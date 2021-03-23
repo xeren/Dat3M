@@ -56,7 +56,7 @@ public class RelRf extends Relation {
         boolean canAccNonInitMem = settings.getFlag(Settings.FLAG_CAN_ACCESS_UNINITIALIZED_MEMORY);
         boolean useSeqEncoding = settings.getFlag(Settings.FLAG_USE_SEQ_ENCODING_REL_RF);
 
-        for(Tuple tuple : maxTupleSet){
+        for(Tuple tuple : getMaxTupleSet()){
             MemEvent w = (MemEvent) tuple.getFirst();
             MemEvent r = (MemEvent) tuple.getSecond();
             BoolExpr edge = edge(w, r);
