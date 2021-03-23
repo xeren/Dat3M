@@ -2,8 +2,6 @@ package com.dat3m.dartagnan.wmm.relation.base.stat;
 
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
-import com.dat3m.dartagnan.wmm.utils.Tuple;
-import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 import java.util.List;
 
@@ -28,18 +26,12 @@ public class RelCartesian extends StaticRelation {
         this.term = makeTerm(filter1, filter2);
     }
 
-    @Override
-    public TupleSet getMaxTupleSet(){
-        if(maxTupleSet == null){
-            maxTupleSet = new TupleSet();
-            List<Event> l1 = program.getCache().getEvents(filter1);
-            List<Event> l2 = program.getCache().getEvents(filter2);
-            for(Event e1 : l1){
-                for(Event e2 : l2){
-                    maxTupleSet.add(new Tuple(e1, e2));
-                }
-            }
-        }
-        return maxTupleSet;
-    }
+	@Override
+	protected void mkMaxTupleSet(){
+		List<Event> l1 = program.getCache().getEvents(filter1);
+		List<Event> l2 = program.getCache().getEvents(filter2);
+		for(Event e1 : l1)
+			for(Event e2 : l2)
+				addMaxTuple(e1,e2);
+	}
 }

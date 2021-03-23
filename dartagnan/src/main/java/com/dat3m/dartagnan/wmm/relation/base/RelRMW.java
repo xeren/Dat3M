@@ -15,7 +15,6 @@ import com.dat3m.dartagnan.wmm.filter.FilterIntersection;
 import com.dat3m.dartagnan.wmm.relation.base.stat.StaticRelation;
 import com.dat3m.dartagnan.wmm.utils.Flag;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
-import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import java.util.HashSet;
@@ -46,9 +45,8 @@ public class RelRMW extends StaticRelation {
         this.baseMaxTupleSet = null;
     }
 
-    @Override
-    public TupleSet getMaxTupleSet(){
-        if(maxTupleSet == null){
+	@Override
+	protected void mkMaxTupleSet(){
 			baseMaxTupleSet = new HashSet<>();
             FilterAbstract filter = FilterIntersection.get(FilterBasic.get(EType.RMW), FilterBasic.get(EType.WRITE));
             for(Event store : program.getCache().getEvents(filter)){
@@ -86,7 +84,6 @@ public class RelRMW extends StaticRelation {
             	}
             }
 
-            maxTupleSet = new TupleSet();
             maxTupleSet.addAll(baseMaxTupleSet);
 
             for(Thread thread : program.getThreads()){
@@ -98,9 +95,7 @@ public class RelRMW extends StaticRelation {
                     }
                 }
             }
-        }       	
-        return maxTupleSet;
-    }
+	}
 
     @Override
     protected BoolExpr encodeApprox() {

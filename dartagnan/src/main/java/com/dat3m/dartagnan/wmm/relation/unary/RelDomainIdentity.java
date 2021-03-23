@@ -3,7 +3,6 @@ package com.dat3m.dartagnan.wmm.relation.unary;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
-import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.BoolExpr;
 import java.util.Collection;
 import java.util.HashSet;
@@ -25,16 +24,13 @@ public class RelDomainIdentity extends UnaryRelation {
         term = makeTerm(r1);
     }
 
-    @Override
-    public TupleSet getMaxTupleSet(){
-        if(maxTupleSet == null){
-            maxTupleSet = new TupleSet();
-            for(Tuple tuple : r1.getMaxTupleSet()){
-                maxTupleSet.add(new Tuple(tuple.getFirst(), tuple.getFirst()));
-            }
-        }
-        return maxTupleSet;
-    }
+	@Override
+	protected void mkMaxTupleSet(){
+		for(Tuple t : r1.getMaxTupleSet()){
+			Event e = t.getFirst();
+			addMaxTuple(e,e);
+		}
+	}
 
 	@Override
 	public void addEncodeTupleSet(Collection<Tuple> tuples){
@@ -42,7 +38,7 @@ public class RelDomainIdentity extends UnaryRelation {
 		HashSet<Tuple> activeSet = new HashSet<>(tuples);
         activeSet.retainAll(maxTupleSet);
         if(!activeSet.isEmpty()){
-            TupleSet r1Set = new TupleSet();
+			HashSet<Tuple> r1Set = new HashSet<>();
             for(Tuple tuple : activeSet){
                 r1Set.addAll(r1.getMaxTupleSet().getByFirst(tuple.getFirst()));
             }

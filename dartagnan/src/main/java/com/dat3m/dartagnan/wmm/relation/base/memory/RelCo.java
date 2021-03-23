@@ -5,15 +5,15 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.program.utils.EType;
-import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.filter.FilterMinus;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
-import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.*;
 import java.util.List;
 import java.util.ListIterator;
+
+import static com.dat3m.dartagnan.utils.Settings.FLAG_CURRENT_MODEL_LOCAL_CO;
 
 public class RelCo extends Relation {
 
@@ -27,54 +27,47 @@ public class RelCo extends Relation {
 	}
 
     @Override
-    public TupleSet getMaxTupleSet(){
-        if(maxTupleSet == null){
-            maxTupleSet = new TupleSet();
-			FilterBasic filterInit = FilterBasic.get(EType.INIT);
-			FilterMinus filterWrite = FilterMinus.get(FilterBasic.get(EType.WRITE),filterInit);
+	protected void mkMaxTupleSet(){
+		FilterBasic filterInit = FilterBasic.get(EType.INIT);
+		FilterMinus filterWrite = FilterMinus.get(FilterBasic.get(EType.WRITE),filterInit);
 
-			for(Event e1 : program.getCache().getEvents(filterInit)){
-				for(Event e2 : program.getCache().getEvents(filterWrite)){
-                    if(MemEvent.canAddressTheSameLocation((MemEvent) e1, (MemEvent)e2)){
-                        maxTupleSet.add(new Tuple(e1, e2));
-                    }
-                }
-            }
+		for(Event e1 : program.getCache().getEvents(filterInit))
+			for(Event e2 : program.getCache().getEvents(filterWrite))
+				if(MemEvent.canAddressTheSameLocation((MemEvent) e1, (MemEvent)e2))
+					addMaxTuple(e1,e2);
 
-			boolean lc = settings.getFlag(Settings.FLAG_CURRENT_MODEL_LOCAL_CO);
+		boolean lc = settings.getFlag(FLAG_CURRENT_MODEL_LOCAL_CO);
 
-			for(ListIterator<Thread> it = program.getThreads().listIterator(); it.hasNext();){
-				List<Event> st = it.next().getCache().getEvents(filterWrite);
-				if(st.isEmpty())
-					continue;
-				//internal relationships
-				for(ListIterator<Event> i = st.listIterator(); i.hasNext();){
-					Event e1 = i.next();
-					for(ListIterator<Event> j = st.listIterator(i.nextIndex()); j.hasNext();){
-						Event e2 = j.next();
+		for(ListIterator<Thread> it = program.getThreads().listIterator(); it.hasNext();){
+			List<Event> st = it.next().getCache().getEvents(filterWrite);
+			if(st.isEmpty())
+				continue;
+			//internal relationships
+			for(ListIterator<Event> i = st.listIterator(); i.hasNext();){
+				Event e1 = i.next();
+				for(ListIterator<Event> j = st.listIterator(i.nextIndex()); j.hasNext();){
+					Event e2 = j.next();
+					if(MemEvent.canAddressTheSameLocation((MemEvent)e1,(MemEvent)e2)){
+						addMaxTuple(e1,e2);
+						if(!lc)
+							addMaxTuple(e2,e1);
+					}
+				}
+			}
+			//external relationships
+			for(ListIterator<Thread> jt = program.getThreads().listIterator(it.nextIndex()); jt.hasNext();){
+				for(Event e1 : jt.next().getCache().getEvents(filterWrite)){
+					for(Event e2 : st){
+						assert e1.getCId() != e2.getCId();
 						if(MemEvent.canAddressTheSameLocation((MemEvent)e1,(MemEvent)e2)){
-							maxTupleSet.add(new Tuple(e1,e2));
-							if(!lc)
-								maxTupleSet.add(new Tuple(e2,e1));
+							addMaxTuple(e1,e2);
+							addMaxTuple(e2,e1);
 						}
 					}
 				}
-				//external relationships
-				for(ListIterator<Thread> jt = program.getThreads().listIterator(it.nextIndex()); jt.hasNext();){
-					for(Event e1 : jt.next().getCache().getEvents(filterWrite)){
-						for(Event e2 : st){
-							assert e1.getCId() != e2.getCId();
-							if(MemEvent.canAddressTheSameLocation((MemEvent)e1,(MemEvent)e2)){
-								maxTupleSet.add(new Tuple(e1,e2));
-								maxTupleSet.add(new Tuple(e2,e1));
-							}
-						}
-                    }
-                }
-            }
-        }
-        return maxTupleSet;
-    }
+			}
+		}
+	}
 
     @Override
     protected BoolExpr encodeApprox() {

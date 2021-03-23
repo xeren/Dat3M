@@ -7,7 +7,6 @@ import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
-import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 import java.util.Collection;
 
@@ -17,21 +16,17 @@ public class RelLoc extends Relation {
         term = "loc";
     }
 
-    @Override
-    public TupleSet getMaxTupleSet(){
-        if(maxTupleSet == null){
-            maxTupleSet = new TupleSet();
+	@Override
+	protected void mkMaxTupleSet(){
             Collection<Event> events = program.getCache().getEvents(FilterBasic.get(EType.MEMORY));
             for(Event e1 : events){
                 for(Event e2 : events){
                     if(e1.getCId() != e2.getCId() && MemEvent.canAddressTheSameLocation((MemEvent) e1, (MemEvent)e2)){
-                        maxTupleSet.add(new Tuple(e1, e2));
+                        addMaxTuple(e1,e2);
                     }
                 }
             }
-        }
-        return maxTupleSet;
-    }
+	}
 
     @Override
     protected BoolExpr encodeApprox() {

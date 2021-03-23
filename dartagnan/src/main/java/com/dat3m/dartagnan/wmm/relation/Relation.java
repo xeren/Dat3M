@@ -67,7 +67,19 @@ public abstract class Relation {
 		encodeTupleSet = new HashSet<>();
     }
 
-    public abstract TupleSet getMaxTupleSet();
+	public TupleSet getMaxTupleSet(){
+		if(null==maxTupleSet){
+			maxTupleSet = new TupleSet();
+			mkMaxTupleSet();
+		}
+		return maxTupleSet;
+	}
+
+	protected abstract void mkMaxTupleSet();
+
+	protected final void addMaxTuple(Event x, Event y){
+		maxTupleSet.add(new Tuple(x,y));
+	}
 
     public TupleSet getMaxTupleSetRecursive(){
         return getMaxTupleSet();

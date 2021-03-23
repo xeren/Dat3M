@@ -47,13 +47,9 @@ public class RecursiveRelation extends Relation {
         doRecurse = true;
     }
 
-    @Override
-    public TupleSet getMaxTupleSet(){
-        if(maxTupleSet == null){
-            maxTupleSet = new TupleSet();
-        }
-        return maxTupleSet;
-    }
+	@Override
+	protected void mkMaxTupleSet(){
+	}
 
     @Override
     public TupleSet getMaxTupleSetRecursive(){
