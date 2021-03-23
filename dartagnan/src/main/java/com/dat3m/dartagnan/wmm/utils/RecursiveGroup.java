@@ -56,9 +56,9 @@ public class RecursiveGroup {
             changed = false;
             for(RecursiveRelation relation : relations){
                 relation.setDoRecurse();
-                int oldSize = relation.getMaxTupleSet().size();
+                int oldSize = relation.size();
 				relation.getMaxTupleSetRecursive();
-				changed |= oldSize != relation.getMaxTupleSet().size();
+				changed |= oldSize != relation.size();
             }
             iterationCounter++;
         }

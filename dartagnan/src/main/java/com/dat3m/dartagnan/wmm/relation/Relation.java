@@ -66,27 +66,39 @@ public abstract class Relation {
 		encodeTupleSet = new HashSet<>();
     }
 
-	public TupleSet getMaxTupleSet(){
+	public void initMaxTupleSet(){
 		if(null==maxTupleSet){
 			maxTupleSet = new TupleSet();
 			mkMaxTupleSet();
 		}
+	}
+
+	public TupleSet getMaxTupleSet(){
+		initMaxTupleSet();
 		return maxTupleSet;
 	}
 
+	public int size(){
+		initMaxTupleSet();
+		return maxTupleSet.size();
+	}
+
 	public boolean contains(Event first, Event second){
-		return getMaxTupleSet().contains(new Tuple(first,second));
+		initMaxTupleSet();
+		return maxTupleSet.contains(new Tuple(first,second));
 	}
 
 	public Collection<Tuple> getMaxTupleSet(Event first){
-		return getMaxTupleSet().getByFirst(first);
+		initMaxTupleSet();
+		return maxTupleSet.getByFirst(first);
 	}
 
 	public HashMap<Event,HashSet<Event>> getMaxTupleSetTransitive(){
 		if(null!= maxTupleSetTransitive)
 			return maxTupleSetTransitive;
 		maxTupleSetTransitive = new HashMap<>();
-		for(Tuple t : getMaxTupleSet()){
+		initMaxTupleSet();
+		for(Tuple t : maxTupleSet){
 			maxTupleSetTransitive.computeIfAbsent(t.getFirst(),k->new HashSet<>()).add(t.getSecond());
 			maxTupleSetTransitive.computeIfAbsent(t.getSecond(),k->new HashSet<>());
 		}
