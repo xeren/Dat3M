@@ -4,6 +4,8 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.microsoft.z3.BoolExpr;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.function.BiFunction;
 
 /**
@@ -37,6 +39,18 @@ public class RelIntersection extends BinaryRelation {
 		r1.getMaxTupleSetRecursive();
 		r2.getMaxTupleSetRecursive();
 		mkMaxTupleSet();
+	}
+
+	@Override
+	public void addEncodeTupleSet(Collection<Tuple> tuples){
+		HashSet<Tuple> activeSet = new HashSet<>(tuples);
+		activeSet.removeAll(encodeTupleSet);
+		encodeTupleSet.addAll(activeSet);
+		activeSet.retainAll(maxTupleSet);
+		if(!activeSet.isEmpty()){
+			r1.addEncodeTupleSet(activeSet);
+			r2.addEncodeTupleSet(activeSet);
+		}
 	}
 
     @Override
