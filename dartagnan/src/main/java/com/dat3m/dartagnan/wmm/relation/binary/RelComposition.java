@@ -28,20 +28,12 @@ public class RelComposition extends BinaryRelation {
         term = makeTerm(r1, r2);
     }
 
-    @Override
-    public TupleSet getMaxTupleSet(){
-        if(maxTupleSet == null){
-            maxTupleSet = new TupleSet();
-            TupleSet set1 = r1.getMaxTupleSet();
-            TupleSet set2 = r2.getMaxTupleSet();
-            for(Tuple rel1 : set1){
-                for(Tuple rel2 : set2.getByFirst(rel1.getSecond())){
-                    maxTupleSet.add(new Tuple(rel1.getFirst(), rel2.getSecond()));
-                }
-            }
-        }
-        return maxTupleSet;
-    }
+	@Override
+	protected void mkMaxTupleSet(){
+		for(Tuple t1 : r1.getMaxTupleSet())
+			for(Tuple t2 : r2.getMaxTupleSet().getByFirst(t1.getSecond()))
+				addMaxTuple(t1.getFirst(),t2.getSecond());
+	}
 
     @Override
     public TupleSet getMaxTupleSetRecursive(){
@@ -66,8 +58,8 @@ public class RelComposition extends BinaryRelation {
         activeSet.retainAll(maxTupleSet);
 
         if(!activeSet.isEmpty()){
-            TupleSet r1Set = new TupleSet();
-            TupleSet r2Set = new TupleSet();
+			HashSet<Tuple> r1Set = new HashSet<>();
+			HashSet<Tuple> r2Set = new HashSet<>();
 
 			HashMap<Integer,HashSet<Integer>> myMap = new HashMap<>();
             for(Tuple tuple : activeSet){
@@ -99,13 +91,14 @@ public class RelComposition extends BinaryRelation {
     protected BoolExpr encodeApprox() {
         BoolExpr enc = ctx.mkTrue();
 
-        TupleSet r1Set = new TupleSet();
-        r1Set.addAll(r1.getEncodeTupleSet());
+		HashSet<Tuple> r1Set = new HashSet<>(r1.getEncodeTupleSet());
         r1Set.retainAll(r1.getMaxTupleSet());
 
-        TupleSet r2Set = new TupleSet();
-        r2Set.addAll(r2.getEncodeTupleSet());
-        r2Set.retainAll(r2.getMaxTupleSet());
+		HashMap<Event,HashSet<Event>> r2Set = new HashMap<>();
+		HashSet<Event> empty = new HashSet<>();
+		for(Tuple t : r2.getEncodeTupleSet())
+			if(r2.getMaxTupleSet().contains(t))
+				r2Set.computeIfAbsent(t.getFirst(),k->new HashSet<>()).add(t.getSecond());
 
         Map<Integer, BoolExpr> exprMap = new HashMap<>();
         for(Tuple tuple : encodeTupleSet){
@@ -115,8 +108,7 @@ public class RelComposition extends BinaryRelation {
         for(Tuple tuple1 : r1Set){
             Event e1 = tuple1.getFirst();
             Event e3 = tuple1.getSecond();
-            for(Tuple tuple2 : r2Set.getByFirst(e3)){
-                Event e2 = tuple2.getSecond();
+			for(Event e2 : r2Set.getOrDefault(e3,empty)){
                 int id = Tuple.toHashCode(e1.getCId(), e2.getCId());
                 if(exprMap.containsKey(id)){
                     BoolExpr e = exprMap.get(id);
@@ -144,13 +136,14 @@ public class RelComposition extends BinaryRelation {
         boolean recurseInR1 = (r1.getRecursiveGroupId() & recursiveGroupId) > 0;
         boolean recurseInR2 = (r2.getRecursiveGroupId() & recursiveGroupId) > 0;
 
-        TupleSet r1Set = new TupleSet();
-        r1Set.addAll(r1.getEncodeTupleSet());
+		HashSet<Tuple> r1Set = new HashSet<>(r1.getEncodeTupleSet());
         r1Set.retainAll(r1.getMaxTupleSet());
 
-        TupleSet r2Set = new TupleSet();
-        r2Set.addAll(r2.getEncodeTupleSet());
-        r2Set.retainAll(r2.getMaxTupleSet());
+		HashMap<Event,HashSet<Event>> r2Set = new HashMap<>();
+		HashSet<Event> empty = new HashSet<>();
+		for(Tuple t : r2.getEncodeTupleSet())
+			if(r2.getMaxTupleSet().contains(t))
+				r2Set.computeIfAbsent(t.getFirst(),k->new HashSet<>()).add(t.getSecond());
 
         Map<Integer, BoolExpr> orClauseMap = new HashMap<>();
         Map<Integer, BoolExpr> idlClauseMap = new HashMap<>();
@@ -162,8 +155,7 @@ public class RelComposition extends BinaryRelation {
         for(Tuple tuple1 : r1Set){
             Event e1 = tuple1.getFirst();
             Event e3 = tuple1.getSecond();
-            for(Tuple tuple2 : r2Set.getByFirst(e3)){
-                Event e2 = tuple2.getSecond();
+			for(Event e2 : r2Set.getOrDefault(e3,empty)){
                 int id = Tuple.toHashCode(e1.getCId(), e2.getCId());
                 if(orClauseMap.containsKey(id)){
                     BoolExpr opt1 = r1.edge(e1,e3);
@@ -209,13 +201,14 @@ public class RelComposition extends BinaryRelation {
                 BiFunction<Event,Event,BoolExpr> r1Edge = recurseInR1 ? (x,y)->r1.edge(childIteration,x,y) : r1::edge;
                 BiFunction<Event,Event,BoolExpr> r2Edge = recurseInR2 ? (x,y)->r2.edge(childIteration,x,y) : r2::edge;
 
-                TupleSet r1Set = new TupleSet();
-                r1Set.addAll(r1.getEncodeTupleSet());
+				HashSet<Tuple> r1Set = new HashSet<>(r1.getEncodeTupleSet());
                 r1Set.retainAll(r1.getMaxTupleSet());
 
-                TupleSet r2Set = new TupleSet();
-                r2Set.addAll(r2.getEncodeTupleSet());
-                r2Set.retainAll(r2.getMaxTupleSet());
+				HashMap<Event,HashSet<Event>> r2Set = new HashMap<>();
+				HashSet<Event> empty = new HashSet<>();
+				for(Tuple t : r2.getEncodeTupleSet())
+					if(r2.getMaxTupleSet().contains(t))
+						r2Set.computeIfAbsent(t.getFirst(),k->new HashSet<>()).add(t.getSecond());
 
                 Map<Integer, BoolExpr> exprMap = new HashMap<>();
                 for(Tuple tuple : encodeTupleSet){
@@ -225,8 +218,7 @@ public class RelComposition extends BinaryRelation {
                 for(Tuple tuple1 : r1Set){
                     Event e1 = tuple1.getFirst();
                     Event e3 = tuple1.getSecond();
-                    for(Tuple tuple2 : r2Set.getByFirst(e3)){
-                        Event e2 = tuple2.getSecond();
+					for(Event e2 : r2Set.getOrDefault(e3,empty)){
                         int id = Tuple.toHashCode(e1.getCId(), e2.getCId());
                         if(exprMap.containsKey(id)){
                             BoolExpr e = exprMap.get(id);

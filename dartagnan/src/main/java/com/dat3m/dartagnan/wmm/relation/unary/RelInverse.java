@@ -4,7 +4,6 @@ import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
-import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import java.util.Collection;
 import java.util.HashSet;
 
@@ -28,16 +27,11 @@ public class RelInverse extends UnaryRelation {
         term = makeTerm(r1);
     }
 
-    @Override
-    public TupleSet getMaxTupleSet(){
-        if(maxTupleSet == null){
-            maxTupleSet = new TupleSet();
-            for(Tuple pair : r1.getMaxTupleSet()){
-                maxTupleSet.add(new Tuple(pair.getSecond(), pair.getFirst()));
-            }
-        }
-        return maxTupleSet;
-    }
+	@Override
+	protected void mkMaxTupleSet(){
+		for(Tuple pair : r1.getMaxTupleSet())
+			addMaxTuple(pair.getSecond(),pair.getFirst());
+	}
 
 	@Override
 	public void addEncodeTupleSet(Collection<Tuple> tuples){
@@ -45,7 +39,7 @@ public class RelInverse extends UnaryRelation {
 		HashSet<Tuple> activeSet = new HashSet<>(tuples);
         activeSet.retainAll(maxTupleSet);
         if(!activeSet.isEmpty()){
-            TupleSet invSet = new TupleSet();
+			HashSet<Tuple> invSet = new HashSet<>();
             for(Tuple pair : activeSet){
                 invSet.add(new Tuple(pair.getSecond(), pair.getFirst()));
             }

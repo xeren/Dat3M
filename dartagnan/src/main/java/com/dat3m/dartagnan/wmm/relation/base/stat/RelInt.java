@@ -4,9 +4,6 @@ import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
-import com.dat3m.dartagnan.wmm.utils.Tuple;
-import com.dat3m.dartagnan.wmm.utils.TupleSet;
-
 import java.util.List;
 import java.util.ListIterator;
 
@@ -16,10 +13,8 @@ public class RelInt extends StaticRelation {
         term = "int";
     }
 
-    @Override
-    public TupleSet getMaxTupleSet(){
-        if(maxTupleSet == null){
-            maxTupleSet = new TupleSet();
+	@Override
+	protected void mkMaxTupleSet(){
             for(Thread t : program.getThreads()) {
                 List<Event> events = t.getCache().getEvents(FilterBasic.get(EType.VISIBLE));
                 ListIterator<Event> it1 = events.listIterator();
@@ -28,12 +23,10 @@ public class RelInt extends StaticRelation {
                     ListIterator<Event> it2 = events.listIterator(it1.nextIndex());
                     while (it2.hasNext()) {
                         Event e2 = it2.next();
-                        maxTupleSet.add(new Tuple(e1, e2));
-                        maxTupleSet.add(new Tuple(e2, e1));
+					addMaxTuple(e1,e2);
+					addMaxTuple(e2,e1);
                     }
                 }
             }
-        }
-        return maxTupleSet;
-    }
+	}
 }

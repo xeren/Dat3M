@@ -27,15 +27,11 @@ public class RelIntersection extends BinaryRelation {
         term = makeTerm(r1, r2);
     }
 
-    @Override
-    public TupleSet getMaxTupleSet(){
-        if(maxTupleSet == null){
-            maxTupleSet = new TupleSet();
-            maxTupleSet.addAll(r1.getMaxTupleSet());
-            maxTupleSet.retainAll(r2.getMaxTupleSet());
-        }
-        return maxTupleSet;
-    }
+	@Override
+	protected void mkMaxTupleSet(){
+		maxTupleSet.addAll(r1.getMaxTupleSet());
+		maxTupleSet.retainAll(r2.getMaxTupleSet());
+	}
 
     @Override
     public TupleSet getMaxTupleSetRecursive(){

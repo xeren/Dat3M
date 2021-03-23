@@ -7,8 +7,6 @@ import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
-import com.dat3m.dartagnan.wmm.utils.TupleSet;
-
 import java.util.List;
 import java.util.ListIterator;
 
@@ -31,10 +29,8 @@ public class RelFencerel extends Relation {
         term = makeTerm(fenceName);
     }
 
-    @Override
-    public TupleSet getMaxTupleSet(){
-        if(maxTupleSet == null){
-            maxTupleSet = new TupleSet();
+	@Override
+	protected void mkMaxTupleSet(){
             for(Thread t : program.getThreads()){
                 List<Event> fences = t.getCache().getEvents(FilterBasic.get(fenceName));
                 if(!fences.isEmpty()){
@@ -48,7 +44,7 @@ public class RelFencerel extends Relation {
                             Event e2 = it2.next();
                             for(Event f : fences) {
                                 if(f.getCId() > e1.getCId() && f.getCId() < e2.getCId()){
-                                    maxTupleSet.add(new Tuple(e1, e2));
+								addMaxTuple(e1,e2);
                                     break;
                                 }
                             }
@@ -56,9 +52,7 @@ public class RelFencerel extends Relation {
                     }
                 }
             }
-        }
-        return maxTupleSet;
-    }
+	}
 
     @Override
     protected BoolExpr encodeApprox() {

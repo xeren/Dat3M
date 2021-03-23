@@ -9,7 +9,6 @@ import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
-import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,10 +24,8 @@ public class RelCo extends Relation {
         return ctx.mkIntConst("co "+event.getCId());
     }
 
-    @Override
-    public TupleSet getMaxTupleSet(){
-        if(maxTupleSet == null){
-            maxTupleSet = new TupleSet();
+	@Override
+	protected void mkMaxTupleSet(){
             List<Event> eventsInit = program.getCache().getEvents(FilterBasic.get(EType.INIT));
             List<Event> eventsStore = program.getCache().getEvents(FilterMinus.get(
                     FilterBasic.get(EType.WRITE),
@@ -38,7 +35,7 @@ public class RelCo extends Relation {
             for(Event e1 : eventsInit){
                 for(Event e2 : eventsStore){
                     if(MemEvent.canAddressTheSameLocation((MemEvent) e1, (MemEvent)e2)){
-                        maxTupleSet.add(new Tuple(e1, e2));
+					addMaxTuple(e1,e2);
                     }
                 }
             }
@@ -46,13 +43,11 @@ public class RelCo extends Relation {
             for(Event e1 : eventsStore){
                 for(Event e2 : eventsStore){
                     if(e1.getCId() != e2.getCId() && MemEvent.canAddressTheSameLocation((MemEvent) e1, (MemEvent)e2)){
-                        maxTupleSet.add(new Tuple(e1, e2));
+					addMaxTuple(e1,e2);
                     }
                 }
             }
-        }
-        return maxTupleSet;
-    }
+	}
 
     @Override
     protected BoolExpr encodeApprox() {
