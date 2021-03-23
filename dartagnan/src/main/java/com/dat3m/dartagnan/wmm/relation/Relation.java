@@ -80,9 +80,14 @@ public abstract class Relation {
 		maxTupleSet.add(new Tuple(x,y));
 	}
 
-    public TupleSet getMaxTupleSetRecursive(){
-        return getMaxTupleSet();
-    }
+	protected void updateMaxTupleSetRecursive(){
+	}
+
+	public void getMaxTupleSetRecursive(){
+		if(recursiveGroupId > 0 && null!=maxTupleSet){
+			updateMaxTupleSetRecursive();
+		}
+	}
 
 	public Set<Tuple> getEncodeTupleSet(){
         return encodeTupleSet;

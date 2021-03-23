@@ -5,7 +5,6 @@ import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
-import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import java.util.Collection;
 
 /**
@@ -50,15 +49,14 @@ public class RecursiveRelation extends Relation {
 	protected void mkMaxTupleSet(){
 	}
 
-    @Override
-    public TupleSet getMaxTupleSetRecursive(){
-        if(doRecurse){
-            doRecurse = false;
-            maxTupleSet = r1.getMaxTupleSetRecursive();
-            return maxTupleSet;
-        }
-        return getMaxTupleSet();
-    }
+	@Override
+	public void getMaxTupleSetRecursive(){
+		if(doRecurse){
+			doRecurse = false;
+			r1.getMaxTupleSetRecursive();
+			maxTupleSet = r1.getMaxTupleSet();
+		}
+	}
 
 	@Override
 	public void addEncodeTupleSet(Collection<Tuple> tuples){
