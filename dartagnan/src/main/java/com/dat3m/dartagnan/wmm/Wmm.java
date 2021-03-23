@@ -110,9 +110,12 @@ public class Wmm {
         if(settings.getDrawGraph()){
             for(String relName : settings.getGraphRelations()){
                 Relation relation = relationRepository.getRelation(relName);
-                if(relation != null){
-                    relation.addEncodeTupleSet(relation.getMaxTupleSet());
-                }
+				if(null==relation)
+					continue;
+				ArrayList<Tuple> set = new ArrayList<>(relation.size());
+				for(Tuple t : relation.getMaxTupleSet())
+					set.add(t);
+				relation.addEncodeTupleSet(set);
             }
         }
 

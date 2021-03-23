@@ -29,14 +29,13 @@ public class EdgeTestHelper {
     // Encode violation of expected event pairs in the relation
     public BoolExpr encodeIllegalEdges(int[] data, Context ctx){
         Set<Tuple> all = mkAllTuples();
-        Set<Tuple> max = relation.getMaxTupleSet();
         Set<Tuple> expected = mkExpectedTuples(all, data);
         BoolExpr enc = ctx.mkFalse();
 
         for(Tuple tuple : all){
             if(expected.contains(tuple)){
                 enc = ctx.mkOr(enc, ctx.mkNot(relation.edge(tuple)));
-            } else if(max.contains(tuple)){
+            } else if(relation.contains(tuple.getFirst(),tuple.getSecond())){
                 enc = ctx.mkOr(enc, relation.edge(tuple));
             }
         }

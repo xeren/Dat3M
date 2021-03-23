@@ -5,6 +5,8 @@ import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 
+import java.util.ArrayList;
+
 public class Empty extends Axiom {
 
     public Empty(Relation rel) {
@@ -17,7 +19,10 @@ public class Empty extends Axiom {
 
 	@Override
 	public void getEncodeTupleSet(){
-		rel.addEncodeTupleSet(rel.getMaxTupleSet());
+		ArrayList<Tuple> set = new ArrayList<>(rel.size());
+		for(Tuple t : rel.getMaxTupleSet())
+			set.add(t);
+		rel.addEncodeTupleSet(set);
 	}
 
     @Override
