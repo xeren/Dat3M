@@ -200,11 +200,11 @@ public class Wmm {
         }
 
         for (Axiom ax : axioms) {
-            ax.getRel().getMaxTupleSet();
+            ax.getRel().initMaxTupleSet();
         }
 
         for(String relName : baseRelations){
-            relationRepository.getRelation(relName).getMaxTupleSet();
+            relationRepository.getRelation(relName).initMaxTupleSet();
         }
 
         if(settings.getDrawGraph()){
