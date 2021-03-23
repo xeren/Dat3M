@@ -41,7 +41,6 @@ public class RelRangeIdentity extends UnaryRelation {
 	public void addEncodeTupleSet(Collection<Tuple> tuples){
         encodeTupleSet.addAll(tuples);
 		HashSet<Tuple> activeSet = new HashSet<>(tuples);
-        activeSet.retainAll(maxTupleSet);
         if(!activeSet.isEmpty()){
 			HashSet<Tuple> r1Set = new HashSet<>();
             for(Tuple tuple : activeSet){

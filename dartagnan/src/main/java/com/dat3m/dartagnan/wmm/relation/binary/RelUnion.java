@@ -47,7 +47,6 @@ public class RelUnion extends BinaryRelation {
 		HashSet<Tuple> activeSet = new HashSet<>(tuples);
 		activeSet.removeAll(encodeTupleSet);
 		encodeTupleSet.addAll(activeSet);
-		activeSet.retainAll(maxTupleSet);
 		if(!activeSet.isEmpty()){
 			ArrayList<Tuple> a = new ArrayList<>(activeSet.size());
 			for(Tuple t : activeSet)

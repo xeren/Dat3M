@@ -52,7 +52,6 @@ public class RelTrans extends UnaryRelation {
 		HashSet<Tuple> activeSet = new HashSet<>(tuples);
         activeSet.removeAll(encodeTupleSet);
         encodeTupleSet.addAll(activeSet);
-        activeSet.retainAll(maxTupleSet);
 
 		HashSet<Tuple> processNow = activeSet;
 		HashSet<Tuple> result = new HashSet<>();
