@@ -59,7 +59,6 @@ public class RelMinus extends BinaryRelation {
 		HashSet<Tuple> activeSet = new HashSet<>(tuples);
 		activeSet.removeAll(encodeTupleSet);
 		encodeTupleSet.addAll(activeSet);
-		activeSet.retainAll(maxTupleSet);
 		if(!activeSet.isEmpty()){
 			r1.addEncodeTupleSet(activeSet);
 			activeSet.retainAll(r2.getMaxTupleSet());

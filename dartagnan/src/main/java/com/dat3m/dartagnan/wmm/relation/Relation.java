@@ -227,7 +227,8 @@ public abstract class Relation {
     }
 
     protected BoolExpr doEncode(){
-        BoolExpr enc = encodeNegations();
+		assert null==maxTupleSet ? encodeTupleSet.isEmpty() : maxTupleSet.containsAll(encodeTupleSet);
+        BoolExpr enc = ctx.mkTrue();
         if(!encodeTupleSet.isEmpty() || forceDoEncode){
             if(settings.getMode() == Mode.KLEENE) {
                 return ctx.mkAnd(enc, encodeLFP());
@@ -235,19 +236,6 @@ public abstract class Relation {
                 return ctx.mkAnd(enc, encodeIDL());
             }
             return ctx.mkAnd(enc, encodeApprox());
-        }
-        return enc;
-    }
-
-    private BoolExpr encodeNegations(){
-        BoolExpr enc = ctx.mkTrue();
-        if(!encodeTupleSet.isEmpty()){
-            Set<Tuple> negations = new HashSet<>(encodeTupleSet);
-            negations.removeAll(maxTupleSet);
-            for(Tuple tuple : negations){
-                enc = ctx.mkAnd(enc, ctx.mkNot(edge(tuple)));
-            }
-            encodeTupleSet.removeAll(negations);
         }
         return enc;
     }

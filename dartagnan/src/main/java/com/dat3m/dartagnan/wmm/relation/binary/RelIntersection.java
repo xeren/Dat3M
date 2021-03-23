@@ -48,7 +48,6 @@ public class RelIntersection extends BinaryRelation {
 		HashSet<Tuple> activeSet = new HashSet<>(tuples);
 		activeSet.removeAll(encodeTupleSet);
 		encodeTupleSet.addAll(activeSet);
-		activeSet.retainAll(maxTupleSet);
 		if(!activeSet.isEmpty()){
 			r1.addEncodeTupleSet(activeSet);
 			r2.addEncodeTupleSet(activeSet);
