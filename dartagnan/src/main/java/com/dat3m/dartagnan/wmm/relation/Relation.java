@@ -9,10 +9,7 @@ import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.IntExpr;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  *
@@ -32,6 +29,7 @@ public abstract class Relation {
     protected boolean isEncoded;
 
     protected TupleSet maxTupleSet;
+	protected HashMap<Event,HashSet<Event>> maxTupleSetTransitive;
 	protected HashSet<Tuple> encodeTupleSet;
 
     protected int recursiveGroupId = 0;
@@ -63,6 +61,7 @@ public abstract class Relation {
         this.ctx = ctx;
         this.settings = settings;
         this.maxTupleSet = null;
+        maxTupleSetTransitive = null;
         this.isEncoded = false;
 		encodeTupleSet = new HashSet<>();
     }
@@ -83,8 +82,27 @@ public abstract class Relation {
 		return maxTupleSet.getByFirst(first);
 	}
 
-	public Map<Event,Set<Event>> getMaxTupleSetTransitive(){
-		return maxTupleSet.transMap();
+	public HashMap<Event,HashSet<Event>> getMaxTupleSetTransitive(){
+		if(null!= maxTupleSetTransitive)
+			return maxTupleSetTransitive;
+		maxTupleSetTransitive = new HashMap<>();
+		for(Tuple t : getMaxTupleSet()){
+			maxTupleSetTransitive.computeIfAbsent(t.getFirst(),k->new HashSet<>()).add(t.getSecond());
+			maxTupleSetTransitive.computeIfAbsent(t.getSecond(),k->new HashSet<>());
+		}
+		boolean changed = true;
+		while(changed){
+			changed = false;
+			for(Map.Entry<Event,HashSet<Event>> e : maxTupleSetTransitive.entrySet()){
+				int c = e.getKey().getCId();
+				HashSet<Event> next = new HashSet<>();
+				for(Event x : e.getValue())
+					if(c != x.getCId())
+						next.addAll(maxTupleSetTransitive.get(x));
+				changed |= e.getValue().addAll(next);
+			}
+		}
+		return maxTupleSetTransitive;
 	}
 
 	protected abstract void mkMaxTupleSet();

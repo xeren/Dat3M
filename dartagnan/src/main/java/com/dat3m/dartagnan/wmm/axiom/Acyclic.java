@@ -8,8 +8,6 @@ import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.microsoft.z3.IntExpr;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 
 /**
  *
@@ -31,7 +29,7 @@ public class Acyclic extends Axiom {
 
 	@Override
 	public void getEncodeTupleSet(){
-		Map<Event, Set<Event>> transMap = rel.getMaxTupleSetTransitive();
+		HashMap<Event,HashSet<Event>> transMap = rel.getMaxTupleSetTransitive();
 		HashSet<Tuple> result = new HashSet<>();
 
         for(Event e1 : transMap.keySet()){
