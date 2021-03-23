@@ -62,7 +62,7 @@ public class RelMinus extends BinaryRelation {
 		encodeTupleSet.addAll(activeSet);
 		if(!activeSet.isEmpty()){
 			r1.addEncodeTupleSet(activeSet);
-			activeSet.retainAll(r2.getMaxTupleSet());
+			activeSet.removeIf(t->!r2.contains(t.getFirst(),t.getSecond()));
 			r2.addEncodeTupleSet(activeSet);
 		}
 	}

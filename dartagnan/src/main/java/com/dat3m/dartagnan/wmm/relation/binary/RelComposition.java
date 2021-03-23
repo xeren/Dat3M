@@ -98,13 +98,11 @@ public class RelComposition extends BinaryRelation {
         BoolExpr enc = ctx.mkTrue();
 
 		HashSet<Tuple> r1Set = new HashSet<>(r1.getEncodeTupleSet());
-        r1Set.retainAll(r1.getMaxTupleSet());
 
 		HashMap<Event,HashSet<Event>> r2Set = new HashMap<>();
 		HashSet<Event> empty = new HashSet<>();
 		for(Tuple t : r2.getEncodeTupleSet())
-			if(r2.getMaxTupleSet().contains(t))
-				r2Set.computeIfAbsent(t.getFirst(),k->new HashSet<>()).add(t.getSecond());
+			r2Set.computeIfAbsent(t.getFirst(),k->new HashSet<>()).add(t.getSecond());
 
         Map<Integer, BoolExpr> exprMap = new HashMap<>();
         for(Tuple tuple : encodeTupleSet){
@@ -143,13 +141,11 @@ public class RelComposition extends BinaryRelation {
         boolean recurseInR2 = (r2.getRecursiveGroupId() & recursiveGroupId) > 0;
 
 		HashSet<Tuple> r1Set = new HashSet<>(r1.getEncodeTupleSet());
-        r1Set.retainAll(r1.getMaxTupleSet());
 
 		HashMap<Event,HashSet<Event>> r2Set = new HashMap<>();
 		HashSet<Event> empty = new HashSet<>();
 		for(Tuple t : r2.getEncodeTupleSet())
-			if(r2.getMaxTupleSet().contains(t))
-				r2Set.computeIfAbsent(t.getFirst(),k->new HashSet<>()).add(t.getSecond());
+			r2Set.computeIfAbsent(t.getFirst(),k->new HashSet<>()).add(t.getSecond());
 
         Map<Integer, BoolExpr> orClauseMap = new HashMap<>();
         Map<Integer, BoolExpr> idlClauseMap = new HashMap<>();
@@ -208,13 +204,11 @@ public class RelComposition extends BinaryRelation {
                 BiFunction<Event,Event,BoolExpr> r2Edge = recurseInR2 ? (x,y)->r2.edge(childIteration,x,y) : r2::edge;
 
 				HashSet<Tuple> r1Set = new HashSet<>(r1.getEncodeTupleSet());
-                r1Set.retainAll(r1.getMaxTupleSet());
 
 				HashMap<Event,HashSet<Event>> r2Set = new HashMap<>();
 				HashSet<Event> empty = new HashSet<>();
 				for(Tuple t : r2.getEncodeTupleSet())
-					if(r2.getMaxTupleSet().contains(t))
-						r2Set.computeIfAbsent(t.getFirst(),k->new HashSet<>()).add(t.getSecond());
+					r2Set.computeIfAbsent(t.getFirst(),k->new HashSet<>()).add(t.getSecond());
 
                 Map<Integer, BoolExpr> exprMap = new HashMap<>();
                 for(Tuple tuple : encodeTupleSet){

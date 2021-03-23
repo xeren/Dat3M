@@ -73,7 +73,7 @@ public abstract class Relation {
 		}
 	}
 
-	public TupleSet getMaxTupleSet(){
+	public Iterable<Tuple> getMaxTupleSet(){
 		initMaxTupleSet();
 		return maxTupleSet;
 	}

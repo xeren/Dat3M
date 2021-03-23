@@ -73,7 +73,7 @@ public class RelTrans extends UnaryRelation {
 			processNow = processNext;
 		}
 		if(fullEncodeTupleSet.addAll(result)){
-			result.retainAll(r1.getMaxTupleSet());
+			result.removeIf(t->!r1.contains(t.getFirst(),t.getSecond()));
 			r1.addEncodeTupleSet(result);
 		}
 	}
@@ -115,7 +115,7 @@ public class RelTrans extends UnaryRelation {
             Event e1 = tuple.getFirst();
             Event e2 = tuple.getSecond();
 
-            if(r1.getMaxTupleSet().contains(new Tuple(e1, e2))){
+			if(r1.contains(e1,e2)){
                 orClause = ctx.mkOr(orClause, r1.edge(e1, e2));
             }
 

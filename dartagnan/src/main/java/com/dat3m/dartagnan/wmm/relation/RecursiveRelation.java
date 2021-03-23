@@ -55,7 +55,8 @@ public class RecursiveRelation extends Relation {
 		if(doRecurse){
 			doRecurse = false;
 			r1.getMaxTupleSetRecursive();
-			maxTupleSet = r1.getMaxTupleSet();
+			r1.initMaxTupleSet();
+			maxTupleSet = r1.maxTupleSet;
 		}
 	}
 

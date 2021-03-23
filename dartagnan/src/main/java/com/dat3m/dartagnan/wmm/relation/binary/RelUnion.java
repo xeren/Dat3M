@@ -57,7 +57,7 @@ public class RelUnion extends BinaryRelation {
 				if(r1.contains(t.getFirst(),t.getSecond()))
 					a.add(t);
 			r1.addEncodeTupleSet(a);
-			activeSet.retainAll(r2.getMaxTupleSet());
+			activeSet.removeIf(t->!r2.contains(t.getFirst(),t.getSecond()));
 			r2.addEncodeTupleSet(activeSet);
 		}
 	}
