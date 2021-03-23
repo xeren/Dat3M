@@ -6,8 +6,10 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.microsoft.z3.IntExpr;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 
 /**
  *
@@ -30,25 +32,12 @@ public class Acyclic extends Axiom {
 	@Override
 	public void getEncodeTupleSet(){
 		HashMap<Event,HashSet<Event>> transMap = rel.getMaxTupleSetTransitive();
-		HashSet<Tuple> result = new HashSet<>();
-
-        for(Event e1 : transMap.keySet()){
-            if(transMap.get(e1).contains(e1)){
-                for(Event e2 : transMap.get(e1)){
-                    if(e2.getCId() != e1.getCId() && transMap.get(e2).contains(e1)){
-                        result.add(new Tuple(e1, e2));
-                    }
-                }
-            }
-        }
-
-        for(Tuple tuple : rel.getMaxTupleSet()){
-            if(tuple.getFirst().getCId() == tuple.getSecond().getCId()){
-                result.add(tuple);
-            }
-        }
-
-        result.retainAll(rel.getMaxTupleSet());
+		ArrayList<Tuple> result = new ArrayList<>();
+		for(Map.Entry<Event,HashSet<Event>> e : transMap.entrySet())
+			if(e.getValue().contains(e.getKey()))
+				for(Tuple t : rel.getMaxTupleSet(e.getKey()))
+					if(transMap.get(t.getSecond()).contains(e.getKey()))
+						result.add(t);
 		rel.addEncodeTupleSet(result);
 	}
 
