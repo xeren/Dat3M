@@ -44,7 +44,8 @@ public class RelMinus extends BinaryRelation {
 
 	@Override
 	protected void mkMaxTupleSet(){
-		maxTupleSet.addAll(r1.getMaxTupleSet());
+		for(Tuple t : r1.getMaxTupleSet())
+			addMaxTuple(t.getFirst(),t.getSecond());
 		r2.getMaxTupleSet();
 	}
 

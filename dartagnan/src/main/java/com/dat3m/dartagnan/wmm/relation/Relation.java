@@ -28,7 +28,7 @@ public abstract class Relation {
 
     protected boolean isEncoded;
 
-    protected TupleSet maxTupleSet;
+	TupleSet maxTupleSet;
 	protected HashMap<Event,HashSet<Event>> maxTupleSetTransitive;
 	protected HashSet<Tuple> encodeTupleSet;
 

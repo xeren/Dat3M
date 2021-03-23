@@ -84,13 +84,14 @@ public class RelRMW extends StaticRelation {
             	}
             }
 
-            maxTupleSet.addAll(baseMaxTupleSet);
+		for(Tuple t : baseMaxTupleSet)
+			addMaxTuple(t.getFirst(),t.getSecond());
 
             for(Thread thread : program.getThreads()){
                 for(Event load : thread.getCache().getEvents(loadFilter)){
                     for(Event store : thread.getCache().getEvents(storeFilter)){
                         if(load.getCId() < store.getCId()){
-                            maxTupleSet.add(new Tuple(load, store));
+						addMaxTuple(load,store);
                         }
                     }
                 }
