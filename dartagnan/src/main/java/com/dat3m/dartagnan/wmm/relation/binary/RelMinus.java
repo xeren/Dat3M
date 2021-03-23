@@ -5,7 +5,6 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
-import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import java.util.function.BiFunction;
@@ -46,14 +45,11 @@ public class RelMinus extends BinaryRelation {
 		r2.getMaxTupleSet();
 	}
 
-    @Override
-    public TupleSet getMaxTupleSetRecursive(){
-        if(recursiveGroupId > 0 && maxTupleSet != null){
-            maxTupleSet.addAll(r1.getMaxTupleSetRecursive());
-            return maxTupleSet;
-        }
-        return getMaxTupleSet();
-    }
+	@Override
+	protected void updateMaxTupleSetRecursive(){
+		r1.getMaxTupleSetRecursive();
+		mkMaxTupleSet();
+	}
 
 	@Override
 	public boolean[][] test(Map<Relation,boolean[][]> b, int n) {

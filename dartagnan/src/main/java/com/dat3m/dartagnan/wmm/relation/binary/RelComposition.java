@@ -3,7 +3,6 @@ package com.dat3m.dartagnan.wmm.relation.binary;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
-import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.microsoft.z3.BoolExpr;
 import java.util.*;
 import java.util.function.BiFunction;
@@ -35,20 +34,12 @@ public class RelComposition extends BinaryRelation {
 				addMaxTuple(t1.getFirst(),t2.getSecond());
 	}
 
-    @Override
-    public TupleSet getMaxTupleSetRecursive(){
-        if(recursiveGroupId > 0 && maxTupleSet != null){
-            TupleSet set1 = r1.getMaxTupleSetRecursive();
-            TupleSet set2 = r2.getMaxTupleSetRecursive();
-            for(Tuple rel1 : set1){
-                for(Tuple rel2 : set2.getByFirst(rel1.getSecond())){
-                    maxTupleSet.add(new Tuple(rel1.getFirst(), rel2.getSecond()));
-                }
-            }
-            return maxTupleSet;
-        }
-        return getMaxTupleSet();
-    }
+	@Override
+	protected void updateMaxTupleSetRecursive(){
+		r1.getMaxTupleSetRecursive();
+		r2.getMaxTupleSetRecursive();
+		mkMaxTupleSet();
+	}
 
 	@Override
 	public void addEncodeTupleSet(Collection<Tuple> tuples){
