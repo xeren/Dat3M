@@ -30,7 +30,7 @@ public class RelComposition extends BinaryRelation {
 	@Override
 	protected void mkMaxTupleSet(){
 		for(Tuple t1 : r1.getMaxTupleSet())
-			for(Tuple t2 : r2.getMaxTupleSet().getByFirst(t1.getSecond()))
+			for(Tuple t2 : r2.getMaxTupleSet(t1.getSecond()))
 				addMaxTuple(t1.getFirst(),t2.getSecond());
 	}
 
@@ -64,7 +64,7 @@ public class RelComposition extends BinaryRelation {
                 Event e1 = tuple1.getFirst();
 				HashSet<Integer> ends = myMap.get(e1.getCId());
                 if(ends == null) continue;
-                for(Tuple tuple2 : r2.getMaxTupleSet().getByFirst(tuple1.getSecond())){
+                for(Tuple tuple2 : r2.getMaxTupleSet(tuple1.getSecond())){
                     Event e2 = tuple2.getSecond();
                     if(ends.contains(e2.getCId())){
                         r1Set.add(tuple1);
