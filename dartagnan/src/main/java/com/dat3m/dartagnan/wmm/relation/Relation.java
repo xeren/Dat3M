@@ -75,6 +75,14 @@ public abstract class Relation {
 		return maxTupleSet;
 	}
 
+	public Collection<Tuple> getMaxTupleSet(Event first){
+		if(null==maxTupleSet){
+			maxTupleSet = new TupleSet();
+			mkMaxTupleSet();
+		}
+		return maxTupleSet.getByFirst(first);
+	}
+
 	protected abstract void mkMaxTupleSet();
 
 	protected final void addMaxTuple(Event x, Event y){

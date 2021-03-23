@@ -40,7 +40,7 @@ public class RelDomainIdentity extends UnaryRelation {
         if(!activeSet.isEmpty()){
 			HashSet<Tuple> r1Set = new HashSet<>();
             for(Tuple tuple : activeSet){
-                r1Set.addAll(r1.getMaxTupleSet().getByFirst(tuple.getFirst()));
+                r1Set.addAll(r1.getMaxTupleSet(tuple.getFirst()));
             }
             r1.addEncodeTupleSet(r1Set);
         }
@@ -68,7 +68,7 @@ public class RelDomainIdentity extends UnaryRelation {
         for(Tuple tuple1 : encodeTupleSet){
             Event e = tuple1.getFirst();
             BoolExpr opt = ctx.mkFalse();
-            for(Tuple tuple2 : r1.getMaxTupleSet().getByFirst(e)){
+            for(Tuple tuple2 : r1.getMaxTupleSet(e)){
                 opt = ctx.mkOr(r1.edge(tuple2));
             }
             enc = ctx.mkAnd(enc, ctx.mkEq(edge(e, e), opt));

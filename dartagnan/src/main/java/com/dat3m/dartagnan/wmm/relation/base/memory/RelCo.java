@@ -103,7 +103,7 @@ public class RelCo extends Relation {
             MemEvent w1 = (MemEvent)w;
             BoolExpr lastCo = w1.exec();
 
-            for(Tuple t : maxTupleSet.getByFirst(w1)){
+            for(Tuple t : getMaxTupleSet(w1)){
                 MemEvent w2 = (MemEvent)t.getSecond();
 				lastCo = ctx.mkAnd(lastCo,ctx.mkNot(edge(w1,w2)));
             }
