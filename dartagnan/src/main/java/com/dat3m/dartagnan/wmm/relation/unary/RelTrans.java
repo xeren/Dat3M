@@ -76,8 +76,13 @@ public class RelTrans extends UnaryRelation {
 			processNow = processNext;
 		}
 		if(fullEncodeTupleSet.addAll(result)){
-			result.removeIf(t->!r1.contains(t.getFirst(),t.getSecond()));
-			r1.addEncodeTupleSet(result);
+			ArrayList<Tuple> a = new ArrayList<>(result.size());
+			for(Tuple t : result){
+				Tuple tt = r1.of(t.getFirst(),t.getSecond());
+				if(null!=tt)
+					a.add(tt);
+			}
+			r1.addEncodeTupleSet(a);
 		}
 	}
 
