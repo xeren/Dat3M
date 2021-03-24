@@ -67,6 +67,7 @@ public class RecursiveRelation extends Relation {
         }
         if(doRecurse){
             doRecurse = false;
+            assert maxTupleSet==r1.maxTupleSet;
             r1.addEncodeTupleSet(encodeTupleSet);
         }
     }

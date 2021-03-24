@@ -52,13 +52,20 @@ public class RelUnion extends BinaryRelation {
 		activeSet.removeAll(encodeTupleSet);
 		encodeTupleSet.addAll(activeSet);
 		if(!activeSet.isEmpty()){
-			ArrayList<Tuple> a = new ArrayList<>(activeSet.size());
-			for(Tuple t : activeSet)
-				if(r1.contains(t.getFirst(),t.getSecond()))
-					a.add(t);
-			r1.addEncodeTupleSet(a);
-			activeSet.removeIf(t->!r2.contains(t.getFirst(),t.getSecond()));
-			r2.addEncodeTupleSet(activeSet);
+			ArrayList<Tuple> a1 = new ArrayList<>(activeSet.size());
+			for(Tuple t : activeSet){
+				Tuple tt = r1.of(t.getFirst(),t.getSecond());
+				if(null!=tt)
+					a1.add(tt);
+			}
+			r1.addEncodeTupleSet(a1);
+			ArrayList<Tuple> a2 = new ArrayList<>(activeSet.size());
+			for(Tuple t : activeSet){
+				Tuple tt = r2.of(t.getFirst(),t.getSecond());
+				if(null!=tt)
+					a2.add(tt);
+			}
+			r2.addEncodeTupleSet(a2);
 		}
 	}
 

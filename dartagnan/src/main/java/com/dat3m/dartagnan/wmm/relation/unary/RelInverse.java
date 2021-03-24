@@ -40,9 +40,8 @@ public class RelInverse extends UnaryRelation {
 		HashSet<Tuple> activeSet = new HashSet<>(tuples);
         if(!activeSet.isEmpty()){
 			HashSet<Tuple> invSet = new HashSet<>();
-            for(Tuple pair : activeSet){
-                invSet.add(new Tuple(pair.getSecond(), pair.getFirst()));
-            }
+			for(Tuple t : activeSet)
+				invSet.add(r1.of(t.getSecond(),t.getFirst()));
             r1.addEncodeTupleSet(invSet);
         }
     }

@@ -8,6 +8,7 @@ import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.function.BiFunction;
@@ -65,9 +66,17 @@ public class RelMinus extends BinaryRelation {
 		activeSet.removeAll(encodeTupleSet);
 		encodeTupleSet.addAll(activeSet);
 		if(!activeSet.isEmpty()){
-			r1.addEncodeTupleSet(activeSet);
-			activeSet.removeIf(t->!r2.contains(t.getFirst(),t.getSecond()));
-			r2.addEncodeTupleSet(activeSet);
+			ArrayList<Tuple> a1 = new ArrayList<>(activeSet.size());
+			for(Tuple t : activeSet)
+				a1.add(r1.of(t.getFirst(),t.getSecond()));
+			r1.addEncodeTupleSet(a1);
+			ArrayList<Tuple> a2 = new ArrayList<>(activeSet.size());
+			for(Tuple t : activeSet){
+				Tuple tt = r2.of(t.getFirst(),t.getSecond());
+				if(null!=tt)
+					a2.add(tt);
+			}
+			r2.addEncodeTupleSet(a2);
 		}
 	}
 
