@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan.wmm.relation.base.local;
 
 import com.dat3m.dartagnan.expression.IConst;
-import com.dat3m.dartagnan.wmm.relation.base.stat.StaticRelation;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.microsoft.z3.BoolExpr;
@@ -9,9 +8,10 @@ import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
 import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
+import com.dat3m.dartagnan.wmm.relation.Relation;
 import java.util.*;
 
-abstract class BasicRegRelation extends StaticRelation {
+abstract class BasicRegRelation extends Relation {
 
 	abstract Collection<Register> getRegisters(Event regReader);
 
