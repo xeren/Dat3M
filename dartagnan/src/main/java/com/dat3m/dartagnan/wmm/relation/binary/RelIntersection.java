@@ -7,7 +7,6 @@ import com.microsoft.z3.BoolExpr;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.function.BiFunction;
 
 import java.util.Map;
@@ -52,9 +51,8 @@ public class RelIntersection extends BinaryRelation {
 
 	@Override
 	public void addEncodeTupleSet(Collection<Tuple> tuples){
-		HashSet<Tuple> activeSet = new HashSet<>(tuples);
-		activeSet.removeAll(encodeTupleSet);
-		encodeTupleSet.addAll(activeSet);
+		ArrayList<Tuple> activeSet = new ArrayList<>(tuples);
+		super.addEncodeTupleSet(activeSet);
 		if(!activeSet.isEmpty()){
 			ArrayList<Tuple> a1 = new ArrayList<>(activeSet.size());
 			for(Tuple t : activeSet)

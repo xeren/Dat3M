@@ -172,8 +172,8 @@ public abstract class Relation {
     }
 
 	public void addEncodeTupleSet(Collection<Tuple> tuples){
-        encodeTupleSet.addAll(tuples);
-    }
+		tuples.removeIf(t->!encodeTupleSet.add(t)||t.isMinimal());
+	}
 
     public String getName() {
         if(name != null){

@@ -53,8 +53,7 @@ public class RelTrans extends UnaryRelation {
 	@Override
 	public void addEncodeTupleSet(Collection<Tuple> tuples){
 		HashSet<Tuple> activeSet = new HashSet<>(tuples);
-        activeSet.removeAll(encodeTupleSet);
-        encodeTupleSet.addAll(activeSet);
+		super.addEncodeTupleSet(activeSet);
 
 		HashSet<Tuple> processNow = activeSet;
 		HashSet<Tuple> result = new HashSet<>();
