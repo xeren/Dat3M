@@ -44,8 +44,7 @@ public class RelComposition extends BinaryRelation {
 	@Override
 	public void addEncodeTupleSet(Collection<Tuple> tuples){
 		HashSet<Tuple> activeSet = new HashSet<>(tuples);
-        activeSet.removeAll(encodeTupleSet);
-        encodeTupleSet.addAll(tuples);
+		super.addEncodeTupleSet(activeSet);
 
         if(!activeSet.isEmpty()){
 			HashSet<Tuple> r1Set = new HashSet<>();
