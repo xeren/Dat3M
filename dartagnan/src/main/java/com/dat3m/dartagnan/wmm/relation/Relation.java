@@ -281,7 +281,7 @@ public abstract class Relation {
 		BoolExpr enc = ctx.mkTrue();
 		for(Tuple t : encodeTupleSet)
 			if(t.isMinimal())
-				enc = ctx.mkAnd(enc,ctx.mkEq(edge(t),ctx.mkAnd(t.getFirst().exec(),t.getSecond().exec())));
+				enc = ctx.mkAnd(enc,ctx.mkEq(edge(t),t.getFirst().exec(ctx,t.getSecond())));
         if(!encodeTupleSet.isEmpty() || forceDoEncode){
             if(settings.getMode() == Mode.KLEENE) {
                 return ctx.mkAnd(enc, encodeLFP());
