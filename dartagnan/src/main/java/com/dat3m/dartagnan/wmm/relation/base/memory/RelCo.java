@@ -34,7 +34,7 @@ public class RelCo extends Relation {
 		for(Event e1 : program.getCache().getEvents(filterInit))
 			for(Event e2 : program.getCache().getEvents(filterWrite))
 				if(MemEvent.canAddressTheSameLocation((MemEvent) e1, (MemEvent)e2))
-					addMaxTuple(e1,e2,true);
+					addMaxTuple(e1,e2,false);
 
 		boolean lc = settings.getFlag(FLAG_CURRENT_MODEL_LOCAL_CO);
 
@@ -48,7 +48,7 @@ public class RelCo extends Relation {
 				for(ListIterator<Event> j = st.listIterator(i.nextIndex()); j.hasNext();){
 					Event e2 = j.next();
 					if(MemEvent.canAddressTheSameLocation((MemEvent)e1,(MemEvent)e2)){
-						addMaxTuple(e1,e2,lc);
+						addMaxTuple(e1,e2,false);
 						if(!lc)
 							addMaxTuple(e2,e1,false);
 					}
