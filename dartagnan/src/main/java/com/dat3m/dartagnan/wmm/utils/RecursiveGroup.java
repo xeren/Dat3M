@@ -26,12 +26,6 @@ public class RecursiveGroup {
         return id;
     }
 
-    public void setDoRecurse(){
-        for(RecursiveRelation relation : relations){
-            relation.setDoRecurse();
-        }
-    }
-
     public BoolExpr encode(Context ctx){
         BoolExpr enc = ctx.mkTrue();
         for(int i = 0; i < encodeIterations; i++){

@@ -25,14 +25,6 @@ public class RecursiveRelation extends Relation {
         return name;
     }
 
-    public void initialise(Program program, Context ctx, Settings settings){
-        if(doRecurse){
-            doRecurse = false;
-            super.initialise(program, ctx, settings);
-            r1.initialise(program, ctx, settings);
-        }
-    }
-
     public void setConcreteRelation(Relation r1){
         r1.isRecursive = true;
         r1.setName(name);
@@ -44,6 +36,13 @@ public class RecursiveRelation extends Relation {
     public void setDoRecurse(){
         doRecurse = true;
     }
+
+	@Override
+	public void initialise(Program p, Context c, Settings s){
+		super.initialise(p,c,s);
+		if(!(r1 instanceof RecursiveRelation))
+			r1.initialise(p,c,s);
+	}
 
 	@Override
 	protected void mkMaxTupleSet(){
