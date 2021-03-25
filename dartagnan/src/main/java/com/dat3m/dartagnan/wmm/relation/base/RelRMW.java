@@ -12,14 +12,14 @@ import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.filter.FilterIntersection;
-import com.dat3m.dartagnan.wmm.relation.base.stat.StaticRelation;
+import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Flag;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import java.util.HashSet;
 
-public class RelRMW extends StaticRelation {
+public class RelRMW extends Relation {
 
     private final FilterAbstract loadFilter  = FilterIntersection.get(
             FilterBasic.get(EType.EXCL),
@@ -100,12 +100,7 @@ public class RelRMW extends StaticRelation {
 
     @Override
     protected BoolExpr encodeApprox() {
-        // Encode base (not exclusive pairs) RMW
-		HashSet<Tuple> origEncodeTupleSet = encodeTupleSet;
-        encodeTupleSet = baseMaxTupleSet;
-        BoolExpr enc = super.encodeApprox();
-        encodeTupleSet = origEncodeTupleSet;
-
+		BoolExpr enc = ctx.mkTrue();
         // Encode RMW for exclusive pairs
         BoolExpr unpredictable = ctx.mkFalse();
         for(Thread thread : program.getThreads()) {

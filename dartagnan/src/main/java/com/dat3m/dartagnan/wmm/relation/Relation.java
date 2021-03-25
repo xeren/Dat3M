@@ -263,7 +263,9 @@ public abstract class Relation {
         return encodeApprox();
     }
 
-    protected abstract BoolExpr encodeApprox();
+	protected BoolExpr encodeApprox(){
+		return ctx.mkTrue();
+	}
 
     public BoolExpr encodeIteration(int recGroupId, int iteration){
         return ctx.mkTrue();
@@ -272,7 +274,10 @@ public abstract class Relation {
     protected BoolExpr doEncode(){
 		assert null==maxTupleSet ? encodeTupleSet.isEmpty()
 			: encodeTupleSet.stream().allMatch(t->contains(t.getFirst(),t.getSecond()));
-        BoolExpr enc = ctx.mkTrue();
+		BoolExpr enc = ctx.mkTrue();
+		for(Tuple t : encodeTupleSet)
+			if(t.isMinimal())
+				enc = ctx.mkAnd(enc,ctx.mkEq(edge(t),ctx.mkAnd(t.getFirst().exec(),t.getSecond().exec())));
         if(!encodeTupleSet.isEmpty() || forceDoEncode){
             if(settings.getMode() == Mode.KLEENE) {
                 return ctx.mkAnd(enc, encodeLFP());
