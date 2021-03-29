@@ -20,10 +20,13 @@ public class RelLoc extends Relation {
 	protected void mkMaxTupleSet(){
             Collection<Event> events = program.getCache().getEvents(FilterBasic.get(EType.MEMORY));
             for(Event e1 : events){
+			MemEvent m1 = (MemEvent)e1;
                 for(Event e2 : events){
-                    if(e1.getCId() != e2.getCId() && MemEvent.canAddressTheSameLocation((MemEvent) e1, (MemEvent)e2)){
-                        addMaxTuple(e1,e2,false);
-                    }
+				if(e1.getCId() == e2.getCId())
+					continue;
+				MemEvent m2 = (MemEvent)e2;
+				if(MemEvent.canAddressTheSameLocation(m1,m2))
+					addMaxTuple(e1,e2,MemEvent.mustAddressTheSameLocation(m1,m2));
                 }
             }
 	}
