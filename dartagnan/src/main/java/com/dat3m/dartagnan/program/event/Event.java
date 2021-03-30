@@ -221,15 +221,43 @@ public abstract class Event implements Comparable<Event> {
 	False proposition, if both events exclude each other.
 	*/
 	public final BoolExpr exec(Context context, Event other) {
-		if(control.excludes(other.control) || other.control.excludes(control))
+		if(excludes(other))
 			return context.mkFalse();
-		if(control.variable==exec() && other.control.variable==other.exec()){
-			if(control==other.control || control.implies(other.control))
-				return exec();
-			if(other.control.implies(control))
-				return other.exec();
-		}
+		if(implies(other))
+			return exec();
+		if(other.implies(this))
+			return other.exec();
 		return context.mkAnd(exec(),other.exec());
+	}
+
+	/**
+	Checks if executions may include this event but not another event.
+	<p>
+	Currently only the program's control flow contributes to this property.
+	However, events on any thread's entry block possess few conditions.
+	@param other
+	Another event of the program.
+	@return
+	Proofed that all executions that execute this program must also execute {@code other}.
+	Otherwise unclear.
+	*/
+	public final boolean implies(Event other) {
+		return other.control.variable==other.exec() && (control==other.control || control.implies(other.control));
+	}
+
+	/**
+	Checks if this and another event may occur in the same execution.
+	<p>
+	Currently only control flow is used, therefore only internal pairs may be exclusive.
+	This is a symmetry: {@code a.excludes(b) == b.excludes(a)}
+	@param other
+	Second event of the program.
+	@return
+	Proofed that no execution executes both events.
+	Otherwise unclear.
+	*/
+	public final boolean excludes(Event other) {
+		return control.excludes(other.control) || other.control.excludes(control);
 	}
 
 	@FunctionalInterface
