@@ -61,8 +61,14 @@ public final class ControlBlock {
 		joined = parent;
 		variable = var;
 		for(ControlBlock p : parent){
-			assert null==p.out;
-			p.out = this;
+			//follow out-chains resulting when a join block outs to another join block
+			//the intermediate blocks do not occur in parent but in this chain
+			for(ControlBlock o = p; this!=o.out; o = o.out){
+				if(null!=o.out)
+					continue;
+				o.out = this;
+				break;
+			}
 		}
 	}
 
