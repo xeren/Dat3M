@@ -3,21 +3,17 @@ package com.dat3m.dartagnan.parsers.program.visitors.boogie;
 import java.util.Arrays;
 import java.util.List;
 
-import com.dat3m.dartagnan.expression.BConst;
-import com.dat3m.dartagnan.expression.BNonDet;
-import com.dat3m.dartagnan.expression.ExprInterface;
-import com.dat3m.dartagnan.expression.IConst;
-import com.dat3m.dartagnan.expression.INonDet;
-import com.dat3m.dartagnan.expression.INonDetTypes;
+import com.dat3m.dartagnan.expression.*;
 import com.dat3m.dartagnan.parsers.BoogieParser.Call_cmdContext;
 import com.dat3m.dartagnan.parsers.program.utils.ParsingException;
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.event.Assume;
+import com.dat3m.dartagnan.program.event.CondJump;
 import com.dat3m.dartagnan.program.event.Label;
 import com.dat3m.dartagnan.program.event.Local;
 import com.dat3m.dartagnan.program.svcomp.event.BeginAtomic;
 import com.dat3m.dartagnan.program.svcomp.event.EndAtomic;
 import com.dat3m.dartagnan.program.utils.EType;
+import static com.dat3m.dartagnan.expression.op.BOpUn.NOT;
 
 public class SvcompProcedures {
 
@@ -80,9 +76,9 @@ public class SvcompProcedures {
        	Label label = visitor.programBuilder.getOrCreateLabel("END_OF_T" + visitor.threadCount);
        	ExprInterface c = (ExprInterface)ctx.call_params().exprs().accept(visitor);
 		if(c != null) {
-			Assume child = new Assume(c, label);
+			CondJump child = new CondJump(new BExprUn(NOT,c),label);
 			child.setCLine(visitor.currentLine);
-			visitor.programBuilder.addChild(visitor.threadCount, child);	
+			visitor.programBuilder.addChild(visitor.threadCount,child);
 		}
 	}
 
