@@ -12,7 +12,6 @@ import com.dat3m.dartagnan.parsers.program.utils.ParsingException;
 import com.dat3m.dartagnan.parsers.program.utils.ProgramBuilder;
 import com.dat3m.dartagnan.program.EventFactory;
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.event.Cmp;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Label;
 import com.google.common.collect.ImmutableSet;
@@ -29,6 +28,8 @@ public class VisitorLitmusPPC
     private final ProgramBuilder programBuilder;
     private int mainThread;
     private int threadCount = 0;
+    private Register[] lhs;
+    private Register[] rhs;
 
     public VisitorLitmusPPC(ProgramBuilder pb){
         this.programBuilder = pb;
@@ -95,6 +96,8 @@ public class VisitorLitmusPPC
             programBuilder.initThread(threadCtx.id);
             threadCount++;
         }
+        lhs = new Register[threadCount];
+        rhs = new Register[threadCount];
         return null;
     }
 
@@ -169,20 +172,15 @@ public class VisitorLitmusPPC
 
     @Override
     public Object visitCmpw(LitmusPPCParser.CmpwContext ctx) {
-        Register r1 = programBuilder.getOrErrorRegister(mainThread, ctx.register(0).getText());
-        Register r2 = programBuilder.getOrErrorRegister(mainThread, ctx.register(1).getText());
-        return programBuilder.addChild(mainThread, EventFactory.newCompare(r1, r2));
+        lhs[mainThread] = programBuilder.getOrErrorRegister(mainThread, ctx.register(0).getText());
+        rhs[mainThread] = programBuilder.getOrErrorRegister(mainThread, ctx.register(1).getText());
+        return null;
     }
 
     @Override
     public Object visitBranchCond(LitmusPPCParser.BranchCondContext ctx) {
         Label label = programBuilder.getOrCreateLabel(ctx.Label().getText());
-        Event lastEvent = programBuilder.getLastEvent(mainThread);
-        if(!(lastEvent instanceof Cmp)){
-            throw new ParsingException("Invalid syntax near " + ctx.getText());
-        }
-        Cmp cmp = (Cmp)lastEvent;
-        Atom expr = new Atom(cmp.getLeft(), ctx.cond().op, cmp.getRight());
+        Atom expr = new Atom(lhs[mainThread], ctx.cond().op, rhs[mainThread]);
         return programBuilder.addChild(mainThread, EventFactory.newJump(expr, label));
     }
 

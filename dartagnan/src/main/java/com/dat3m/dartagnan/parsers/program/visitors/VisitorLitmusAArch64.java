@@ -9,12 +9,10 @@ import com.dat3m.dartagnan.parsers.LitmusAArch64BaseVisitor;
 import com.dat3m.dartagnan.parsers.LitmusAArch64Parser;
 import com.dat3m.dartagnan.parsers.LitmusAArch64Visitor;
 import com.dat3m.dartagnan.parsers.program.utils.AssertionHelper;
-import com.dat3m.dartagnan.parsers.program.utils.ParsingException;
 import com.dat3m.dartagnan.parsers.program.utils.ProgramBuilder;
 import com.dat3m.dartagnan.program.EventFactory;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.arch.aarch64.event.StoreExclusive;
-import com.dat3m.dartagnan.program.event.Cmp;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Label;
 import com.dat3m.dartagnan.program.event.Load;
@@ -28,6 +26,8 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
     private final ProgramBuilder programBuilder;
     private int mainThread;
     private int threadCount = 0;
+    private Register[] lhs;
+    private IExpr[] rhs;
 
     public VisitorLitmusAArch64(ProgramBuilder pb){
         this.programBuilder = pb;
@@ -95,6 +95,8 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
             programBuilder.initThread(threadCtx.id);
             threadCount++;
         }
+        lhs = new Register[threadCount];
+        rhs = new IExpr[threadCount];
         return null;
     }
 
@@ -119,9 +121,9 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 
     @Override
     public Object visitCmp(LitmusAArch64Parser.CmpContext ctx) {
-        Register register = programBuilder.getOrCreateRegister(mainThread, ctx.rD, -1);
-        IExpr expr = ctx.expr32() != null ? (IExpr)ctx.expr32().accept(this) : (IExpr)ctx.expr64().accept(this);
-        return programBuilder.addChild(mainThread, EventFactory.newCompare(register, expr));
+        lhs[mainThread] = programBuilder.getOrCreateRegister(mainThread, ctx.rD, -1);
+        rhs[mainThread] = ctx.expr32() != null ? (IExpr)ctx.expr32().accept(this) : (IExpr)ctx.expr64().accept(this);
+        return null;
     }
 
     @Override
@@ -181,12 +183,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
         if(ctx.branchCondition() == null){
             return programBuilder.addChild(mainThread, EventFactory.newGoto(label));
         }
-        Event lastEvent = programBuilder.getLastEvent(mainThread);
-        if(!(lastEvent instanceof Cmp)){
-            throw new ParsingException("Invalid syntax near " + ctx.getText());
-        }
-        Cmp cmp = (Cmp)lastEvent;
-        Atom expr = new Atom(cmp.getLeft(), ctx.branchCondition().op, cmp.getRight());
+        Atom expr = new Atom(lhs[mainThread], ctx.branchCondition().op, rhs[mainThread]);
         return programBuilder.addChild(mainThread, EventFactory.newJump(expr, label));
     }
 
