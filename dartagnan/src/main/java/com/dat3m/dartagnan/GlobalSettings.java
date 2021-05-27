@@ -19,6 +19,7 @@ public class GlobalSettings {
     // === Encoding ===
     public static final boolean MERGE_CF_VARS = true;
     public static final boolean ANTISYMM_CO = false;
+	public static final boolean IGNORE_MINIMAL_TUPLES = false;
 
     // === BranchEquivalence ===
     public static final boolean MERGE_BRANCHES = true;

@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.wmm.relation.unary;
 
+import com.dat3m.dartagnan.GlobalSettings;
 import com.dat3m.dartagnan.utils.equivalence.BranchEquivalence;
 import com.dat3m.dartagnan.verification.VerificationTask;
 import com.google.common.collect.Sets;
@@ -92,7 +93,7 @@ public class RelTrans extends UnaryRelation {
     protected BoolExpr encodeApprox(Context ctx) {
         BoolExpr enc = ctx.mkTrue();
 
-        TupleSet minSet = getMinTupleSet();
+		TupleSet minSet = GlobalSettings.IGNORE_MINIMAL_TUPLES ? new TupleSet() : getMinTupleSet();
         TupleSet r1Max = r1.getMaxTupleSet();
         for(Tuple tuple : fullEncodeTupleSet){
             if (minSet.contains(tuple)) {

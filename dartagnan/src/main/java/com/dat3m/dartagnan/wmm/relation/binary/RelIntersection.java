@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.wmm.relation.binary;
 
+import com.dat3m.dartagnan.GlobalSettings;
 import com.google.common.collect.Sets;
 import com.microsoft.z3.BoolExpr;
 import com.dat3m.dartagnan.wmm.utils.Utils;
@@ -67,7 +68,7 @@ public class RelIntersection extends BinaryRelation {
     public BoolExpr encodeApprox(Context ctx) {
         BoolExpr enc = ctx.mkTrue();
 
-        TupleSet min = getMinTupleSet();
+        TupleSet min = GlobalSettings.IGNORE_MINIMAL_TUPLES ? new TupleSet() : getMinTupleSet();
         for(Tuple tuple : encodeTupleSet){
             if (min.contains(tuple)) {
                 enc = ctx.mkAnd(enc, ctx.mkEq(this.getSMTVar(tuple, ctx), getExecPair(tuple, ctx)));

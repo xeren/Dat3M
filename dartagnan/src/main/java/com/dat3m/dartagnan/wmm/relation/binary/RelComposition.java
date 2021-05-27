@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.wmm.relation.binary;
 
+import com.dat3m.dartagnan.GlobalSettings;
 import com.dat3m.dartagnan.utils.equivalence.BranchEquivalence;
 import com.google.common.collect.Sets;
 import com.microsoft.z3.BoolExpr;
@@ -98,7 +99,8 @@ public class RelComposition extends BinaryRelation {
     public void addEncodeTupleSet(TupleSet tuples){
         Set<Tuple> activeSet = new HashSet<>(Sets.intersection(Sets.difference(tuples, encodeTupleSet), maxTupleSet));
         encodeTupleSet.addAll(activeSet);
-        activeSet.removeAll(getMinTupleSet());
+		if(!GlobalSettings.IGNORE_MINIMAL_TUPLES)
+			activeSet.removeAll(getMinTupleSet());
 
         if(!activeSet.isEmpty()){
             TupleSet r1Set = new TupleSet();
@@ -136,7 +138,7 @@ public class RelComposition extends BinaryRelation {
 
         TupleSet r1Set = r1.getEncodeTupleSet();
         TupleSet r2Set = r2.getEncodeTupleSet();
-        TupleSet minSet = getMinTupleSet();
+		TupleSet minSet = GlobalSettings.IGNORE_MINIMAL_TUPLES ? new TupleSet() : getMinTupleSet();
 
         //TODO: Fix this abuse of hashCode
         Map<Integer, BoolExpr> exprMap = new HashMap<>();

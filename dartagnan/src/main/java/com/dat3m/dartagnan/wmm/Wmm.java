@@ -130,10 +130,11 @@ public class Wmm {
             throw new IllegalStateException("The WMM needs to get initialised first.");
         }
 
-        for (RecursiveGroup recursiveGroup : recursiveGroups) {
-            recursiveGroup.initMaxTupleSets();
-            recursiveGroup.initMinTupleSets();
-        }
+		for(var g : recursiveGroups)
+			g.initMaxTupleSets();
+		if(!GlobalSettings.IGNORE_MINIMAL_TUPLES)
+			for(var g : recursiveGroups)
+				g.initMinTupleSets();
 
         for (Axiom ax : axioms) {
             ax.getRelation().getMaxTupleSet();
