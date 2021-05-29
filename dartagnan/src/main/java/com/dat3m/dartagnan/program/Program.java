@@ -7,7 +7,6 @@ import com.dat3m.dartagnan.utils.equivalence.BranchEquivalence;
 import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.utils.Arch;
-import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.dat3m.dartagnan.asserts.AbstractAssert;
@@ -17,7 +16,6 @@ import com.dat3m.dartagnan.asserts.AssertTrue;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Local;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
-import com.dat3m.dartagnan.program.memory.Location;
 import com.dat3m.dartagnan.program.memory.Memory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -32,7 +30,6 @@ public class Program {
 	private AbstractAssert ass;
     private AbstractAssert assFilter;
 	private final List<Thread> threads;
-	private final ImmutableSet<Location> locations;
 	private final Memory memory;
 	private Arch arch;
     private ThreadCache cache;
@@ -41,14 +38,13 @@ public class Program {
     private VerificationTask task;
     private BranchEquivalence branchEquivalence;
 
-    public Program(Memory memory, ImmutableSet<Location> locations){
-        this("", memory, locations);
+    public Program(Memory memory){
+        this("", memory);
     }
 
-	public Program (String name, Memory memory, ImmutableSet<Location> locations) {
+	public Program (String name, Memory memory) {
 		this.name = name;
 		this.memory = memory;
-		this.locations = locations;
 		this.threads = new ArrayList<>();
 	}
 
@@ -116,10 +112,6 @@ public class Program {
 
     public List<Thread> getThreads() {
         return threads;
-    }
-
-    public ImmutableSet<Location> getLocations(){
-        return locations;
     }
 
 	public List<Event> getEvents(){
