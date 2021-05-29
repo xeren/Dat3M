@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan.expression;
 
 import com.dat3m.dartagnan.expression.processing.ExpressionVisitor;
-import com.dat3m.dartagnan.program.memory.Location;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.Expr;
@@ -50,12 +49,8 @@ public class IExprUn extends IExpr {
 	public ImmutableSet<Register> getRegs() {
         return b.getRegs();
 	}
-	@Override
-	public ImmutableSet<Location> getLocs() {
-		return b.getLocs();
-	}
 
-    @Override
+	@Override
     public String toString() {
         return "(" + op + b + ")";
     }

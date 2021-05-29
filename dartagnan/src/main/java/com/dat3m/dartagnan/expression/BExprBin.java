@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan.expression;
 
 import com.dat3m.dartagnan.expression.processing.ExpressionVisitor;
-import com.dat3m.dartagnan.program.memory.Location;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
@@ -56,12 +55,7 @@ public class BExprBin extends BExpr {
         return new ImmutableSet.Builder<Register>().addAll(b1.getRegs()).addAll(b2.getRegs()).build();
     }
 
-    @Override
-    public ImmutableSet<Location> getLocs() {
-        return new ImmutableSet.Builder<Location>().addAll(b1.getLocs()).addAll(b2.getLocs()).build();
-    }
-
-    @Override
+	@Override
     public String toString() {
         return "(" + b1 + " " + op + " " + b2 + ")";
     }

@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan.expression;
 
 import com.dat3m.dartagnan.expression.processing.ExpressionVisitor;
-import com.dat3m.dartagnan.program.memory.Location;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
@@ -46,11 +45,6 @@ public class Atom extends BExpr implements ExprInterface {
 	}
 
 	@Override
-	public ImmutableSet<Location> getLocs() {
-		return new ImmutableSet.Builder<Location>().addAll(lhs.getLocs()).addAll(rhs.getLocs()).build();
-	}
-
-    @Override
     public String toString() {
         return lhs + " " + op + " " + rhs;
     }

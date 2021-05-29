@@ -3,7 +3,6 @@ package com.dat3m.dartagnan.expression;
 import java.math.BigInteger;
 
 import com.dat3m.dartagnan.expression.processing.ExpressionVisitor;
-import com.dat3m.dartagnan.program.memory.Location;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
@@ -28,11 +27,7 @@ public interface ExprInterface {
 
     ImmutableSet<Register> getRegs();
 
-    default ImmutableSet<Location> getLocs() {
-    	return ImmutableSet.of();
-    }
-    
-    int getPrecision();
+	int getPrecision();
     
     IExpr getBase();
 

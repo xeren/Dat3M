@@ -67,11 +67,6 @@ public class Location implements ExprInterface {
 	}
 
 	@Override
-	public ImmutableSet<Location> getLocs() {
-		return ImmutableSet.of(this);
-	}
-
-	@Override
 	public Expr getLastValueExpr(Context ctx){
 		return address.getLastMemValueExpr(ctx);
 	}
