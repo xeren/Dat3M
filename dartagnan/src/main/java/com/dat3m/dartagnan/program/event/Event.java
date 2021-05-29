@@ -1,15 +1,22 @@
 package com.dat3m.dartagnan.program.event;
 
 import com.dat3m.dartagnan.GlobalSettings;
+import com.dat3m.dartagnan.expression.IConst;
+import com.dat3m.dartagnan.program.Register;
+import com.dat3m.dartagnan.program.event.utils.RegWriter;
 import com.dat3m.dartagnan.utils.recursion.RecursiveAction;
 import com.dat3m.dartagnan.utils.recursion.RecursiveFunction;
 import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.wmm.utils.Arch;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
+import com.microsoft.z3.Expr;
 import com.microsoft.z3.Model;
 import com.dat3m.dartagnan.program.Thread;
 
+import java.math.BigInteger;
 import java.util.*;
 
 public abstract class Event implements Comparable<Event> {
@@ -31,6 +38,7 @@ public abstract class Event implements Comparable<Event> {
     protected transient BoolExpr cfEnc;
     protected transient BoolExpr cfCond;
 	protected transient BoolExpr cfVar;
+	private transient ImmutableMap<Register,ImmutableList<Event>> dependency;
 
 	protected VerificationTask task;
 
@@ -90,6 +98,35 @@ public abstract class Event implements Comparable<Event> {
 		if (successor != null) {
 			successor.setThread(this.thread);
 		}
+	}
+
+	/**
+	Updates the dependencies of this event.
+	Called after compilation of the thread and before memory model initialisation.
+	@param m
+	Complete list of dependencies grouped by register.
+	@see #getDependency(Register) accesses {@code m}.
+	*/
+	public void setDependency(ImmutableMap<Register,ImmutableList<Event>> m) {
+		assert dependency == null;
+		dependency = m;
+	}
+
+	/**
+	Queries dependencies of this event.
+	@param r
+	Some register used by this event.
+	@return
+	Sequence of previous events that write on {@code r}.
+	All elements are program-ordered before {@code this}.
+	No element but the first are implied by {@code this}.
+	No element is mutually exclusive to {@code this}.
+	No element implies any of its successors in the list.
+	Longest such sequence in the program.
+	{@code null} iff {@code r} is not read by {@code this}.
+	*/
+	public ImmutableList<Event> getDependency(Register r) {
+		return dependency.get(r);
 	}
 
 	public Thread getThread() {
@@ -356,6 +393,21 @@ public abstract class Event implements Comparable<Event> {
 		return ctx.mkTrue();
 	}
 
+	public Expr getRegisterExpr(Context c, Register r) {
+		var d = dependency.get(r);
+		if(d.isEmpty())
+			return new IConst(BigInteger.ZERO,r.getPrecision()).toZ3Int(c);
+		var first = d.get(0);
+		var f = ((RegWriter)first).getResultRegisterExpr();
+		Expr x = first.cfImpliesExec() && task.getBranchEquivalence().isImplied(this,first)
+		?	f
+		:	c.mkITE(first.exec(),f,new IConst(BigInteger.ZERO,r.getPrecision()).toZ3Int(c));
+		for(var i = d.listIterator(1); i.hasNext();) {
+			var ee = i.next();
+			x = c.mkITE(ee.exec(),((RegWriter)ee).getResultRegisterExpr(),x);
+		}
+		return x;
+	}
 
 	// =============== Utility methods ==================
 

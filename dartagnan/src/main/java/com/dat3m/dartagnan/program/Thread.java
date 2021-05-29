@@ -3,12 +3,18 @@ package com.dat3m.dartagnan.program;
 import com.dat3m.dartagnan.program.event.CondJump;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.If;
+import com.dat3m.dartagnan.program.event.MemEvent;
+import com.dat3m.dartagnan.program.event.utils.RegReaderData;
+import com.dat3m.dartagnan.program.event.utils.RegWriter;
 import com.dat3m.dartagnan.program.utils.preprocessing.BranchReordering;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.program.utils.ThreadCache;
 import com.dat3m.dartagnan.program.utils.preprocessing.DeadCodeElimination;
+import com.dat3m.dartagnan.utils.equivalence.BranchEquivalence;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.utils.Arch;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 
@@ -199,4 +205,50 @@ public class Thread {
         new BranchReordering(this).apply();
     }
 
+	public void computeDependency(BranchEquivalence b) {
+		var current = new HashMap<Register,LinkedList<Event>>();
+		for(Event e : entry.getSuccessors()) {
+			if(e instanceof RegReaderData || e instanceof MemEvent) {
+				ImmutableMap.Builder<Register,ImmutableList<Event>> m = ImmutableMap.builder();
+				//NOTE duplicate calls to dependency if address and value share a register
+				if(e instanceof RegReaderData)
+					for(var r : ((RegReaderData)e).getDataRegs())
+						m.put(r,dependency(b,e,current.get(r)));
+				if(e instanceof MemEvent)
+					for(var r : ((MemEvent)e).getAddress().getRegs())
+						m.put(r,dependency(b,e,current.get(r)));
+				e.setDependency(m.build());
+			}
+			if(e instanceof RegWriter) {
+				var r = ((RegWriter)e).getResultRegister();
+				var c = current.computeIfAbsent(r,k->new LinkedList<>());
+				//filter all events that imply being overwritten
+				if(e.cfImpliesExec())
+					c.removeIf(x->b.isImplied(x,e));
+				c.add(e);
+			}
+		}
+	}
+
+	private ImmutableList<Event> dependency(BranchEquivalence b, Event e, LinkedList<Event> c) {
+		if(null==c)
+			return ImmutableList.of();
+		assert!c.isEmpty();
+		//get the last event in c that is implied by e
+		int size = 0;
+		for(var i = c.descendingIterator(); i.hasNext();) {
+			++size;
+			var ee = i.next();
+			if(ee.cfImpliesExec() && b.isImplied(e,ee))
+				break;
+		}
+		//filter all remaining events that are mutually exclusive to e
+		var a = new ArrayList<Event>(size);
+		for(var i = c.listIterator(c.size()-size); i.hasNext();) {
+			var ee = i.next();
+			if(!b.areMutuallyExclusive(e,ee))
+				a.add(ee);
+		}
+		return ImmutableList.copyOf(a);
+	}
 }

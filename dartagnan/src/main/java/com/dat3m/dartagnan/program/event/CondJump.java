@@ -21,7 +21,6 @@ public class CondJump extends Event implements RegReaderData {
     private Label label4Copy;
     private final BExpr expr;
     private final ImmutableSet<Register> dataRegs;
-    private static final Context defaultCtx = new Context();
 
     public CondJump(BExpr expr, Label label){
         if(label == null){
@@ -48,7 +47,7 @@ public class CondJump extends Event implements RegReaderData {
     }
 
     public boolean isGoto() {
-        return expr.toZ3Bool(this, defaultCtx).simplify().isTrue();
+        return expr.toZ3Bool(this,Register.defaultCtx).simplify().isTrue();
     }
     
     public Label getLabel(){

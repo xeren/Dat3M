@@ -1495,7 +1495,6 @@ procedure  assert_($i0: i32)
 {
 $bb0:
   call __VERIFIER_assert($i0);
-  $exn := false;
   return;
 }
 const llvm.dbg.declare: ref;
@@ -1511,7 +1510,6 @@ $bb0:
   goto $bb1, $bb2;
 $bb1:
   assume ($i1 == 1);
-  $exn := false;
   return;
 $bb2:
   assume !(($i1 == 1));
@@ -1530,7 +1528,6 @@ procedure  reach_error()
 {
 $bb0:
   call assert_(0);
-  $exn := false;
   return;
 }
 const init: ref;
@@ -1540,7 +1537,6 @@ procedure  init()
   var $i0: i32;
 $bb0:
   call $i0 := atomic_init.ref.ref(TOP, $0.ref);
-  $exn := false;
   return;
 }
 const atomic_init: ref;
@@ -1556,41 +1552,27 @@ procedure  atomic_init.ref.ref(p.0: ref, p.1: ref)
 
 const push: ref;
 axiom (push == $sub.ref(0, 9288));
-procedure  push($i0: i32)
+procedure  push($e: i32)
 {
-  var $p1: ref;
-  var $y: ref;
-  var $p3: ref;
-  var $p4: ref;
-  var $i5: i32;
-  var $i6: i64;
-  var $p7: ref;
-  var $p8: ref;
-  var $p9: ref;
-  var $i10: i32;
-  var $i11: i32;
-  var $i12: i1;
+  var $addr_top: ref;
+  var $n: ref;
+  var $top: ref;
+  var $success: bool;
 $bb0:
-  call $addr_n := $alloc(1);
-  call $y := malloc(2);
-  $M.0 := $store.i32($M.0, $y, $i0);
-  goto $bb1;
+  call $addr_top := $alloc(1);
+  call $n := malloc(2);
+  $M.0 := $store.i32($M.0,$n,$e);
 $bb1:
-  call $n := atomic_load_explicit.ref.i32(TOP, 2);
-  $M.0 := $store.ref($M.0, $addr_n, $n);
-  $y.next := $y + 1;
-  call $i10 := atomic_store_explicit.ref.ref.i32($y.next, $n, 0);
-  call $i11 := atomic_compare_exchange_strong_explicit.ref.ref.ref.i32.i32(TOP, $addr_n, $y, 4, 0);
-  $i12 := $ne.i32($i11, 0);
+  call $top := atomic_load_explicit.ref.i32(TOP,2);
+  $M.0 := $store.ref($M.0,$addr_top,$top);
+  call atomic_store_explicit.ref.ref.i32($n+1,$top,0);
+  call $success := atomic_compare_exchange_strong_explicit.ref.ref.ref.i32.i32(TOP,$addr_top,$n,4,0);
   goto $bb2, $bb3;
-$bb2:
-  assume ($i12 == 1);
-  goto $bb4;
 $bb3:
-  assume !(($i12 == 1));
+  assume !($success == true);
   goto $bb1;
-$bb4:
-  $exn := false;
+$bb2:
+  assume ($success == true);
   return;
 }
 
@@ -1619,66 +1601,33 @@ axiom (pop == $sub.ref(0, 14448));
 procedure  pop()
   returns ($r: i32)
 {
-  var $p0: ref;
-  var $i1: i32;
-  var $i2: i64;
-  var $p3: ref;
-  var $p4: ref;
-  var $i5: i1;
-  var $p7: ref;
-  var $p8: ref;
-  var $i9: i32;
-  var $i10: i64;
-  var $p11: ref;
-  var $i12: i32;
-  var $i13: i1;
-  var $p14: ref;
-  var $p15: ref;
-  var $i16: i32;
-  var $i6: i32;
+  var $addr_top: ref;
+  var $top: ref;
+	var $next: ref;
+  var $success: bool;
 $bb0:
-  call $p0 := $alloc($mul.ref(8, $zext.i32.i64(1)));
-  goto $bb1;
+  call $addr_top := $alloc(1);
 $bb1:
-  call $i1 := atomic_load_explicit.ref.i32(TOP, 2);
-  $i2 := $sext.i32.i64($i1);
-  $p3 := $i2p.i64.ref($i2);
-  $M.0 := $store.ref($M.0, $p0, $p3);
-  $p4 := $load.ref($M.0, $p0);
-  $i5 := $eq.ref($p4, $0.ref);
+  call $top := atomic_load_explicit.ref.i32(TOP,2);
+  $M.0 := $store.ref($M.0,$addr_top,$top);
   goto $bb2, $bb3;
 $bb2:
-  assume ($i5 == 1);
-  $i6 := $sub.i32(0, 1);
+  assume ($top == $0.ref);
+  $r := $sub.i32(0,1);
   goto $bb4;
 $bb3:
-  assume !(($i5 == 1));
-  $p7 := $load.ref($M.0, $p0);
-  $p8 := $add.ref($add.ref($p7, $mul.ref(0, 16)), $mul.ref(8, 1));
-  call $i9 := atomic_load_explicit.ref.i32($p8, 2);
-  $i10 := $sext.i32.i64($i9);
-  $p11 := $i2p.i64.ref($i10);
-  call $i12 := atomic_compare_exchange_strong_explicit.ref.ref.ref.i32.i32(TOP, $p0, $p11, 4, 0);
-  $i13 := $ne.i32($i12, 0);
+  assume !($top == $0.ref);
+  call $next := atomic_load_explicit.ref.ref($top+1,2);
+  call $success := atomic_compare_exchange_strong_explicit.ref.ref.ref.i32.i32(TOP,$addr_top,$next,4,0);
   goto $bb5, $bb6;
-$bb4:
-  $r := $i6;
-  $exn := false;
-  return;
-$bb5:
-  assume ($i13 == 1);
-  goto $bb7;
 $bb6:
-  assume !(($i13 == 1));
-  goto $bb8;
-$bb7:
-  $p14 := $load.ref($M.0, $p0);
-  $p15 := $add.ref($add.ref($p14, $mul.ref(0, 16)), $mul.ref(0, 1));
-  $i16 := $load.i32($M.0, $p15);
-  $i6 := $i16;
-  goto $bb4;
-$bb8:
+  assume !($success == true);
   goto $bb1;
+$bb5:
+  assume ($success == true);
+  $r := $load.i32($M.0,$top);
+$bb4:
+  return;
 }
 const worker_1: ref;
 axiom (worker_1 == $sub.ref(0, 15480));
@@ -1695,7 +1644,6 @@ $bb0:
   $i3 := $zext.i1.i32($i2);
   call __VERIFIER_assert($i3);
   $r := $0.ref;
-  $exn := false;
   return;
 }
 const worker_2: ref;
@@ -1713,7 +1661,6 @@ $bb0:
   $i3 := $zext.i1.i32($i2);
   call __VERIFIER_assert($i3);
   $r := $0.ref;
-  $exn := false;
   return;
 }
 const main: ref;
@@ -1784,7 +1731,6 @@ $bb8:
   $i14 := $zext.i1.i32($i13);
   call __VERIFIER_assert($i14);
   $r := 0;
-  $exn := false;
   return;
 }
 const pthread_create: ref;
@@ -1805,7 +1751,6 @@ procedure  __VERIFIER_assume($i0: i32)
 {
 $bb0:
   assume $i0 != $0;
-  $exn := false;
   return;
 }
 const __SMACK_dummy: ref;
@@ -1813,7 +1758,6 @@ axiom (__SMACK_dummy == $sub.ref(0, 22704));
 procedure  __SMACK_dummy($i0: i32)
 {
 $bb0:
-  $exn := false;
   return;
 }
 const __SMACK_and32: ref;
@@ -5370,7 +5314,6 @@ $bb569:
   goto $bb570;
 $bb570:
   $r := $i949;
-  $exn := false;
   return;
 $bb571:
   assume ($i950 == 1);
@@ -5409,7 +5352,6 @@ $bb0:
   call $i4 := __SMACK_and32($i2, $i3);
   $i5 := $sext.i32.i64($i4);
   $r := $i5;
-  $exn := false;
   return;
 }
 const __SMACK_and16: ref;
@@ -6711,7 +6653,6 @@ $bb137:
   goto $bb138;
 $bb138:
   $r := $i443;
-  $exn := false;
   return;
 $bb139:
   assume ($i445 == 1);
@@ -7365,7 +7306,6 @@ $bb65:
   goto $bb66;
 $bb66:
   $r := $i211;
-  $exn := false;
   return;
 $bb67:
   assume ($i213 == 1);
@@ -8908,7 +8848,6 @@ $bb188:
   goto $bb190, $bb191;
 $bb189:
   $r := $i470;
-  $exn := false;
   return;
 $bb190:
   assume ($i471 == 1);
@@ -8937,7 +8876,6 @@ $bb0:
   call $i4 := __SMACK_or32($i2, $i3);
   $i5 := $sext.i32.i64($i4);
   $r := $i5;
-  $exn := false;
   return;
 }
 const __SMACK_or16: ref;
@@ -8955,7 +8893,6 @@ $bb0:
   call $i4 := __SMACK_or32($i2, $i3);
   $i5 := $trunc.i32.i16($i4);
   $r := $i5;
-  $exn := false;
   return;
 }
 const __SMACK_or8: ref;
@@ -8973,7 +8910,6 @@ $bb0:
   call $i4 := __SMACK_or32($i2, $i3);
   $i5 := $trunc.i32.i8($i4);
   $r := $i5;
-  $exn := false;
   return;
 }
 const __SMACK_check_overflow: ref;
@@ -8982,15 +8918,12 @@ procedure  __SMACK_check_overflow($i0: i32)
 {
 $bb0:
   assert {:overflow} $i0 == $0;
-  $exn := false;
   return;
 }
 const __SMACK_decls: ref;
 axiom (__SMACK_decls == $sub.ref(0, 33024));
 type $mop;
 const $MOP: $mop;
-var $exn: bool;
-var $exnv: int;
 procedure  corral_atomic_begin();
 procedure  corral_atomic_end();
 procedure  $alloc(n: ref) returns (p: ref)
@@ -9032,7 +8965,6 @@ procedure  __SMACK_init_func_memory_model()
 {
 $bb0:
   $CurrAddr := $1024.ref;
-  $exn := false;
   return;
 }
 const abort: ref;
@@ -9053,7 +8985,6 @@ axiom (__SMACK_static_init == $sub.ref(0, 38184));
 procedure  __SMACK_static_init()
 {
 $bb0:
-  $exn := false;
   return;
 }
 procedure  $initialize()

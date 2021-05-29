@@ -318,5 +318,10 @@ public class Program {
         cache = null;
     }
 
+	public void computeDependency() {
+		var b = getBranchEquivalence();
+		for(var t : getThreads())
+			t.computeDependency(b);
+	}
 
 }

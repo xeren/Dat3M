@@ -16,6 +16,7 @@ import com.dat3m.dartagnan.program.event.Event;
 public class Register extends IExpr implements ExprInterface {
 
 	private static int dummyCount = 0;
+	public static final Context defaultCtx = new Context();
 
 	private final String name;
 	private String cVar;
@@ -71,9 +72,10 @@ public class Register extends IExpr implements ExprInterface {
     }
 
 	@Override
-	public Expr toZ3Int(Event e, Context ctx) {
-		String name = getName() + "(" + e.repr() + ")";
-		return precision > 0 ? ctx.mkBVConst(name, precision) : ctx.mkIntConst(name);
+	public Expr toZ3Int(Event e, Context c) {
+		if(c==defaultCtx)
+			return precision > 0 ? c.mkBVConst(name,precision) : c.mkIntConst(name);
+		return e.getRegisterExpr(c,this);
 	}
 
 	public Expr toZ3IntResult(Event e, Context ctx) {

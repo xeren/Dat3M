@@ -55,25 +55,4 @@ public class ThreadCache {
         }
         return registers;
     }
-
-    public ImmutableMap<Register, ImmutableList<Event>> getRegWriterMap(){
-        if(regWriterMap == null){
-            Map<Register, Set<Event>> setMap = new HashMap<>();
-            for (Event e : getEvents(FilterBasic.get(EType.REG_WRITER))) {
-                Register register = ((RegWriter) e).getResultRegister();
-                setMap.putIfAbsent(register, new TreeSet<>());
-                setMap.get(register).add(e);
-            }
-
-            ImmutableMap.Builder<Register, ImmutableList<Event>> builder = new ImmutableMap.Builder<>();
-            for (Register register : setMap.keySet()) {
-                List<Event> list = new ArrayList<>(setMap.get(register));
-                Collections.sort(list);
-                builder.put(register, ImmutableList.copyOf(list));
-            }
-
-            regWriterMap = builder.build();
-        }
-        return regWriterMap;
-    }
 }
