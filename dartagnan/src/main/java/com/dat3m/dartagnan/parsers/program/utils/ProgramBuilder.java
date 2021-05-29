@@ -7,7 +7,6 @@ import com.dat3m.dartagnan.expression.IConst;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.memory.Address;
-import com.dat3m.dartagnan.program.memory.Location;
 import com.dat3m.dartagnan.program.memory.Memory;
 
 import java.util.*;
@@ -18,7 +17,6 @@ public class ProgramBuilder {
 
     private final Map<String, Address> pointers = new HashMap<>();
 
-	private final Map<Address,IConst> iValueMap = new HashMap<>();
     private final Memory memory = new Memory();
 
     private final Map<String, Label> labels = new HashMap<>();
@@ -73,15 +71,15 @@ public class ProgramBuilder {
     // Declarators
 
     public void initLocEqLocPtr(String leftName, String rightName, int precision){
-		iValueMap.put(pointer(leftName,precision),pointer(rightName,precision));
+		pointer(leftName,precision).setInitialValue(pointer(rightName,precision));
     }
 
     public void initLocEqLocVal(String leftName, String rightName, int precision){
-		iValueMap.put(pointer(leftName,precision),iValueMap.get(pointer(rightName,precision)));
+		pointer(leftName,precision).setInitialValue(pointer(rightName,precision).getInitialValue());
     }
 
     public void initLocEqConst(String locName, IConst iValue){
-		iValueMap.put(pointer(locName, iValue.getPrecision()),iValue);
+		pointer(locName,iValue.getPrecision()).setInitialValue(iValue);
     }
 
     public void initRegEqLocPtr(int regThread, String regName, String locName, int precision){
@@ -91,7 +89,7 @@ public class ProgramBuilder {
 
     public void initRegEqLocVal(int regThread, String regName, String locName, int precision){
         Register reg = getOrCreateRegister(regThread, regName, precision);
-		addChild(regThread, new Local(reg,iValueMap.get(pointer(locName,precision))));
+		addChild(regThread,new Local(reg,pointer(locName,precision).getInitialValue()));
     }
 
     public void initRegEqConst(int regThread, String regName, IConst iValue){
@@ -105,7 +103,7 @@ public class ProgramBuilder {
             String varName = name + "[" + i + "]";
             Address address = addresses.get(i);
             pointers.put(varName,address);
-            iValueMap.put(address,values.get(i));
+			address.setInitialValue(values.get(i));
         }
         pointers.put(name, addresses.get(0));
     }
@@ -126,11 +124,7 @@ public class ProgramBuilder {
 	}
 
 	public Address pointer(String name, int precision){
-		return pointers.computeIfAbsent(name,k->{
-			var a = memory.getOrCreateLocation(name,precision);
-			iValueMap.put(a,new IConst(Location.DEFAULT_INIT_VALUE,precision));
-			return a;
-		});
+		return pointers.computeIfAbsent(name,k->memory.getOrCreateLocation(name,precision));
     }
 
     public Register getRegister(int thread, String name){
@@ -170,7 +164,7 @@ public class ProgramBuilder {
     }
 
     public IConst getInitValue(Address address){
-        return iValueMap.getOrDefault(address, new IConst(Location.DEFAULT_INIT_VALUE, address.getPrecision()));
+        return address.getInitialValue();
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -186,8 +180,8 @@ public class ProgramBuilder {
 
     private void buildInitThreads(){
         int nextThreadId = nextThreadId();
-		for(var entry : iValueMap.entrySet()) {
-            Event e = new Init(entry.getKey(), entry.getValue());
+		for(var a : memory.getAllAddresses()) {
+			var e = new Init(a);
             Thread thread = new Thread(nextThreadId, e);
             threads.put(nextThreadId, thread);
             nextThreadId++;

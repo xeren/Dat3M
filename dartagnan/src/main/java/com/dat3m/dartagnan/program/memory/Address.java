@@ -18,11 +18,20 @@ public class Address extends IConst implements ExprInterface {
 
     private final int index;
     private BigInteger constantValue;
+	private IConst initialValue;
 
     Address(int index, int precision){
         super(BigInteger.valueOf(index), precision);
         this.index = index;
     }
+
+	public void setInitialValue(IConst value) {
+		initialValue = value;
+	}
+
+	public IConst getInitialValue() {
+		return null!=initialValue ? initialValue : new IConst(Location.DEFAULT_INIT_VALUE,precision);
+	}
 
     public boolean hasConstantValue() {
      	return this.constantValue != null;

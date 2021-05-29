@@ -10,9 +10,9 @@ public class Init extends MemEvent {
 
 	private final IConst value;
 
-	public Init(Address address, IConst value) {
+	public Init(Address address) {
 		super(address, null);
-		this.value = value;
+		this.value = address.getInitialValue();
 		addFilters(EType.ANY, EType.VISIBLE, EType.MEMORY, EType.WRITE, EType.INIT);
 	}
 
