@@ -14,7 +14,6 @@ import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
 import com.dat3m.dartagnan.program.memory.Address;
-import com.dat3m.dartagnan.program.memory.Location;
 
 import java.util.*;
 
@@ -61,11 +60,10 @@ public class AliasAnalysis {
 
                 } else if (e instanceof Init) {
                     // Rule loc=&loc2 -> lo(loc)={loc2} (only possible in init events)
-                    Location loc = program.getMemory().getLocationForAddress((Address) address);
                     IExpr value = ((Init) e).getValue();
-                    if (loc != null && value instanceof Address) {
-                        addAddress(loc, (Address) value);
-                        variables.add(loc);
+					if(value instanceof Address) {
+						addAddress(address,(Address)value);
+						variables.add(address);
                     }
                 }
             } else {
@@ -111,8 +109,7 @@ public class AliasAnalysis {
             Object variable = variables.remove(0);
             // Process rules with *variable:
             for (Address address : getAddresses(variable)) {
-                Location location = program.getMemory().getLocationForAddress(address);
-                if (location == null || !(variable instanceof SSAReg))
+				if(!(variable instanceof SSAReg))
 					continue;
                     for (MemEvent e : ((SSAReg) variable).getEventsWithAddr()) {
                         // p = *variable:
@@ -120,10 +117,9 @@ public class AliasAnalysis {
                             // Add edge from location to p
                             Register reg = ((RegWriter) e).getResultRegister();
                             SSAReg ssaReg = getSSAReg(reg, ssaMap.get(reg).get(e) + 1);
-                            if (addEdge(location, ssaReg)) {
-                                //add a to W if edge is new.
-                                variables.add(location);
-                            }
+						if(addEdge(address,ssaReg))
+							//add a to W if edge is new.
+							variables.add(address);
                         } else if (e instanceof Store) {
                             // *variable = register
                             ExprInterface value = e.getMemValue();
@@ -131,10 +127,9 @@ public class AliasAnalysis {
                                 Register register = (Register) value;
                                 SSAReg ssaReg = getSSAReg(register, ssaMap.get(register).get(e));
                                 // Add edge from register to location
-                                if (addEdge(ssaReg, location)) {
-                                    // Add register to variables if edge is new.
-                                    variables.add(ssaReg);
-                            }
+							if(addEdge(ssaReg,address))
+								// Add register to variables if edge is new.
+								variables.add(ssaReg);
                         }
                     }
                 }

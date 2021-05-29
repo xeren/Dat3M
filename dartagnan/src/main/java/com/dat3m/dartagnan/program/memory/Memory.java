@@ -1,7 +1,5 @@
 package com.dat3m.dartagnan.program.memory;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableSet;
 import com.microsoft.z3.BitVecExpr;
 import com.microsoft.z3.BoolExpr;
@@ -14,20 +12,14 @@ import java.util.*;
 
 public class Memory {
 
-    private final BiMap<Location, Address> map;
     private final Map<String, Location> locationIndex;
     private final Map<String, List<Address>> arrays;
 
     private int nextIndex = 0;
 
     public Memory(){
-        map = HashBiMap.create();
         locationIndex = new HashMap<>();
         arrays = new HashMap<>();
-    }
-
-    public Location getLocationForAddress(Address address){
-        return map.inverse().get(address);
     }
 
     public BoolExpr encode(Context ctx){
@@ -64,19 +56,20 @@ public class Memory {
         throw new IllegalMemoryAccessException("Illegal malloc for " + name);
     }
 
-    public Location getOrCreateLocation(String name, int precision){
+	public Address getOrCreateLocation(String name, int precision){
         if(!locationIndex.containsKey(name)){
         	Address address = new Address(nextIndex++,precision);
             Location location = new Location(name,address);
-            map.put(location,address);
             locationIndex.put(name, location);
-            return location;
+			return address;
         }
-        return locationIndex.get(name);
+		return locationIndex.get(name).getAddress();
     }
 
     public ImmutableSet<Address> getAllAddresses(){
-        Set<Address> result = new HashSet<>(map.values());
+		Set<Address> result = new HashSet<>();
+		for(var a : locationIndex.values())
+			result.add(a.getAddress());
         for(List<Address> array : arrays.values()){
             result.addAll(array);
         }

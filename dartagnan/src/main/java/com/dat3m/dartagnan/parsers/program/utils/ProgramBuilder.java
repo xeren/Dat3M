@@ -127,8 +127,8 @@ public class ProgramBuilder {
 
 	public Address pointer(String name, int precision){
 		return pointers.computeIfAbsent(name,k->{
-			var a = memory.getOrCreateLocation(name,precision).getAddress();
-			iValueMap.put(a,new IConst(Location.DEFAULT_INIT_VALUE,a.getPrecision()));
+			var a = memory.getOrCreateLocation(name,precision);
+			iValueMap.put(a,new IConst(Location.DEFAULT_INIT_VALUE,precision));
 			return a;
 		});
     }
