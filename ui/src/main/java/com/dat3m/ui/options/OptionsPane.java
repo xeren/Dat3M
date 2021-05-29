@@ -1,7 +1,6 @@
 package com.dat3m.ui.options;
 
 import com.dat3m.dartagnan.utils.Settings;
-import com.dat3m.dartagnan.wmm.utils.alias.Alias;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.dat3m.ui.button.ClearButton;
 import com.dat3m.ui.button.TestButton;
@@ -32,7 +31,6 @@ public class OptionsPane extends JPanel implements ActionListener {
 	
     private final JLabel iconPane;
 
-    private final Selector<Alias> aliasPane;
     private final Selector<Method> methodPane;
 
     private final Selector<Arch> targetPane;
@@ -51,7 +49,6 @@ public class OptionsPane extends JPanel implements ActionListener {
         int height = Math.min(getIconHeight(), (int) Math.round(Toolkit.getDefaultToolkit().getScreenSize().getHeight()) * 7 / 18);
         iconPane = new JLabel(IconHelper.getIcon(IconCode.DARTAGNAN, height), JLabel.CENTER);
 
-        aliasPane = new Selector<>(EnumSet.allOf(Alias.class).toArray(new Alias[0]), ControlCode.ALIAS);
         methodPane = new Selector<>(EnumSet.allOf(Method.class).toArray(new Method[0]), ControlCode.METHOD);
 
         Arch[] architectures = EnumSet.allOf(Arch.class).toArray(new Arch[0]);
@@ -89,7 +86,6 @@ public class OptionsPane extends JPanel implements ActionListener {
 
     public UiOptions getOptions(){
         Settings settings = new Settings(
-                (Alias)aliasPane.getSelectedItem(),
                 Integer.parseInt(boundField.getText()),
                 Integer.parseInt(timeoutField.getText())
         );
@@ -124,7 +120,7 @@ public class OptionsPane extends JPanel implements ActionListener {
 
         JSplitPane graphPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         graphPane.setDividerSize(0);
-        JComponent[] panes = { targetPane, aliasPane, methodPane, boundsPane, testButton, clearButton, graphPane, scrollConsole };
+        JComponent[] panes = { targetPane, methodPane, boundsPane, testButton, clearButton, graphPane, scrollConsole };
         Iterator<JComponent> it = Arrays.asList(panes).iterator();
         JComponent current = iconPane;
         current.setBorder(emptyBorder);

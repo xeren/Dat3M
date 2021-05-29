@@ -9,7 +9,6 @@ import com.dat3m.dartagnan.utils.ResourceHelper;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.utils.Arch;
-import com.dat3m.dartagnan.wmm.utils.alias.Alias;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.Solver;
 
@@ -36,7 +35,7 @@ public abstract class AbstractDartagnanTest {
         Map<String, Result> expectationMap = ResourceHelper.getExpectedResults();
         Wmm wmm = new ParserCat().parse(new File(ResourceHelper.CAT_RESOURCE_PATH + cat));
 
-        Settings s1 = new Settings(Alias.CFIS, 1, SOLVER_TIMEOUT);
+        Settings s1 = new Settings(1, SOLVER_TIMEOUT);
 
         return Files.walk(Paths.get(ResourceHelper.LITMUS_RESOURCE_PATH + litmusPath))
                 .filter(Files::isRegularFile)

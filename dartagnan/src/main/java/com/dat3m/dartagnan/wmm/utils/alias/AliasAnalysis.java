@@ -32,7 +32,7 @@ public class AliasAnalysis {
 	private final Map<Object,Set<Address>> addresses = new HashMap<>();
 	private final Map<Register,Map<Integer,SSAReg>> ssa = new HashMap<>();
 
-    public void calculateLocationSets(Program program, Alias alias) {
+    public void calculateLocationSets(Program program) {
             maxAddressSet = program.getMemory().getAllAddresses();
             ssaMap = getRegSsaMap(program);
             cfsProcessLocs(program);

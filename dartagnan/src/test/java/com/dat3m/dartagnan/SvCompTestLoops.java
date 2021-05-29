@@ -4,7 +4,6 @@ import com.dat3m.dartagnan.parsers.cat.ParserCat;
 import com.dat3m.dartagnan.utils.ResourceHelper;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.wmm.Wmm;
-import com.dat3m.dartagnan.wmm.utils.alias.Alias;
 
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -22,12 +21,12 @@ public class SvCompTestLoops extends AbstractSvCompTest {
     public static Iterable<Object[]> data() throws IOException {
         Wmm wmm = new ParserCat().parse(new File(ResourceHelper.CAT_RESOURCE_PATH + "cat/sc.cat"));
 
-        Settings s1 = new Settings(Alias.CFIS, 1, TIMEOUT);
-        Settings s2 = new Settings(Alias.CFIS, 2, TIMEOUT);
-        Settings s3 = new Settings(Alias.CFIS, 3, TIMEOUT);
-        Settings s4 = new Settings(Alias.CFIS, 4, TIMEOUT);
-        Settings s5 = new Settings(Alias.CFIS, 5, TIMEOUT);
-        Settings s11 = new Settings(Alias.CFIS,11, TIMEOUT);
+        Settings s1 = new Settings(1, TIMEOUT);
+        Settings s2 = new Settings(2, TIMEOUT);
+        Settings s3 = new Settings(3, TIMEOUT);
+        Settings s4 = new Settings(4, TIMEOUT);
+        Settings s5 = new Settings(5, TIMEOUT);
+        Settings s11 = new Settings(11, TIMEOUT);
 
         List<Object[]> data = new ArrayList<>();
 

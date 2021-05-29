@@ -11,7 +11,6 @@ import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.utils.Utils;
-import com.dat3m.dartagnan.wmm.utils.alias.Alias;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.Solver;
@@ -33,7 +32,7 @@ public class RelRfTest {
 	
     @Test
     public void testUninitializedMemory() throws IOException {
-        Settings settings = new Settings(Alias.CFIS, 1, TIMEOUT);
+        Settings settings = new Settings(1, TIMEOUT);
         settings.setFlag(Settings.FLAG_CAN_ACCESS_UNINITIALIZED_MEMORY, true);
 
         String programPath = ResourceHelper.TEST_RESOURCE_PATH + "wmm/relation/basic/rf/";
@@ -70,7 +69,7 @@ public class RelRfTest {
         String wmmPath = ResourceHelper.CAT_RESOURCE_PATH + "cat/linux-kernel.cat";
         Wmm wmm = new ParserCat().parse(new File(wmmPath));
 
-        Settings settings = new Settings(Alias.CFIS, 1, TIMEOUT);
+        Settings settings = new Settings(1, TIMEOUT);
 
         settings.setFlag(Settings.FLAG_CAN_ACCESS_UNINITIALIZED_MEMORY, false);
         settings.setFlag(Settings.FLAG_USE_SEQ_ENCODING_REL_RF, false);
