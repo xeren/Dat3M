@@ -137,13 +137,6 @@ public class ProgramBuilder {
 		return locations.get(name).getAddress();
     }
 
-    public Location getOrErrorLocation(String name){
-        if(locations.containsKey(name)){
-            return locations.get(name);
-        }
-        throw new ParsingException("Location " + name + " has not been initialised");
-    }
-
     public Register getRegister(int thread, String name){
         if(threads.containsKey(thread)){
             return threads.get(thread).getRegister(name);

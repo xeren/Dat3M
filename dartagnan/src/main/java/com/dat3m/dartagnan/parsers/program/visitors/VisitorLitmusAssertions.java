@@ -10,7 +10,6 @@ import com.dat3m.dartagnan.parsers.LitmusAssertionsParser;
 import com.dat3m.dartagnan.parsers.LitmusAssertionsVisitor;
 import com.dat3m.dartagnan.parsers.program.utils.ParsingException;
 import com.dat3m.dartagnan.parsers.program.utils.ProgramBuilder;
-import com.dat3m.dartagnan.program.memory.Location;
 
 public class VisitorLitmusAssertions extends LitmusAssertionsBaseVisitor<AbstractAssert>
         implements LitmusAssertionsVisitor<AbstractAssert> {
@@ -68,9 +67,6 @@ public class VisitorLitmusAssertions extends LitmusAssertionsBaseVisitor<Abstrac
     public AbstractAssert visitAssertionBasic(LitmusAssertionsParser.AssertionBasicContext ctx){
         ExprInterface expr1 = acceptAssertionValue(ctx.assertionValue(0));
         ExprInterface expr2 = acceptAssertionValue(ctx.assertionValue(1));
-        if(expr2 instanceof Location){
-            expr2 = ((Location) expr2).getAddress();
-        }
         return new AssertBasic(expr1, ctx.assertionCompare().op, expr2);
     }
 
@@ -81,6 +77,9 @@ public class VisitorLitmusAssertions extends LitmusAssertionsBaseVisitor<Abstrac
         if(ctx.threadId() != null){
             return programBuilder.getOrErrorRegister(ctx.threadId().id, ctx.varName().getText());
         }
-        return programBuilder.getOrErrorLocation(ctx.getText());
+		var a = programBuilder.pointerTry(ctx.getText());
+		if(null==a)
+			throw new ParsingException("Location "+ctx.getText()+" has not been initialised");
+		return a;
     }
 }
