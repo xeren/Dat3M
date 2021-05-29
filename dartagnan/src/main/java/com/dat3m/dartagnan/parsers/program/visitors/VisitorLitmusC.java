@@ -131,7 +131,7 @@ public class VisitorLitmusC
                         if(address != null){
                             values.add(address);
                         } else {
-                            address = programBuilder.getOrCreateLocation(varName, -1).getAddress();
+                            address = programBuilder.pointer(varName,-1);
                             values.add(elCtx.Ast() == null ? address : programBuilder.getInitValue(address));
                         }
                     }
@@ -170,9 +170,9 @@ public class VisitorLitmusC
                     Register register = programBuilder.getOrCreateRegister(scope, name, -1);
                     programBuilder.addChild(currentThread, new Local(register, pointer));
                 } else {
-                    Location location = programBuilder.getOrCreateLocation(varName.getText(), -1);
+					var location = programBuilder.pointer(varName.getText(),-1);
                     Register register = programBuilder.getOrCreateRegister(scope, varName.getText(), -1);
-                    programBuilder.addChild(currentThread, new Local(register, location.getAddress()));
+                    programBuilder.addChild(currentThread, new Local(register,location));
                 }
             }
         }
@@ -451,17 +451,16 @@ public class VisitorLitmusC
             if(register != null){
                 return register;
             }
-            Location location = programBuilder.getLocation(ctx.getText());
+			var location = programBuilder.pointerTry(ctx.getText());
             if(location != null){
                 register = programBuilder.getOrCreateRegister(scope, null, -1);
-                programBuilder.addChild(currentThread, new Load(register, location.getAddress(), "NA"));
+				programBuilder.addChild(currentThread, new Load(register,location,"NA"));
                 return register;
             }
             return programBuilder.getOrCreateRegister(scope, ctx.getText(), -1);
         }
-        Location location = programBuilder.getOrCreateLocation(ctx.getText(), -1);
         Register register = programBuilder.getOrCreateRegister(scope, null, -1);
-        programBuilder.addChild(currentThread, new Load(register, location.getAddress(), "NA"));
+		programBuilder.addChild(currentThread,new Load(register,programBuilder.pointer(ctx.getText(),-1),"NA"));
         return register;
     }
 

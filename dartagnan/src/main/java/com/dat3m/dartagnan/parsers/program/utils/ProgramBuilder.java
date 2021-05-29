@@ -75,31 +75,25 @@ public class ProgramBuilder {
     // Declarators
 
     public void initLocEqLocPtr(String leftName, String rightName, int precision){
-        Location location = getOrCreateLocation(leftName, precision);
-        iValueMap.put(location.getAddress(), getOrCreateLocation(rightName, precision).getAddress());
+		iValueMap.put(pointer(leftName,precision),pointer(rightName,precision));
     }
 
     public void initLocEqLocVal(String leftName, String rightName, int precision){
-        Location left = getOrCreateLocation(leftName, precision);
-        Location right = getOrCreateLocation(rightName, precision);
-        iValueMap.put(left.getAddress(), iValueMap.get(right.getAddress()));
+		iValueMap.put(pointer(leftName,precision),iValueMap.get(pointer(rightName,precision)));
     }
 
     public void initLocEqConst(String locName, IConst iValue){
-        Location location = getOrCreateLocation(locName, iValue.getPrecision());
-        iValueMap.put(location.getAddress(), iValue);
+		iValueMap.put(pointer(locName, iValue.getPrecision()),iValue);
     }
 
     public void initRegEqLocPtr(int regThread, String regName, String locName, int precision){
-        Location loc = getOrCreateLocation(locName, precision);
         Register reg = getOrCreateRegister(regThread, regName, precision);
-        addChild(regThread, new Local(reg, loc.getAddress()));
+        addChild(regThread, new Local(reg,pointer(locName,precision)));
     }
 
     public void initRegEqLocVal(int regThread, String regName, String locName, int precision){
-        Location loc = getOrCreateLocation(locName, precision);
         Register reg = getOrCreateRegister(regThread, regName, precision);
-        addChild(regThread, new Local(reg, iValueMap.get(loc.getAddress())));
+		addChild(regThread, new Local(reg,iValueMap.get(pointer(locName,precision))));
     }
 
     public void initRegEqConst(int regThread, String regName, IConst iValue){
@@ -129,17 +123,18 @@ public class ProgramBuilder {
         return threads.get(thread).getExit();
     }
 
-    public Location getLocation(String name){
-        return locations.get(name);
-    }
+	public Address pointerTry(String name) {
+		var l = locations.get(name);
+		return null==l ? null : l.getAddress();
+	}
 
-    public Location getOrCreateLocation(String name, int precision){
+	public Address pointer(String name, int precision){
         if(!locations.containsKey(name)){
             Location location = memory.getOrCreateLocation(name, precision);
             locations.put(name, location);
             iValueMap.put(location.getAddress(), new IConst(Location.DEFAULT_INIT_VALUE, location.getAddress().getPrecision()));
         }
-        return locations.get(name);
+		return locations.get(name).getAddress();
     }
 
     public Location getOrErrorLocation(String name){

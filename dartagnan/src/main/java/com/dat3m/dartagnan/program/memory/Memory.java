@@ -66,8 +66,9 @@ public class Memory {
 
     public Location getOrCreateLocation(String name, int precision){
         if(!locationIndex.containsKey(name)){
-            Location location = new Location(name, new Address(nextIndex++, precision));
-            map.put(location, location.getAddress());
+        	Address address = new Address(nextIndex++,precision);
+            Location location = new Location(name,address);
+            map.put(location,address);
             locationIndex.put(name, location);
             return location;
         }

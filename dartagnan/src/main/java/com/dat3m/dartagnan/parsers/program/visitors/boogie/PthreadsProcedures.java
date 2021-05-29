@@ -17,7 +17,6 @@ import com.dat3m.dartagnan.program.event.pthread.Join;
 import com.dat3m.dartagnan.program.event.pthread.Lock;
 import com.dat3m.dartagnan.program.event.pthread.InitLock;
 import com.dat3m.dartagnan.program.event.pthread.Unlock;
-import com.dat3m.dartagnan.program.memory.Location;
 
 public class PthreadsProcedures {
 	
@@ -77,8 +76,8 @@ public class PthreadsProcedures {
 		ExprInterface callingValue = (ExprInterface)ctx.call_params().exprs().expr().get(3).accept(visitor);
 		visitor.threadCallingValues.get(visitor.currentThread).add(callingValue);
 		visitor.pool.add(threadPtr, threadName);
-		Location loc = visitor.programBuilder.getOrCreateLocation(threadPtr + "_active", -1);
-		visitor.programBuilder.addChild(visitor.threadCount, new Create(threadPtr, threadName, loc.getAddress(), visitor.currentLine));
+		var loc = visitor.programBuilder.pointer(threadPtr + "_active", -1);
+		visitor.programBuilder.addChild(visitor.threadCount, new Create(threadPtr, threadName, loc, visitor.currentLine));
 	}
 	
 	private static void pthread_join(VisitorBoogie visitor, Call_cmdContext ctx) {
@@ -88,10 +87,10 @@ public class PthreadsProcedures {
 		if(visitor.pool.getPtrFromReg(callReg) == null) {
         	throw new UnsupportedOperationException("pthread_join cannot be handled");
 		}
-		Location loc = visitor.programBuilder.getOrCreateLocation(visitor.pool.getPtrFromReg(callReg) + "_active", -1);
+		var loc = visitor.programBuilder.pointer(visitor.pool.getPtrFromReg(callReg) + "_active", -1);
 		Register reg = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, null, -1);
        	Label label = visitor.programBuilder.getOrCreateLabel("END_OF_T" + visitor.threadCount);
-       	visitor.programBuilder.addChild(visitor.threadCount, new Join(visitor.pool.getPtrFromReg(callReg), reg, loc.getAddress(), label));
+       	visitor.programBuilder.addChild(visitor.threadCount, new Join(visitor.pool.getPtrFromReg(callReg), reg, loc, label));
 	}
 
 	private static void mutexInit(VisitorBoogie visitor, Call_cmdContext ctx) {
