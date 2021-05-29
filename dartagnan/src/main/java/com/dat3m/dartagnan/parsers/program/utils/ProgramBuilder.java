@@ -124,8 +124,8 @@ public class ProgramBuilder {
 	}
 
 	public Address pointer(String name, int precision){
-		return pointers.computeIfAbsent(name,k->memory.getOrCreateLocation(name,precision));
-    }
+		return pointers.computeIfAbsent(name,k->memory.malloc(name,1,precision).get(0));
+	}
 
     public Register getRegister(int thread, String name){
         if(threads.containsKey(thread)){

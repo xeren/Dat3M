@@ -16,14 +16,20 @@ import com.dat3m.dartagnan.program.event.Event;
 
 public class Address extends IConst implements ExprInterface {
 
-    private final int index;
+	private final Location location;
+	private final int index;
     private BigInteger constantValue;
 	private IConst initialValue;
 
-    Address(int index, int precision){
-        super(BigInteger.valueOf(index), precision);
-        this.index = index;
+	Address(Location l, int i, int p) {
+		super(BigInteger.valueOf(i),p);
+		location = l;
+		index = i;
     }
+
+	public Location getLocation() {
+		return location;
+	}
 
 	public void setInitialValue(IConst value) {
 		initialValue = value;
@@ -61,7 +67,8 @@ public class Address extends IConst implements ExprInterface {
     }
 
     public Expr getLastMemValueExpr(Context ctx){
-        return precision > 0 ? ctx.mkBVConst("last_val_at_memory_" + index, precision) : ctx.mkIntConst("last_val_at_memory_" + index);
+		var n = location.getName()+'['+index+']';
+		return precision > 0 ? ctx.mkBVConst(n,precision) : ctx.mkIntConst(n);
     }
 
     @Override
@@ -71,12 +78,12 @@ public class Address extends IConst implements ExprInterface {
 
     @Override
     public String toString(){
-        return "&mem" + index;
+		return "&"+location+'['+index+']';
     }
 
     @Override
     public int hashCode(){
-        return index;
+		return location.hashCode() ^ index;
     }
 
     @Override
@@ -87,7 +94,7 @@ public class Address extends IConst implements ExprInterface {
         if (obj == null || getClass() != obj.getClass())
             return false;
 
-        return index == ((Address)obj).index;
+		return index==((Address)obj).index && location.equals(((Address)obj).location);
     }
 
     @Override
@@ -95,7 +102,7 @@ public class Address extends IConst implements ExprInterface {
     	if(constantValue != null) {
     		return precision > 0 ? ctx.mkBV(constantValue.toString(), precision) : ctx.mkInt(constantValue.toString());
     	}
-		return precision > 0 ? ctx.mkBVConst("memory_" + index, precision) : ctx.mkIntConst("memory_" + index);
+		return precision > 0 ? ctx.mkBVConst(toString(),precision) : ctx.mkIntConst(toString());
     }
 
     @Override

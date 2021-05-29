@@ -12,19 +12,12 @@ import java.util.*;
 
 public class Memory {
 
-    private final Map<String, Location> locationIndex;
-    private final Map<String, List<Address>> arrays;
-
-    private int nextIndex = 0;
-
-    public Memory(){
-        locationIndex = new HashMap<>();
-        arrays = new HashMap<>();
-    }
+	private final HashMap<String,Location> arrays = new HashMap<>();
 
     public BoolExpr encode(Context ctx){
         BoolExpr enc = ctx.mkTrue();
-        for(List<Address> array : arrays.values()){
+		for(var l : arrays.values()){
+			var array = l.getAddress();
             Expr e1 = array.get(0).toZ3Int(ctx);
             for(int i = 1; i < array.size(); i++){
                 Expr e2 = array.get(i).toZ3Int(ctx);
@@ -44,50 +37,16 @@ public class Memory {
         return ctx.mkAnd(enc, ctx.mkDistinct(getAllAddresses().stream().map(a -> a.toZ3Int(ctx).isBV() ? ctx.mkBV2Int((BitVecExpr) a.toZ3Int(ctx), false) : a.toZ3Int(ctx)).toArray(Expr[]::new)));
     }
 
-    public List<Address> malloc(String name, int size, int precision){
-        if(!arrays.containsKey(name) && size > 0){
-            List<Address> addresses = new ArrayList<>();
-            for(int i = 0; i < size; i++){
-                addresses.add(new Address(nextIndex++, precision));
-            }
-            arrays.put(name, addresses);
-            return addresses;
-        }
-        throw new IllegalMemoryAccessException("Illegal malloc for " + name);
-    }
-
-	public Address getOrCreateLocation(String name, int precision){
-        if(!locationIndex.containsKey(name)){
-        	Address address = new Address(nextIndex++,precision);
-            Location location = new Location(name,address);
-            locationIndex.put(name, location);
-			return address;
-        }
-		return locationIndex.get(name).getAddress();
-    }
+	public List<Address> malloc(String name, int size, int precision) {
+		if(arrays.containsKey(name) || size <= 0)
+			throw new IllegalMemoryAccessException("Illegal malloc for " + name);
+		return arrays.compute(name,(k,v)->new Location(name,size,precision)).getAddress();
+	}
 
     public ImmutableSet<Address> getAllAddresses(){
 		Set<Address> result = new HashSet<>();
-		for(var a : locationIndex.values())
-			result.add(a.getAddress());
-        for(List<Address> array : arrays.values()){
-            result.addAll(array);
-        }
+		for(var array : arrays.values())
+			result.addAll(array.getAddress());
         return ImmutableSet.copyOf(result);
-    }
-
-    public boolean isArrayPointer(Address address) {
-    	return arrays.values().stream()
-        	.collect(ArrayList::new, List::addAll, List::addAll).contains(address);
-    }
-    
-    public List<Address> getArrayfromPointer(Address address) {
-    	for(List<Address> array : arrays.values()) {
-    		if(array.contains(address)) {
-    			return array;
-    		}
-    	}
-    	// This method shall be called after isArrayPointer to avoid returning null
-		return null;
     }
 }

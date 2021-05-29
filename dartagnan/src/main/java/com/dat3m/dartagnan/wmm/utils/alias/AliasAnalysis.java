@@ -178,12 +178,11 @@ public class AliasAnalysis {
             IExpr address = ((MemEvent) e).getAddress();
             Set<Address> addresses;
             if (address instanceof Register) {
-            	if(bases.containsKey(address) && program.getMemory().isArrayPointer(bases.get(address))) {
-            		if(offsets.containsKey(address)) {
-                		addresses = ImmutableSet.of(program.getMemory().getArrayfromPointer(bases.get(address)).get(offsets.get(address)));            			
-            		} else {
-                		addresses = new HashSet<>(program.getMemory().getArrayfromPointer(bases.get(address)));
-            		}
+				var b = bases.get(address);
+				if(null!=b) {
+					var a = b.getLocation().getAddress();
+					var o = offsets.get(address);
+					addresses = null!=o ? ImmutableSet.of(a.get(o)) : new HashSet<>(a);
             	} else {
             	    addresses = maxAddressSet;
             	    //TODO: This line of code is buggy. It causes many WMM benchmarks to fail
