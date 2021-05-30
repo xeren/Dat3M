@@ -51,6 +51,21 @@ public class Address extends IConst implements ExprInterface {
      	this.constantValue = value;
      }
 
+	public Address add(int offset) {
+		//offset==0 accelerates the most likely case
+		return offset==0 ? this : location.get(index+offset);
+	}
+
+	public boolean valid() {
+		return 0 <= index && index < location.getAddress().size();
+	}
+
+	public boolean mayAlias(Address other) {
+		if(location.equals(other.location))
+			return index == other.index;
+		return !valid() || !other.valid();
+	}
+
     @Override
     public ImmutableSet<Register> getRegs(){
         return ImmutableSet.of();

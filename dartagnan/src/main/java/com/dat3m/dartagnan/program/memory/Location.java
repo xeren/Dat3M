@@ -10,11 +10,17 @@ public class Location {
 	public static final BigInteger DEFAULT_INIT_VALUE = BigInteger.ZERO;
 
 	private final String name;
+	private final int precision;
 	private final List<Address> address;
 
-	public Location(String n, int s, int p) {
+	Location(String n, int s, int p) {
 		name = n;
-		this.address = IntStream.range(0,s).mapToObj(i->new Address(this,i,p)).collect(Collectors.toUnmodifiableList());
+		precision = p;
+		address = IntStream.range(0,s).mapToObj(i->new Address(this,i,p)).collect(Collectors.toUnmodifiableList());
+	}
+
+	public Address get(int index) {
+		return 0 <= index && index < address.size() ? address.get(index) : new Address(this,index,precision);
 	}
 
 	public String getName() {
