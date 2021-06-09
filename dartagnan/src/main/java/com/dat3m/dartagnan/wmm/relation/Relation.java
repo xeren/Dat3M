@@ -80,10 +80,6 @@ public abstract class Relation implements Dependent<Relation> {
 
     public abstract TupleSet getMaxTupleSet();
 
-    public TupleSet getMinTupleSetRecursive(){
-        return getMinTupleSet();
-    }
-
     public TupleSet getMaxTupleSetRecursive(){
         return getMaxTupleSet();
     }

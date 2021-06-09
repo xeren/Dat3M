@@ -55,18 +55,6 @@ public class RelComposition extends BinaryRelation {
     }
 
     @Override
-    public TupleSet getMinTupleSetRecursive(){
-        if(recursiveGroupId > 0 && maxTupleSet != null){
-            BranchEquivalence eq = task.getBranchEquivalence();
-            minTupleSet = r1.getMinTupleSetRecursive().postComposition(r2.getMinTupleSetRecursive(),
-                    (t1, t2) -> t1.getSecond().cfImpliesExec() && eq.isImplied(t1.getFirst(), t1.getSecond()) || eq.isImplied(t2.getSecond(), t1.getSecond()));
-            removeMutuallyExclusiveTuples(minTupleSet);
-            return minTupleSet;
-        }
-        return getMinTupleSet();
-    }
-
-    @Override
     public TupleSet getMaxTupleSetRecursive(){
         if(recursiveGroupId > 0 && maxTupleSet != null){
             BranchEquivalence eq = task.getBranchEquivalence();

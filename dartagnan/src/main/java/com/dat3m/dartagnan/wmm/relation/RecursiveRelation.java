@@ -72,16 +72,6 @@ public class RecursiveRelation extends Relation {
     }
 
     @Override
-    public TupleSet getMinTupleSetRecursive(){
-        if(doRecurse){
-            doRecurse = false;
-            minTupleSet = r1.getMinTupleSetRecursive();
-            return minTupleSet;
-        }
-        return getMinTupleSet();
-    }
-
-    @Override
     public TupleSet getMaxTupleSetRecursive(){
         if(doRecurse){
             doRecurse = false;
