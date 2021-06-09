@@ -44,21 +44,6 @@ public class RecursiveGroup {
         }
     }
 
-    public void initMinTupleSets(){
-        boolean changed = true;
-
-        while(changed){
-            changed = false;
-            for(RecursiveRelation relation : relations){
-                relation.setDoRecurse();
-                int oldSize = relation.getMinTupleSet().size();
-                if(oldSize != relation.getMinTupleSetRecursive().size()){
-                    changed = true;
-                }
-            }
-        }
-    }
-
     public void updateEncodeTupleSets(){
         Map<Relation, Integer> encodeSetSizes = new HashMap<>();
         for(Relation relation : relations){
