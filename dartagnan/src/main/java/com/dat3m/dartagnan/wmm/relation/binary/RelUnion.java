@@ -3,7 +3,6 @@ package com.dat3m.dartagnan.wmm.relation.binary;
 import com.google.common.collect.Sets;
 import com.microsoft.z3.BoolExpr;
 
-import com.dat3m.dartagnan.wmm.utils.Utils;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -79,47 +78,6 @@ public class RelUnion extends BinaryRelation {
                 enc = ctx.mkAnd(enc, ctx.mkImplies(ctx.mkOr(opt1, opt2), this.getSMTVar(tuple, ctx)));
             } else {
                 enc = ctx.mkAnd(enc, ctx.mkEq(this.getSMTVar(tuple, ctx), ctx.mkOr(opt1, opt2)));
-            }
-        }
-        return enc;
-    }
-
-    @Override
-    public BoolExpr encodeIteration(int groupId, int iteration, Context ctx){
-        BoolExpr enc = ctx.mkTrue();
-
-        if((groupId & recursiveGroupId) > 0 && iteration > lastEncodedIteration){
-            lastEncodedIteration = iteration;
-
-            String name = this.getName() + "_" + iteration;
-
-            if(iteration == 0 && isRecursive){
-                for(Tuple tuple : encodeTupleSet){
-                    enc = ctx.mkAnd(ctx.mkNot(Utils.edge(name, tuple.getFirst(), tuple.getSecond(), ctx)));
-                }
-            } else {
-                int childIteration = isRecursive ? iteration - 1 : iteration;
-
-                boolean recurseInR1 = (r1.getRecursiveGroupId() & groupId) > 0;
-                boolean recurseInR2 = (r2.getRecursiveGroupId() & groupId) > 0;
-
-                String r1Name = recurseInR1 ? r1.getName() + "_" + childIteration : r1.getName();
-                String r2Name = recurseInR2 ? r2.getName() + "_" + childIteration : r2.getName();
-
-                for(Tuple tuple : encodeTupleSet){
-                    BoolExpr edge = Utils.edge(name, tuple.getFirst(), tuple.getSecond(), ctx);
-                    BoolExpr opt1 = Utils.edge(r1Name, tuple.getFirst(), tuple.getSecond(), ctx);
-                    BoolExpr opt2 = Utils.edge(r2Name, tuple.getFirst(), tuple.getSecond(), ctx);
-                    enc = ctx.mkAnd(enc, ctx.mkEq(edge, ctx.mkOr(opt1, opt2)));
-                }
-
-                if(recurseInR1){
-                    enc = ctx.mkAnd(enc, r1.encodeIteration(groupId, childIteration, ctx));
-                }
-
-                if(recurseInR2){
-                    enc = ctx.mkAnd(enc, r2.encodeIteration(groupId, childIteration, ctx));
-                }
             }
         }
         return enc;

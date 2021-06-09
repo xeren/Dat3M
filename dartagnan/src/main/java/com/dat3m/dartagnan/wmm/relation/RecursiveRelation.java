@@ -3,8 +3,6 @@ package com.dat3m.dartagnan.wmm.relation;
 import com.dat3m.dartagnan.verification.VerificationTask;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
-import com.dat3m.dartagnan.wmm.utils.Utils;
-import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 import java.util.Collections;
@@ -138,25 +136,5 @@ public class RecursiveRelation extends Relation {
     @Override
     protected BoolExpr encodeApprox(Context ctx) {
         return r1.encodeApprox(ctx);
-    }
-
-    @Override
-    public BoolExpr encodeIteration(int recGroupId, int iteration, Context ctx){
-        if(doRecurse){
-            doRecurse = false;
-            return r1.encodeIteration(recGroupId, iteration, ctx);
-        }
-        return ctx.mkTrue();
-    }
-
-    public BoolExpr encodeFinalIteration(int iteration, Context ctx){
-        BoolExpr enc = ctx.mkTrue();
-        for(Tuple tuple : encodeTupleSet){
-            enc = ctx.mkAnd(enc, ctx.mkEq(
-                    this.getSMTVar(tuple, ctx),
-                    Utils.edge(getName() + "_" + iteration, tuple.getFirst(), tuple.getSecond(), ctx)
-            ));
-        }
-        return enc;
     }
 }

@@ -147,10 +147,6 @@ public abstract class Relation implements Dependent<Relation> {
 
     protected abstract BoolExpr encodeApprox(Context ctx);
 
-    public BoolExpr encodeIteration(int recGroupId, int iteration, Context ctx){
-        return ctx.mkTrue();
-    }
-
     protected BoolExpr doEncode(Context ctx){
         if(!encodeTupleSet.isEmpty() || forceDoEncode){
         	return encodeApprox(ctx);
