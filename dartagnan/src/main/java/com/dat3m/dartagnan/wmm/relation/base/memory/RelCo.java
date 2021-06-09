@@ -35,7 +35,7 @@ public class RelCo extends Relation {
     public TupleSet getMinTupleSet(){
         if(minTupleSet == null){
             minTupleSet = new TupleSet();
-            applyLocalConsistencyMinSet();
+            applyLocalConsistencyMinSet(minTupleSet);
         }
         return minTupleSet;
     }
@@ -79,6 +79,9 @@ public class RelCo extends Relation {
     protected BoolExpr encodeApprox(Context ctx) {
         BoolExpr enc = ctx.mkTrue();
 
+        var minTupleSet = new TupleSet();
+        applyLocalConsistencyMinSet(minTupleSet);
+
         List<Event> eventsInit = task.getProgram().getCache().getEvents(FilterBasic.get(INIT));
         List<Event> eventsStore = task.getProgram().getCache().getEvents(FilterMinus.get(
                 FilterBasic.get(WRITE),
@@ -115,7 +118,7 @@ public class RelCo extends Relation {
                 )));
 
                 // ============ Local consistency optimizations ============
-                if (getMinTupleSet().contains(t)) {
+                if (minTupleSet.contains(t)) {
                    enc = ctx.mkAnd(enc, ctx.mkEq(relation, execPair));
                 } else if (task.getMemoryModel().isLocallyConsistent()) {
                     if (w2.is(INIT) || t.isBackward()){
@@ -141,7 +144,7 @@ public class RelCo extends Relation {
         return enc;
     }
 
-    private void applyLocalConsistencyMinSet() {
+    private void applyLocalConsistencyMinSet(TupleSet s) {
         if (task.getMemoryModel().isLocallyConsistent()) {
             for (Tuple t : getMaxTupleSet()) {
                 MemEvent w1 = (MemEvent) t.getFirst();
@@ -153,7 +156,7 @@ public class RelCo extends Relation {
                     continue;
 
                 if (w1.is(INIT) || t.isForward())
-                    minTupleSet.add(t);
+                    s.add(t);
             }
         }
     }
