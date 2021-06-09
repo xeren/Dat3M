@@ -89,7 +89,6 @@ public class RelComposition extends BinaryRelation {
     public void addEncodeTupleSet(TupleSet tuples){
         Set<Tuple> activeSet = new HashSet<>(Sets.intersection(Sets.difference(tuples, encodeTupleSet), maxTupleSet));
         encodeTupleSet.addAll(activeSet);
-        activeSet.removeAll(getMinTupleSet());
 
         if(!activeSet.isEmpty()){
             TupleSet r1Set = new TupleSet();
@@ -127,16 +126,11 @@ public class RelComposition extends BinaryRelation {
 
         TupleSet r1Set = r1.getEncodeTupleSet();
         TupleSet r2Set = r2.getEncodeTupleSet();
-        TupleSet minSet = getMinTupleSet();
 
         //TODO: Fix this abuse of hashCode
         Map<Integer, BoolExpr> exprMap = new HashMap<>();
         for(Tuple tuple : encodeTupleSet){
-            if (minSet.contains(tuple)) {
-                exprMap.put(tuple.hashCode(), getExecPair(tuple, ctx));
-            } else {
                 exprMap.put(tuple.hashCode(), ctx.mkFalse());
-            }
         }
 
         for(Tuple tuple1 : r1Set){
@@ -144,9 +138,6 @@ public class RelComposition extends BinaryRelation {
             Event e3 = tuple1.getSecond();
             for(Tuple tuple2 : r2Set.getByFirst(e3)){
                 Event e2 = tuple2.getSecond();
-                if (minSet.contains(new Tuple(e1, e2))) {
-                    continue;
-                }
 
                 int id = Tuple.toHashCode(e1.getCId(), e2.getCId());
                 if(exprMap.containsKey(id)){
