@@ -21,18 +21,8 @@ abstract class BasicRegRelation extends StaticRelation {
 
     abstract Collection<Register> getRegisters(Event regReader);
 
-    @Override
-    public TupleSet getMinTupleSet(){
-        if(minTupleSet == null){
-            minTupleSet = new TupleSet();
-            //TODO
-        }
-        return minTupleSet;
-    }
-
     void mkTupleSets(Collection<Event> regReaders) {
         maxTupleSet = new TupleSet();
-        minTupleSet = new TupleSet();
         BranchEquivalence eq = task.getBranchEquivalence();
         ImmutableMap<Register, ImmutableList<Event>> regWriterMap = task.getProgram().getCache().getRegWriterMap();
         for(Event regReader : regReaders){
@@ -53,9 +43,6 @@ abstract class BasicRegRelation extends StaticRelation {
                 }
                 possibleWriters.removeIf(x -> possibleWriters.stream().anyMatch(y -> (x.getCId() < y.getCId()) && eq.isImplied(x ,y)));
 
-                if (possibleWriters.size() == 1) {
-                    minTupleSet.add(new Tuple(possibleWriters.stream().findAny().get(), regReader));
-                }
                 for(Event regWriter : possibleWriters){
                     maxTupleSet.add(new Tuple(regWriter, regReader));
                 }

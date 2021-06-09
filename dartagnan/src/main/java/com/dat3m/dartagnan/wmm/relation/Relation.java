@@ -32,7 +32,6 @@ public abstract class Relation implements Dependent<Relation> {
 
     protected boolean isEncoded;
 
-    protected TupleSet minTupleSet;
     protected TupleSet maxTupleSet;
     protected TupleSet encodeTupleSet;
 
@@ -67,16 +66,10 @@ public abstract class Relation implements Dependent<Relation> {
 
     public void initialise(VerificationTask task, Context ctx){
         this.task = task;
-        this.minTupleSet = null;
         this.maxTupleSet = null;
         this.isEncoded = false;
         encodeTupleSet = new TupleSet();
     }
-
-    /*
-    TODO: getMinTupleSet is no yet used extensively
-     */
-    public abstract TupleSet getMinTupleSet();
 
     public abstract TupleSet getMaxTupleSet();
 

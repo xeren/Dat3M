@@ -30,14 +30,6 @@ public class RelInverse extends UnaryRelation {
     }
 
     @Override
-    public TupleSet getMinTupleSet(){
-        if(minTupleSet == null){
-            minTupleSet = r1.getMinTupleSet().inverse();
-        }
-        return minTupleSet;
-    }
-
-    @Override
     public TupleSet getMaxTupleSet(){
         if(maxTupleSet == null){
             maxTupleSet = r1.getMaxTupleSet().inverse();

@@ -46,17 +46,6 @@ public class RelTransRef extends RelTrans {
     }
 
     @Override
-    public TupleSet getMinTupleSet(){
-        if(minTupleSet == null){
-            super.getMinTupleSet();
-            for(Event e : task.getProgram().getCache().getEvents(FilterBasic.get(EType.VISIBLE))){
-                minTupleSet.add(new Tuple(e, e));
-            }
-        }
-        return minTupleSet;
-    }
-
-    @Override
     public TupleSet getMaxTupleSet(){
         if(maxTupleSet == null){
             super.getMaxTupleSet();

@@ -27,14 +27,6 @@ public abstract class StaticRelation extends Relation {
     }
 
     @Override
-    public TupleSet getMinTupleSet(){
-        if(minTupleSet == null){
-            minTupleSet = getMaxTupleSet();
-        }
-        return minTupleSet;
-    }
-
-    @Override
     protected BoolExpr encodeApprox(Context ctx) {
         BoolExpr enc = ctx.mkTrue();
         for(Tuple tuple : encodeTupleSet) {

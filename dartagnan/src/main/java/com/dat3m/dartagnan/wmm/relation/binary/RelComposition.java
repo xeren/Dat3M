@@ -35,17 +35,6 @@ public class RelComposition extends BinaryRelation {
     }
 
     @Override
-    public TupleSet getMinTupleSet(){
-        if(minTupleSet == null){
-            BranchEquivalence eq = task.getBranchEquivalence();
-            minTupleSet = r1.getMinTupleSet().postComposition(r2.getMinTupleSet(),
-                    (t1, t2) -> t1.getSecond().cfImpliesExec() && eq.isImplied(t1.getFirst(), t1.getSecond()) || eq.isImplied(t2.getSecond(), t1.getSecond()));
-            removeMutuallyExclusiveTuples(minTupleSet);
-        }
-        return minTupleSet;
-    }
-
-    @Override
     public TupleSet getMaxTupleSet(){
         if(maxTupleSet == null){
             maxTupleSet = r1.getMaxTupleSet().postComposition(r2.getMaxTupleSet());
