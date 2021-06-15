@@ -13,6 +13,8 @@ import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.relation.RecursiveRelation;
 import com.dat3m.dartagnan.wmm.relation.Relation;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 
@@ -21,6 +23,8 @@ import java.util.*;
  * @author Florian Furbach
  */
 public class Wmm {
+
+	private static final Logger logger = LogManager.getLogger(Wmm.class);
 
     private final static ImmutableSet<String> baseRelations = ImmutableSet.of("co", "rf", "idd", "addrDirect");
 
@@ -150,6 +154,10 @@ public class Wmm {
         for(RecursiveGroup recursiveGroup : recursiveGroups){
             recursiveGroup.updateEncodeTupleSets();
         }
+
+		var l = relationRepository.getRelations();
+		logger.info("maximal tuples: "+l.stream().mapToInt(r->r.getMaxTupleSet().size()).sum());
+		logger.info("encoded tuples: "+l.stream().mapToInt(r->r.getEncodeTupleSet().size()).sum());
 
         BoolExpr enc = ctx.mkTrue();
         for(String relName : baseRelations){

@@ -16,6 +16,8 @@ import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
 import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.program.memory.Location;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 
@@ -25,6 +27,8 @@ import java.util.*;
  */
 public class AliasAnalysis {
 
+	private static final Logger logger = LogManager.getLogger(AliasAnalysis.class);
+
     private List<Object> variables = new LinkedList<>();
     private ImmutableSet<Address> maxAddressSet;
     private Map<Register, Map<Event, Integer>> ssaMap;
@@ -32,17 +36,16 @@ public class AliasAnalysis {
     private Graph graph = new Graph();
 
     public void calculateLocationSets(Program program, Alias alias) {
+		maxAddressSet = program.getMemory().getAllAddresses();
         if(alias == Alias.NONE){
             calculateLocationSetsNoAlias(program);
         } else if (alias == Alias.CFS){
-            maxAddressSet = program.getMemory().getAllAddresses();
             ssaMap = getRegSsaMap(program);
             cfsProcessLocs(program);
             cfsProcessRegs(program);
             cfsAlgorithm(program);
             processResults(program);
         } else {
-            maxAddressSet = program.getMemory().getAllAddresses();
             processLocs(program);
             //TODO this is broken because it assumes that if e1:r1 <- &mem1 and e3:r2 <- r1, then r2 points to mem1.
             // But we can have later r2 <- &mem2 with a back jump to e2 (between e1 and e3) and thus r2 points to mem1 or mem2
@@ -52,6 +55,10 @@ public class AliasAnalysis {
             algorithm(program);
             processResults(program);
         }
+		var m = program.getCache().getEvents(FilterBasic.get(EType.MEMORY));
+		var max = maxAddressSet.size();
+		logger.info("events with all addresses: "+m.stream().filter(e->max==((MemEvent)e).getMaxAddressSet().size()).count());
+		logger.info("events with unique address: "+m.stream().filter(e->1==((MemEvent)e).getMaxAddressSet().size()).count());
     }
 
     private void processLocs(Program program) {
@@ -326,7 +333,6 @@ public class AliasAnalysis {
     }
 
     private void calculateLocationSetsNoAlias(Program program) {
-        ImmutableSet<Address> maxAddressSet = program.getMemory().getAllAddresses();
         for (Event e : program.getCache().getEvents(FilterBasic.get(EType.MEMORY))) {
             IExpr address = ((MemEvent) e).getAddress();
             if (address instanceof Address) {
