@@ -39,7 +39,7 @@ public class Base {
         solver.add(task.encodeAssertions(ctx));
         solver.add(task.encodeWitness(ctx));
 
-		logger.info("Analysis time: "+(System.nanoTime()-t0));
+		logger.info("Analysis duration: "+(System.nanoTime()-t0));
 
 		if(task.getSettings().hasSolverTimeout()) {
 			Params p = ctx.mkParams();
@@ -51,7 +51,11 @@ public class Base {
 
         Result res = Result.UNKNOWN;
         logger.info("Starting first solver.check()");
-        switch(solver.check()) {
+		var r = solver.check();
+		for(var s : solver.getStatistics().getEntries())
+			logger.info(s);
+
+		switch(r) {
         case UNKNOWN:
         	res = solver.getReasonUnknown().equals("canceled") ? TIMEOUT : Result.UNKNOWN;
         	break;
@@ -74,7 +78,7 @@ public class Base {
             	break;
 			}
         	break;
-        }
+		}
         res = task.getProgram().getAss().getInvert() ? res.invert() : res;
         logger.info("Verification finished with result " + res);
 		return res;
@@ -120,7 +124,7 @@ public class Base {
 
         BoolExpr encodeNoBoundEventExec = program.encodeNoBoundEventExec(ctx);
 
-		logger.info("Analysis time: "+(System.nanoTime()-t0));
+		logger.info("Analysis duration: "+(System.nanoTime()-t0));
 
 		if(task.getSettings().hasSolverTimeout()) {
 			Params p = ctx.mkParams();
@@ -135,7 +139,11 @@ public class Base {
 
 		Result res = Result.UNKNOWN;
         logger.info("Starting first solver.check()");
-        switch(s1.check()) {
+		var r = s1.check();
+		for(var s : s1.getStatistics().getEntries())
+			logger.info(s);
+
+		switch(r) {
         case UNKNOWN:
         	res = s1.getReasonUnknown().equals("canceled") ? TIMEOUT : Result.UNKNOWN;
         	break;
@@ -157,7 +165,7 @@ public class Base {
 				break;
 			}
 			break;
-        }
+		}
         res = task.getProgram().getAss().getInvert() ? res.invert() : res;
         logger.info("Verification finished with result " + res);
         return res;
@@ -179,7 +187,7 @@ public class Base {
 		solver.add(task.encodeWmmConsistency(ctx));
         solver.add(task.encodeWitness(ctx));
 
-		logger.info("Analysis time: "+(System.nanoTime()-t0));
+		logger.info("Analysis duration: "+(System.nanoTime()-t0));
 
 		if(task.getSettings().hasSolverTimeout()) {
 			Params p = ctx.mkParams();
@@ -191,7 +199,11 @@ public class Base {
 
 		Result res = Result.UNKNOWN;
 		logger.info("Starting first solver.check()");
-		switch(solver.check(task.encodeAssertions(ctx))) {
+		var r = solver.check(task.encodeAssertions(ctx));
+		for(var s : solver.getStatistics().getEntries())
+			logger.info(s);
+
+		switch(r) {
 			case UNKNOWN:
 				res = solver.getReasonUnknown().equals("canceled") ? TIMEOUT : Result.UNKNOWN;
 				break;
