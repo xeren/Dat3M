@@ -21,6 +21,7 @@ public class Base {
     private static final Logger logger = LogManager.getLogger(Base.class);
 
     public static Result runAnalysisIncrementalSolver(Solver solver, Context ctx, VerificationTask task) {
+		long t0 = System.nanoTime();
         task.unrollAndCompile();
        	if(task.getProgram().getAss() instanceof AssertTrue) {
             logger.info("Verification finished: assertion trivialy holds");
@@ -37,7 +38,9 @@ public class Base {
         solver.push();
         solver.add(task.encodeAssertions(ctx));
         solver.add(task.encodeWitness(ctx));
-        
+
+		logger.info("Analysis time: "+(System.nanoTime()-t0));
+
 		if(task.getSettings().hasSolverTimeout()) {
 			Params p = ctx.mkParams();
 			p.add("timeout", 1000*task.getSettings().getSolverTimeout());
@@ -78,6 +81,7 @@ public class Base {
     }
 
     public static Result runAnalysis(Solver s1, Context ctx, VerificationTask task) {
+		long t0 = System.nanoTime();
         Program program = task.getProgram();
     	task.unrollAndCompile();
        	if(task.getProgram().getAss() instanceof AssertTrue) {
@@ -115,6 +119,8 @@ public class Base {
         s1.add(task.encodeWitness(ctx));
 
         BoolExpr encodeNoBoundEventExec = program.encodeNoBoundEventExec(ctx);
+
+		logger.info("Analysis time: "+(System.nanoTime()-t0));
 
 		if(task.getSettings().hasSolverTimeout()) {
 			Params p = ctx.mkParams();
@@ -158,6 +164,7 @@ public class Base {
     }
 	
 	public static Result runAnalysisAssumeSolver(Solver solver, Context ctx, VerificationTask task) {
+		long t0 = System.nanoTime();
 		task.unrollAndCompile();
 		if(task.getProgram().getAss() instanceof AssertTrue) {
 			logger.info("Verification finished: assertion trivially holds");
@@ -171,6 +178,8 @@ public class Base {
 		solver.add(task.encodeWmmRelations(ctx));
 		solver.add(task.encodeWmmConsistency(ctx));
         solver.add(task.encodeWitness(ctx));
+
+		logger.info("Analysis time: "+(System.nanoTime()-t0));
 
 		if(task.getSettings().hasSolverTimeout()) {
 			Params p = ctx.mkParams();
