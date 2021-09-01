@@ -42,11 +42,6 @@ public class INonDet extends IExpr implements ExprInterface {
 	public INonDetTypes getType() {
 		return type;
 	}
-	
-	@Override
-	public IConst reduce() {
-        throw new UnsupportedOperationException("Reduce not supported for " + this);
-	}
 
 	@Override
 	public Formula toIntFormula(Event e, SolverContext ctx) {

@@ -17,11 +17,6 @@ public class BNonDet extends BExpr implements ExprInterface {
 	public BNonDet(int precision) {
 		this.precision = precision;
 	}
-	
-	@Override
-	public IConst reduce() {
-        throw new UnsupportedOperationException("Reduce not supported for " + this);
-	}
 
     @Override
     public Formula toIntFormula(Event e, SolverContext ctx) {

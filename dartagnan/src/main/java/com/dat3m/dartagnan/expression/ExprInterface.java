@@ -15,30 +15,36 @@ import com.dat3m.dartagnan.program.event.Event;
 
 public interface ExprInterface {
 
-	IConst reduce();
-	
-    Formula toIntFormula(Event e, SolverContext ctx);
+	Formula toIntFormula(Event e, SolverContext ctx);
 
-    BooleanFormula toBoolFormula(Event e, SolverContext ctx);
+	BooleanFormula toBoolFormula(Event e, SolverContext ctx);
 
-    Formula getLastValueExpr(SolverContext ctx);
+	Formula getLastValueExpr(SolverContext ctx);
 
-    BigInteger getIntValue(Event e, Model model, SolverContext ctx);
+	BigInteger getIntValue(Event e, Model model, SolverContext ctx);
 
-    boolean getBoolValue(Event e, Model model, SolverContext ctx);
+	boolean getBoolValue(Event e, Model model, SolverContext ctx);
 
-    ImmutableSet<Register> getRegs();
+	ImmutableSet<Register> getRegs();
 
-    default ImmutableSet<Location> getLocs() {
-    	return ImmutableSet.of();
-    }
-    
-    int getPrecision();
-    
-    IExpr getBase();
+	default ImmutableSet<Location> getLocs() {
+		return ImmutableSet.of();
+	}
 
-    <T> T visit(ExpressionVisitor<T> visitor);
+	default IConst reduce() {
+		throw new UnsupportedOperationException("Reduce not supported for " + this);
+	}
 
-    //default ExprInterface simplify() { return visit(ExprSimplifier.SIMPLIFIER); }
-    
+	default int getPrecision() {
+		throw new UnsupportedOperationException("getPrecision() not supported for " + this);
+	}
+
+	default IExpr getBase() {
+		throw new UnsupportedOperationException("getBase not supported for " + this);
+	}
+
+	<T> T visit(ExpressionVisitor<T> visitor);
+
+	//default ExprInterface simplify() { return visit(ExprSimplifier.SIMPLIFIER); }
+
 }

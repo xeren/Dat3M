@@ -13,8 +13,6 @@ import org.sosy_lab.java_smt.api.NumeralFormula.IntegerFormula;
 import org.sosy_lab.java_smt.api.SolverContext;
 
 import com.dat3m.dartagnan.expression.ExprInterface;
-import com.dat3m.dartagnan.expression.IConst;
-import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Init;
@@ -125,17 +123,7 @@ public class Location implements ExprInterface {
 	}
 
 	@Override
-	public IConst reduce() {
-		throw new UnsupportedOperationException("Reduce not supported for " + this);
-	}
-
-	@Override
 	public int getPrecision() {
 		return address.getPrecision();
-	}
-
-	@Override
-	public IExpr getBase() {
-		throw new UnsupportedOperationException("getBase not supported for " + this);
 	}
 }

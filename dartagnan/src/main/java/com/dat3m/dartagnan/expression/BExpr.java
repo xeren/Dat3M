@@ -25,12 +25,7 @@ public abstract class BExpr implements ExprInterface {
     public BigInteger getIntValue(Event e, Model model, SolverContext ctx){
         return getBoolValue(e, model, ctx) ? BigInteger.ONE : BigInteger.ZERO;
     }
-    
-	@Override
-	public int getPrecision() {
-		throw new UnsupportedOperationException("getPrecision() not supported for " + this);
-	}
-	
+
 	@Override
 	public IExpr getBase() {
 		return null;

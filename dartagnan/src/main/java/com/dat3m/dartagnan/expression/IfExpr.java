@@ -93,11 +93,6 @@ public class IfExpr implements ExprInterface {
 		}
 		return tbranch.getPrecision();
 	}
-	
-	@Override
-	public IExpr getBase() {
-		throw new UnsupportedOperationException("getBase not supported for " + this);
-	}
 
 	@Override
 	public <T> T visit(ExpressionVisitor<T> visitor) {
