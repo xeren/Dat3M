@@ -35,6 +35,20 @@ public interface ExprInterface {
 		throw new UnsupportedOperationException("Reduce not supported for " + this);
 	}
 
+	/**
+	 * Checks syntactically if this expression always results in {@literal true} if coerced to boolean.
+	 */
+	default boolean isTrue() {
+		return false;
+	}
+
+	/**
+	 * Checks syntactically if this expression always results in {@literal false} if coerced to boolean.
+	 */
+	default boolean isFalse() {
+		return false;
+	}
+
 	default int getPrecision() {
 		throw new UnsupportedOperationException("getPrecision() not supported for " + this);
 	}

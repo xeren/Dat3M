@@ -110,7 +110,7 @@ public class EventFactory {
         return new Label(name);
     }
 
-    public static CondJump newJump(BExpr cond, Label target) {
+    public static CondJump newJump(ExprInterface cond, Label target) {
         return new CondJump(cond, target);
     }
 
@@ -118,7 +118,7 @@ public class EventFactory {
         return newJump(new BExprUn(BOpUn.NOT, cond), target);
     }
 
-    public static IfAsJump newIfJump(BExpr expr, Label label, Label end) {
+    public static IfAsJump newIfJump(ExprInterface expr, Label label, Label end) {
         return new IfAsJump(expr, label, end);
     }
 

@@ -504,7 +504,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 			} else {
 				pairingLabel = pairLabels.get(currentLabel);
 			}
-			BExpr c = (BExpr)ctx.proposition().expr().accept(this);
+			var c = (ExprInterface)ctx.proposition().expr().accept(this);
 			if(c != null) {
 				programBuilder.addChild(threadCount, EventFactory.newJumpUnless(c, pairingLabel));
 			}
@@ -732,7 +732,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 
 	@Override
 	public Object visitIf_then_else_expr(If_then_else_exprContext ctx) {
-		BExpr guard = (BExpr)ctx.expr(0).accept(this);
+		var guard = (ExprInterface)ctx.expr(0).accept(this);
 		ExprInterface tbranch = (ExprInterface)ctx.expr(1).accept(this);
 		ExprInterface fbranch = (ExprInterface)ctx.expr(2).accept(this);
 		return new IfExpr(guard, tbranch, fbranch);

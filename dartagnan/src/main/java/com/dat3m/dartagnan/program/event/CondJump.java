@@ -2,7 +2,7 @@ package com.dat3m.dartagnan.program.event;
 
 import com.dat3m.dartagnan.GlobalSettings;
 import com.dat3m.dartagnan.expression.BConst;
-import com.dat3m.dartagnan.expression.BExpr;
+import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.program.EventFactory;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.Thread;
@@ -22,10 +22,10 @@ public class CondJump extends Event implements RegReaderData {
 
     private Label label;
     private Label label4Copy;
-    private final BExpr expr;
+    private final ExprInterface expr;
     private final ImmutableSet<Register> dataRegs;
 
-    public CondJump(BExpr expr, Label label){
+    public CondJump(ExprInterface expr, Label label){
         if(label == null){
             throw new IllegalArgumentException("CondJump event requires non null label event");
         }
@@ -58,7 +58,7 @@ public class CondJump extends Event implements RegReaderData {
         return label;
     }
 
-    public BExpr getGuard(){
+    public ExprInterface getGuard(){
         return expr;
     }
 

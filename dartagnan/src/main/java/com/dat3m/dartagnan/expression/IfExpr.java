@@ -15,11 +15,11 @@ import com.google.common.collect.ImmutableSet;
 
 public class IfExpr implements ExprInterface {
 
-	private final BExpr guard;
+	private final ExprInterface guard;
 	private final ExprInterface tbranch;
 	private final ExprInterface fbranch;
 	
-	public IfExpr(BExpr guard, ExprInterface tbranch, ExprInterface fbranch) {
+	public IfExpr(ExprInterface guard, ExprInterface tbranch, ExprInterface fbranch) {
 		this.guard =  guard;
 		this.tbranch = tbranch;
 		this.fbranch = fbranch;
@@ -74,7 +74,7 @@ public class IfExpr implements ExprInterface {
 		return guard.reduce().getIntValue().signum() == 1 ? tbranch.reduce() : fbranch.reduce();
 	}
 	
-	public BExpr getGuard() {
+	public ExprInterface getGuard() {
 		return guard;
 	}
 

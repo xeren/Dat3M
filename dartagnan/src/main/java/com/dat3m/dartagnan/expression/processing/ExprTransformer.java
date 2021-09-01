@@ -14,22 +14,22 @@ public abstract class ExprTransformer implements ExpressionVisitor<ExprInterface
     }
 
     @Override
-    public BExpr visit(BConst bConst) {
+    public ExprInterface visit(BConst bConst) {
         return bConst;
     }
 
     @Override
-    public BExpr visit(BExprBin bBin) {
+    public ExprInterface visit(BExprBin bBin) {
         return new BExprBin(bBin.getLHS().visit(this), bBin.getOp(), bBin.getRHS().visit(this));
     }
 
     @Override
-    public BExpr visit(BExprUn bUn) {
+    public ExprInterface visit(BExprUn bUn) {
         return new BExprUn(bUn.getOp(), bUn.getInner().visit(this));
     }
 
     @Override
-    public BExpr visit(BNonDet bNonDet) {
+    public ExprInterface visit(BNonDet bNonDet) {
         return bNonDet;
     }
 
@@ -50,7 +50,7 @@ public abstract class ExprTransformer implements ExpressionVisitor<ExprInterface
 
     @Override
     public ExprInterface visit(IfExpr ifExpr) {
-        return new IfExpr((BExpr)ifExpr.getGuard().visit(this), ifExpr.getTrueBranch().visit(this), ifExpr.getFalseBranch().visit(this));
+        return new IfExpr(ifExpr.getGuard().visit(this), ifExpr.getTrueBranch().visit(this), ifExpr.getFalseBranch().visit(this));
     }
 
     @Override

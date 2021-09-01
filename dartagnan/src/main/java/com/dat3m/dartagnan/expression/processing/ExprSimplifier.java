@@ -26,14 +26,14 @@ public class ExprSimplifier extends ExprTransformer {
     }
 
     @Override
-    public BExpr visit(BConst bConst) {
+    public BConst visit(BConst bConst) {
         return bConst;
     }
 
     @Override
-    public BExpr visit(BExprBin bBin) {
-        BExpr lhs = (BExpr) bBin.getLHS().visit(this);
-        BExpr rhs = (BExpr) bBin.getRHS().visit(this);
+    public ExprInterface visit(BExprBin bBin) {
+        var lhs = bBin.getLHS().visit(this);
+        var rhs = bBin.getRHS().visit(this);
         switch (bBin.getOp()) {
             case OR:
                 if (lhs.isTrue() || rhs.isTrue()) {
@@ -58,19 +58,19 @@ public class ExprSimplifier extends ExprTransformer {
     }
 
     @Override
-    public BExpr visit(BExprUn bUn) {
-        BExpr inner = (BExpr) bUn.getInner().visit(this);
+    public ExprInterface visit(BExprUn bUn) {
+        var inner = bUn.getInner().visit(this);
         if (inner instanceof BConst) {
             return inner.isTrue() ? BConst.FALSE : BConst.TRUE;
         }
         if (inner instanceof BExprUn && bUn.getOp() == BOpUn.NOT) {
-            return (BExpr) ((BExprUn)inner).getInner();
+            return ((BExprUn)inner).getInner();
         }
         return new BExprUn(bUn.getOp(), inner);
     }
 
     @Override
-    public BExpr visit(BNonDet bNonDet) {
+    public ExprInterface visit(BNonDet bNonDet) {
         return bNonDet;
     }
 
@@ -123,7 +123,7 @@ public class ExprSimplifier extends ExprTransformer {
 
     @Override
     public ExprInterface visit(IfExpr ifExpr) {
-        BExpr cond = (BExpr) ifExpr.getGuard().visit(this);
+        var cond = ifExpr.getGuard().visit(this);
         IExpr t = (IExpr) ifExpr.getTrueBranch().visit(this);
         IExpr f = (IExpr) ifExpr.getFalseBranch().visit(this);
 
