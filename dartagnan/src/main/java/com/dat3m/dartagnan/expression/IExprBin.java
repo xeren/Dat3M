@@ -72,15 +72,15 @@ public class IExprBin extends IExpr implements ExprInterface {
 	}
 	
 	@Override
-	public IExpr getBase() {
+	public ExprInterface getBase() {
 		return lhs.getBase();
 	}
 	
 	@Override
-	public IExpr simplify() {
+	public ExprInterface simplify() {
 		if(op.equals(IOpBin.PLUS) && lhs instanceof IExprBin && ((IExprBin)lhs).getOp().equals(IOpBin.PLUS)) {
 			if(new IExprBin(((IExprBin)lhs).getRHS(), IOpBin.PLUS, rhs).reduce().equals(IConst.ZERO)) {
-				return (IExpr) ((IExprBin)lhs).getLHS();
+				return ((IExprBin)lhs).getLHS();
 			}
 			return new IExprBin(((IExprBin)lhs).getLHS(), IOpBin.PLUS, new IExprBin(((IExprBin)lhs).getRHS(), IOpBin.PLUS, rhs).reduce());
 		}

@@ -27,11 +27,11 @@ public abstract class IExpr implements ExprInterface {
     }
 
 	@Override
-	public IExpr getBase() {
+	public ExprInterface getBase() {
 		return this;
 	}
 	
-	public IExpr simplify() {
+	public ExprInterface simplify() {
 		return this;
 	}
 }

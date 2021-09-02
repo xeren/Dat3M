@@ -27,7 +27,7 @@ public abstract class BExpr implements ExprInterface {
     }
 
 	@Override
-	public IExpr getBase() {
+	public ExprInterface getBase() {
 		return null;
 	}
 

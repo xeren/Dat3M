@@ -1,6 +1,6 @@
 package com.dat3m.dartagnan.program.event.pthread;
 
-import com.dat3m.dartagnan.expression.IExpr;
+import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.utils.recursion.RecursiveFunction;
 import com.dat3m.dartagnan.wmm.utils.Arch;
@@ -14,10 +14,10 @@ import static com.dat3m.dartagnan.program.atomic.utils.Mo.SC;
 public class InitLock extends Event {
 	
 	private final String name;
-	private final IExpr address;
-	private final IExpr value;
+	private final ExprInterface address;
+	private final ExprInterface value;
 
-	public InitLock(String name, IExpr address, IExpr value){
+	public InitLock(String name, ExprInterface address, ExprInterface value){
 		this.name = name;
         this.address = address;
         this.value = value;

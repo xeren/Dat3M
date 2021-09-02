@@ -23,7 +23,9 @@ public interface ExprInterface {
 
 	BigInteger getIntValue(Event e, Model model, SolverContext ctx);
 
-	boolean getBoolValue(Event e, Model model, SolverContext ctx);
+	default boolean getBoolValue(Event e, Model model, SolverContext ctx) {
+		return 1 == getIntValue(e,model,ctx).signum();
+	}
 
 	ImmutableSet<Register> getRegs();
 
@@ -53,7 +55,7 @@ public interface ExprInterface {
 		throw new UnsupportedOperationException("getPrecision() not supported for " + this);
 	}
 
-	default IExpr getBase() {
+	default ExprInterface getBase() {
 		throw new UnsupportedOperationException("getBase not supported for " + this);
 	}
 

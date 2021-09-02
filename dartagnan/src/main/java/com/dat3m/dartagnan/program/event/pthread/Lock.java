@@ -1,8 +1,8 @@
 package com.dat3m.dartagnan.program.event.pthread;
 
 import com.dat3m.dartagnan.expression.Atom;
+import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IConst;
-import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Label;
@@ -20,12 +20,12 @@ import static com.dat3m.dartagnan.program.utils.EType.RMW;
 public class Lock extends Event {
 	
 	private final String name;
-	private final IExpr address;
+	private final ExprInterface address;
 	private final Register reg;
 	private Label label;
     private Label label4Copy;
 
-	public Lock(String name, IExpr address, Register reg, Label label){
+	public Lock(String name, ExprInterface address, Register reg, Label label){
 		this.name = name;
         this.address = address;
         this.reg = reg;

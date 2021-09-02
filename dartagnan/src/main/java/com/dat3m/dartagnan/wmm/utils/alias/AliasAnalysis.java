@@ -7,7 +7,6 @@ import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.google.common.collect.ImmutableSet;
-import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.expression.IExprBin;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Register;
@@ -68,7 +67,7 @@ public class AliasAnalysis {
                 } else if (e instanceof Init) {
                     // Rule loc = &loc2 -> lo(loc) = {loc2} (only possible in init events)
                     Location loc = program.getMemory().getLocationForAddress((Address) address);
-                    IExpr value = ((Init) e).getValue();
+                    var value = ((Init) e).getValue();
                     if (loc != null && value instanceof Address) {
                         graph.addAddress(loc, (Address)value);
                         variables.add(loc);
@@ -110,7 +109,7 @@ public class AliasAnalysis {
                 } else if (e instanceof Init) {
                     // Rule loc=&loc2 -> lo(loc)={loc2} (only possible in init events)
                     Location loc = program.getMemory().getLocationForAddress((Address) address);
-                    IExpr value = ((Init) e).getValue();
+                    var value = ((Init) e).getValue();
                     if (loc != null && value instanceof Address) {
                         graph.addAddress(loc, (Address) value);
                         variables.add(loc);
@@ -275,7 +274,7 @@ public class AliasAnalysis {
     			bases.put(reg, (Address)exp);
                 offsets.put(reg, 0);
             } else if(exp instanceof IExprBin) {
-    			IExpr base = exp.getBase();
+				var base = exp.getBase();
     			if(base instanceof Address) {
     				bases.put(reg, (Address)base);
     				if(((IExprBin) exp).getRHS() instanceof IConst) {

@@ -182,7 +182,7 @@ public class EventFactory {
             return new End(address);
         }
 
-        public static InitLock newInitLock(String name, IExpr address, IExpr value) {
+        public static InitLock newInitLock(String name, ExprInterface address, ExprInterface value) {
             return new InitLock(name, address, value);
         }
 
@@ -190,7 +190,7 @@ public class EventFactory {
             return new Join(pthread_t, reg, address, label);
         }
 
-        public static Lock newLock(String name, IExpr address, Register reg, Label label) {
+        public static Lock newLock(String name, ExprInterface address, Register reg, Label label) {
             return new Lock(name, address, reg, label);
         }
 
@@ -198,7 +198,7 @@ public class EventFactory {
             return new Start(reg, address, label);
         }
 
-        public static Unlock newUnlock(String name, IExpr address, Register reg, Label label) {
+        public static Unlock newUnlock(String name, ExprInterface address, Register reg, Label label) {
             return new Unlock(name, address, reg, label);
         }
     }
