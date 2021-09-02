@@ -449,9 +449,9 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 	        			// Nothing to be done
 	        		}
 	        		if(!allocationRegs.contains(value)) {
-	        			programBuilder.addChild(threadCount, EventFactory.newLoad(register, (IExpr)value, null, currentLine));
+	        			programBuilder.addChild(threadCount, EventFactory.newLoad(register, value, null, currentLine));
 	        		} else {
-	        			programBuilder.addChild(threadCount, EventFactory.newLoad(register, (IExpr)value, null));
+	        			programBuilder.addChild(threadCount, EventFactory.newLoad(register, value, null));
 	        		}						        			
 		            continue;
 	        	}
@@ -675,8 +675,8 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 			if(smackDummyVariables.contains(ctx.expr(1).getText())) {
 				return null;
 			}
-			IExpr address = (IExpr)ctx.expr(1).accept(this);
-			IExpr value = (IExpr)ctx.expr(2).accept(this);
+			var address = (ExprInterface)ctx.expr(1).accept(this);
+			var value = (ExprInterface)ctx.expr(2).accept(this);
 			// This improves the blow-up
 			if(initMode && !(value instanceof Address)) {
 				ExprInterface lhs = address;

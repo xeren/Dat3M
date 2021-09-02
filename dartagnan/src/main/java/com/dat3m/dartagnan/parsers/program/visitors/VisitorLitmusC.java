@@ -218,7 +218,7 @@ public class VisitorLitmusC
 
     // Returns new value (the value after computation)
     @Override
-    public IExpr visitReAtomicOpReturn(LitmusCParser.ReAtomicOpReturnContext ctx){
+	public ExprInterface visitReAtomicOpReturn(LitmusCParser.ReAtomicOpReturnContext ctx){
         Register register = getReturnRegister(true);
         ExprInterface value = returnExpressionOrDefault(ctx.value, BigInteger.ONE);
         Event event = EventFactory.Linux.newRMWOpReturn(getAddress(ctx.address), register, value, ctx.op, ctx.mo);
@@ -228,7 +228,7 @@ public class VisitorLitmusC
 
     // Returns old value (the value before computation)
     @Override
-    public IExpr visitReAtomicFetchOp(LitmusCParser.ReAtomicFetchOpContext ctx){
+	public ExprInterface visitReAtomicFetchOp(LitmusCParser.ReAtomicFetchOpContext ctx){
         Register register = getReturnRegister(true);
         ExprInterface value = returnExpressionOrDefault(ctx.value, BigInteger.ONE);
         Event event = EventFactory.Linux.newRMWFetchOp(getAddress(ctx.address), register, value, ctx.op, ctx.mo);
@@ -237,7 +237,7 @@ public class VisitorLitmusC
     }
 
     @Override
-    public IExpr visitReAtomicOpAndTest(LitmusCParser.ReAtomicOpAndTestContext ctx){
+	public ExprInterface visitReAtomicOpAndTest(LitmusCParser.ReAtomicOpAndTestContext ctx){
         Register register = getReturnRegister(true);
         ExprInterface value = returnExpressionOrDefault(ctx.value, BigInteger.ONE);
         Event event = EventFactory.Linux.newRMWOpAndTest(getAddress(ctx.address), register, value, ctx.op);
@@ -247,7 +247,7 @@ public class VisitorLitmusC
 
     // Returns non-zero if the addition was executed, zero otherwise
     @Override
-    public IExpr visitReAtomicAddUnless(LitmusCParser.ReAtomicAddUnlessContext ctx){
+	public ExprInterface visitReAtomicAddUnless(LitmusCParser.ReAtomicAddUnlessContext ctx){
         Register register = getReturnRegister(true);
         ExprInterface value = (ExprInterface)ctx.value.accept(this);
         ExprInterface cmp = (ExprInterface)ctx.cmp.accept(this);
@@ -256,7 +256,7 @@ public class VisitorLitmusC
     }
 
     @Override
-    public IExpr visitReXchg(LitmusCParser.ReXchgContext ctx){
+	public ExprInterface visitReXchg(LitmusCParser.ReXchgContext ctx){
         Register register = getReturnRegister(true);
         ExprInterface value = (ExprInterface)ctx.value.accept(this);
         Event event = EventFactory.Linux.newRMWExchange(getAddress(ctx.address), register, value, ctx.mo);
@@ -265,7 +265,7 @@ public class VisitorLitmusC
     }
 
     @Override
-    public IExpr visitReCmpXchg(LitmusCParser.ReCmpXchgContext ctx){
+	public ExprInterface visitReCmpXchg(LitmusCParser.ReCmpXchgContext ctx){
         Register register = getReturnRegister(true);
         ExprInterface cmp = (ExprInterface)ctx.cmp.accept(this);
         ExprInterface value = (ExprInterface)ctx.value.accept(this);
@@ -275,7 +275,7 @@ public class VisitorLitmusC
     }
 
     @Override
-    public IExpr visitReLoad(LitmusCParser.ReLoadContext ctx){
+	public ExprInterface visitReLoad(LitmusCParser.ReLoadContext ctx){
         Register register = getReturnRegister(true);
         Event event = EventFactory.newLoad(register, getAddress(ctx.address), ctx.mo);
         programBuilder.addChild(currentThread, event);
@@ -283,7 +283,7 @@ public class VisitorLitmusC
     }
 
     @Override
-    public IExpr visitReReadOnce(LitmusCParser.ReReadOnceContext ctx){
+	public ExprInterface visitReReadOnce(LitmusCParser.ReReadOnceContext ctx){
         Register register = getReturnRegister(true);
         Event event = EventFactory.newLoad(register, getAddress(ctx.address), ctx.mo);
         programBuilder.addChild(currentThread, event);
@@ -291,7 +291,7 @@ public class VisitorLitmusC
     }
 
     @Override
-    public IExpr visitReReadNa(LitmusCParser.ReReadNaContext ctx){
+	public ExprInterface visitReReadNa(LitmusCParser.ReReadNaContext ctx){
         Register register = getReturnRegister(true);
         Event event = EventFactory.newLoad(register, getAddress(ctx.address), "NA");
         programBuilder.addChild(currentThread, event);
@@ -315,7 +315,7 @@ public class VisitorLitmusC
         Register register = getReturnRegister(false);
         ExprInterface v1 = (ExprInterface)ctx.re(0).accept(this);
         ExprInterface v2 = (ExprInterface)ctx.re(1).accept(this);
-        IExpr result = new IExprBin(v1, ctx.opArith().op, v2);
+		var result = new IExprBin(v1, ctx.opArith().op, v2);
         return assignToReturnRegister(register, result);
     }
 
@@ -356,7 +356,7 @@ public class VisitorLitmusC
     @Override
     public ExprInterface visitReVarName(LitmusCParser.ReVarNameContext ctx){
         Register register = getReturnRegister(false);
-        IExpr variable = visitVarName(ctx.varName());
+		var variable = visitVarName(ctx.varName());
         if(variable instanceof Register){
             Register result = (Register)variable;
             return assignToReturnRegister(register, result);
@@ -416,7 +416,7 @@ public class VisitorLitmusC
 
         ExprInterface value = (ExprInterface)ctx.re().accept(this);
         if(variable instanceof Address || variable instanceof Register){
-            Event event = EventFactory.newStore((IExpr) variable, value, "NA");
+			Event event = EventFactory.newStore(variable, value, "NA");
             return programBuilder.addChild(currentThread, event);
         }
         throw new ParsingException("Invalid syntax near " + ctx.getText());
@@ -446,7 +446,7 @@ public class VisitorLitmusC
     // Utils
 
     @Override
-    public IExpr visitVarName(LitmusCParser.VarNameContext ctx){
+	public ExprInterface visitVarName(LitmusCParser.VarNameContext ctx){
         if(scope > -1){
             Register register = programBuilder.getRegister(scope, ctx.getText());
             if(register != null){
@@ -466,13 +466,9 @@ public class VisitorLitmusC
         return register;
     }
 
-    private IExpr getAddress(LitmusCParser.ReContext ctx){
-        ExprInterface address = (ExprInterface)ctx.accept(this);
-        if(address instanceof IExpr){
-           return (IExpr)address;
-        }
-        throw new ParsingException("Invalid syntax near " + ctx.getText());
-    }
+	private ExprInterface getAddress(LitmusCParser.ReContext ctx){
+		return (ExprInterface)ctx.accept(this);
+	}
 
     private ExprInterface returnExpressionOrDefault(LitmusCParser.ReContext ctx, BigInteger defaultValue){
         return ctx != null ? (ExprInterface)ctx.accept(this) : new IConst(defaultValue, -1);

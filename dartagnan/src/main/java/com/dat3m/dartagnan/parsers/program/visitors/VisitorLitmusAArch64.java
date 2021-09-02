@@ -1,8 +1,8 @@
 package com.dat3m.dartagnan.parsers.program.visitors;
 
 import com.dat3m.dartagnan.expression.Atom;
+import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IConst;
-import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.expression.IExprBin;
 import com.dat3m.dartagnan.expression.op.IOpBin;
 import com.dat3m.dartagnan.parsers.LitmusAArch64BaseVisitor;
@@ -13,7 +13,6 @@ import com.dat3m.dartagnan.parsers.program.utils.ProgramBuilder;
 import com.dat3m.dartagnan.program.EventFactory;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.arch.aarch64.event.StoreExclusive;
-import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Label;
 import com.dat3m.dartagnan.program.event.Load;
 import org.antlr.v4.runtime.misc.Interval;
@@ -27,7 +26,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
     private int mainThread;
     private int threadCount = 0;
     private Register[] lhs;
-    private IExpr[] rhs;
+    private ExprInterface[] rhs;
 
     public VisitorLitmusAArch64(ProgramBuilder pb){
         this.programBuilder = pb;
@@ -96,7 +95,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
             threadCount++;
         }
         lhs = new Register[threadCount];
-        rhs = new IExpr[threadCount];
+        rhs = new ExprInterface[threadCount];
         return null;
     }
 
@@ -115,14 +114,14 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
     @Override
     public Object visitMov(LitmusAArch64Parser.MovContext ctx) {
         Register register = programBuilder.getOrCreateRegister(mainThread, ctx.rD, -1);
-        IExpr expr = ctx.expr32() != null ? (IExpr)ctx.expr32().accept(this) : (IExpr)ctx.expr64().accept(this);
+        var expr = ctx.expr32() != null ? (ExprInterface)ctx.expr32().accept(this) : (ExprInterface)ctx.expr64().accept(this);
         return programBuilder.addChild(mainThread, EventFactory.newLocal(register, expr));
     }
 
     @Override
     public Object visitCmp(LitmusAArch64Parser.CmpContext ctx) {
         lhs[mainThread] = programBuilder.getOrCreateRegister(mainThread, ctx.rD, -1);
-        rhs[mainThread] = ctx.expr32() != null ? (IExpr)ctx.expr32().accept(this) : (IExpr)ctx.expr64().accept(this);
+        rhs[mainThread] = ctx.expr32() != null ? (ExprInterface)ctx.expr32().accept(this) : (ExprInterface)ctx.expr64().accept(this);
         return null;
     }
 
@@ -130,7 +129,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
     public Object visitArithmetic(LitmusAArch64Parser.ArithmeticContext ctx) {
         Register rD = programBuilder.getOrCreateRegister(mainThread, ctx.rD, -1);
         Register r1 = programBuilder.getOrErrorRegister(mainThread, ctx.rV);
-        IExpr expr = ctx.expr32() != null ? (IExpr)ctx.expr32().accept(this) : (IExpr)ctx.expr64().accept(this);
+        var expr = ctx.expr32() != null ? (ExprInterface)ctx.expr32().accept(this) : (ExprInterface)ctx.expr64().accept(this);
         return programBuilder.addChild(mainThread, EventFactory.newLocal(rD, new IExprBin(r1, ctx.arithmeticInstruction().op, expr)));
     }
 
@@ -206,8 +205,8 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
     }
 
     @Override
-    public IExpr visitExpressionRegister64(LitmusAArch64Parser.ExpressionRegister64Context ctx) {
-        IExpr expr = programBuilder.getOrCreateRegister(mainThread, ctx.register64().id, -1);
+    public ExprInterface visitExpressionRegister64(LitmusAArch64Parser.ExpressionRegister64Context ctx) {
+        ExprInterface expr = programBuilder.getOrCreateRegister(mainThread, ctx.register64().id, -1);
         if(ctx.shift() != null){
             IConst val = new IConst(new BigInteger(ctx.shift().immediate().constant().getText()), -1);
             expr = new IExprBin(expr, ctx.shift().shiftOperator().op, val);
@@ -216,8 +215,8 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
     }
 
     @Override
-    public IExpr visitExpressionRegister32(LitmusAArch64Parser.ExpressionRegister32Context ctx) {
-        IExpr expr = programBuilder.getOrCreateRegister(mainThread, ctx.register32().id, -1);
+    public ExprInterface visitExpressionRegister32(LitmusAArch64Parser.ExpressionRegister32Context ctx) {
+        ExprInterface expr = programBuilder.getOrCreateRegister(mainThread, ctx.register32().id, -1);
         if(ctx.shift() != null){
             IConst val = new IConst(new BigInteger(ctx.shift().immediate().constant().getText()), -1);
             expr = new IExprBin(expr, ctx.shift().shiftOperator().op, val);
@@ -226,8 +225,8 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
     }
 
     @Override
-    public IExpr visitExpressionImmediate(LitmusAArch64Parser.ExpressionImmediateContext ctx) {
-        IExpr expr = new IConst(new BigInteger(ctx.immediate().constant().getText()), -1);
+    public ExprInterface visitExpressionImmediate(LitmusAArch64Parser.ExpressionImmediateContext ctx) {
+        ExprInterface expr = new IConst(new BigInteger(ctx.immediate().constant().getText()), -1);
         if(ctx.shift() != null){
             IConst val = new IConst(new BigInteger(ctx.shift().immediate().constant().getText()), -1);
             expr = new IExprBin(expr, ctx.shift().shiftOperator().op, val);
@@ -236,14 +235,14 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
     }
 
     @Override
-    public IExpr visitExpressionConversion(LitmusAArch64Parser.ExpressionConversionContext ctx) {
+    public ExprInterface visitExpressionConversion(LitmusAArch64Parser.ExpressionConversionContext ctx) {
         // TODO: Implement when adding support for mixed-size accesses
         return programBuilder.getOrCreateRegister(mainThread, ctx.register32().id, -1);
     }
 
     private Register visitOffset(LitmusAArch64Parser.OffsetContext ctx, Register register){
         Register result = programBuilder.getOrCreateRegister(mainThread, null, -1);
-        IExpr expr = ctx.immediate() == null
+        var expr = ctx.immediate() == null
                 ? programBuilder.getOrErrorRegister(mainThread, ctx.expressionConversion().register32().id)
                 : new IConst(new BigInteger(ctx.immediate().constant().getText()), -1);
         programBuilder.addChild(mainThread, EventFactory.newLocal(result, new IExprBin(register, IOpBin.PLUS, expr)));

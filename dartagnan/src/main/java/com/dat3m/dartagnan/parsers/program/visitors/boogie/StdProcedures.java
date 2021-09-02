@@ -2,7 +2,6 @@ package com.dat3m.dartagnan.parsers.program.visitors.boogie;
 
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IConst;
-import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.parsers.BoogieParser.Call_cmdContext;
 import com.dat3m.dartagnan.parsers.program.utils.ParsingException;
 import com.dat3m.dartagnan.program.EventFactory;
@@ -46,7 +45,7 @@ public class StdProcedures {
 	public static void handleStdFunction(VisitorBoogie visitor, Call_cmdContext ctx) {
 		String name = ctx.call_params().Define() == null ? ctx.call_params().Ident(0).getText() : ctx.call_params().Ident(1).getText();
 		if(name.startsWith("WRITE_ONCE")) {
-			IExpr address = (IExpr)ctx.call_params().exprs().expr(0).accept(visitor);
+			var address = (ExprInterface)ctx.call_params().exprs().expr(0).accept(visitor);
 			ExprInterface value = (ExprInterface)ctx.call_params().exprs().expr(1).accept(visitor);
 			visitor.programBuilder.addChild(visitor.threadCount, EventFactory.newStore(address, value, "NA"));
 			return;

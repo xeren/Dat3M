@@ -2,7 +2,6 @@ package com.dat3m.dartagnan.parsers.program.visitors.boogie;
 
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IConst;
-import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.expression.op.IOpBin;
 import com.dat3m.dartagnan.parsers.BoogieParser;
 import com.dat3m.dartagnan.parsers.BoogieParser.Call_cmdContext;
@@ -67,13 +66,13 @@ public class AtomicProcedures {
 	}
 	
 	private static void atomicInit(VisitorBoogie visitor, Call_cmdContext ctx) {
-		IExpr add = (IExpr)ctx.call_params().exprs().expr().get(0).accept(visitor);
+		var add = (ExprInterface)ctx.call_params().exprs().expr().get(0).accept(visitor);
 		ExprInterface value = (ExprInterface)ctx.call_params().exprs().expr().get(1).accept(visitor);
 		visitor.programBuilder.addChild(visitor.threadCount, EventFactory.newStore(add, value, null, visitor.currentLine));
 	}
 
 	private static void atomicStore(VisitorBoogie visitor, Call_cmdContext ctx) {
-		IExpr add = (IExpr)ctx.call_params().exprs().expr().get(0).accept(visitor);
+		var add = (ExprInterface)ctx.call_params().exprs().expr().get(0).accept(visitor);
 		ExprInterface value = (ExprInterface)ctx.call_params().exprs().expr().get(1).accept(visitor);
 		String mo = null;
 		if(ctx.call_params().exprs().expr().size() > 2) {
@@ -84,7 +83,7 @@ public class AtomicProcedures {
 
 	private static void atomicLoad(VisitorBoogie visitor, Call_cmdContext ctx) {
 		Register reg = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, visitor.currentScope.getID() + ":" + ctx.call_params().Ident(0).getText(), -1);
-		IExpr add = (IExpr)ctx.call_params().exprs().expr().get(0).accept(visitor);
+		var add = (ExprInterface)ctx.call_params().exprs().expr().get(0).accept(visitor);
 		String mo = null;
 		if(ctx.call_params().exprs().expr().size() > 1) {
 			mo = intToMo(((IConst)ctx.call_params().exprs().expr().get(1).accept(visitor)).getIntValue().intValue());
@@ -94,8 +93,8 @@ public class AtomicProcedures {
 
 	private static void atomicFetchOp(VisitorBoogie visitor, Call_cmdContext ctx) {
 		Register reg = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, visitor.currentScope.getID() + ":" + ctx.call_params().Ident(0).getText(), -1);
-		IExpr add = (IExpr)ctx.call_params().exprs().expr().get(0).accept(visitor);
-		ExprInterface value = (IExpr)ctx.call_params().exprs().expr().get(1).accept(visitor);
+		var add = (ExprInterface)ctx.call_params().exprs().expr().get(0).accept(visitor);
+		var value = (ExprInterface)ctx.call_params().exprs().expr().get(1).accept(visitor);
 		String mo = null;
 		IOpBin op;
 		if(ctx.getText().contains("_add")) {
@@ -119,7 +118,7 @@ public class AtomicProcedures {
 
 	private static void atomicXchg(VisitorBoogie visitor, Call_cmdContext ctx) {
 		Register reg = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, visitor.currentScope.getID() + ":" + ctx.call_params().Ident(0).getText(), -1);
-		IExpr add = (IExpr)ctx.call_params().exprs().expr().get(0).accept(visitor);
+		var add = (ExprInterface)ctx.call_params().exprs().expr().get(0).accept(visitor);
 		ExprInterface value = (ExprInterface)ctx.call_params().exprs().expr().get(1).accept(visitor);
 		String mo = null;
 		if(ctx.call_params().exprs().expr().size() > 2) {
@@ -131,7 +130,7 @@ public class AtomicProcedures {
 	private static void DAT3M_CAS(VisitorBoogie visitor, Call_cmdContext ctx) {
 		Register reg = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, visitor.currentScope.getID() + ":" + ctx.call_params().Ident(0).getText(), -1);
 		List<BoogieParser.ExprContext> params = ctx.call_params().exprs().expr();
-		IExpr add = (IExpr) params.get(0).accept(visitor);
+		var add = (ExprInterface) params.get(0).accept(visitor);
 		Register expected = (Register) params.get(1).accept(visitor);
 		ExprInterface desired = (ExprInterface) params.get(2).accept(visitor);
 		String mo = null;
@@ -149,7 +148,7 @@ public class AtomicProcedures {
 	private static void atomicCmpXchg(VisitorBoogie visitor, Call_cmdContext ctx) {
 		Register reg = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, visitor.currentScope.getID() + ":" + ctx.call_params().Ident(0).getText(), -1);
 		List<BoogieParser.ExprContext> params = ctx.call_params().exprs().expr();
-		IExpr add = (IExpr) params.get(0).accept(visitor);
+		var add = (ExprInterface)params.get(0).accept(visitor);
 		Register expectedAdd = (Register) params.get(1).accept(visitor); // NOTE: We assume a register here
 		Register expected = new Register(null, reg.getThreadId(), reg.getPrecision());
 		ExprInterface desired = (ExprInterface) params.get(2).accept(visitor);

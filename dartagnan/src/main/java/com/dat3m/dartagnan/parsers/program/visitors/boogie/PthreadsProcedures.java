@@ -2,7 +2,6 @@ package com.dat3m.dartagnan.parsers.program.visitors.boogie;
 
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IConst;
-import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.parsers.BoogieParser.Call_cmdContext;
 import com.dat3m.dartagnan.parsers.BoogieParser.ExprContext;
 import com.dat3m.dartagnan.parsers.BoogieParser.ExprsContext;
@@ -97,8 +96,8 @@ public class PthreadsProcedures {
 
 	private static void mutexInit(VisitorBoogie visitor, Call_cmdContext ctx) {
 		ExprContext lock = ctx.call_params().exprs().expr(0);
-		IExpr lockAddress = (IExpr)lock.accept(visitor);
-		IExpr value = (IExpr)ctx.call_params().exprs().expr(1).accept(visitor);
+		var lockAddress = (ExprInterface)lock.accept(visitor);
+		var value = (ExprInterface)ctx.call_params().exprs().expr(1).accept(visitor);
 		if(lockAddress != null) {
 			visitor.programBuilder.addChild(visitor.threadCount, EventFactory.Pthread.newInitLock(lock.getText(), lockAddress, value));
 		}
@@ -107,7 +106,7 @@ public class PthreadsProcedures {
 	private static void mutexLock(VisitorBoogie visitor, Call_cmdContext ctx) {
 		ExprsContext lock = ctx.call_params().exprs();
         Register register = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, null, -1);
-		IExpr lockAddress = (IExpr)lock.accept(visitor);
+		var lockAddress = (ExprInterface)lock.accept(visitor);
        	Label label = visitor.programBuilder.getOrCreateLabel("END_OF_T" + visitor.threadCount);
 		if(lockAddress != null) {
 			visitor.programBuilder.addChild(visitor.threadCount, EventFactory.Pthread.newLock(lock.getText(), lockAddress, register, label));
@@ -117,7 +116,7 @@ public class PthreadsProcedures {
 	private static void mutexUnlock(VisitorBoogie visitor, Call_cmdContext ctx) {
 		ExprsContext lock = ctx.call_params().exprs();
         Register register = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, null, -1);
-		IExpr lockAddress = (IExpr)lock.accept(visitor);
+		var lockAddress = (ExprInterface)lock.accept(visitor);
        	Label label = visitor.programBuilder.getOrCreateLabel("END_OF_T" + visitor.threadCount);
 		if(lockAddress != null) {
 			visitor.programBuilder.addChild(visitor.threadCount, EventFactory.Pthread.newUnlock(lock.getText(), lockAddress, register, label));
