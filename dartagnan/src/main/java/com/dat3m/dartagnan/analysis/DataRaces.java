@@ -1,6 +1,5 @@
 package com.dat3m.dartagnan.analysis;
 
-import com.dat3m.dartagnan.expression.BConst;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Event;
@@ -77,10 +76,10 @@ public class DataRaces {
     						continue;
     					}
     					// TODO improve this: these events correspond to return statements
-    					if(w.getMemValue() instanceof BConst && !((BConst)w.getMemValue()).getValue()) {
+    					if(w.getMemValue().isFalse()) {
     						continue;
     					}
-    					if(m.getMemValue() instanceof BConst && !((BConst)m.getMemValue()).getValue()) {
+    					if(m.getMemValue().isFalse()) {
     						continue;
     					}
     					if(w.canRace() && m.canRace() && MemEvent.canAddressTheSameLocation(w, m)) {

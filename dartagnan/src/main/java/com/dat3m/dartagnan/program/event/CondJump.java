@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan.program.event;
 
 import com.dat3m.dartagnan.GlobalSettings;
-import com.dat3m.dartagnan.expression.BConst;
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.program.EventFactory;
 import com.dat3m.dartagnan.program.Register;
@@ -97,7 +96,7 @@ public class CondJump extends Event implements RegReaderData {
         Event next = successor;
         // If the label immediately follows and the condition is either true or false we can remove the jump
         // (in both cases the next executed event is the successor)
-        if(label.equals(successor) && expr instanceof BConst) {
+        if(label.equals(successor) && (expr.isTrue() || expr.isFalse())) {
             prev = predecessor;
             label.listeners.remove(this);
             // If the label is only the target of the removed jump, we can also remove the label

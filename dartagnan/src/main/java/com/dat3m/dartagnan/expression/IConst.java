@@ -8,6 +8,7 @@ import com.dat3m.dartagnan.program.event.Event;
 
 import java.math.BigInteger;
 
+import org.sosy_lab.java_smt.api.BooleanFormula;
 import org.sosy_lab.java_smt.api.Formula;
 import org.sosy_lab.java_smt.api.FormulaManager;
 import org.sosy_lab.java_smt.api.Model;
@@ -42,6 +43,11 @@ public class IConst extends IExpr implements ExprInterface {
 		return precision > 0 ? 
 				fmgr.getBitvectorFormulaManager().makeBitvector(precision, value) : 
 				fmgr.getIntegerFormulaManager().makeNumber(value);
+	}
+
+	@Override
+	public BooleanFormula toBoolFormula(Event e, SolverContext ctx){
+		return ctx.getFormulaManager().getBooleanFormulaManager().makeBoolean(isTrue());
 	}
 
 	@Override
@@ -82,7 +88,17 @@ public class IConst extends IExpr implements ExprInterface {
 	public IConst reduce() {
 		return this;
 	}
-	
+
+	@Override
+	public boolean isTrue() {
+		return 0 < value.compareTo(BigInteger.ZERO);
+	}
+
+	@Override
+	public boolean isFalse() {
+		return 0 >= value.compareTo(BigInteger.ZERO);
+	}
+
 	public BigInteger getValue() {
 		return value;
 	}

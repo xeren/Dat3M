@@ -30,12 +30,4 @@ public abstract class BExpr implements ExprInterface {
 	public ExprInterface getBase() {
 		return null;
 	}
-
-	public boolean isTrue() {
-		return this.equals(BConst.TRUE);
-	}
-
-    public boolean isFalse() {
-    	return this.equals(BConst.FALSE);
-    }
 }

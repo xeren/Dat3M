@@ -336,7 +336,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 		if(name.equals("reach_error")) {
 			var ass = programBuilder.getOrCreateRegister(threadCount, "assert_" + assertionIndex);
 	    	assertionIndex++;
-	    	Local event = EventFactory.newLocal(ass, new BConst(false), currentLine);
+	    	Local event = EventFactory.newLocal(ass, IConst.ZERO, currentLine);
 			event.addFilters(EType.ASSERTION);
 			programBuilder.addChild(threadCount, event);
 	       	Label end = programBuilder.getOrCreateLabel("END_OF_T" + threadCount);
@@ -757,7 +757,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 	
 	@Override
 	public Object visitBool_lit(Bool_litContext ctx) {
-		return new BConst(Boolean.parseBoolean(ctx.getText()));
+		return Boolean.parseBoolean(ctx.getText()) ? IConst.ONE : IConst.ZERO;
 	}
 
 	@Override

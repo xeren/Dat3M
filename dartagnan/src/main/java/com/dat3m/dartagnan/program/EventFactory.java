@@ -127,7 +127,7 @@ public class EventFactory {
     }
 
     public static CondJump newGoto(Label target) {
-        return newJump(BConst.TRUE, target);
+        return newJump(IConst.ONE, target);
     }
 
     public static CondJump newFakeCtrlDep(Register reg, Label target) {

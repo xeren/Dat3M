@@ -20,14 +20,9 @@ public class ExprSimplifier extends ExprTransformer {
         if (lhs instanceof IConst && rhs instanceof  IConst) {
             IConst lc = (IConst) lhs;
             IConst rc = (IConst) rhs;
-            return new BConst(atom.getOp().combine(lc.getIntValue(), rc.getIntValue()));
+			return atom.getOp().combine(lc.getIntValue(), rc.getIntValue()) ? IConst.ONE : IConst.ZERO;
         }
         return new Atom(lhs, atom.getOp(), rhs);
-    }
-
-    @Override
-    public BConst visit(BConst bConst) {
-        return bConst;
     }
 
     @Override
@@ -37,7 +32,7 @@ public class ExprSimplifier extends ExprTransformer {
         switch (bBin.getOp()) {
             case OR:
                 if (lhs.isTrue() || rhs.isTrue()) {
-                    return BConst.TRUE;
+                    return IConst.ONE;
                 } else if (lhs.isFalse()) {
                     return rhs;
                 } else if (rhs.isFalse()) {
@@ -46,7 +41,7 @@ public class ExprSimplifier extends ExprTransformer {
                 break;
             case AND:
                 if (lhs.isFalse() || rhs.isFalse()) {
-                    return BConst.FALSE;
+                    return IConst.ZERO;
                 } else if (lhs.isTrue()) {
                     return rhs;
                 } else if (rhs.isTrue()) {
@@ -60,9 +55,10 @@ public class ExprSimplifier extends ExprTransformer {
     @Override
     public ExprInterface visit(BExprUn bUn) {
         var inner = bUn.getInner().visit(this);
-        if (inner instanceof BConst) {
-            return inner.isTrue() ? BConst.FALSE : BConst.TRUE;
-        }
+		if(inner.isTrue())
+			return IConst.ZERO;
+		if(inner.isFalse())
+			return IConst.ONE;
         if (inner instanceof BExprUn && bUn.getOp() == BOpUn.NOT) {
             return ((BExprUn)inner).getInner();
         }
