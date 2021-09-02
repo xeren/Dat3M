@@ -14,7 +14,7 @@ import com.dat3m.dartagnan.expression.op.IOpUn;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 
-public class IExprUn extends IExpr {
+public class IExprUn implements ExprInterface {
 
 	private final ExprInterface b;
 	private final IOpUn op;

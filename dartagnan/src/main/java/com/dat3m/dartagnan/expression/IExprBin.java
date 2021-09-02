@@ -14,7 +14,7 @@ import com.dat3m.dartagnan.expression.op.IOpBin;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 
-public class IExprBin extends IExpr implements ExprInterface {
+public class IExprBin implements ExprInterface {
 
     private final ExprInterface lhs;
     private final ExprInterface rhs;

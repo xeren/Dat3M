@@ -2,7 +2,9 @@ package com.dat3m.dartagnan.expression;
 
 import java.math.BigInteger;
 
+import org.sosy_lab.java_smt.api.BitvectorFormula;
 import org.sosy_lab.java_smt.api.BooleanFormula;
+import org.sosy_lab.java_smt.api.NumeralFormula.IntegerFormula;
 import org.sosy_lab.java_smt.api.Formula;
 import org.sosy_lab.java_smt.api.Model;
 import org.sosy_lab.java_smt.api.SolverContext;
@@ -17,7 +19,17 @@ public interface ExprInterface {
 
 	Formula toIntFormula(Event e, SolverContext ctx);
 
-	BooleanFormula toBoolFormula(Event e, SolverContext ctx);
+	default BooleanFormula toBoolFormula(Event e, SolverContext ctx) {
+		var f = ctx.getFormulaManager();
+		var r = toIntFormula(e, ctx);
+		if(r instanceof BitvectorFormula) {
+			var b = f.getBitvectorFormulaManager();
+			return b.greaterThan((BitvectorFormula)r, b.makeBitvector(getPrecision(),BigInteger.ZERO),false);
+		}
+		assert r instanceof IntegerFormula;
+		var i = f.getIntegerFormulaManager();
+		return i.greaterThan((IntegerFormula)r, i.makeNumber(BigInteger.ZERO));
+	}
 
 	Formula getLastValueExpr(SolverContext ctx);
 
@@ -56,7 +68,11 @@ public interface ExprInterface {
 	}
 
 	default ExprInterface getBase() {
-		return null;
+		return this;
+	}
+
+	default ExprInterface simplify() {
+		return this;
 	}
 
 	<T> T visit(ExpressionVisitor<T> visitor);

@@ -29,17 +29,17 @@ public abstract class ExprTransformer implements ExpressionVisitor<ExprInterface
     }
 
     @Override
-    public IExpr visit(IConst iConst) {
+	public ExprInterface visit(IConst iConst) {
         return iConst;
     }
 
     @Override
-    public IExpr visit(IExprBin iBin) {
+	public ExprInterface visit(IExprBin iBin) {
         return new IExprBin(iBin.getLHS().visit(this), iBin.getOp(), iBin.getRHS().visit(this));
     }
 
     @Override
-    public IExpr visit(IExprUn iUn) {
+	public ExprInterface visit(IExprUn iUn) {
         return new IExprUn(iUn.getOp(), iUn.getInner().visit(this));
     }
 
@@ -49,7 +49,7 @@ public abstract class ExprTransformer implements ExpressionVisitor<ExprInterface
     }
 
     @Override
-    public IExpr visit(INonDet iNonDet) {
+	public ExprInterface visit(INonDet iNonDet) {
         return iNonDet;
     }
 

@@ -66,19 +66,9 @@ public class ExprSimplifier extends ExprTransformer {
     }
 
     @Override
-    public ExprInterface visit(BNonDet bNonDet) {
-        return bNonDet;
-    }
-
-    @Override
-    public IExpr visit(IConst iConst) {
-        return iConst;
-    }
-
-    @Override
-    public IExpr visit(IExprBin iBin) {
-        IExpr lhs = (IExpr)iBin.getLHS().visit(this);
-        IExpr rhs = (IExpr)iBin.getRHS().visit(this);
+	public ExprInterface visit(IExprBin iBin) {
+		var lhs = iBin.getLHS().visit(this);
+		var rhs = iBin.getRHS().visit(this);
         IOpBin op = iBin.getOp();
         if (! (lhs instanceof IConst || rhs instanceof IConst)) {
             return new IExprBin(lhs, iBin.getOp(), rhs);
@@ -113,15 +103,15 @@ public class ExprSimplifier extends ExprTransformer {
     }
 
     @Override
-    public IExpr visit(IExprUn iUn) {
+	public ExprInterface visit(IExprUn iUn) {
         return new IExprUn(iUn.getOp(), iUn.getInner());
     }
 
     @Override
     public ExprInterface visit(IfExpr ifExpr) {
         var cond = ifExpr.getGuard().visit(this);
-        IExpr t = (IExpr) ifExpr.getTrueBranch().visit(this);
-        IExpr f = (IExpr) ifExpr.getFalseBranch().visit(this);
+		var t = ifExpr.getTrueBranch().visit(this);
+		var f = ifExpr.getFalseBranch().visit(this);
 
         if (cond.isTrue()) {
             return t;
@@ -134,7 +124,7 @@ public class ExprSimplifier extends ExprTransformer {
     }
 
     @Override
-    public IExpr visit(INonDet iNonDet) {
+	public ExprInterface visit(INonDet iNonDet) {
         return iNonDet;
     }
 

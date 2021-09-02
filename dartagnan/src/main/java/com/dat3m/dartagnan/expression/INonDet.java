@@ -29,7 +29,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.UnsignedInteger;
 import com.google.common.primitives.UnsignedLong;
 
-public class INonDet extends IExpr implements ExprInterface {
+public class INonDet implements ExprInterface {
 	
 	private final INonDetTypes type;
 	private final int precision;
