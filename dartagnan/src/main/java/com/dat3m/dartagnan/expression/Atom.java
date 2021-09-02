@@ -16,7 +16,7 @@ import com.dat3m.dartagnan.expression.op.COpBin;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 
-public class Atom extends BExpr implements ExprInterface {
+public final class Atom implements ExprInterface {
 	
 	private final ExprInterface lhs;
 	private final ExprInterface rhs;
@@ -26,6 +26,20 @@ public class Atom extends BExpr implements ExprInterface {
 		this.lhs = lhs;
 		this.rhs = rhs;
 		this.op = op;
+	}
+
+	@Override
+	public Formula toIntFormula(Event e, SolverContext ctx) {
+		var f = ctx.getFormulaManager();
+		var i = f.getIntegerFormulaManager();
+		return f.getBooleanFormulaManager().ifThenElse(toBoolFormula(e, ctx),
+			i.makeNumber(BigInteger.ONE),
+			i.makeNumber(BigInteger.ZERO));
+	}
+
+	@Override
+	public BigInteger getIntValue(Event e, Model model, SolverContext ctx){
+		return getBoolValue(e, model, ctx) ? BigInteger.ONE : BigInteger.ZERO;
 	}
 
     @Override

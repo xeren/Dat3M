@@ -10,7 +10,7 @@ import static org.sosy_lab.java_smt.api.FormulaType.BooleanType;
 
 import java.math.BigInteger;
 
-public class BNonDet extends BExpr implements ExprInterface {
+public final class BNonDet implements ExprInterface {
 
 	private final int precision;
 	
@@ -33,6 +33,11 @@ public class BNonDet extends BExpr implements ExprInterface {
     	}
         return fmgr.getBooleanFormulaManager().ifThenElse(toBoolFormula(e, ctx), e1, e2);
     }
+
+	@Override
+	public BigInteger getIntValue(Event e, Model model, SolverContext ctx){
+		return getBoolValue(e, model, ctx) ? BigInteger.ONE : BigInteger.ZERO;
+	}
 
 	@Override
 	public BooleanFormula toBoolFormula(Event e, SolverContext ctx) {

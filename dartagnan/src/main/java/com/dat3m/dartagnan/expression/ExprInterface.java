@@ -56,7 +56,7 @@ public interface ExprInterface {
 	}
 
 	default ExprInterface getBase() {
-		throw new UnsupportedOperationException("getBase not supported for " + this);
+		return null;
 	}
 
 	<T> T visit(ExpressionVisitor<T> visitor);

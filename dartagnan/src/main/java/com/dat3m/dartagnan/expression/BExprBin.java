@@ -18,7 +18,7 @@ import com.dat3m.dartagnan.expression.op.BOpBin;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 
-public class BExprBin extends BExpr {
+public final class BExprBin implements ExprInterface {
 
     private final ExprInterface b1;
     private final ExprInterface b2;
@@ -41,6 +41,20 @@ public class BExprBin extends BExpr {
     public BOpBin getOp() {
     	return op;
     }
+
+	@Override
+	public Formula toIntFormula(Event e, SolverContext ctx) {
+		var f = ctx.getFormulaManager();
+		var i = f.getIntegerFormulaManager();
+		return f.getBooleanFormulaManager().ifThenElse(toBoolFormula(e, ctx),
+			i.makeNumber(BigInteger.ONE),
+			i.makeNumber(BigInteger.ZERO));
+	}
+
+	@Override
+	public BigInteger getIntValue(Event e, Model model, SolverContext ctx){
+		return getBoolValue(e, model, ctx) ? BigInteger.ONE : BigInteger.ZERO;
+	}
 
     @Override
     public BooleanFormula toBoolFormula(Event e, SolverContext ctx) {

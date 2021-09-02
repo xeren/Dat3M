@@ -5,7 +5,6 @@ import java.math.BigInteger;
 import org.sosy_lab.java_smt.api.BitvectorFormula;
 import org.sosy_lab.java_smt.api.BooleanFormula;
 import org.sosy_lab.java_smt.api.FormulaManager;
-import org.sosy_lab.java_smt.api.Model;
 import org.sosy_lab.java_smt.api.NumeralFormula.IntegerFormula;
 import org.sosy_lab.java_smt.api.SolverContext;
 
@@ -20,11 +19,6 @@ public abstract class IExpr implements ExprInterface {
 				fmgr.getBitvectorFormulaManager().greaterThan((BitvectorFormula)toIntFormula(e, ctx), fmgr.getBitvectorFormulaManager().makeBitvector(getPrecision(), BigInteger.ZERO), false) :
 				fmgr.getIntegerFormulaManager().greaterThan((IntegerFormula)toIntFormula(e, ctx), fmgr.getIntegerFormulaManager().makeNumber(BigInteger.ZERO));
 	}
-
-    @Override
-    public boolean getBoolValue(Event e, Model model, SolverContext ctx){
-        return getIntValue(e, model, ctx).signum() == 1;
-    }
 
 	@Override
 	public ExprInterface getBase() {
