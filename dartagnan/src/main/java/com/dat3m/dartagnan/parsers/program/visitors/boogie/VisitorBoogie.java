@@ -119,7 +119,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
     		throw new ParsingException("Program shall have a main procedure");
     	}
 
-    	Register next = programBuilder.getOrCreateRegister(threadCount, currentScope.getID() + ":" + "ptrMain", -1);
+		var next = programBuilder.getOrCreateRegister(threadCount, currentScope.getID() + ":" + "ptrMain");
     	pool.add(next, "main");
     	while(pool.canCreate()) {
     		next = pool.next();
@@ -235,8 +235,8 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
             programBuilder.initThread(name, threadCount);
             if(threadCount != 1) {
             	// Used to allow execution of threads after they have been created (pthread_create)
-        		Location loc = programBuilder.getOrCreateLocation(pool.getPtrFromInt(threadCount) + "_active", -1);
-        		Register reg = programBuilder.getOrCreateRegister(threadCount, null, -1);
+				var loc = programBuilder.getOrCreateLocation(pool.getPtrFromInt(threadCount) + "_active");
+				var reg = programBuilder.getOrCreateRegister(threadCount, null);
                	Label label = programBuilder.getOrCreateLabel("END_OF_T" + threadCount);
                	programBuilder.addChild(threadCount, EventFactory.Pthread.newStart(reg, loc.getAddress(), label));
             }
@@ -282,7 +282,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
     	if(create) {
          	if(threadCount != 1) {
          		// Used to mark the end of the execution of a thread (used by pthread_join)
-        		Location loc = programBuilder.getOrCreateLocation(pool.getPtrFromInt(threadCount) + "_active", -1);
+				var loc = programBuilder.getOrCreateLocation(pool.getPtrFromInt(threadCount) + "_active");
         		programBuilder.addChild(threadCount, EventFactory.Pthread.newEnd(loc.getAddress()));
          	}
         	label = programBuilder.getOrCreateLabel("END_OF_T" + threadCount);
@@ -334,7 +334,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 	       	return null;
 		}
 		if(name.equals("reach_error")) {
-	    	Register ass = programBuilder.getOrCreateRegister(threadCount, "assert_" + assertionIndex, -1);
+			var ass = programBuilder.getOrCreateRegister(threadCount, "assert_" + assertionIndex);
 	    	assertionIndex++;
 	    	Local event = EventFactory.newLocal(ass, new BConst(false), currentLine);
 			event.addFilters(EType.ASSERTION);
@@ -439,11 +439,11 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 	        	if(ctx.getText().contains("$load.") || value instanceof Address) {
 	        		try {
 		    			// This names are global so we don't use currentScope.getID(), but per thread.
-		    			Register reg = programBuilder.getOrCreateRegister(threadCount, ctx.Ident(0).getText(), -1);
+						Register reg = programBuilder.getOrCreateRegister(threadCount, ctx.Ident(0).getText());
 		    			String tmp = ctx.def_body().exprs().expr(0).getText();
 		    			tmp = tmp.substring(tmp.indexOf(",") + 1, tmp.indexOf(")"));
 		    			// This names are global so we don't use currentScope.getID(), but per thread.
-		    			Register ptr = programBuilder.getOrCreateRegister(threadCount, tmp, -1);
+						Register ptr = programBuilder.getOrCreateRegister(threadCount, tmp);
 	        			pool.addRegPtr(reg, ptr);	        				        			
 	        		} catch (Exception e) {
 	        			// Nothing to be done

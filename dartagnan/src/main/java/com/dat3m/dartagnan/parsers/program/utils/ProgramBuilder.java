@@ -79,33 +79,30 @@ public class ProgramBuilder {
     // ----------------------------------------------------------------------------------------------------------------
     // Declarators
 
-    public void initLocEqLocPtr(String leftName, String rightName, int precision){
-        Location location = getOrCreateLocation(leftName, precision);
-        iValueMap.put(location.getAddress(), getOrCreateLocation(rightName, precision).getAddress());
-    }
+	public void initLocEqLocPtr(String leftName, String rightName){
+		iValueMap.put(getOrCreateLocation(leftName).getAddress(), getOrCreateLocation(rightName).getAddress());
+	}
 
-    public void initLocEqLocVal(String leftName, String rightName, int precision){
-        Location left = getOrCreateLocation(leftName, precision);
-        Location right = getOrCreateLocation(rightName, precision);
-        iValueMap.put(left.getAddress(), iValueMap.get(right.getAddress()));
-    }
+	public void initLocEqLocVal(String leftName, String rightName){
+		iValueMap.put(getOrCreateLocation(leftName).getAddress(), iValueMap.get(getOrCreateLocation(rightName).getAddress()));
+	}
 
     public void initLocEqConst(String locName, IConst iValue){
         Location location = getOrCreateLocation(locName, iValue.getPrecision());
         iValueMap.put(location.getAddress(), iValue);
     }
 
-    public void initRegEqLocPtr(int regThread, String regName, String locName, int precision){
-        Location loc = getOrCreateLocation(locName, precision);
-        Register reg = getOrCreateRegister(regThread, regName, precision);
-        addChild(regThread, EventFactory.newLocal(reg, loc.getAddress()));
-    }
+	public void initRegEqLocPtr(int regThread, String regName, String locName){
+		var loc = getOrCreateLocation(locName);
+		var reg = getOrCreateRegister(regThread, regName);
+		addChild(regThread, EventFactory.newLocal(reg, loc.getAddress()));
+	}
 
-    public void initRegEqLocVal(int regThread, String regName, String locName, int precision){
-        Location loc = getOrCreateLocation(locName, precision);
-        Register reg = getOrCreateRegister(regThread, regName, precision);
-        addChild(regThread, EventFactory.newLocal(reg, iValueMap.get(loc.getAddress())));
-    }
+	public void initRegEqLocVal(int regThread, String regName, String locName){
+		var loc = getOrCreateLocation(locName);
+		var reg = getOrCreateRegister(regThread, regName);
+		addChild(regThread, EventFactory.newLocal(reg, iValueMap.get(loc.getAddress())));
+	}
 
     public void initRegEqConst(int regThread, String regName, IConst iValue){
         addChild(regThread, EventFactory.newLocal(getOrCreateRegister(regThread, regName, iValue.getPrecision()), iValue));
@@ -147,6 +144,10 @@ public class ProgramBuilder {
         return locations.get(name);
     }
 
+	public Location getOrCreateLocation(String name) {
+		return getOrCreateLocation(name, -1);
+	}
+
     public Location getOrErrorLocation(String name){
         if(locations.containsKey(name)){
             return locations.get(name);
@@ -170,6 +171,10 @@ public class ProgramBuilder {
         }
         return register;
     }
+
+	public Register getOrCreateRegister(int threadId, String name) {
+		return getOrCreateRegister(threadId, name, -1);
+	}
 
     public Register getOrErrorRegister(int thread, String name){
         if(threads.containsKey(thread)){

@@ -7,9 +7,7 @@ import com.dat3m.dartagnan.parsers.BoogieParser.ExprContext;
 import com.dat3m.dartagnan.parsers.BoogieParser.ExprsContext;
 import com.dat3m.dartagnan.parsers.program.utils.ParsingException;
 import com.dat3m.dartagnan.program.EventFactory;
-import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Label;
-import com.dat3m.dartagnan.program.memory.Location;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -69,27 +67,27 @@ public class PthreadsProcedures {
 		visitor.threadCallingValues.put(visitor.currentThread, new ArrayList<>());
 		String namePtr = ctx.call_params().exprs().expr().get(0).getText();
 		// This names are global so we don't use currentScope.getID(), but per thread.
-		Register threadPtr = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, namePtr, -1);
+		var threadPtr = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, namePtr);
 		String threadName = ctx.call_params().exprs().expr().get(2).getText();
 		ExprInterface callingValue = (ExprInterface)ctx.call_params().exprs().expr().get(3).accept(visitor);
 		visitor.threadCallingValues.get(visitor.currentThread).add(callingValue);
 		visitor.pool.add(threadPtr, threadName);
-		Register reg = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, visitor.currentScope.getID() + ":" + ctx.call_params().Ident(0).getText(), -1);
+		var reg = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, visitor.currentScope.getID() + ":" + ctx.call_params().Ident(0).getText());
 		// We assume pthread_create always succeeds
 		visitor.programBuilder.addChild(visitor.threadCount, EventFactory.newLocal(reg, new IConst(BigInteger.ZERO, -1)));
-		Location loc = visitor.programBuilder.getOrCreateLocation(threadPtr + "_active", -1);
+		var loc = visitor.programBuilder.getOrCreateLocation(threadPtr + "_active");
 		visitor.programBuilder.addChild(visitor.threadCount, EventFactory.Pthread.newCreate(threadPtr, threadName, loc.getAddress(), visitor.currentLine));
 	}
 	
 	private static void pthread_join(VisitorBoogie visitor, Call_cmdContext ctx) {
 		String namePtr = ctx.call_params().exprs().expr().get(0).getText();
 		// This names are global so we don't use currentScope.getID(), but per thread.
-		Register callReg = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, namePtr, -1);
+		var callReg = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, namePtr);
 		if(visitor.pool.getPtrFromReg(callReg) == null) {
         	throw new UnsupportedOperationException("pthread_join cannot be handled");
 		}
-		Location loc = visitor.programBuilder.getOrCreateLocation(visitor.pool.getPtrFromReg(callReg) + "_active", -1);
-		Register reg = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, null, -1);
+		var loc = visitor.programBuilder.getOrCreateLocation(visitor.pool.getPtrFromReg(callReg) + "_active");
+		var reg = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, null);
        	Label label = visitor.programBuilder.getOrCreateLabel("END_OF_T" + visitor.threadCount);
        	visitor.programBuilder.addChild(visitor.threadCount, EventFactory.Pthread.newJoin(visitor.pool.getPtrFromReg(callReg), reg, loc.getAddress(), label));
 	}
@@ -105,7 +103,7 @@ public class PthreadsProcedures {
 	
 	private static void mutexLock(VisitorBoogie visitor, Call_cmdContext ctx) {
 		ExprsContext lock = ctx.call_params().exprs();
-        Register register = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, null, -1);
+		var register = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, null);
 		var lockAddress = (ExprInterface)lock.accept(visitor);
        	Label label = visitor.programBuilder.getOrCreateLabel("END_OF_T" + visitor.threadCount);
 		if(lockAddress != null) {
@@ -115,7 +113,7 @@ public class PthreadsProcedures {
 	
 	private static void mutexUnlock(VisitorBoogie visitor, Call_cmdContext ctx) {
 		ExprsContext lock = ctx.call_params().exprs();
-        Register register = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, null, -1);
+		var register = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, null);
 		var lockAddress = (ExprInterface)lock.accept(visitor);
        	Label label = visitor.programBuilder.getOrCreateLabel("END_OF_T" + visitor.threadCount);
 		if(lockAddress != null) {

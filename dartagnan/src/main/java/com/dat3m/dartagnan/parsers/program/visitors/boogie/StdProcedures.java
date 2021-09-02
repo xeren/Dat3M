@@ -134,7 +134,7 @@ public class StdProcedures {
 	}
 	
 	private static void __assert(VisitorBoogie visitor, Call_cmdContext ctx) {
-    	Register ass = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, "assert_" + visitor.assertionIndex, -1);
+		var ass = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, "assert_" + visitor.assertionIndex);
     	visitor.assertionIndex++;
     	ExprInterface expr = (ExprInterface)ctx.call_params().exprs().accept(visitor);
     	if(expr instanceof IConst && ((IConst)expr).getIntValue().compareTo(BigInteger.ONE) == 0) {
