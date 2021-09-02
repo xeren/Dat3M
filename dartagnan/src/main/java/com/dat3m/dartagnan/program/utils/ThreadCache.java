@@ -1,6 +1,5 @@
 package com.dat3m.dartagnan.program.utils;
 
-import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
@@ -44,8 +43,7 @@ public class ThreadCache {
                     builder.add(((RegWriter) e).getResultRegister());
                 }
                 if(e instanceof MemEvent){
-                    IExpr address = ((MemEvent) e).getAddress();
-                    builder.addAll(address.getRegs());
+                    builder.addAll(((MemEvent) e).getAddress().getRegs());
                 }
                 if(e instanceof RegReaderData){
                     builder.addAll(((RegReaderData) e).getDataRegs());

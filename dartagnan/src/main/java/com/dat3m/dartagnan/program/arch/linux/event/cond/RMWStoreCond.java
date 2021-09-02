@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan.program.arch.linux.event.cond;
 
 import com.dat3m.dartagnan.expression.ExprInterface;
-import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.rmw.RMWStore;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
@@ -18,7 +17,7 @@ public class RMWStoreCond extends RMWStore implements RegReaderData {
 
     protected transient BooleanFormula execVar;
 
-    public RMWStoreCond(RMWReadCond loadEvent, IExpr address, ExprInterface value, String mo) {
+    public RMWStoreCond(RMWReadCond loadEvent, ExprInterface address, ExprInterface value, String mo) {
         super(loadEvent, address, value, mo);
     }
 

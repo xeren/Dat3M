@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan.program.atomic.event;
 
 import com.dat3m.dartagnan.expression.ExprInterface;
-import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Fence;
@@ -24,7 +23,7 @@ public class AtomicStore extends MemEvent implements RegReaderData {
     private final ExprInterface value;
     private final ImmutableSet<Register> dataRegs;
 
-    public AtomicStore(IExpr address, ExprInterface value, String mo){
+    public AtomicStore(ExprInterface address, ExprInterface value, String mo){
         super(address, mo);
         this.value = value;
         this.dataRegs = value.getRegs();

@@ -5,7 +5,6 @@ import com.dat3m.dartagnan.utils.recursion.RecursiveFunction;
 import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.google.common.collect.ImmutableSet;
 import com.dat3m.dartagnan.expression.ExprInterface;
-import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.MemEvent;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
@@ -18,7 +17,7 @@ public abstract class RMWAbstract extends MemEvent implements RegWriter, RegRead
     protected final ExprInterface value;
     protected ImmutableSet<Register> dataRegs;
 
-    RMWAbstract(IExpr address, Register register, ExprInterface value, String mo) {
+    RMWAbstract(ExprInterface address, Register register, ExprInterface value, String mo) {
         super(address, mo);
         this.resultRegister = register;
         this.value = value;

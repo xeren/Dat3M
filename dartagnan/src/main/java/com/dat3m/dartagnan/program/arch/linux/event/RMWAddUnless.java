@@ -2,7 +2,6 @@ package com.dat3m.dartagnan.program.arch.linux.event;
 
 import com.dat3m.dartagnan.expression.Atom;
 import com.dat3m.dartagnan.expression.ExprInterface;
-import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.expression.IExprBin;
 import com.dat3m.dartagnan.expression.op.COpBin;
 import com.dat3m.dartagnan.expression.op.IOpBin;
@@ -26,7 +25,7 @@ public class RMWAddUnless extends RMWAbstract implements RegWriter, RegReaderDat
 
     private final ExprInterface cmp;
 
-    public RMWAddUnless(IExpr address, Register register, ExprInterface cmp, ExprInterface value) {
+    public RMWAddUnless(ExprInterface address, Register register, ExprInterface cmp, ExprInterface value) {
         super(address, register, value, Mo.MB);
         dataRegs = new ImmutableSet.Builder<Register>().addAll(value.getRegs()).addAll(cmp.getRegs()).build();
         this.cmp = cmp;

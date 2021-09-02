@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan.program.event;
 
 import com.dat3m.dartagnan.expression.ExprInterface;
-import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.verification.VerificationTask;
 import com.google.common.collect.ImmutableSet;
@@ -11,21 +10,21 @@ import org.sosy_lab.java_smt.api.SolverContext;
 
 public abstract class MemEvent extends Event {
 
-    protected final IExpr address;
-    protected final String mo;
+	protected final ExprInterface address;
+	protected final String mo;
 
-    protected Formula memAddressExpr;
-    protected Formula memValueExpr;
-    private ImmutableSet<Address> maxAddressSet;
+	protected Formula memAddressExpr;
+	protected Formula memValueExpr;
+	private ImmutableSet<Address> maxAddressSet;
 
-    public MemEvent(IExpr address, String mo){
-        this.address = address;
-        this.mo = mo;
-        if(mo != null){
-            addFilters(mo);
-        }
-    }
-    
+	public MemEvent(ExprInterface address, String mo){
+		this.address = address;
+		this.mo = mo;
+		if(mo != null){
+			addFilters(mo);
+		}
+	}
+
     protected MemEvent(MemEvent other){
         super(other);
         this.address = other.address;
@@ -66,9 +65,9 @@ public abstract class MemEvent extends Event {
         this.maxAddressSet = maxAddressSet;
     }
 
-    public IExpr getAddress(){
-        return address;
-    }
+	public ExprInterface getAddress(){
+		return address;
+	}
 
     public ExprInterface getMemValue(){
         throw new RuntimeException("MemValue is not available for event " + this.getClass().getName());

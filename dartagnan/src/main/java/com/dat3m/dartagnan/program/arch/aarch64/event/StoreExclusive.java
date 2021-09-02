@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan.program.arch.aarch64.event;
 
 import com.dat3m.dartagnan.expression.ExprInterface;
-import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.ExecutionStatus;
@@ -23,7 +22,7 @@ public class StoreExclusive extends Store implements RegWriter, RegReaderData {
 
     private final Register register;
 
-    public StoreExclusive(Register register, IExpr address, ExprInterface value, String mo){
+    public StoreExclusive(Register register, ExprInterface address, ExprInterface value, String mo){
         super(address, value, mo);
         this.register = register;
         addFilters(EType.EXCL, EType.REG_WRITER);

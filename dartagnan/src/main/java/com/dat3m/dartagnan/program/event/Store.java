@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan.program.event;
 
 import com.dat3m.dartagnan.expression.ExprInterface;
-import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.utils.EType;
@@ -14,7 +13,7 @@ public class Store extends MemEvent implements RegReaderData {
     protected final ExprInterface value;
     private final ImmutableSet<Register> dataRegs;
 
-    public Store(IExpr address, ExprInterface value, String mo){
+    public Store(ExprInterface address, ExprInterface value, String mo){
     	super(address, mo);
         this.value = value;
         dataRegs = value.getRegs();

@@ -3,7 +3,6 @@ package com.dat3m.dartagnan.program.atomic.event;
 import com.dat3m.dartagnan.expression.Atom;
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IConst;
-import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
@@ -24,7 +23,7 @@ public class Dat3mCAS extends AtomicAbstract implements RegWriter, RegReaderData
 
     private final ExprInterface expectedValue;
 
-    public Dat3mCAS(Register register, IExpr address, ExprInterface expectedVal, ExprInterface value, String mo) {
+    public Dat3mCAS(Register register, ExprInterface address, ExprInterface expectedVal, ExprInterface value, String mo) {
         super(address, register, value, mo);
         this.expectedValue = expectedVal;
     }

@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan.program.atomic.event;
 
 import com.dat3m.dartagnan.expression.ExprInterface;
-import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.arch.linux.utils.EType;
 import com.dat3m.dartagnan.program.event.Event;
@@ -18,7 +17,7 @@ public abstract class AtomicAbstract extends MemEvent implements RegWriter, RegR
     protected final ExprInterface value;
     protected ImmutableSet<Register> dataRegs;
 
-    AtomicAbstract(IExpr address, Register register, ExprInterface value, String mo) {
+    AtomicAbstract(ExprInterface address, Register register, ExprInterface value, String mo) {
         super(address, mo);
         this.resultRegister = register;
         this.value = value;

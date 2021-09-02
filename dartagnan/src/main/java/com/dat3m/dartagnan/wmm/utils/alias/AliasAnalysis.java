@@ -52,7 +52,7 @@ public class AliasAnalysis {
     private void processLocs(Program program) {
         for (Event ev : program.getCache().getEvents(FilterBasic.get(EType.MEMORY))) {
             MemEvent e = (MemEvent) ev;
-            IExpr address = e.getAddress();
+            var address = e.getAddress();
 
             // Collect for each v events of form: p = *v, *v = q
             if (address instanceof Register) {
@@ -91,7 +91,7 @@ public class AliasAnalysis {
     private void cfsProcessLocs(Program program) {
         for (Event ev : program.getCache().getEvents(FilterBasic.get(EType.MEMORY))) {
             MemEvent e = (MemEvent) ev;
-            IExpr address = e.getAddress();
+            var address = e.getAddress();
 
             // Collect for each v events of form: p = *v, *v = q
             if (address instanceof Register) {
@@ -291,7 +291,7 @@ public class AliasAnalysis {
     	}
 
         for (Event e : program.getCache().getEvents(FilterBasic.get(EType.MEMORY))) {
-            IExpr address = ((MemEvent) e).getAddress();
+            var address = ((MemEvent) e).getAddress();
             Set<Address> addresses;
             if (address instanceof Register) {
             	if(bases.containsKey(address) && program.getMemory().isArrayPointer(bases.get(address))) {
@@ -319,7 +319,7 @@ public class AliasAnalysis {
     private void calculateLocationSetsNoAlias(Program program) {
         ImmutableSet<Address> maxAddressSet = program.getMemory().getAllAddresses();
         for (Event e : program.getCache().getEvents(FilterBasic.get(EType.MEMORY))) {
-            IExpr address = ((MemEvent) e).getAddress();
+            var address = ((MemEvent) e).getAddress();
             if (address instanceof Address) {
                 ((MemEvent) e).setMaxAddressSet(ImmutableSet.of((Address) address));
             } else {

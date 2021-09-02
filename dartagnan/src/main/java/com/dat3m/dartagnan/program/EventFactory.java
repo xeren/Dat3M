@@ -44,23 +44,23 @@ public class EventFactory {
 
     // ------------------------------------------ Memory events ------------------------------------------
 
-    public static Load newLoad(Register register, IExpr address, String mo, int cLine) {
+    public static Load newLoad(Register register, ExprInterface address, String mo, int cLine) {
         Load load = new Load(register, address, mo);
         load.setCLine(cLine);
         return load;
     }
 
-    public static Load newLoad(Register register, IExpr address, String mo) {
+    public static Load newLoad(Register register, ExprInterface address, String mo) {
         return newLoad(register, address, mo, -1);
     }
 
-    public static Store newStore(IExpr address, ExprInterface value, String mo, int cLine) {
+    public static Store newStore(ExprInterface address, ExprInterface value, String mo, int cLine) {
         Store store = new Store(address, value, mo);
         store.setCLine(cLine);
         return store;
     }
 
-    public static Store newStore(IExpr address, ExprInterface value, String mo) {
+    public static Store newStore(ExprInterface address, ExprInterface value, String mo) {
         return newStore(address, value, mo, -1);
     }
 
@@ -74,7 +74,7 @@ public class EventFactory {
     	return fence;
     }
 
-    public static Init newInit(IExpr address, IConst value) {
+    public static Init newInit(ExprInterface address, IConst value) {
         return new Init(address, value);
     }
 
@@ -136,27 +136,27 @@ public class EventFactory {
 
     // ------------------------------------------ RMW events ------------------------------------------
 
-    public static Load newRMWLoad(Register reg, IExpr address, String mo) {
+    public static Load newRMWLoad(Register reg, ExprInterface address, String mo) {
         Load load = newLoad(reg, address, mo);
         load.addFilters(EType.RMW);
         return load;
     }
 
-    public static RMWStore newRMWStore(Load loadEvent, IExpr address, ExprInterface value, String mo) {
+    public static RMWStore newRMWStore(Load loadEvent, ExprInterface address, ExprInterface value, String mo) {
         return new RMWStore(loadEvent, address, value, mo);
     }
 
-    public static Load newRMWLoadExclusive(Register reg, IExpr address, String mo) {
+    public static Load newRMWLoadExclusive(Register reg, ExprInterface address, String mo) {
         Load load = new Load(reg, address, mo);
         load.addFilters(EType.RMW, EType.EXCL);
         return load;
     }
 
-    public static RMWStoreExclusive newRMWStoreExclusive(IExpr address, ExprInterface value, String mo, boolean isStrong) {
+    public static RMWStoreExclusive newRMWStoreExclusive(ExprInterface address, ExprInterface value, String mo, boolean isStrong) {
         return new RMWStoreExclusive(address, value, mo, isStrong);
     }
 
-    public static RMWStoreExclusive newRMWStoreExclusive(IExpr address, ExprInterface value, String mo) {
+    public static RMWStoreExclusive newRMWStoreExclusive(ExprInterface address, ExprInterface value, String mo) {
         return newRMWStoreExclusive(address, value, mo, false);
     }
 
@@ -210,31 +210,31 @@ public class EventFactory {
     public static class Atomic {
         private Atomic() {}
 
-        public static AtomicCmpXchg newCompareExchange(Register register, IExpr address, Register expected, ExprInterface value, String mo, boolean isStrong) {
+        public static AtomicCmpXchg newCompareExchange(Register register, ExprInterface address, Register expected, ExprInterface value, String mo, boolean isStrong) {
             return new AtomicCmpXchg(register, address, expected, value, mo, isStrong);
         }
 
-        public static AtomicCmpXchg newCompareExchange(Register register, IExpr address, Register expected, ExprInterface value, String mo) {
+        public static AtomicCmpXchg newCompareExchange(Register register, ExprInterface address, Register expected, ExprInterface value, String mo) {
             return newCompareExchange(register, address, expected, value, mo, false);
         }
 
-        public static AtomicFetchOp newFetchOp(Register register, IExpr address, ExprInterface value, IOpBin op, String mo) {
+        public static AtomicFetchOp newFetchOp(Register register, ExprInterface address, ExprInterface value, IOpBin op, String mo) {
             return new AtomicFetchOp(register, address, value, op, mo);
         }
 
-        public static AtomicFetchOp newFADD(Register register, IExpr address, ExprInterface value, String mo) {
+        public static AtomicFetchOp newFADD(Register register, ExprInterface address, ExprInterface value, String mo) {
             return newFetchOp(register, address, value, IOpBin.PLUS, mo);
         }
 
-        public static AtomicFetchOp newIncrement(Register register, IExpr address, String mo) {
+        public static AtomicFetchOp newIncrement(Register register, ExprInterface address, String mo) {
             return newFetchOp(register, address, new IConst(BigInteger.ONE, -1), IOpBin.PLUS, mo);
         }
 
-        public static AtomicLoad newLoad(Register register, IExpr address, String mo) {
+        public static AtomicLoad newLoad(Register register, ExprInterface address, String mo) {
             return new AtomicLoad(register, address, mo);
         }
 
-        public static AtomicStore newStore(IExpr address, ExprInterface value, String mo) {
+        public static AtomicStore newStore(ExprInterface address, ExprInterface value, String mo) {
             return new AtomicStore(address, value, mo);
         }
 
@@ -242,11 +242,11 @@ public class EventFactory {
             return new AtomicThreadFence(mo);
         }
 
-        public static AtomicXchg newExchange(Register register, IExpr address, ExprInterface value, String mo) {
+        public static AtomicXchg newExchange(Register register, ExprInterface address, ExprInterface value, String mo) {
             return new AtomicXchg(register, address, value, mo);
         }
 
-        public static Dat3mCAS newDat3mCAS(Register register, IExpr address, IExpr expected, ExprInterface value, String mo) {
+        public static Dat3mCAS newDat3mCAS(Register register, ExprInterface address, ExprInterface expected, ExprInterface value, String mo) {
             return new Dat3mCAS(register, address, expected, value, mo);
         }
     }
@@ -274,7 +274,7 @@ public class EventFactory {
     private static class ArmCommon {
         private ArmCommon() {}
 
-        public static StoreExclusive newExclusiveStore(Register register, IExpr address, ExprInterface value, String mo) {
+        public static StoreExclusive newExclusiveStore(Register register, ExprInterface address, ExprInterface value, String mo) {
             return new StoreExclusive(register, address, value, mo);
         }
     }
@@ -334,43 +334,43 @@ public class EventFactory {
     public static class Linux {
         private Linux() {}
 
-        public static RMWReadCondCmp newRMWReadCondCmp(Register reg, ExprInterface cmp, IExpr address, String atomic) {
+        public static RMWReadCondCmp newRMWReadCondCmp(Register reg, ExprInterface cmp, ExprInterface address, String atomic) {
             return new RMWReadCondCmp(reg, cmp, address, atomic);
         }
 
-        public static RMWReadCondUnless newRMWReadCondUnless(Register reg, ExprInterface cmp, IExpr address, String mo) {
+        public static RMWReadCondUnless newRMWReadCondUnless(Register reg, ExprInterface cmp, ExprInterface address, String mo) {
             return new RMWReadCondUnless(reg, cmp, address, mo);
         }
 
-        public static RMWStoreCond newRMWStoreCond(RMWReadCond loadEvent, IExpr address, ExprInterface value, String mo) {
+        public static RMWStoreCond newRMWStoreCond(RMWReadCond loadEvent, ExprInterface address, ExprInterface value, String mo) {
             return new RMWStoreCond(loadEvent, address, value, mo);
         }
 
-        public static RMWAddUnless newRMWAddUnless(IExpr address, Register register, ExprInterface cmp, ExprInterface value) {
+        public static RMWAddUnless newRMWAddUnless(ExprInterface address, Register register, ExprInterface cmp, ExprInterface value) {
             return new RMWAddUnless(address, register, cmp, value);
         }
 
-        public static RMWCmpXchg newRMWCompareExchange(IExpr address, Register register, ExprInterface cmp, ExprInterface value, String mo) {
+        public static RMWCmpXchg newRMWCompareExchange(ExprInterface address, Register register, ExprInterface cmp, ExprInterface value, String mo) {
             return new RMWCmpXchg(address, register, cmp, value, mo);
         }
 
-        public static RMWFetchOp newRMWFetchOp(IExpr address, Register register, ExprInterface value, IOpBin op, String mo) {
+        public static RMWFetchOp newRMWFetchOp(ExprInterface address, Register register, ExprInterface value, IOpBin op, String mo) {
             return new RMWFetchOp(address, register, value, op, mo);
         }
 
-        public static RMWOp newRMWOp(IExpr address, Register register, ExprInterface value, IOpBin op) {
+        public static RMWOp newRMWOp(ExprInterface address, Register register, ExprInterface value, IOpBin op) {
             return new RMWOp(address, register, value, op);
         }
 
-        public static RMWOpAndTest newRMWOpAndTest(IExpr address, Register register, ExprInterface value, IOpBin op) {
+        public static RMWOpAndTest newRMWOpAndTest(ExprInterface address, Register register, ExprInterface value, IOpBin op) {
             return new RMWOpAndTest(address, register, value, op);
         }
 
-        public static RMWOpReturn newRMWOpReturn(IExpr address, Register register, ExprInterface value, IOpBin op, String mo) {
+        public static RMWOpReturn newRMWOpReturn(ExprInterface address, Register register, ExprInterface value, IOpBin op, String mo) {
             return new RMWOpReturn(address, register, value, op, mo);
         }
 
-        public static RMWXchg newRMWExchange(IExpr address, Register register, ExprInterface value, String mo) {
+        public static RMWXchg newRMWExchange(ExprInterface address, Register register, ExprInterface value, String mo) {
             return new RMWXchg(address, register, value, mo);
         }
 

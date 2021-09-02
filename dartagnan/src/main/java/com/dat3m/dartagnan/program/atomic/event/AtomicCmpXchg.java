@@ -23,7 +23,7 @@ public class AtomicCmpXchg extends AtomicAbstract implements RegWriter, RegReade
 
     private final Register expected;
 
-    public AtomicCmpXchg(Register register, IExpr address, Register expected, ExprInterface value, String mo, boolean strong) {
+    public AtomicCmpXchg(Register register, ExprInterface address, Register expected, ExprInterface value, String mo, boolean strong) {
         super(address, register, value, mo);
         this.expected = expected;
         if(strong) {
@@ -31,7 +31,7 @@ public class AtomicCmpXchg extends AtomicAbstract implements RegWriter, RegReade
         }
     }
 
-    public AtomicCmpXchg(Register register, IExpr address, Register expected, ExprInterface value, String mo) {
+    public AtomicCmpXchg(Register register, ExprInterface address, Register expected, ExprInterface value, String mo) {
         this(register, address, expected, value, mo, false);
     }
 
