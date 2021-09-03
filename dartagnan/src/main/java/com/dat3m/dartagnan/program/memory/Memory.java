@@ -22,8 +22,7 @@ public class Memory {
 	private final Map<Address,Location> map = new HashMap<>();
     private final Map<String, Location> locationIndex;
 	private final LinkedList<Array> arrays = new LinkedList<>();
-
-    private int nextIndex = 1;
+	private int nextIndex = 0;
 
     public Memory(){
         locationIndex = new HashMap<>();
@@ -79,17 +78,15 @@ public class Memory {
     }
 
     public List<Address> malloc(int size, int precision){
-		var a = new Array(size, false);
-		for(int i = 0; i < size; i++)
-			a.address.add(new Address(a, nextIndex++, precision));
+		var a = new Array(nextIndex++, size, precision, false);
 		arrays.add(a);
 		return a.address;
     }
 
     public Location getOrCreateLocation(String name, int precision){
         if(!locationIndex.containsKey(name)){
-			var a = new Array(1, true);
-			var location = new Location(name, new Address(a, nextIndex++, precision));
+			var a = new Array(nextIndex++, 1, precision, true);
+			var location = new Location(name, a.address.get(0));
             map.put(location.getAddress(), location);
             locationIndex.put(name, location);
             return location;

@@ -24,7 +24,7 @@ public class IConst implements ExprInterface {
 	public static IConst ZERO = new IConst(BigInteger.ZERO, -1);
 	public static IConst ONE = new IConst(BigInteger.ONE, -1);
 
-	private final BigInteger value;
+	protected final BigInteger value;
 	protected final int precision;
 	
 	public IConst(BigInteger value, int precision) {

@@ -16,13 +16,11 @@ import java.math.BigInteger;
 public class Address extends IConst implements ExprInterface {
 
 	final Array array;
-    private final int index;
     private BigInteger constantValue;
 
 	Address(Array array, int index, int precision){
         super(BigInteger.valueOf(index), precision);
 		this.array = array;
-        this.index = index;
     }
 
     public boolean hasConstantValue() {
@@ -54,7 +52,7 @@ public class Address extends IConst implements ExprInterface {
 
     public Formula getLastMemValueExpr(SolverContext ctx){
         FormulaManager fmgr = ctx.getFormulaManager();
-		String name = "last_val_at_memory_" + index;
+		String name = "last_val_at_memory_" + array.name + "[" + value + "]";
 		FormulaType<?> type = precision > 0 ? getBitvectorTypeWithSize(precision) : IntegerType;
 		return fmgr.makeVariable(type, name);
     }
@@ -65,27 +63,6 @@ public class Address extends IConst implements ExprInterface {
     }
 
     @Override
-    public String toString(){
-        return "&mem" + index;
-    }
-
-    @Override
-    public int hashCode(){
-        return index;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-
-        if (obj == null || getClass() != obj.getClass())
-            return false;
-
-        return index == ((Address)obj).index;
-    }
-
-    @Override
     public Formula toIntFormula(SolverContext ctx){
 		FormulaManager fmgr = ctx.getFormulaManager();
 		if(constantValue != null) {
@@ -93,7 +70,7 @@ public class Address extends IConst implements ExprInterface {
 					fmgr.getBitvectorFormulaManager().makeBitvector(precision, constantValue) : 
 					fmgr.getIntegerFormulaManager().makeNumber(constantValue);
     	}
-		String name = "memory_" + index;
+		String name = "memory_" + array.name + "[" + value + "]";
 		FormulaType<?> type = precision > 0 ? getBitvectorTypeWithSize(precision) : IntegerType;
 		return fmgr.makeVariable(type, name);
     }
@@ -106,8 +83,33 @@ public class Address extends IConst implements ExprInterface {
         return new BigInteger(model.evaluate(toIntFormula(ctx)).toString());
     }
 
+	@Override
+	public boolean isTrue() {
+		return true;
+	}
+
+	@Override
+	public boolean isFalse() {
+		return false;
+	}
+
     @Override
     public <T> T visit(ExpressionVisitor<T> visitor) {
         return visitor.visit(this);
     }
+
+	@Override
+	public String toString() {
+		return "&mem" + array.name + "[" + value + "]";
+	}
+
+	@Override
+	public int hashCode() {
+		return array.hashCode() ^ value.hashCode();
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		return o instanceof Address && array.equals(((Address)o).array) && value.equals(((Address)o).value);
+	}
 }
