@@ -1,8 +1,6 @@
 package com.dat3m.dartagnan.program.memory;
 
 import com.dat3m.dartagnan.program.memory.utils.IllegalMemoryAccessException;
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableSet;
 
 import static com.dat3m.dartagnan.program.utils.Utils.convertToIntegerFormula;
@@ -22,20 +20,19 @@ import org.sosy_lab.java_smt.api.SolverContext;
 
 public class Memory {
 
-    private final BiMap<Location, Address> map;
+	private final Map<Address,Location> map = new HashMap<>();
     private final Map<String, Location> locationIndex;
     private final Map<String, List<Address>> arrays;
 
     private int nextIndex = 1;
 
     public Memory(){
-        map = HashBiMap.create();
         locationIndex = new HashMap<>();
         arrays = new HashMap<>();
     }
 
     public Location getLocationForAddress(Address address){
-        return map.inverse().get(address);
+        return map.get(address);
     }
 
     public BooleanFormula encode(SolverContext ctx){
@@ -98,7 +95,7 @@ public class Memory {
     public Location getOrCreateLocation(String name, int precision){
         if(!locationIndex.containsKey(name)){
             Location location = new Location(name, new Address(nextIndex++, precision));
-            map.put(location, location.getAddress());
+            map.put(location.getAddress(), location);
             locationIndex.put(name, location);
             return location;
         }
@@ -106,7 +103,7 @@ public class Memory {
     }
 
     public ImmutableSet<Address> getAllAddresses(){
-        Set<Address> result = new HashSet<>(map.values());
+        Set<Address> result = new HashSet<>(map.keySet());
         for(List<Address> array : arrays.values()){
             result.addAll(array);
         }
