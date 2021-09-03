@@ -8,8 +8,10 @@ import java.util.ArrayList;
 final class Array {
 
 	final ArrayList<Address> address;
+	final boolean isStatic;
 
-	Array(int size) {
+	Array(int size, boolean isStatic) {
 		address = new ArrayList<>(size);
+		this.isStatic = isStatic;
 	}
 }

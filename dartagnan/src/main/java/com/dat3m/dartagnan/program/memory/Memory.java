@@ -82,7 +82,7 @@ public class Memory {
 
     public List<Address> malloc(String name, int size, int precision){
         if(!arrays.containsKey(name) && size > 0){
-			var a = new Array(size);
+			var a = new Array(size, false);
 			for(int i = 0; i < size; i++)
 				a.address.add(new Address(a, nextIndex++, precision));
 			arrays.put(name, a);
@@ -93,7 +93,7 @@ public class Memory {
 
     public Location getOrCreateLocation(String name, int precision){
         if(!locationIndex.containsKey(name)){
-			var a = new Array(1);
+			var a = new Array(1, true);
 			var location = new Location(name, new Address(a, nextIndex++, precision));
             map.put(location.getAddress(), location);
             locationIndex.put(name, location);
@@ -110,16 +110,11 @@ public class Memory {
     }
 
     public boolean isArrayPointer(Address address) {
-    	return arrays.values().stream()
-			.map(a->a.address)
-        	.collect(ArrayList::new, List::addAll, List::addAll).contains(address);
+		return !address.array.isStatic;
     }
     
     public List<Address> getArrayfromPointer(Address address) {
-		for(var array : arrays.values())
-			if(array.address.contains(address))
-				return array.address;
-    	// This method shall be called after isArrayPointer to avoid returning null
-		return null;
+		// This method shall be called after isArrayPointer to avoid returning null
+		return address.array.address;
     }
 }
