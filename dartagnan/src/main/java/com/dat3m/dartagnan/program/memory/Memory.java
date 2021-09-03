@@ -1,6 +1,5 @@
 package com.dat3m.dartagnan.program.memory;
 
-import com.dat3m.dartagnan.program.memory.utils.IllegalMemoryAccessException;
 import com.google.common.collect.ImmutableSet;
 
 import static com.dat3m.dartagnan.program.utils.Utils.convertToIntegerFormula;
@@ -22,13 +21,12 @@ public class Memory {
 
 	private final Map<Address,Location> map = new HashMap<>();
     private final Map<String, Location> locationIndex;
-	private final Map<String,Array> arrays;
+	private final LinkedList<Array> arrays = new LinkedList<>();
 
     private int nextIndex = 1;
 
     public Memory(){
         locationIndex = new HashMap<>();
-        arrays = new HashMap<>();
     }
 
     public Location getLocationForAddress(Address address){
@@ -41,7 +39,7 @@ public class Memory {
         IntegerFormulaManager imgr = fmgr.getIntegerFormulaManager();
 
 		BooleanFormula enc = bmgr.makeTrue();
-		for(var array : arrays.values()){
+		for(var array : arrays){
 			Formula e1 = array.address.get(0).toIntFormula(ctx);
 			for(int i = 1; i < array.address.size(); i++){
 				IntegerFormula e2 = convertToIntegerFormula(array.address.get(i).toIntFormula(ctx), ctx);
@@ -80,15 +78,12 @@ public class Memory {
         return fmgr.getBooleanFormulaManager().and(addrExprs);
     }
 
-    public List<Address> malloc(String name, int size, int precision){
-        if(!arrays.containsKey(name) && size > 0){
-			var a = new Array(size, false);
-			for(int i = 0; i < size; i++)
-				a.address.add(new Address(a, nextIndex++, precision));
-			arrays.put(name, a);
-			return a.address;
-        }
-        throw new IllegalMemoryAccessException("Illegal malloc for " + name);
+    public List<Address> malloc(int size, int precision){
+		var a = new Array(size, false);
+		for(int i = 0; i < size; i++)
+			a.address.add(new Address(a, nextIndex++, precision));
+		arrays.add(a);
+		return a.address;
     }
 
     public Location getOrCreateLocation(String name, int precision){
@@ -104,7 +99,7 @@ public class Memory {
 
     public ImmutableSet<Address> getAllAddresses(){
         Set<Address> result = new HashSet<>(map.keySet());
-		for(var array : arrays.values())
+		for(var array : arrays)
 			result.addAll(array.address);
         return ImmutableSet.copyOf(result);
     }

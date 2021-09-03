@@ -110,7 +110,7 @@ public class ProgramBuilder {
 
     public void addDeclarationArray(String name, List<IConst> values, int precision){
         int size = values.size();
-        List<Address> addresses = memory.malloc(name, size, precision);
+        List<Address> addresses = memory.malloc(size, precision);
         for(int i = 0; i < size; i++){
             String varName = name + "[" + i + "]";
             Address address = addresses.get(i);
