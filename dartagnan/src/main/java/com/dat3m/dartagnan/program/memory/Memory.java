@@ -22,7 +22,7 @@ public class Memory {
 
 	private final Map<Address,Location> map = new HashMap<>();
     private final Map<String, Location> locationIndex;
-    private final Map<String, List<Address>> arrays;
+	private final Map<String,Array> arrays;
 
     private int nextIndex = 1;
 
@@ -41,10 +41,10 @@ public class Memory {
         IntegerFormulaManager imgr = fmgr.getIntegerFormulaManager();
 
 		BooleanFormula enc = bmgr.makeTrue();
-		for(List<Address> array : arrays.values()){
-        	Formula e1 = array.get(0).toIntFormula(ctx);
-            for(int i = 1; i < array.size(); i++){
-            	IntegerFormula e2 = convertToIntegerFormula(array.get(i).toIntFormula(ctx), ctx);
+		for(var array : arrays.values()){
+			Formula e1 = array.address.get(0).toIntFormula(ctx);
+			for(int i = 1; i < array.address.size(); i++){
+				IntegerFormula e2 = convertToIntegerFormula(array.address.get(i).toIntFormula(ctx), ctx);
 				IntegerFormula newAddress = imgr.add(convertToIntegerFormula(e1, ctx), imgr.makeNumber(BigInteger.ONE));
 				enc = bmgr.and(enc, generalEqual(e2, newAddress, ctx));
                 e1 = e2;
@@ -82,19 +82,19 @@ public class Memory {
 
     public List<Address> malloc(String name, int size, int precision){
         if(!arrays.containsKey(name) && size > 0){
-            List<Address> addresses = new ArrayList<>();
-            for(int i = 0; i < size; i++){
-                addresses.add(new Address(nextIndex++, precision));
-            }
-            arrays.put(name, addresses);
-            return addresses;
+			var a = new Array(size);
+			for(int i = 0; i < size; i++)
+				a.address.add(new Address(a, nextIndex++, precision));
+			arrays.put(name, a);
+			return a.address;
         }
         throw new IllegalMemoryAccessException("Illegal malloc for " + name);
     }
 
     public Location getOrCreateLocation(String name, int precision){
         if(!locationIndex.containsKey(name)){
-            Location location = new Location(name, new Address(nextIndex++, precision));
+			var a = new Array(1);
+			var location = new Location(name, new Address(a, nextIndex++, precision));
             map.put(location.getAddress(), location);
             locationIndex.put(name, location);
             return location;
@@ -104,23 +104,21 @@ public class Memory {
 
     public ImmutableSet<Address> getAllAddresses(){
         Set<Address> result = new HashSet<>(map.keySet());
-        for(List<Address> array : arrays.values()){
-            result.addAll(array);
-        }
+		for(var array : arrays.values())
+			result.addAll(array.address);
         return ImmutableSet.copyOf(result);
     }
 
     public boolean isArrayPointer(Address address) {
     	return arrays.values().stream()
+			.map(a->a.address)
         	.collect(ArrayList::new, List::addAll, List::addAll).contains(address);
     }
     
     public List<Address> getArrayfromPointer(Address address) {
-    	for(List<Address> array : arrays.values()) {
-    		if(array.contains(address)) {
-    			return array;
-    		}
-    	}
+		for(var array : arrays.values())
+			if(array.address.contains(address))
+				return array.address;
     	// This method shall be called after isArrayPointer to avoid returning null
 		return null;
     }

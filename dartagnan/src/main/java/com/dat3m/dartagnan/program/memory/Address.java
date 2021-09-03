@@ -15,11 +15,13 @@ import java.math.BigInteger;
 
 public class Address extends IConst implements ExprInterface {
 
+	final Array array;
     private final int index;
     private BigInteger constantValue;
 
-    Address(int index, int precision){
+	Address(Array array, int index, int precision){
         super(BigInteger.valueOf(index), precision);
+		this.array = array;
         this.index = index;
     }
 
