@@ -159,7 +159,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 		if(exp instanceof Atom && ((Atom)exp).getLHS() instanceof Address && ((Atom)exp).getOp().equals(EQ)) {
  			Address add = (Address)((Atom)exp).getLHS();
  			ExprInterface def = ((Atom)exp).getRHS();
- 			add.setConstantValue(def.reduce().getValue());
+ 			add.setConstantValue(def.reduce().getIntValue());
  		}
 		return null;
 	}

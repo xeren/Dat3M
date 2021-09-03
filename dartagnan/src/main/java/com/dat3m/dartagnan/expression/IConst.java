@@ -99,10 +99,6 @@ public class IConst implements ExprInterface {
 		return 0 >= value.compareTo(BigInteger.ZERO);
 	}
 
-	public BigInteger getValue() {
-		return value;
-	}
-
     
 	@Override
 	public int getPrecision() {

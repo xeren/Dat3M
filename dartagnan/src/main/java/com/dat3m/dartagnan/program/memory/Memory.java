@@ -78,7 +78,7 @@ public class Memory {
 
     	BooleanFormula[] addrExprs = getAllAddresses().stream().filter(x -> !x.hasConstantValue())
         		.map(add -> imgr.equal(convertToIntegerFormula(add.toIntFormula(ctx), ctx), 
-        								imgr.makeNumber(add.getValue().intValue())))
+        								imgr.makeNumber(add.getIntValue().intValue())))
         		.toArray(BooleanFormula[]::new);
         return fmgr.getBooleanFormulaManager().and(addrExprs);
     }
