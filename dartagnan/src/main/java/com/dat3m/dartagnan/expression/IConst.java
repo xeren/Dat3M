@@ -38,11 +38,8 @@ public class IConst implements ExprInterface {
 	}
 
 	@Override
-    public Formula toIntFormula(Event e, SolverContext ctx){
-		FormulaManager fmgr = ctx.getFormulaManager();
-		return precision > 0 ? 
-				fmgr.getBitvectorFormulaManager().makeBitvector(precision, value) : 
-				fmgr.getIntegerFormulaManager().makeNumber(value);
+	public Formula toIntFormula(Event e, SolverContext ctx){
+		return toIntFormula(ctx);
 	}
 
 	@Override
@@ -62,10 +59,7 @@ public class IConst implements ExprInterface {
 
 	@Override
 	public Formula getLastValueExpr(SolverContext ctx){
-		FormulaManager fmgr = ctx.getFormulaManager();
-		return precision > 0 ? 
-				fmgr.getBitvectorFormulaManager().makeBitvector(precision, value) : 
-				fmgr.getIntegerFormulaManager().makeNumber(value);
+		return toIntFormula(ctx);
 	}
 
 	@Override
