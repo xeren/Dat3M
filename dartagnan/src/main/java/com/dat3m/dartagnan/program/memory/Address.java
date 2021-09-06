@@ -25,6 +25,21 @@ public class Address extends IConst implements ExprInterface {
 		array.constant = value.subtract(this.value);
 	}
 
+	/**
+	 * @return Value found at the memory address on program start.
+	 */
+	public IConst getInitial() {
+		var r = array.initial[value.intValue()];
+		return null!=r ? r : new IConst(Location.DEFAULT_INIT_VALUE, precision);
+	}
+
+	/**
+	 * @param initial Value to be read from this address on program start.
+	 */
+	public void setInitial(IConst initial) {
+		array.initial[value.intValue()] = initial;
+	}
+
 	public Formula getLastMemValueExpr(SolverContext ctx){
 		var m = ctx.getFormulaManager();
 		var name = "last_val_at_memory_" + array.name + "[" + value + "]";

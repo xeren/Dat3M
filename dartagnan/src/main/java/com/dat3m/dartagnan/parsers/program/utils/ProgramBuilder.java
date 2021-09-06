@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan.parsers.program.utils;
 
 import com.dat3m.dartagnan.asserts.AbstractAssert;
-import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IConst;
 import com.dat3m.dartagnan.program.EventFactory;
 import com.dat3m.dartagnan.program.Program;
@@ -25,7 +24,6 @@ public class ProgramBuilder {
     private final Map<String, Location> locations = new HashMap<>();
     private final Map<String, Address> pointers = new HashMap<>();
 
-    private final Map<ExprInterface, IConst> iValueMap = new HashMap<>();
     private final Memory memory = new Memory();
 
     private final Map<String, Label> labels = new HashMap<>();
@@ -80,17 +78,16 @@ public class ProgramBuilder {
     // Declarators
 
 	public void initLocEqLocPtr(String leftName, String rightName){
-		iValueMap.put(getOrCreateLocation(leftName).getAddress(), getOrCreateLocation(rightName).getAddress());
+		getOrCreateLocation(leftName).getAddress().setInitial(getOrCreateLocation(rightName).getAddress());
 	}
 
 	public void initLocEqLocVal(String leftName, String rightName){
-		iValueMap.put(getOrCreateLocation(leftName).getAddress(), iValueMap.get(getOrCreateLocation(rightName).getAddress()));
+		getOrCreateLocation(leftName).getAddress().setInitial(getOrCreateLocation(rightName).getAddress().getInitial());
 	}
 
-    public void initLocEqConst(String locName, IConst iValue){
-        Location location = getOrCreateLocation(locName, iValue.getPrecision());
-        iValueMap.put(location.getAddress(), iValue);
-    }
+	public void initLocEqConst(String locName, IConst iValue){
+		getOrCreateLocation(locName, iValue.getPrecision()).getAddress().setInitial(iValue);
+	}
 
 	public void initRegEqLocPtr(int regThread, String regName, String locName){
 		var loc = getOrCreateLocation(locName);
@@ -101,7 +98,7 @@ public class ProgramBuilder {
 	public void initRegEqLocVal(int regThread, String regName, String locName){
 		var loc = getOrCreateLocation(locName);
 		var reg = getOrCreateRegister(regThread, regName);
-		addChild(regThread, EventFactory.newLocal(reg, iValueMap.get(loc.getAddress())));
+		addChild(regThread, EventFactory.newLocal(reg, loc.getAddress().getInitial()));
 	}
 
     public void initRegEqConst(int regThread, String regName, IConst iValue){
@@ -115,7 +112,7 @@ public class ProgramBuilder {
             String varName = name + "[" + i + "]";
             Address address = addresses.get(i);
             locations.put(varName, new Location(varName, address));
-            iValueMap.put(address, values.get(i));
+			address.setInitial(values.get(i));
         }
         pointers.put(name, addresses.get(0));
     }
@@ -139,7 +136,6 @@ public class ProgramBuilder {
         if(!locations.containsKey(name)){
             Location location = memory.getOrCreateLocation(name, precision);
             locations.put(name, location);
-            iValueMap.put(location.getAddress(), new IConst(Location.DEFAULT_INIT_VALUE, location.getAddress().getPrecision()));
         }
         return locations.get(name);
     }
@@ -195,9 +191,9 @@ public class ProgramBuilder {
         return labels.get(name);
     }
 
-    public IConst getInitValue(Address address){
-        return iValueMap.getOrDefault(address, new IConst(Location.DEFAULT_INIT_VALUE, address.getPrecision()));
-    }
+	public IConst getInitValue(Address address){
+		return address.getInitial();
+	}
 
     public Address getPointer(String name){
         return pointers.get(name);
@@ -216,8 +212,8 @@ public class ProgramBuilder {
 
     private void buildInitThreads(){
         int nextThreadId = nextThreadId();
-        for (Map.Entry<ExprInterface, IConst> entry : iValueMap.entrySet()) {
-            Event e = EventFactory.newInit(entry.getKey(), entry.getValue());
+		for(var a : memory.getAllAddresses()) {
+			Event e = EventFactory.newInit(a, a.getInitial());
             Thread thread = new Thread(nextThreadId, e);
             threads.put(nextThreadId, thread);
             nextThreadId++;

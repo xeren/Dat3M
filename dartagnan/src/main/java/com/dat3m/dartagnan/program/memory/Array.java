@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.program.memory;
 
+import com.dat3m.dartagnan.expression.IConst;
 import org.sosy_lab.java_smt.api.IntegerFormulaManager;
 import org.sosy_lab.java_smt.api.NumeralFormula.IntegerFormula;
 
@@ -13,6 +14,7 @@ final class Array {
 
 	final int name;
 	final ArrayList<Address> address;
+	final IConst[] initial;
 	final int precision;
 	final boolean isStatic;
 	BigInteger constant;
@@ -20,6 +22,7 @@ final class Array {
 	Array(int name, int size, int precision, boolean isStatic) {
 		this.name = name;
 		address = new ArrayList<>(size);
+		initial = new IConst[size];
 		this.precision = precision;
 		this.isStatic = isStatic;
 		for(int i = 0; i < size; ++i)
