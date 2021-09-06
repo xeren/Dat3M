@@ -70,7 +70,7 @@ public class Lock extends Event {
     protected RecursiveFunction<Integer> compileRecursive(Arch target, int nextId, Event predecessor, int depth) {
         List<Event> events = eventSequence(
                 newLoad(reg, address, SC),
-                newJump(new Atom(reg, NEQ, IConst.ZERO), label),
+				newJump(Atom.of(NEQ, reg, IConst.ZERO), label),
                 newStore(address, IConst.ONE, SC)
         );
         for(Event e : events) {

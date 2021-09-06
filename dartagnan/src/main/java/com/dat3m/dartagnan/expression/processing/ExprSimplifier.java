@@ -13,18 +13,6 @@ import com.dat3m.dartagnan.program.memory.Location;
 public class ExprSimplifier extends ExprTransformer {
 
     @Override
-    public ExprInterface visit(Atom atom) {
-        ExprInterface lhs = atom.getLHS().visit(this);
-        ExprInterface rhs = atom.getRHS().visit(this);
-        if (lhs instanceof IConst && rhs instanceof  IConst) {
-            IConst lc = (IConst) lhs;
-            IConst rc = (IConst) rhs;
-			return atom.getOp().combine(lc.getIntValue(), rc.getIntValue()) ? IConst.ONE : IConst.ZERO;
-        }
-        return new Atom(lhs, atom.getOp(), rhs);
-    }
-
-    @Override
 	public ExprInterface visit(IExprBin iBin) {
 		var lhs = iBin.getLHS().visit(this);
 		var rhs = iBin.getRHS().visit(this);

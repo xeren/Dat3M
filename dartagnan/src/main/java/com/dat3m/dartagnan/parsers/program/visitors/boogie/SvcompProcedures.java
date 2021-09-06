@@ -102,7 +102,7 @@ public class SvcompProcedures {
 		event.addFilters(EType.ASSERTION);
 		visitor.programBuilder.addChild(visitor.threadCount, event);
        	Label end = visitor.programBuilder.getOrCreateLabel("END_OF_T" + visitor.threadCount);
-       	visitor.programBuilder.addChild(visitor.threadCount, EventFactory.newJump(new Atom(ass, NEQ, new IConst(BigInteger.ONE, -1)), end));
+       	visitor.programBuilder.addChild(visitor.threadCount, EventFactory.newJump(Atom.of(NEQ, ass, new IConst(BigInteger.ONE, -1)), end));
 	}
 
 	public static void __VERIFIER_atomic(VisitorBoogie visitor, boolean begin) {
@@ -111,7 +111,7 @@ public class SvcompProcedures {
 		Label label = visitor.programBuilder.getOrCreateLabel("END_OF_T" + visitor.threadCount);
 		LinkedList<Event> events = new LinkedList<>();
         events.add(EventFactory.newLoad(register, lockAddress, null));
-        events.add(EventFactory.newJump(new Atom(register, NEQ, new IConst(begin ? BigInteger.ZERO : BigInteger.ONE, -1)), label));
+        events.add(EventFactory.newJump(Atom.of(NEQ, register, new IConst(begin ? BigInteger.ZERO : BigInteger.ONE, -1)), label));
         events.add(EventFactory.newStore(lockAddress, new IConst(begin ? BigInteger.ONE : BigInteger.ZERO, -1), null));
         for(Event e : events) {
         	e.addFilters(EType.LOCK, EType.RMW);

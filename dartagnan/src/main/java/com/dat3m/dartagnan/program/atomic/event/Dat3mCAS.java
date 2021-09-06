@@ -57,9 +57,9 @@ public class Dat3mCAS extends AtomicAbstract implements RegWriter, RegReaderData
             case NONE: case TSO: {
                 Register dummy = new Register(null, resultRegister.getThreadId(), resultRegister.getPrecision());
                 Load load = newRMWLoad(dummy, address, mo);
-                Local casCmpResult = newLocal(resultRegister, new Atom(dummy, EQ, expectedValue));
+				var casCmpResult = newLocal(resultRegister, Atom.of(EQ, dummy, expectedValue));
                 Label casEnd = newLabel("CAS_end");
-                CondJump branchOnCasCmpResult = newJump(new Atom(resultRegister, NEQ, IConst.ONE), casEnd);
+				var branchOnCasCmpResult = newJump(Atom.of(NEQ, resultRegister, IConst.ONE), casEnd);
                 Store store = newRMWStore(load, address, value, mo);
 
                 events = eventSequence(
@@ -79,9 +79,9 @@ public class Dat3mCAS extends AtomicAbstract implements RegWriter, RegReaderData
 
                 Register dummy = new Register(null, resultRegister.getThreadId(), resultRegister.getPrecision());
                 Load load = newRMWLoadExclusive(dummy, address, loadMo);
-                Local casCmpResult = newLocal(resultRegister, new Atom(dummy, EQ, expectedValue));
+				var casCmpResult = newLocal(resultRegister, Atom.of(EQ, dummy, expectedValue));
                 Label endCas = newLabel("CAS_end");
-                CondJump branchOnCasCmpResult = newJump(new Atom(resultRegister, NEQ, IConst.ONE), endCas);
+				var branchOnCasCmpResult = newJump(Atom.of(NEQ, resultRegister, IConst.ONE), endCas);
                 // ---- CAS success ----
                 Store store = newRMWStoreExclusive(address, value, storeMo, true);
                 // ---------------------

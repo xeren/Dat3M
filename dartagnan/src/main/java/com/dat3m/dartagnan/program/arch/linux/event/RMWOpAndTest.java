@@ -57,7 +57,7 @@ public class RMWOpAndTest extends RMWAbstract implements RegWriter, RegReaderDat
             Load load = newRMWLoad(dummy, address, Mo.RELAXED);
             Local localOp = newLocal(dummy, new IExprBin(dummy, op, value));
             RMWStore store = newRMWStore(load, address, dummy, Mo.RELAXED);
-            Local test = newLocal(resultRegister, new Atom(dummy, COpBin.EQ, new IConst(BigInteger.ZERO, resultRegister.getPrecision())));
+            Local test = newLocal(resultRegister, Atom.of(COpBin.EQ, dummy, new IConst(BigInteger.ZERO, resultRegister.getPrecision())));
 
             //TODO: Are the memory barriers really unconditional?
             List<Event> events = eventSequence(

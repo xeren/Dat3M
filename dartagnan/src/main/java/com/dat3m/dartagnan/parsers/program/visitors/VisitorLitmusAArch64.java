@@ -182,14 +182,14 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
         if(ctx.branchCondition() == null){
             return programBuilder.addChild(mainThread, EventFactory.newGoto(label));
         }
-        Atom expr = new Atom(lhs[mainThread], ctx.branchCondition().op, rhs[mainThread]);
+		var expr = Atom.of(ctx.branchCondition().op, lhs[mainThread], rhs[mainThread]);
         return programBuilder.addChild(mainThread, EventFactory.newJump(expr, label));
     }
 
     @Override
     public Object visitBranchRegister(LitmusAArch64Parser.BranchRegisterContext ctx) {
         Register register = programBuilder.getOrErrorRegister(mainThread, ctx.rV);
-        Atom expr = new Atom(register, ctx.branchRegInstruction().op, new IConst(BigInteger.ZERO, -1));
+		var expr = Atom.of(ctx.branchRegInstruction().op, register, new IConst(BigInteger.ZERO, -1));
         Label label = programBuilder.getOrCreateLabel(ctx.label().getText());
         return programBuilder.addChild(mainThread, EventFactory.newJump(expr, label));
     }

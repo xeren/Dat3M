@@ -10,7 +10,6 @@ import com.dat3m.dartagnan.program.arch.linux.event.cond.RMWReadCondUnless;
 import com.dat3m.dartagnan.program.arch.linux.event.cond.RMWStoreCond;
 import com.dat3m.dartagnan.program.arch.linux.utils.Mo;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.Local;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
 import com.dat3m.dartagnan.utils.recursion.RecursiveFunction;
@@ -59,7 +58,7 @@ public class RMWAddUnless extends RMWAbstract implements RegWriter, RegReaderDat
             Register dummy = new Register(null, resultRegister.getThreadId(), resultRegister.getPrecision());
             RMWReadCondUnless load = Linux.newRMWReadCondUnless(dummy, cmp, address, Mo.RELAXED);
             RMWStoreCond store = Linux.newRMWStoreCond(load, address, new IExprBin(dummy, IOpBin.PLUS, value), Mo.RELAXED);
-            Local local = newLocal(resultRegister, new Atom(dummy, COpBin.NEQ, cmp));
+			var local = newLocal(resultRegister, Atom.of(COpBin.NEQ, dummy, cmp));
 
             List<Event> events = eventSequence(
                     Linux.newConditionalMemoryBarrier(load),

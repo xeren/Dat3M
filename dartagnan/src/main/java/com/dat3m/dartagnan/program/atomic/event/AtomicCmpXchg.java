@@ -72,8 +72,8 @@ public class AtomicCmpXchg extends AtomicAbstract implements RegWriter, RegReade
                 Label casFail = newLabel("CAS_fail");
                 Label casEnd = newLabel("CAS_end");
                 Load load = newRMWLoad(dummy, address, mo);
-                Local casCmpResult = newLocal(resultRegister, new Atom(dummy, EQ, expected));
-                CondJump branchOnCasCmpResult = newJump(new Atom(resultRegister, NEQ, IConst.ONE), casFail);
+				var casCmpResult = newLocal(resultRegister, Atom.of(EQ, dummy, expected));
+				var branchOnCasCmpResult = newJump(Atom.of(NEQ, resultRegister, IConst.ONE), casFail);
                 Store store = newRMWStore(load, address, value, mo);
                 CondJump gotoCasEnd = newGoto(casEnd);
                 Local updateReg = newLocal(expected, dummy);
@@ -100,8 +100,8 @@ public class AtomicCmpXchg extends AtomicAbstract implements RegWriter, RegReade
                 Label casFail = newLabel("CAS_fail");
                 Label casEnd = newLabel("CAS_end");
                 Load load = newRMWLoadExclusive(dummy, address, loadMo);
-                Local casCmpResult = newLocal(resultRegister, new Atom(dummy, EQ, expected));
-                CondJump branchOnCasCmpResult = newJump(new Atom(resultRegister, NEQ, IConst.ONE), casFail);
+				var casCmpResult = newLocal(resultRegister, Atom.of(EQ, dummy, expected));
+				var branchOnCasCmpResult = newJump(Atom.of(NEQ, resultRegister, IConst.ONE), casFail);
                 // ---- CAS success ----
                 Store store = newRMWStoreExclusive(address, value, storeMo, is(STRONG));
                 ExecutionStatus optionalExecStatus = null;

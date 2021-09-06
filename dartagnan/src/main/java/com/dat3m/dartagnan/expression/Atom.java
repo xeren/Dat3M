@@ -21,11 +21,26 @@ public final class Atom implements ExprInterface {
 	private final ExprInterface lhs;
 	private final ExprInterface rhs;
 	private final COpBin op;
-	
-	public Atom (ExprInterface lhs, COpBin op, ExprInterface rhs) {
+
+	private Atom(ExprInterface lhs, COpBin op, ExprInterface rhs) {
 		this.lhs = lhs;
 		this.rhs = rhs;
 		this.op = op;
+	}
+
+	/**
+	 * Builds a binary predicate.
+	 * @param o Operator.
+	 * @param a First operand.
+	 * @param b Second and last operand.
+	 * @return Simplified equivalent of the described expression.
+	 */
+	public static ExprInterface of(COpBin o, ExprInterface a, ExprInterface b) {
+		var aa = a.toConstant();
+		var bb = b.toConstant();
+		if(null==aa || null==bb)
+			return new Atom(a, o, b);
+		return new IConst(o.combine(aa, bb) ? BigInteger.ONE : BigInteger.ZERO, a.getPrecision());
 	}
 
 	@Override

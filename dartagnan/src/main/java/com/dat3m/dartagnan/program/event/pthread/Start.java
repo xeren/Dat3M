@@ -92,7 +92,7 @@ public class Start extends Event {
                 throw new UnsupportedOperationException("Compilation to " + target + " is not supported for " + this);
         }
 
-        events.add(newJumpUnless(new Atom(reg, EQ, IConst.ONE), label));
+		events.add(newJumpUnless(Atom.of(EQ, reg, IConst.ONE), label));
         return compileSequenceRecursive(target, nextId, predecessor, events, depth + 1);
     }
 

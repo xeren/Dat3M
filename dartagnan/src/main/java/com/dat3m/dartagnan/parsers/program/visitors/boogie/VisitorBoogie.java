@@ -304,7 +304,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 		event.addFilters(EType.ASSERTION);
 		programBuilder.addChild(threadCount, event);
        	Label end = programBuilder.getOrCreateLabel("END_OF_T" + threadCount);
-		programBuilder.addChild(threadCount, EventFactory.newJump(new Atom(ass, COpBin.NEQ, new IConst(BigInteger.ONE, -1)), end));
+		programBuilder.addChild(threadCount, EventFactory.newJump(Atom.of(COpBin.NEQ, ass, new IConst(BigInteger.ONE, -1)), end));
     	return null;
     }
     
@@ -340,7 +340,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 			event.addFilters(EType.ASSERTION);
 			programBuilder.addChild(threadCount, event);
 	       	Label end = programBuilder.getOrCreateLabel("END_OF_T" + threadCount);
-			programBuilder.addChild(threadCount, EventFactory.newJump(new Atom(ass, COpBin.NEQ, new IConst(BigInteger.ONE, -1)), end));
+			programBuilder.addChild(threadCount, EventFactory.newJump(Atom.of(COpBin.NEQ, ass, new IConst(BigInteger.ONE, -1)), end));
 			return null;
 		}
 
@@ -603,7 +603,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 		ExprInterface v2;
 		for(int i = 0; i < ctx.bv_term().size()-1; i++) {
 			v2 = (ExprInterface)ctx.bv_term(i+1).accept(this);
-			v1 = new Atom(v1, ctx.rel_op(i).op, v2);
+			v1 = Atom.of(ctx.rel_op(i).op, v1, v2);
 		}
 		return v1;
 	}

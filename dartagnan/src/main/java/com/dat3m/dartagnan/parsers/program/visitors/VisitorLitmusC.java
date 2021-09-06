@@ -306,7 +306,7 @@ public class VisitorLitmusC
         Register register = getReturnRegister(false);
         ExprInterface v1 = (ExprInterface)ctx.re(0).accept(this);
         ExprInterface v2 = (ExprInterface)ctx.re(1).accept(this);
-        Atom result = new Atom(v1, ctx.opCompare().op, v2);
+		var result = Atom.of(ctx.opCompare().op, v1, v2);
         return assignToReturnRegister(register, result);
     }
 

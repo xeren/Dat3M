@@ -112,8 +112,8 @@ public class SmackPredicates {
 				throw new ParsingException("Function " + name + " has no implementation");
 			}
 		}
-		Atom c1 = new Atom(var, GTE, new IConst(min, var.getPrecision()));
-		Atom c2 = new Atom(var, LTE, new IConst(max, var.getPrecision()));
+		var c1 = Atom.of(GTE, var, new IConst(min, var.getPrecision()));
+		var c2 = Atom.of(LTE, var, new IConst(max, var.getPrecision()));
 		var guard = BExprBin.of(AND, c1, c2);
 		ExprInterface fbranch = new IExprBin(var, MOD, new IConst(max, var.getPrecision()));
 		return IfExpr.of(guard, var, fbranch);

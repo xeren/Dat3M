@@ -131,7 +131,7 @@ public class EventFactory {
     }
 
     public static CondJump newFakeCtrlDep(Register reg, Label target) {
-        return newJump(new Atom(reg, COpBin.EQ, reg), target);
+        return newJump(Atom.of(COpBin.EQ, reg, reg), target);
     }
 
     // ------------------------------------------ RMW events ------------------------------------------

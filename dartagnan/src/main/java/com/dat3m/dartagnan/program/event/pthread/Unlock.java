@@ -71,7 +71,7 @@ public class Unlock extends Event {
     protected RecursiveFunction<Integer> compileRecursive(Arch target, int nextId, Event predecessor, int depth) {
         List<Event> events = eventSequence(
                 newLoad(reg, address, SC),
-                newJump(new Atom(reg, NEQ, IConst.ONE), label),
+				newJump(Atom.of(NEQ, reg, IConst.ONE), label),
                 newStore(address, IConst.ZERO, SC)
         );
         for(Event e : events) {

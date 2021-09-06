@@ -68,6 +68,6 @@ public class LlvmPredicates {
 		if(op == null) {
 			throw new ParsingException("Function " + name + " has no implementation");
 		}
-		return new Atom((ExprInterface)callParams.get(0), op, (ExprInterface)callParams.get(1));
+		return Atom.of(op, (ExprInterface)callParams.get(0), (ExprInterface)callParams.get(1));
 	}
 }

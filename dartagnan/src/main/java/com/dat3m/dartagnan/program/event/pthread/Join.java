@@ -97,7 +97,7 @@ public class Join extends Event {
                 throw new UnsupportedOperationException("Compilation to " + target + " is not supported for " + this);
         }
 
-        events.add(newJumpUnless(new Atom(reg, EQ, IConst.ZERO), label));
+		events.add(newJumpUnless(Atom.of(EQ, reg, IConst.ZERO), label));
         return compileSequenceRecursive(target, nextId, predecessor, events, depth + 1);
     }
 }

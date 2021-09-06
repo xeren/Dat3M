@@ -10,7 +10,7 @@ public abstract class ExprTransformer implements ExpressionVisitor<ExprInterface
 
     @Override
     public ExprInterface visit(Atom atom) {
-        return new Atom(atom.getLHS().visit(this), atom.getOp(), atom.getRHS().visit(this));
+		return Atom.of(atom.getOp(), atom.getLHS().visit(this), atom.getRHS().visit(this));
     }
 
     @Override

@@ -179,7 +179,7 @@ public class VisitorLitmusPPC
     @Override
     public Object visitBranchCond(LitmusPPCParser.BranchCondContext ctx) {
         Label label = programBuilder.getOrCreateLabel(ctx.Label().getText());
-        Atom expr = new Atom(lhs[mainThread], ctx.cond().op, rhs[mainThread]);
+		var expr = Atom.of(ctx.cond().op, lhs[mainThread], rhs[mainThread]);
         return programBuilder.addChild(mainThread, EventFactory.newJump(expr, label));
     }
 
