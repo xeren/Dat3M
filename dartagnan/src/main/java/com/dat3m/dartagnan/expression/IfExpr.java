@@ -18,8 +18,8 @@ public class IfExpr implements ExprInterface {
 	private final ExprInterface guard;
 	private final ExprInterface tbranch;
 	private final ExprInterface fbranch;
-	
-	public IfExpr(ExprInterface guard, ExprInterface tbranch, ExprInterface fbranch) {
+
+	private IfExpr(ExprInterface guard, ExprInterface tbranch, ExprInterface fbranch) {
 		this.guard =  guard;
 		this.tbranch = tbranch;
 		this.fbranch = fbranch;
