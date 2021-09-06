@@ -112,31 +112,6 @@ public final class Atom implements ExprInterface {
     	return rhs;
     }
 
-    @Override
-	public IConst reduce() {
-    	BigInteger v1 = lhs.reduce().getIntValue();
-    	BigInteger v2 = rhs.reduce().getIntValue();
-        switch(op) {
-        case EQ:
-            return new IConst(v1.compareTo(v2) == 0 ? BigInteger.ONE : BigInteger.ZERO, lhs.getPrecision());
-        case NEQ:
-            return new IConst(v1.compareTo(v2) != 0 ? BigInteger.ONE : BigInteger.ZERO, lhs.getPrecision());
-        case LT:
-        case ULT:
-            return new IConst(v1.compareTo(v2) < 0 ? BigInteger.ONE : BigInteger.ZERO, lhs.getPrecision());
-        case LTE:
-        case ULTE:
-            return new IConst(v1.compareTo(v2) <= 0 ? BigInteger.ONE : BigInteger.ZERO, lhs.getPrecision());
-        case GT:
-        case UGT:
-            return new IConst(v1.compareTo(v2) > 0 ? BigInteger.ONE : BigInteger.ZERO, lhs.getPrecision());
-        case GTE:
-        case UGTE:
-            return new IConst(v1.compareTo(v2) >= 0 ? BigInteger.ONE : BigInteger.ZERO, lhs.getPrecision());
-        }
-        throw new UnsupportedOperationException("Reduce not supported for " + this);
-	}
-
 	@Override
 	public int getPrecision() {
 		if(lhs.getPrecision() != rhs.getPrecision()) {

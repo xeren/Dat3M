@@ -128,19 +128,6 @@ public final class BExprBin implements ExprInterface {
     }
 
     @Override
-	public IConst reduce() {
-    	BigInteger v1 = b1.reduce().getIntValue();
-    	BigInteger v2 = b2.reduce().getIntValue();
-		switch(op) {
-        case AND:
-        	return new IConst(v1.compareTo(BigInteger.ONE) == 0 ? v2 : BigInteger.ZERO, -1);
-        case OR:
-        	return new IConst(v1.compareTo(BigInteger.ONE) == 0 ? BigInteger.ONE : v2, -1);
-        }
-        throw new UnsupportedOperationException("Reduce not supported for " + this);
-	}
-
-    @Override
     public <T> T visit(ExpressionVisitor<T> visitor) {
         return visitor.visit(this);
     }

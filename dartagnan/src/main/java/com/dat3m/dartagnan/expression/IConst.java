@@ -88,11 +88,6 @@ public class IConst implements ExprInterface {
     }
 
 	@Override
-	public IConst reduce() {
-		return this;
-	}
-
-	@Override
 	public boolean isTrue() {
 		return 0 < value.compareTo(BigInteger.ZERO);
 	}

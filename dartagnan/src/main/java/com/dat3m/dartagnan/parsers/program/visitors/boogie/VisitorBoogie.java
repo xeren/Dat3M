@@ -150,17 +150,20 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 
 	@Override
 	public Object visitAxiom_decl(Axiom_declContext ctx) {
-		ExprInterface exp = (ExprInterface)ctx.proposition().accept(this);
-		if(exp instanceof Atom && ((Atom)exp).getLHS() instanceof Register && ((Atom)exp).getOp().equals(EQ)) {
-			String name = ((Register)((Atom)exp).getLHS()).getName();
-			ExprInterface def = ((Atom)exp).getRHS();
-			constantsMap.put(name, def);
+		var axiom = (ExprInterface)ctx.proposition().accept(this);
+		if(axiom instanceof Atom && ((Atom)axiom).getOp().equals(EQ)) {
+			var l = ((Atom) axiom).getLHS();
+			var r = ((Atom) axiom).getRHS();
+			if(l instanceof Register) {
+				constantsMap.put(((Register) l).getName(), r);
+				return null;
+			}
+			if(l instanceof Address && r instanceof IConst) {
+				((Address) l).setConstantValue(((IConst) r).getIntValue());
+				return null;
+			}
 		}
-		if(exp instanceof Atom && ((Atom)exp).getLHS() instanceof Address && ((Atom)exp).getOp().equals(EQ)) {
- 			Address add = (Address)((Atom)exp).getLHS();
- 			ExprInterface def = ((Atom)exp).getRHS();
- 			add.setConstantValue(def.reduce().getIntValue());
- 		}
+		logger.warn("No support for axiom " + axiom);
 		return null;
 	}
 
@@ -431,7 +434,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 				throw new ParsingException("Constants cannot be assigned: " + ctx.getText());
 			}
 			if(initMode) {
-				programBuilder.initLocEqConst(name, value.reduce());
+				programBuilder.initLocEqConst(name, (IConst)value);
 				continue;
 			}
 			Register register = programBuilder.getRegister(threadCount, currentScope.getID() + ":" + name);
@@ -675,22 +678,16 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 			var value = (ExprInterface)ctx.expr(2).accept(this);
 			// This improves the blow-up
 			if(initMode && !(value instanceof Address)) {
-				ExprInterface lhs = address;
-				BigInteger rhs = BigInteger.ZERO;
-				while(lhs instanceof IExprBin) {
-					rhs = rhs.add(((IExprBin)lhs).getRHS().reduce().getIntValue());
-					lhs = ((IExprBin)lhs).getLHS();
-				}
-				String text = ctx.expr(1).getText();				
+				String text = ctx.expr(1).getText();
 				String[] split = text.split("add.ref");
 				if(split.length > 1) {
 					text = split[split.length - 1];
 					text = text.substring(text.indexOf("(")+1, text.indexOf(","));
 				}
-				if(!rhs.equals(BigInteger.ZERO)) {
-					text += "(" + rhs + ")";
+				if(!((Address)address).getIntValue().equals(BigInteger.ZERO)) {
+					text += "(" + ((Address)address).getIntValue() + ")";
 				}
-				programBuilder.initLocEqConst(text, value.reduce());
+				programBuilder.initLocEqConst(text, (IConst)value);
 				return null;
 			}
 			Store child = EventFactory.newStore(address, value, null, currentLine);

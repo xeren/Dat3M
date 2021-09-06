@@ -112,13 +112,6 @@ public class IExprBin implements ExprInterface {
     public BigInteger getIntValue(Event e, Model model, SolverContext ctx){
         return op.combine(lhs.getIntValue(e, model, ctx), rhs.getIntValue(e, model, ctx));
     }
-    
-    @Override
-	public IConst reduce() {
-    	BigInteger v1 = lhs.reduce().getIntValue();
-    	BigInteger v2 = rhs.reduce().getIntValue();
-		return new IConst(op.combine(v1, v2), lhs.getPrecision());
-	}
 
 	@Override
 	public int getPrecision() {

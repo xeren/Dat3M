@@ -45,10 +45,6 @@ public interface ExprInterface {
 		return ImmutableSet.of();
 	}
 
-	default IConst reduce() {
-		throw new UnsupportedOperationException("Reduce not supported for " + this);
-	}
-
 	/**
 	 * Checks syntactically if this expression always results in {@literal true} if coerced to boolean.
 	 */

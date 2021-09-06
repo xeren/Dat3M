@@ -107,11 +107,6 @@ public final class BExprUn implements ExprInterface {
     }
 
 	@Override
-	public IConst reduce() {
-		return new IConst(b.reduce().getIntValue(), -1);
-	}
-
-    @Override
     public <T> T visit(ExpressionVisitor<T> visitor) {
         return visitor.visit(this);
     }

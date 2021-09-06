@@ -80,11 +80,6 @@ public class IfExpr implements ExprInterface {
         return "(if " + guard + " then " + tbranch + " else " + fbranch + ")";
     }
 
-	@Override
-	public IConst reduce() {
-		return guard.reduce().getIntValue().signum() == 1 ? tbranch.reduce() : fbranch.reduce();
-	}
-	
 	public ExprInterface getGuard() {
 		return guard;
 	}

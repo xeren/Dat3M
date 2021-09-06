@@ -115,8 +115,8 @@ public class StdProcedures {
 	private static void alloc(VisitorBoogie visitor, Call_cmdContext ctx) {
 		int size;
 		try {
-			size = ((ExprInterface)ctx.call_params().exprs().expr(0).accept(visitor)).reduce().getIntValue().intValue();
-		} catch (Exception e) {
+			size = ((IConst)ctx.call_params().exprs().expr(0).accept(visitor)).toConstant().intValue();
+		} catch(ClassCastException|NullPointerException e) {
 			String tmp = ctx.call_params().getText();
 			tmp = tmp.contains(",") ? tmp.substring(0, tmp.indexOf(',')) : tmp.substring(0, tmp.indexOf(')')); 
 			tmp = tmp.substring(tmp.lastIndexOf('(')+1);
