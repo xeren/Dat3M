@@ -733,7 +733,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 		var guard = (ExprInterface)ctx.expr(0).accept(this);
 		ExprInterface tbranch = (ExprInterface)ctx.expr(1).accept(this);
 		ExprInterface fbranch = (ExprInterface)ctx.expr(2).accept(this);
-		return new IfExpr(guard, tbranch, fbranch);
+		return IfExpr.of(guard, tbranch, fbranch);
 	}
 
 	@Override

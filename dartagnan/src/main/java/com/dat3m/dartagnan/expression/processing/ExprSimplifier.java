@@ -67,22 +67,6 @@ public class ExprSimplifier extends ExprTransformer {
     }
 
     @Override
-    public ExprInterface visit(IfExpr ifExpr) {
-        var cond = ifExpr.getGuard().visit(this);
-		var t = ifExpr.getTrueBranch().visit(this);
-		var f = ifExpr.getFalseBranch().visit(this);
-
-        if (cond.isTrue()) {
-            return t;
-        } else if (cond.isFalse()) {
-            return f;
-        } else if (t.equals(f)) {
-            return t;
-        }
-        return new IfExpr(cond, t, f);
-    }
-
-    @Override
 	public ExprInterface visit(INonDet iNonDet) {
         return iNonDet;
     }

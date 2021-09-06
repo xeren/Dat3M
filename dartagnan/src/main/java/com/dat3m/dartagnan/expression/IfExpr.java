@@ -25,6 +25,17 @@ public class IfExpr implements ExprInterface {
 		this.fbranch = fbranch;
 	}
 
+	/**
+	 * Builds a conditional expression.
+	 * @param c Guard to be queried.
+	 * @param t Expression to be evaluated if the guard evaluates to {@code true}.
+	 * @param f Expression to be evaluated if the guard evaluates to {@code false}.
+	 * @return Simplified equivalent to the described expression.
+	 */
+	public static ExprInterface of(ExprInterface c, ExprInterface t, ExprInterface f) {
+		return c.isTrue() ? t : c.isFalse() || t.equals(f) ? f : new IfExpr(c, t, f);
+	}
+
 	@Override
 	public Formula toIntFormula(Event e, SolverContext ctx) {
 		return ctx.getFormulaManager().getBooleanFormulaManager().ifThenElse(
