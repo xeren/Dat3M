@@ -48,6 +48,16 @@ public class Address extends IConst implements ExprInterface {
 	}
 
 	@Override
+	public Address add(BigInteger offset) {
+		var index = value.add(offset).intValue();
+		try {
+			return array.address.get(index);
+		} catch(IndexOutOfBoundsException e) {
+			return new Address(array, index);
+		}
+	}
+
+	@Override
 	public Formula toIntFormula(SolverContext ctx){
 		var m = ctx.getFormulaManager();
 		if(array.constant != null) {
@@ -68,7 +78,8 @@ public class Address extends IConst implements ExprInterface {
 
 	@Override
 	public boolean isTrue() {
-		return true;
+		var v = value.intValue();
+		return 0 <= v && v < array.address.size();
 	}
 
 	@Override

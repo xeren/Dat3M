@@ -47,6 +47,9 @@ public class IExprBin implements ExprInterface {
 		case PLUS:
 			if(BigInteger.ZERO.equals(c))
 				return x;
+			if(x instanceof IConst)
+				//assert x instanceof Address
+				return ((IConst)x).add(c);
 		case MINUS:
 			if(BigInteger.ZERO.equals(aa))
 				return new IExprUn(IOpUn.MINUS, b);

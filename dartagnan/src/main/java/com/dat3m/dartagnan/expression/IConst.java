@@ -37,6 +37,15 @@ public class IConst implements ExprInterface {
 		this.precision = precision;
 	}
 
+	/**
+	 * Adds a value to this constant.
+	 * @param offset Additional value.
+	 * @return Sum of this and {@code offset}.
+	 */
+	public IConst add(BigInteger offset) {
+		return new IConst(value.add(offset), precision);
+	}
+
 	@Override
 	public Formula toIntFormula(Event e, SolverContext ctx){
 		return toIntFormula(ctx);
