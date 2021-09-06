@@ -614,7 +614,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 		ExprInterface v2;
 		for(int i = 0; i < ctx.factor().size()-1; i++) {
 			v2 = (ExprInterface)ctx.factor(i+1).accept(this);
-			v1 = new IExprBin(v1, ctx.add_op(i).op, v2);
+			v1 = IExprBin.of(ctx.add_op(i).op, v1, v2);
 		}
 		return v1;
 	}
@@ -625,7 +625,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 		ExprInterface v2 ;
 		for(int i = 0; i < ctx.power().size()-1; i++) {
 			v2 = (ExprInterface)ctx.power(i+1).accept(this);
-			v1 = new IExprBin(v1, ctx.mul_op(i).op, v2);
+			v1 = IExprBin.of(ctx.mul_op(i).op, v1, v2);
 		}
 		return v1;
 	}

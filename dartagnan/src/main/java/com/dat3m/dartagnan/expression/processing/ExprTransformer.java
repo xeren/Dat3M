@@ -35,7 +35,7 @@ public abstract class ExprTransformer implements ExpressionVisitor<ExprInterface
 
     @Override
 	public ExprInterface visit(IExprBin iBin) {
-        return new IExprBin(iBin.getLHS().visit(this), iBin.getOp(), iBin.getRHS().visit(this));
+        return IExprBin.of(iBin.getOp(), iBin.getLHS().visit(this), iBin.getRHS().visit(this));
     }
 
     @Override

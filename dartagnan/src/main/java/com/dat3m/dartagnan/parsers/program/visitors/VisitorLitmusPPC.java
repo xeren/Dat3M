@@ -158,7 +158,7 @@ public class VisitorLitmusPPC
 		var r1 = programBuilder.getOrCreateRegister(mainThread, ctx.register(0).getText());
         Register r2 = programBuilder.getOrErrorRegister(mainThread, ctx.register(1).getText());
         IConst constant = new IConst(new BigInteger(ctx.constant().getText()), -1);
-        return programBuilder.addChild(mainThread, EventFactory.newLocal(r1, new IExprBin(r2, IOpBin.PLUS, constant)));
+		return programBuilder.addChild(mainThread, EventFactory.newLocal(r1, IExprBin.of(IOpBin.PLUS, r2, constant)));
     }
 
     @Override
@@ -166,7 +166,7 @@ public class VisitorLitmusPPC
 		var r1 = programBuilder.getOrCreateRegister(mainThread, ctx.register(0).getText());
         Register r2 = programBuilder.getOrErrorRegister(mainThread, ctx.register(1).getText());
         Register r3 = programBuilder.getOrErrorRegister(mainThread, ctx.register(2).getText());
-        return programBuilder.addChild(mainThread, EventFactory.newLocal(r1, new IExprBin(r2, IOpBin.XOR, r3)));
+		return programBuilder.addChild(mainThread, EventFactory.newLocal(r1, IExprBin.of(IOpBin.XOR, r2, r3)));
     }
 
     @Override

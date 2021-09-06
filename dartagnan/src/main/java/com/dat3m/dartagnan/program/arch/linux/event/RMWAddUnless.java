@@ -7,7 +7,6 @@ import com.dat3m.dartagnan.expression.op.COpBin;
 import com.dat3m.dartagnan.expression.op.IOpBin;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.arch.linux.event.cond.RMWReadCondUnless;
-import com.dat3m.dartagnan.program.arch.linux.event.cond.RMWStoreCond;
 import com.dat3m.dartagnan.program.arch.linux.utils.Mo;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
@@ -57,7 +56,7 @@ public class RMWAddUnless extends RMWAbstract implements RegWriter, RegReaderDat
         if(target == Arch.NONE) {
             Register dummy = new Register(null, resultRegister.getThreadId(), resultRegister.getPrecision());
             RMWReadCondUnless load = Linux.newRMWReadCondUnless(dummy, cmp, address, Mo.RELAXED);
-            RMWStoreCond store = Linux.newRMWStoreCond(load, address, new IExprBin(dummy, IOpBin.PLUS, value), Mo.RELAXED);
+			var store = Linux.newRMWStoreCond(load, address, IExprBin.of(IOpBin.PLUS, dummy, value), Mo.RELAXED);
 			var local = newLocal(resultRegister, Atom.of(COpBin.NEQ, dummy, cmp));
 
             List<Event> events = eventSequence(

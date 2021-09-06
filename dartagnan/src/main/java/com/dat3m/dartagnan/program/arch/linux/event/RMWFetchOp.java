@@ -9,7 +9,6 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Fence;
 import com.dat3m.dartagnan.program.event.Load;
 import com.dat3m.dartagnan.program.event.Local;
-import com.dat3m.dartagnan.program.event.rmw.RMWStore;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
 import com.dat3m.dartagnan.utils.recursion.RecursiveFunction;
@@ -61,7 +60,7 @@ public class RMWFetchOp extends RMWAbstract implements RegWriter, RegReaderData 
 
             Fence optionalMbBefore = mo.equals(Mo.MB) ? Linux.newMemoryBarrier() : null;
             Load load = newRMWLoad(dummy, address, Mo.loadMO(mo));
-            RMWStore store = newRMWStore(load, address, new IExprBin(dummy, op, value), Mo.storeMO(mo));
+			var store = newRMWStore(load, address, IExprBin.of(op, dummy, value), Mo.storeMO(mo));
             Local optionalUpdateReg = dummy != resultRegister ? newLocal(resultRegister, dummy) : null;
             Fence optionalMbAfter = mo.equals(Mo.MB) ? Linux.newMemoryBarrier() : null;
 

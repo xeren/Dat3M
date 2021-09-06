@@ -52,7 +52,7 @@ public class AtomicFetchOp extends AtomicAbstract implements RegWriter, RegReade
     @Override
     protected RecursiveFunction<Integer> compileRecursive(Arch target, int nextId, Event predecessor, int depth) {
     	Register dummyReg = new Register(null, resultRegister.getThreadId(), resultRegister.getPrecision());
-    	Local localOp = newLocal(dummyReg, new IExprBin(resultRegister, op, value));
+		var localOp = newLocal(dummyReg, IExprBin.of(op, resultRegister, value));
     	List<Event> events;
 
         switch(target) {

@@ -8,7 +8,6 @@ import com.dat3m.dartagnan.program.arch.linux.utils.Mo;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Fence;
 import com.dat3m.dartagnan.program.event.Load;
-import com.dat3m.dartagnan.program.event.Local;
 import com.dat3m.dartagnan.program.event.rmw.RMWStore;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
@@ -56,7 +55,7 @@ public class RMWOpReturn extends RMWAbstract implements RegWriter, RegReaderData
             Register dummy = new Register(null, resultRegister.getThreadId(), resultRegister.getPrecision());
             Fence optionalMbBefore = mo.equals(Mo.MB) ? Linux.newMemoryBarrier() : null;
             Load load = newRMWLoad(dummy, address, Mo.loadMO(mo));
-            Local localOp = newLocal(resultRegister, new IExprBin(dummy, op, value));
+			var localOp = newLocal(resultRegister, IExprBin.of(op, dummy, value));
             RMWStore store = newRMWStore(load, address, resultRegister, Mo.storeMO(mo));
             Fence optionalMbAfter = mo.equals(Mo.MB) ? Linux.newMemoryBarrier() : null;
 

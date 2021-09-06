@@ -115,7 +115,7 @@ public class SmackPredicates {
 		var c1 = Atom.of(GTE, var, new IConst(min, var.getPrecision()));
 		var c2 = Atom.of(LTE, var, new IConst(max, var.getPrecision()));
 		var guard = BExprBin.of(AND, c1, c2);
-		ExprInterface fbranch = new IExprBin(var, MOD, new IConst(max, var.getPrecision()));
+		var fbranch = IExprBin.of(MOD, var, new IConst(max, var.getPrecision()));
 		return IfExpr.of(guard, var, fbranch);
 	}
 }

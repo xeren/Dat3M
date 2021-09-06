@@ -89,6 +89,6 @@ public class LlvmFunctions {
 		if(op == null) {
 			throw new ParsingException("Function " + name + " has no implementation");
 		}
-		return new IExprBin((ExprInterface)callParams.get(0), op, (ExprInterface)callParams.get(1));
+		return IExprBin.of(op, (ExprInterface)callParams.get(0), (ExprInterface)callParams.get(1));
 	}
 }

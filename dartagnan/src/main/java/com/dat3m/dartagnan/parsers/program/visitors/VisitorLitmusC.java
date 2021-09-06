@@ -315,7 +315,7 @@ public class VisitorLitmusC
         Register register = getReturnRegister(false);
         ExprInterface v1 = (ExprInterface)ctx.re(0).accept(this);
         ExprInterface v2 = (ExprInterface)ctx.re(1).accept(this);
-		var result = new IExprBin(v1, ctx.opArith().op, v2);
+		var result = IExprBin.of(ctx.opArith().op, v1, v2);
         return assignToReturnRegister(register, result);
     }
 

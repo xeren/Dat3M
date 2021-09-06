@@ -130,7 +130,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 		var rD = programBuilder.getOrCreateRegister(mainThread, ctx.rD);
         Register r1 = programBuilder.getOrErrorRegister(mainThread, ctx.rV);
         var expr = ctx.expr32() != null ? (ExprInterface)ctx.expr32().accept(this) : (ExprInterface)ctx.expr64().accept(this);
-        return programBuilder.addChild(mainThread, EventFactory.newLocal(rD, new IExprBin(r1, ctx.arithmeticInstruction().op, expr)));
+		return programBuilder.addChild(mainThread, EventFactory.newLocal(rD, IExprBin.of(ctx.arithmeticInstruction().op, r1, expr)));
     }
 
     @Override
@@ -209,7 +209,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 		ExprInterface expr = programBuilder.getOrCreateRegister(mainThread, ctx.register64().id);
         if(ctx.shift() != null){
             IConst val = new IConst(new BigInteger(ctx.shift().immediate().constant().getText()), -1);
-            expr = new IExprBin(expr, ctx.shift().shiftOperator().op, val);
+			return IExprBin.of(ctx.shift().shiftOperator().op, expr, val);
         }
         return expr;
     }
@@ -219,7 +219,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
 		ExprInterface expr = programBuilder.getOrCreateRegister(mainThread, ctx.register32().id);
         if(ctx.shift() != null){
             IConst val = new IConst(new BigInteger(ctx.shift().immediate().constant().getText()), -1);
-            expr = new IExprBin(expr, ctx.shift().shiftOperator().op, val);
+			return IExprBin.of(ctx.shift().shiftOperator().op, expr, val);
         }
         return expr;
     }
@@ -229,7 +229,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
         ExprInterface expr = new IConst(new BigInteger(ctx.immediate().constant().getText()), -1);
         if(ctx.shift() != null){
             IConst val = new IConst(new BigInteger(ctx.shift().immediate().constant().getText()), -1);
-            expr = new IExprBin(expr, ctx.shift().shiftOperator().op, val);
+			return IExprBin.of(ctx.shift().shiftOperator().op, expr, val);
         }
         return expr;
     }
@@ -245,7 +245,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
         var expr = ctx.immediate() == null
                 ? programBuilder.getOrErrorRegister(mainThread, ctx.expressionConversion().register32().id)
                 : new IConst(new BigInteger(ctx.immediate().constant().getText()), -1);
-        programBuilder.addChild(mainThread, EventFactory.newLocal(result, new IExprBin(register, IOpBin.PLUS, expr)));
+		programBuilder.addChild(mainThread, EventFactory.newLocal(result, IExprBin.of(IOpBin.PLUS, register, expr)));
         return result;
     }
 }
