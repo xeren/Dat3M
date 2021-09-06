@@ -81,12 +81,6 @@ public interface ExprInterface {
 		return this;
 	}
 
-	default ExprInterface simplify() {
-		return this;
-	}
-
 	<T> T visit(ExpressionVisitor<T> visitor);
-
-	//default ExprInterface simplify() { return visit(ExprSimplifier.SIMPLIFIER); }
 
 }

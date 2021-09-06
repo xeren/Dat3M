@@ -129,17 +129,6 @@ public class IExprBin implements ExprInterface {
 	public ExprInterface getBase() {
 		return lhs.getBase();
 	}
-
-	@Override
-	public ExprInterface simplify() {
-		if(op.equals(IOpBin.PLUS) && lhs instanceof IExprBin && ((IExprBin)lhs).getOp().equals(IOpBin.PLUS)) {
-			if(new IExprBin(((IExprBin)lhs).getRHS(), IOpBin.PLUS, rhs).reduce().equals(IConst.ZERO)) {
-				return ((IExprBin)lhs).getLHS();
-			}
-			return new IExprBin(((IExprBin)lhs).getLHS(), IOpBin.PLUS, new IExprBin(((IExprBin)lhs).getRHS(), IOpBin.PLUS, rhs).reduce());
-		}
-		return new IExprBin(lhs, op, rhs.reduce());
-	}
 	
 	public IOpBin getOp() {
 		return op;
