@@ -37,6 +37,13 @@ public class IConst implements ExprInterface {
 		this.precision = precision;
 	}
 
+	/**
+	 * @return This constant allows arbitrary arithmetics for constant value propagation.
+	 */
+	public boolean isConstant() {
+		return true;
+	}
+
 	@Override
 	public Formula toIntFormula(Event e, SolverContext ctx){
 		return toIntFormula(ctx);

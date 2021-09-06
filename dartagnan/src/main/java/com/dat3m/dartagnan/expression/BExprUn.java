@@ -23,10 +23,28 @@ public final class BExprUn implements ExprInterface {
     private final ExprInterface b;
     private final BOpUn op;
 
-    public BExprUn(BOpUn op, ExprInterface b) {
+	private BExprUn(BOpUn op, ExprInterface b) {
         this.b = b;
         this.op = op;
     }
+
+	/**
+	 * Builds a unary operation.
+	 * @param o Operator.
+	 * @param a First and only operand.
+	 * @return Simplified equivalent.
+	 */
+	public static ExprInterface of(BOpUn o, ExprInterface a) {
+		if(BOpUn.NOT.equals(o)) {
+			if(a.isTrue())
+				return IConst.ZERO;
+			if(a.isFalse())
+				return IConst.ONE;
+			if(a instanceof BExprUn && BOpUn.NOT.equals(((BExprUn)a).op))
+				return ((BExprUn)a).b;
+		}
+		return new BExprUn(o, a);
+	}
 
     public BOpUn getOp() {
         return op;

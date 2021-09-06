@@ -114,7 +114,7 @@ public class SmackPredicates {
 		}
 		Atom c1 = new Atom(var, GTE, new IConst(min, var.getPrecision()));
 		Atom c2 = new Atom(var, LTE, new IConst(max, var.getPrecision()));
-		BExprBin guard = new BExprBin(c1, AND, c2);
+		var guard = BExprBin.of(AND, c1, c2);
 		ExprInterface fbranch = new IExprBin(var, MOD, new IConst(max, var.getPrecision()));
 		return new IfExpr(guard, var, fbranch);
 	}

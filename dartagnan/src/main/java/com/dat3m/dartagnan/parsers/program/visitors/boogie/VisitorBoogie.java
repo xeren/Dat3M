@@ -554,11 +554,11 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 		ExprInterface v1 = (ExprInterface)ctx.rel_expr().accept(this);
 		if(ctx.and_expr() != null) {
 			ExprInterface v2 = (ExprInterface)ctx.and_expr().accept(this);
-			v1 = new BExprBin(v1, ctx.and_op().op, v2);
+			v1 = BExprBin.of(ctx.and_op().op, v1, v2);
 		}
 		if(ctx.or_expr() != null) {
 			ExprInterface v2 = (ExprInterface)ctx.or_expr().accept(this);
-			v1 = new BExprBin(v1, ctx.or_op().op, v2);
+			v1 = BExprBin.of(ctx.or_op().op, v1, v2);
 		}
 		return v1;
 	}
@@ -572,7 +572,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 	@Override
 	public Object visitNeg_expr(Neg_exprContext ctx) {
 		ExprInterface v = (ExprInterface)ctx.unary_expr().accept(this);
-		return new BExprUn(NOT, v);
+		return BExprUn.of(NOT, v);
 	}
 
 	@Override
@@ -581,7 +581,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 		ExprInterface v2;
 		for(int i = 0; i < ctx.rel_expr().size()-1; i++) {
 			v2 = (ExprInterface)ctx.rel_expr(i+1).accept(this);
-			v1 = new BExprBin(v1, ctx.and_op(i).op, v2);
+			v1 = BExprBin.of(ctx.and_op(i).op, v1, v2);
 		}
 		return v1;
 	}
@@ -592,7 +592,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 		ExprInterface v2;
 		for(int i = 0; i < ctx.rel_expr().size()-1; i++) {
 			v2 = (ExprInterface)ctx.rel_expr(i+1).accept(this);
-			v1 = new BExprBin(v1, ctx.or_op(i).op, v2);
+			v1 = BExprBin.of(ctx.or_op(i).op, v1, v2);
 		}
 		return v1;
 	}

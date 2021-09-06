@@ -115,7 +115,7 @@ public class EventFactory {
     }
 
     public static CondJump newJumpUnless(ExprInterface cond, Label target) {
-        return newJump(new BExprUn(BOpUn.NOT, cond), target);
+        return newJump(BExprUn.of(BOpUn.NOT, cond), target);
     }
 
     public static IfAsJump newIfJump(ExprInterface expr, Label label, Label end) {
@@ -123,7 +123,7 @@ public class EventFactory {
     }
 
     public static IfAsJump newIfJumpUnless(ExprInterface expr, Label label, Label end) {
-        return newIfJump(new BExprUn(BOpUn.NOT, expr), label, end);
+        return newIfJump(BExprUn.of(BOpUn.NOT, expr), label, end);
     }
 
     public static CondJump newGoto(Label target) {

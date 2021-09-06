@@ -3,7 +3,6 @@ package com.dat3m.dartagnan.expression.processing;
 import java.math.BigInteger;
 
 import com.dat3m.dartagnan.expression.*;
-import com.dat3m.dartagnan.expression.op.BOpUn;
 import com.dat3m.dartagnan.expression.op.IOpBin;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.memory.Address;
@@ -23,46 +22,6 @@ public class ExprSimplifier extends ExprTransformer {
 			return atom.getOp().combine(lc.getIntValue(), rc.getIntValue()) ? IConst.ONE : IConst.ZERO;
         }
         return new Atom(lhs, atom.getOp(), rhs);
-    }
-
-    @Override
-    public ExprInterface visit(BExprBin bBin) {
-        var lhs = bBin.getLHS().visit(this);
-        var rhs = bBin.getRHS().visit(this);
-        switch (bBin.getOp()) {
-            case OR:
-                if (lhs.isTrue() || rhs.isTrue()) {
-                    return IConst.ONE;
-                } else if (lhs.isFalse()) {
-                    return rhs;
-                } else if (rhs.isFalse()) {
-                    return lhs;
-                }
-                break;
-            case AND:
-                if (lhs.isFalse() || rhs.isFalse()) {
-                    return IConst.ZERO;
-                } else if (lhs.isTrue()) {
-                    return rhs;
-                } else if (rhs.isTrue()) {
-                    return lhs;
-                }
-                break;
-        }
-        return new BExprBin(lhs, bBin.getOp(), rhs);
-    }
-
-    @Override
-    public ExprInterface visit(BExprUn bUn) {
-        var inner = bUn.getInner().visit(this);
-		if(inner.isTrue())
-			return IConst.ZERO;
-		if(inner.isFalse())
-			return IConst.ONE;
-        if (inner instanceof BExprUn && bUn.getOp() == BOpUn.NOT) {
-            return ((BExprUn)inner).getInner();
-        }
-        return new BExprUn(bUn.getOp(), inner);
     }
 
     @Override

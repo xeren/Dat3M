@@ -79,7 +79,7 @@ public class LlvmUnary {
 	
 	public static Object llvmUnary(String name, List<Object> callParams) {
 		if(name.startsWith("$not.")) {
-			return new BExprUn(NOT, (ExprInterface)callParams.get(0));
+			return BExprUn.of(NOT, (ExprInterface)callParams.get(0));
 		}
 
 		IOpUn op = null;

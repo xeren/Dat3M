@@ -48,6 +48,11 @@ public class Address extends IConst implements ExprInterface {
 	}
 
 	@Override
+	public boolean isConstant() {
+		return false;
+	}
+
+	@Override
 	public Formula toIntFormula(SolverContext ctx){
 		var m = ctx.getFormulaManager();
 		if(array.constant != null) {

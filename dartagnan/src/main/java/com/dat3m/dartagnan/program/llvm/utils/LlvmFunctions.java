@@ -75,7 +75,7 @@ public class LlvmFunctions {
 				if (c.getIntValue().intValue() == 0) {
 					return callParams.get(0);
 				} else if (c.getIntValue().intValue() == 1) {
-					return new BExprUn(BOpUn.NOT, (ExprInterface) callParams.get(0));
+					return BExprUn.of(BOpUn.NOT, (ExprInterface) callParams.get(0));
 				}
 			}
 			op = XOR;

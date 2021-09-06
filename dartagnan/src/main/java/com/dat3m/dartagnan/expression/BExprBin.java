@@ -24,11 +24,40 @@ public final class BExprBin implements ExprInterface {
     private final ExprInterface b2;
     private final BOpBin op;
 
-    public BExprBin(ExprInterface b1, BOpBin op, ExprInterface b2) {
-        this.b1 = b1;
-        this.b2 = b2;
-        this.op = op;
-    }
+	private BExprBin(ExprInterface b1, BOpBin op, ExprInterface b2) {
+		this.b1 = b1;
+		this.b2 = b2;
+		this.op = op;
+	}
+
+	/**
+	 * Builds a binary operation.
+	 * @param o Operator.
+	 * @param a First operand.
+	 * @param b Second and last operand.
+	 * @return Simplified equivalent.
+	 */
+	public static ExprInterface of(BOpBin o, ExprInterface a, ExprInterface b) {
+		switch(o) {
+		case AND:
+			if(a.isFalse() || b.isFalse())
+				return IConst.ZERO;
+			if(a.isTrue())
+				return b;
+			if(b.isTrue())
+				return a;
+			break;
+		case OR:
+			if(a.isTrue() || b.isTrue())
+				return IConst.ONE;
+			if(a.isFalse())
+				return a;
+			if(b.isFalse())
+				return b;
+			break;
+		}
+		return new BExprBin(a, o, b);
+	}
 
     public ExprInterface getLHS() {
     	return b1;

@@ -324,16 +324,14 @@ public class VisitorLitmusC
         Register register = getReturnRegister(false);
         ExprInterface v1 = (ExprInterface)ctx.re(0).accept(this);
         ExprInterface v2 = (ExprInterface)ctx.re(1).accept(this);
-        BExprBin result = new BExprBin(v1, ctx.opBool().op, v2);
-        return assignToReturnRegister(register, result);
+		return assignToReturnRegister(register, BExprBin.of(ctx.opBool().op, v1, v2));
     }
 
     @Override
     public ExprInterface visitReOpBoolNot(LitmusCParser.ReOpBoolNotContext ctx){
         Register register = getReturnRegister(false);
         ExprInterface v = (ExprInterface)ctx.re().accept(this);
-        BExprUn result = new BExprUn(BOpUn.NOT, v);
-        return assignToReturnRegister(register, result);
+		return assignToReturnRegister(register, BExprUn.of(BOpUn.NOT, v));
     }
 
     @Override

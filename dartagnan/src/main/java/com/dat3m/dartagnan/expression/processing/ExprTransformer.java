@@ -15,12 +15,12 @@ public abstract class ExprTransformer implements ExpressionVisitor<ExprInterface
 
     @Override
     public ExprInterface visit(BExprBin bBin) {
-        return new BExprBin(bBin.getLHS().visit(this), bBin.getOp(), bBin.getRHS().visit(this));
+		return BExprBin.of(bBin.getOp(), bBin.getLHS().visit(this), bBin.getRHS().visit(this));
     }
 
     @Override
     public ExprInterface visit(BExprUn bUn) {
-        return new BExprUn(bUn.getOp(), bUn.getInner().visit(this));
+		return BExprUn.of(bUn.getOp(), bUn.getInner().visit(this));
     }
 
     @Override
