@@ -48,14 +48,10 @@ public class Memory {
             }
         }
         // Following SMACK, only address with constant values can have negative values.
-        for(Address add : getAllAddresses()) {
-        	if(!add.hasConstantValue()) {
-        		enc = bmgr.and(enc, imgr.greaterThan(
-        							convertToIntegerFormula(add.toIntFormula(ctx), ctx), 
-        							imgr.makeNumber(BigInteger.ZERO)));
-        	}
-        }
-        
+		for(var a : arrays)
+			if(null==a.constant)
+				enc = bmgr.and(enc, imgr.greaterThan(a.toVariable(imgr), imgr.makeNumber(BigInteger.ZERO)));
+
         BooleanFormula distinct = getAllAddresses().size() > 1 ?
         		imgr.distinct(getAllAddresses().stream()
                 		.map(a -> convertToIntegerFormula(a.toIntFormula(ctx), ctx))
@@ -70,9 +66,8 @@ public class Memory {
         FormulaManager fmgr = ctx.getFormulaManager();
 		IntegerFormulaManager imgr = fmgr.getIntegerFormulaManager();
 
-    	BooleanFormula[] addrExprs = getAllAddresses().stream().filter(x -> !x.hasConstantValue())
-        		.map(add -> imgr.equal(convertToIntegerFormula(add.toIntFormula(ctx), ctx), 
-        								imgr.makeNumber(add.getIntValue().intValue())))
+		BooleanFormula[] addrExprs = arrays.stream().filter(a -> null==a.constant)
+				.map(a -> imgr.equal(a.toVariable(imgr), imgr.makeNumber(a.name)))
         		.toArray(BooleanFormula[]::new);
         return fmgr.getBooleanFormulaManager().and(addrExprs);
     }

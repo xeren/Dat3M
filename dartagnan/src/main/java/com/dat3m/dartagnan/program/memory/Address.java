@@ -8,6 +8,7 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.google.common.collect.ImmutableSet;
 import org.sosy_lab.java_smt.api.*;
 
+import static java.util.Objects.requireNonNull;
 import static org.sosy_lab.java_smt.api.FormulaType.IntegerType;
 import static org.sosy_lab.java_smt.api.FormulaType.getBitvectorTypeWithSize;
 
@@ -16,24 +17,15 @@ import java.math.BigInteger;
 public class Address extends IConst implements ExprInterface {
 
 	final Array array;
-    private BigInteger constantValue;
 
-	Address(Array array, int index, int precision){
-        super(BigInteger.valueOf(index), precision);
+	Address(Array array, int index){
+		super(BigInteger.valueOf(index), array.precision);
 		this.array = array;
-    }
+	}
 
-    public boolean hasConstantValue() {
-     	return this.constantValue != null;
-     }
-
-    public BigInteger getConstantValue() {
-     	return this.constantValue;
-     }
-
-    public void setConstantValue(BigInteger value) {
-     	this.constantValue = value;
-     }
+	public void setConstantValue(BigInteger value) {
+		array.constant = value.subtract(this.value);
+	}
 
     @Override
     public ImmutableSet<Register> getRegs(){
@@ -50,38 +42,36 @@ public class Address extends IConst implements ExprInterface {
         return toIntFormula(ctx);
     }
 
-    public Formula getLastMemValueExpr(SolverContext ctx){
-        FormulaManager fmgr = ctx.getFormulaManager();
-		String name = "last_val_at_memory_" + array.name + "[" + value + "]";
-		FormulaType<?> type = precision > 0 ? getBitvectorTypeWithSize(precision) : IntegerType;
-		return fmgr.makeVariable(type, name);
-    }
+	public Formula getLastMemValueExpr(SolverContext ctx){
+		var m = ctx.getFormulaManager();
+		var name = "last_val_at_memory_" + array.name + "[" + value + "]";
+		var type = precision > 0 ? getBitvectorTypeWithSize(precision) : IntegerType;
+		return m.makeVariable(type, name);
+	}
 
     @Override
     public BooleanFormula toBoolFormula(Event e, SolverContext ctx){
         return ctx.getFormulaManager().getBooleanFormulaManager().makeTrue();
     }
 
-    @Override
-    public Formula toIntFormula(SolverContext ctx){
-		FormulaManager fmgr = ctx.getFormulaManager();
-		if(constantValue != null) {
-			return precision > 0 ? 
-					fmgr.getBitvectorFormulaManager().makeBitvector(precision, constantValue) : 
-					fmgr.getIntegerFormulaManager().makeNumber(constantValue);
-    	}
-		String name = "memory_" + array.name + "[" + value + "]";
-		FormulaType<?> type = precision > 0 ? getBitvectorTypeWithSize(precision) : IntegerType;
-		return fmgr.makeVariable(type, name);
-    }
+	@Override
+	public Formula toIntFormula(SolverContext ctx){
+		var m = ctx.getFormulaManager();
+		if(array.constant != null) {
+			var c = array.constant.add(value);
+			return precision > 0
+					? m.getBitvectorFormulaManager().makeBitvector(precision, c)
+					: m.getIntegerFormulaManager().makeNumber(c);
+		}
+		var i = m.getIntegerFormulaManager();
+		var v = array.toVariable(i);
+		return BigInteger.ZERO.equals(value) ? v : i.add(v, i.makeNumber(value));
+	}
 
-    @Override
-    public BigInteger getIntValue(Event e, Model model, SolverContext ctx){
-        if (hasConstantValue()) {
-            return constantValue;
-        }
-        return new BigInteger(model.evaluate(toIntFormula(ctx)).toString());
-    }
+	@Override
+	public BigInteger getIntValue(Event e, Model model, SolverContext ctx){
+		return value.add(array.constant!=null ? array.constant : new BigInteger(requireNonNull(model.evaluate(array.toVariable(ctx.getFormulaManager().getIntegerFormulaManager()))).toString()));
+	}
 
 	@Override
 	public boolean isTrue() {

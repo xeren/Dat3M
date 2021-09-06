@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan.wmm.utils.alias;
 
 import com.dat3m.dartagnan.expression.ExprInterface;
-import com.dat3m.dartagnan.expression.IConst;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.utils.EType;
@@ -261,7 +260,6 @@ public class AliasAnalysis {
     private void processResults(Program program) {
     	// Used to have pointer analysis when having arrays and structures
     	Map<Register, Address> bases = new HashMap<>();
-    	Map<Register, Integer> offsets = new HashMap<>();
     	for (Event ev : program.getCache().getEvents(FilterBasic.get(EType.LOCAL))) {
     		// Not only Local events have EType.LOCAL tag
     		if(!(ev instanceof Local)) {
@@ -272,19 +270,12 @@ public class AliasAnalysis {
     		Register reg = l.getResultRegister();
 			if(exp instanceof Address) {
     			bases.put(reg, (Address)exp);
-                offsets.put(reg, 0);
             } else if(exp instanceof IExprBin) {
 				var base = exp.getBase();
     			if(base instanceof Address) {
     				bases.put(reg, (Address)base);
-    				if(((IExprBin) exp).getRHS() instanceof IConst) {
-        				offsets.put(reg, ((IConst)((IExprBin) exp).getRHS()).getIntValue().intValue());    					
-    				}
     			} else if(base instanceof Register && bases.containsKey(base)) {
     				bases.put(reg, bases.get(base));
-    				if(((IExprBin) exp).getRHS() instanceof IConst) {
-        				offsets.put(reg, ((IConst)((IExprBin) exp).getRHS()).getIntValue().intValue());    					
-    				}
     			}
     		}
     	}
@@ -294,11 +285,7 @@ public class AliasAnalysis {
             Set<Address> addresses;
             if (address instanceof Register) {
             	if(bases.containsKey(address) && program.getMemory().isArrayPointer(bases.get(address))) {
-            		if(offsets.containsKey(address)) {
-                		addresses = ImmutableSet.of(program.getMemory().getArrayfromPointer(bases.get(address)).get(offsets.get(address)));            			
-            		} else {
-                		addresses = new HashSet<>(program.getMemory().getArrayfromPointer(bases.get(address)));
-            		}
+					addresses = new HashSet<>(program.getMemory().getArrayfromPointer(bases.get(address)));
             	} else {
             	    addresses = graph.getAddresses(((Register) address));	
             	}
