@@ -63,6 +63,16 @@ public interface ExprInterface {
 		return false;
 	}
 
+	/**
+	 * Checks syntactically if the value of this expression is static.
+	 * In terms of this method, addresses are never static.
+	 * @return Value to be used in constant value propagation.
+	 * {@code null} if this expression is not a static constant.
+	 */
+	default BigInteger toConstant() {
+		return null;
+	}
+
 	default int getPrecision() {
 		throw new UnsupportedOperationException("getPrecision() not supported for " + this);
 	}
