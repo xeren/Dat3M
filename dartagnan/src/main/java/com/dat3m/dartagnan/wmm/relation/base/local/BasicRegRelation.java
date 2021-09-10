@@ -25,14 +25,30 @@ import static com.dat3m.dartagnan.program.utils.Utils.generalEqual;
 
 abstract class BasicRegRelation extends StaticRelation {
 
-    abstract Collection<Register> getRegisters(Event regReader);
+	abstract Collection<Register> getRegisters(Event regReader);
 
-    void mkTupleSets(Collection<Event> regReaders) {
+	abstract Collection<Event> getEvents();
+
+	@Override
+	public TupleSet getMinTupleSet() {
+		if(null==minTupleSet)
+			mkTupleSets();
+		return minTupleSet;
+	}
+
+	@Override
+	public TupleSet getMaxTupleSet(){
+		if(null==maxTupleSet)
+			mkTupleSets();
+		return maxTupleSet;
+	}
+
+	private void mkTupleSets() {
         maxTupleSet = new TupleSet();
         minTupleSet = new TupleSet();
         BranchEquivalence eq = task.getBranchEquivalence();
         ImmutableMap<Register, ImmutableList<Event>> regWriterMap = task.getProgram().getCache().getRegWriterMap();
-        for(Event regReader : regReaders){
+		for(Event regReader : getEvents()) {
             for(Register register : getRegisters(regReader)){
                 List<Event> writers = regWriterMap.getOrDefault(register, ImmutableList.of());
                 // =============== Reduce set of writes ==================
@@ -75,15 +91,16 @@ abstract class BasicRegRelation extends StaticRelation {
         }
     }
 
-    BooleanFormula doEncodeApprox(Collection<Event> regReaders, SolverContext ctx) {
-    	FormulaManager fmgr = ctx.getFormulaManager();
+	@Override
+	public BooleanFormula encodeApprox(SolverContext ctx) {
+		FormulaManager fmgr = ctx.getFormulaManager();
 		BooleanFormulaManager bmgr = fmgr.getBooleanFormulaManager();
 
     	BooleanFormula enc = bmgr.makeTrue();
 
         ImmutableMap<Register, ImmutableList<Event>> regWriterMap = task.getProgram().getCache().getRegWriterMap();
 
-        for (Event regReader : regReaders) {
+		for (Event regReader : getEvents()) {
             Set<Tuple> writerReaders = maxTupleSet.getBySecond(regReader);
             for (Register register : getRegisters(regReader)) {
                 List<Event> writers = regWriterMap.getOrDefault(register, ImmutableList.of());
