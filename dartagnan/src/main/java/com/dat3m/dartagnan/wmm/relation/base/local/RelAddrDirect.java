@@ -23,7 +23,7 @@ public class RelAddrDirect extends BasicRegRelation {
 	}
 
 	@Override
-	Collection<Register> getRegisters(Event regReader) {
-		return ((MemEvent) regReader).getAddress().getRegs();
+	Collection<Register> getRegisters(Event e) {
+		return e instanceof MemEvent ? ((MemEvent)e).getAddress().getRegs() : List.of();
 	}
 }

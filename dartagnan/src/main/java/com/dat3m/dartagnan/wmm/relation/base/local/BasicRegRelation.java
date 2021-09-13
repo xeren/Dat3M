@@ -2,9 +2,9 @@ package com.dat3m.dartagnan.wmm.relation.base.local;
 
 import com.dat3m.dartagnan.expression.IConst;
 import com.dat3m.dartagnan.program.Register;
+import com.dat3m.dartagnan.program.event.CondJump;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
-import com.dat3m.dartagnan.utils.equivalence.BranchEquivalence;
 import com.dat3m.dartagnan.wmm.relation.base.stat.StaticRelation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -16,9 +16,7 @@ import org.sosy_lab.java_smt.api.FormulaManager;
 import org.sosy_lab.java_smt.api.SolverContext;
 
 import java.math.BigInteger;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.dat3m.dartagnan.program.utils.Utils.generalEqual;
@@ -42,54 +40,6 @@ abstract class BasicRegRelation extends StaticRelation {
 			mkTupleSets();
 		return maxTupleSet;
 	}
-
-	private void mkTupleSets() {
-        maxTupleSet = new TupleSet();
-        minTupleSet = new TupleSet();
-        BranchEquivalence eq = task.getBranchEquivalence();
-        ImmutableMap<Register, ImmutableList<Event>> regWriterMap = task.getProgram().getCache().getRegWriterMap();
-		for(Event regReader : getEvents()) {
-            for(Register register : getRegisters(regReader)){
-                List<Event> writers = regWriterMap.getOrDefault(register, ImmutableList.of());
-                // =============== Reduce set of writes ==================
-                //TODO: We assume that any Register-Write is always executed
-                // if it is contained in the program flow
-                // This may fail for RMWReadCond?! It seems to work fine for the litmus tests though.
-
-                // =========================
-                List<Event> possibleWriters = writers.stream()
-                        .filter(x -> x.getCId() < regReader.getCId() && !eq.areMutuallyExclusive(x, regReader))
-                        .collect(Collectors.toList());
-
-                List<Event> impliedWriters = possibleWriters
-                        .stream().filter(x -> eq.isImplied(regReader, x) && x.cfImpliesExec())
-                        .collect(Collectors.toList());
-                if (!impliedWriters.isEmpty()) {
-                    Event lastImplied = impliedWriters.get(impliedWriters.size() - 1);
-                    possibleWriters.removeIf(x -> x.getCId() < lastImplied.getCId());
-                }
-                possibleWriters.removeIf(x -> possibleWriters.stream()
-                        .anyMatch(y -> (x.getCId() < y.getCId()) && y.cfImpliesExec() && eq.isImplied(x ,y)));
-
-                // --- Min sets ---
-                if (possibleWriters.size() == 1) {
-                    // there is only a single regWriter
-                    minTupleSet.add(new Tuple(possibleWriters.stream().findAny().get(), regReader));
-                } else {
-                    // there are multiple regWriters, but some are exclusive to all others
-                    for (Event writer : possibleWriters) {
-                        if (possibleWriters.stream().allMatch(x -> x == writer || eq.areMutuallyExclusive(x, writer))) {
-                            minTupleSet.add(new Tuple(writer, regReader));
-                        }
-                    }
-                }
-                // --- Max sets ---
-                for(Event regWriter : possibleWriters){
-                    maxTupleSet.add(new Tuple(regWriter, regReader));
-                }
-            }
-        }
-    }
 
 	@Override
 	public BooleanFormula encodeApprox(SolverContext ctx) {
@@ -135,4 +85,47 @@ abstract class BasicRegRelation extends StaticRelation {
         }
         return enc;
     }
+
+	private void mkTupleSets() {
+		maxTupleSet = new TupleSet();
+		minTupleSet = new TupleSet();
+		var eq = task.getBranchEquivalence();
+		for(var t : task.getProgram().getThreads()) {
+			var s = new HashSet<RegWriter>();
+			var j = new TreeMap<Integer,ArrayList<RegWriter>>();
+			//ASSERT no backward jump after unrolling
+			for(var e : t.getEvents()) {
+				//branching
+				if(j.firstKey() == e.getCId())
+					s.addAll(j.pollFirstEntry().getValue());
+				if(e instanceof CondJump) {
+					j.computeIfAbsent(((CondJump)e).getLabel().getCId(), k->new ArrayList<>()).addAll(s);
+					if(((CondJump)e).isGoto())
+						s.clear();
+				}
+				//write state
+				if(e instanceof RegWriter) {
+					if(e.cfImpliesExec()) {
+						var r = ((RegWriter)e).getResultRegister();
+						s.removeIf(x -> x.getResultRegister().equals(r));
+					}
+					s.add((RegWriter)e);
+				}
+				//read state
+				for(var r : getRegisters(e)) {
+					var w = s.stream()
+					.filter(x -> x.getResultRegister().equals(r))
+					.map(Event.class::cast)
+					.collect(Collectors.toList());
+					w.forEach(x -> maxTupleSet.add(new Tuple(x, e)));
+					w.stream()
+					.filter(x -> w.stream()
+						.filter(y -> x.getCId() < y.getCId())
+						.allMatch(y -> eq.areMutuallyExclusive(x, y)))
+					.forEach(x -> minTupleSet.add(new Tuple(x, e)));
+				}
+			}
+			assert j.isEmpty();
+		}
+	}
 }

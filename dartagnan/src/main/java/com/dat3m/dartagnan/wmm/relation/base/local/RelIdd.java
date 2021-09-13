@@ -23,7 +23,7 @@ public class RelIdd extends BasicRegRelation {
 	}
 
 	@Override
-	Collection<Register> getRegisters(Event regReader){
-		return ((RegReaderData) regReader).getDataRegs();
+	Collection<Register> getRegisters(Event e){
+		return e instanceof RegReaderData ? ((RegReaderData)e).getDataRegs() : List.of();
 	}
 }
