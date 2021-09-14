@@ -76,10 +76,40 @@ public class Thread {
             throw new RuntimeException("Register " + id + ":" + name + " already exists");
         }
         cache = null;
-        Register register = new Register(name, id, precision);
+		Register register = new Register(this, name, precision);
         registers.put(register.getName(), register);
         return register;
     }
+
+	/**
+	 * Looks up a register by name.
+	 * Creates a new one if not found.
+	 * @param n
+	 * Identifies a register in this thread.
+	 * @param p
+	 * Desired bit precision for stored values.
+	 * @return
+	 * Found or created register, never {@code null}.
+	 * @throws IllegalArgumentException
+	 * {@code p} does not coincide with existing precision.
+	 */
+	public Register register(String n, int p) {
+		var r = registers.computeIfAbsent(n,k->new Register(this,k,p));
+		if(p!=r.getPrecision())
+			throw new RuntimeException("expected register precision "+p+", but found "+r.getPrecision());
+		return r;
+	}
+
+	/**
+	 * Creates a dummy register for this thread.
+	 * @param precision
+	 * Identifies a type for stored values.
+	 * @return
+	 * New register, never {@code null}.
+	 */
+	public Register newRegister(int precision) {
+		return new Register(this, precision);
+	}
 
     public Event getEntry(){
         return entry;

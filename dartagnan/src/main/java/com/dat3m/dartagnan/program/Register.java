@@ -14,21 +14,41 @@ public class Register implements ExprInterface {
 
 	private static int dummyCount = 0;
 
+	private final Thread thread;
 	private final String name;
 	private String cVar;
-    private final int threadId;
 
     private final int precision;
 
-	public Register(String name, int threadId, int precision) {
-		if(name == null){
-			name = "DUMMY_REG_" + dummyCount++;
-		}
-		this.name = name;
-		this.threadId = threadId;
-		this.precision = precision;
+	/**
+	 * @param t
+	 * Scope for this register.
+	 * @param n
+	 * Identifies this register in {@code t}.
+	 * @param p
+	 * Bit precision for stored values.
+	 */
+	public Register(Thread t, String n, int p) {
+		thread = t;
+		name = n;
+		precision = p;
 	}
-	
+
+	/**
+	 * Dummy registers with an unspecified name.
+	 * @param t
+	 * Scope for this register.
+	 * @param p
+	 * Bit precision for stored values.
+	 */
+	public Register(Thread t, int p) {
+		this(t, "DUMMY_REG_"+dummyCount++, p);
+	}
+
+	public Thread getThread() {
+		return thread;
+	}
+
 	public String getName() {
 		return name;
 	}
@@ -42,30 +62,8 @@ public class Register implements ExprInterface {
 	}
 
 	public int getThreadId(){
-		return threadId;
+		return thread.getId();
 	}
-
-	@Override
-	public String toString() {
-        return name;
-	}
-
-    @Override
-    public int hashCode(){
-        return (name.hashCode() << 8) + threadId;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-
-        if (obj == null || getClass() != obj.getClass())
-            return false;
-
-        Register rObj = (Register) obj;
-        return name.equals(rObj.name) && threadId == rObj.threadId;
-    }
 
 	@Override
 	public Formula toIntFormula(Event e, SolverContext ctx) {
@@ -89,7 +87,7 @@ public class Register implements ExprInterface {
 
 	@Override
 	public Formula getLastValueExpr(SolverContext ctx){
-		String name = getName() + "_" + threadId + "_final";
+		String name = getName() + "_" + thread.getId() + "_final";
 		FormulaManager fmgr = ctx.getFormulaManager();
 		FormulaType<?> type = precision > 0 ? getBitvectorTypeWithSize(precision) : IntegerType;
 		return fmgr.makeVariable(type, name);
@@ -104,4 +102,19 @@ public class Register implements ExprInterface {
 	public int getPrecision() {
     	return precision;
     }
+
+	@Override
+	public String toString() {
+		return name;
+	}
+
+	@Override
+	public int hashCode() {
+		return (name.hashCode() << 8) + thread.hashCode();
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		return this==o || o instanceof Register && name.equals(((Register)o).name) && thread.equals(((Register)o).thread);
+	}
 }

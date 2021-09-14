@@ -66,7 +66,7 @@ public class Xchg extends MemEvent implements RegWriter, RegReaderData {
     @Override
     protected RecursiveFunction<Integer> compileRecursive(Arch target, int nextId, Event predecessor, int depth) {
         if(target == Arch.TSO) {
-            Register dummyReg = new Register(null, resultRegister.getThreadId(), resultRegister.getPrecision());
+			var dummyReg = resultRegister.getThread().newRegister(resultRegister.getPrecision());
             Load load = newRMWLoad(dummyReg, address, null);
             load.addFilters(EType.ATOM);
 

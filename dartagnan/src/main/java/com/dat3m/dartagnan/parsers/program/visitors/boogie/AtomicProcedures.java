@@ -150,7 +150,7 @@ public class AtomicProcedures {
 		List<BoogieParser.ExprContext> params = ctx.call_params().exprs().expr();
 		var add = (ExprInterface)params.get(0).accept(visitor);
 		Register expectedAdd = (Register) params.get(1).accept(visitor); // NOTE: We assume a register here
-		Register expected = new Register(null, reg.getThreadId(), reg.getPrecision());
+		var expected = reg.getThread().newRegister(reg.getPrecision());
 		ExprInterface desired = (ExprInterface) params.get(2).accept(visitor);
 		String mo = null;
 		boolean strong = ctx.getText().contains("strong");

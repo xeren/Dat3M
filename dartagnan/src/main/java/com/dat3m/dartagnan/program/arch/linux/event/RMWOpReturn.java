@@ -52,7 +52,7 @@ public class RMWOpReturn extends RMWAbstract implements RegWriter, RegReaderData
     @Override
     protected RecursiveFunction<Integer> compileRecursive(Arch target, int nextId, Event predecessor, int depth) {
         if(target == Arch.NONE) {
-            Register dummy = new Register(null, resultRegister.getThreadId(), resultRegister.getPrecision());
+			var dummy = resultRegister.getThread().newRegister(resultRegister.getPrecision());
             Fence optionalMbBefore = mo.equals(Mo.MB) ? Linux.newMemoryBarrier() : null;
             Load load = newRMWLoad(dummy, address, Mo.loadMO(mo));
 			var localOp = newLocal(resultRegister, IExprBin.of(op, dummy, value));

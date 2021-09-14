@@ -53,7 +53,7 @@ public class RMWOpAndTest extends RMWAbstract implements RegWriter, RegReaderDat
     @Override
     protected RecursiveFunction<Integer> compileRecursive(Arch target, int nextId, Event predecessor, int depth) {
         if(target == Arch.NONE) {
-            Register dummy = new Register(null, resultRegister.getThreadId(), resultRegister.getPrecision());
+			var dummy = resultRegister.getThread().newRegister(resultRegister.getPrecision());
             Load load = newRMWLoad(dummy, address, Mo.RELAXED);
 			var localOp = newLocal(dummy, IExprBin.of(op, dummy, value));
             RMWStore store = newRMWStore(load, address, dummy, Mo.RELAXED);

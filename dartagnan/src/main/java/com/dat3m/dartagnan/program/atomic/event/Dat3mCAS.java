@@ -52,10 +52,10 @@ public class Dat3mCAS extends AtomicAbstract implements RegWriter, RegReaderData
 
     @Override
     protected RecursiveFunction<Integer> compileRecursive(Arch target, int nextId, Event predecessor, int depth) {
+		var dummy = resultRegister.getThread().newRegister(resultRegister.getPrecision());
     	List<Event> events;
         switch(target) {
             case NONE: case TSO: {
-                Register dummy = new Register(null, resultRegister.getThreadId(), resultRegister.getPrecision());
                 Load load = newRMWLoad(dummy, address, mo);
 				var casCmpResult = newLocal(resultRegister, Atom.of(EQ, dummy, expectedValue));
                 Label casEnd = newLabel("CAS_end");
@@ -77,7 +77,6 @@ public class Dat3mCAS extends AtomicAbstract implements RegWriter, RegReaderData
                 String loadMo = extractLoadMo(mo);
                 String storeMo = extractStoreMo(mo);
 
-                Register dummy = new Register(null, resultRegister.getThreadId(), resultRegister.getPrecision());
                 Load load = newRMWLoadExclusive(dummy, address, loadMo);
 				var casCmpResult = newLocal(resultRegister, Atom.of(EQ, dummy, expectedValue));
                 Label endCas = newLabel("CAS_end");

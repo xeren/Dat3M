@@ -54,7 +54,7 @@ public class RMWAddUnless extends RMWAbstract implements RegWriter, RegReaderDat
     @Override
     protected RecursiveFunction<Integer> compileRecursive(Arch target, int nextId, Event predecessor, int depth) {
         if(target == Arch.NONE) {
-            Register dummy = new Register(null, resultRegister.getThreadId(), resultRegister.getPrecision());
+			var dummy = resultRegister.getThread().newRegister(resultRegister.getPrecision());
             RMWReadCondUnless load = Linux.newRMWReadCondUnless(dummy, cmp, address, Mo.RELAXED);
 			var store = Linux.newRMWStoreCond(load, address, IExprBin.of(IOpBin.PLUS, dummy, value), Mo.RELAXED);
 			var local = newLocal(resultRegister, Atom.of(COpBin.NEQ, dummy, cmp));

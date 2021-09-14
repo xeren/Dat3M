@@ -55,7 +55,7 @@ public class RMWFetchOp extends RMWAbstract implements RegWriter, RegReaderData 
         if(target == Arch.NONE) {
             Register dummy = resultRegister;
             if(resultRegister == value){
-                dummy = new Register(null, resultRegister.getThreadId(), resultRegister.getPrecision());
+				dummy = resultRegister.getThread().newRegister(resultRegister.getPrecision());
             }
 
             Fence optionalMbBefore = mo.equals(Mo.MB) ? Linux.newMemoryBarrier() : null;

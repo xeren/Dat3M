@@ -64,11 +64,12 @@ public class AtomicCmpXchg extends AtomicAbstract implements RegWriter, RegReade
     @Override
     protected RecursiveFunction<Integer> compileRecursive(Arch target, int nextId, Event predecessor, int depth) {
         //TODO: Perform Store on <expected> (in general, <expected> should be an address and not a register)
+		var t = resultRegister.getThread();
     	List<Event> events;
         switch(target) {
             case NONE:
             case TSO: {
-                Register dummy = new Register(null, resultRegister.getThreadId(), resultRegister.getPrecision());
+				var dummy = t.newRegister(resultRegister.getPrecision());
                 Label casFail = newLabel("CAS_fail");
                 Label casEnd = newLabel("CAS_end");
                 Load load = newRMWLoad(dummy, address, mo);
@@ -96,7 +97,7 @@ public class AtomicCmpXchg extends AtomicAbstract implements RegWriter, RegReade
                 String loadMo = extractLoadMo(mo);
                 String storeMo = extractStoreMo(mo);
 
-                Register dummy = new Register(null, resultRegister.getThreadId(), resultRegister.getPrecision());
+				var dummy = t.newRegister(resultRegister.getPrecision());
                 Label casFail = newLabel("CAS_fail");
                 Label casEnd = newLabel("CAS_end");
                 Load load = newRMWLoadExclusive(dummy, address, loadMo);
@@ -107,7 +108,7 @@ public class AtomicCmpXchg extends AtomicAbstract implements RegWriter, RegReade
                 ExecutionStatus optionalExecStatus = null;
                 Local optionalUpdateCasCmpResult = null;
                 if (!is(STRONG)) {
-                    Register statusReg = new Register("status(" + getOId() + ")", resultRegister.getThreadId(), resultRegister.getPrecision());
+					var statusReg = t.register("status("+getOId()+")", resultRegister.getPrecision());
                     optionalExecStatus = newExecutionStatus(statusReg, store);
                     optionalUpdateCasCmpResult = newLocal(resultRegister, BExprUn.of(BOpUn.NOT, statusReg));
                 }
