@@ -1,8 +1,5 @@
 package com.dat3m.dartagnan.expression;
 
-import static org.sosy_lab.java_smt.api.FormulaType.IntegerType;
-import static org.sosy_lab.java_smt.api.FormulaType.getBitvectorTypeWithSize;
-
 import java.math.BigInteger;
 
 import org.sosy_lab.java_smt.api.BitvectorFormula;
@@ -18,11 +15,13 @@ import com.google.common.collect.ImmutableSet;
 
 /**
  * Global variable of an associated program.
+ * TODO reduce to constant when unrolling if assigned to a value
  */
 public class INonDet implements ExprInterface {
 
 	private final BigInteger min;
 	private final BigInteger max;
+	private BigInteger value;
 	private final int precision;
 
 	/**
@@ -39,24 +38,46 @@ public class INonDet implements ExprInterface {
 		precision = p;
 	}
 
+	/**
+	 * Callable from a parser, if this variable is equalized to some deterministic value.
+	 * Associates this variable with that value.
+	 * @param v
+	 * Equalized to this.
+	 * @throws IllegalStateException
+	 * Already assigned to a different value.
+	 */
+	public void assign(BigInteger v) {
+		if(null!=value && !value.equals(v))
+			throw new IllegalStateException("constant assigned to both "+value+" and "+v);
+		value = v;
+	}
+
 	@Override
 	public Formula toIntFormula(Event e, SolverContext ctx) {
-		String name = Integer.toString(hashCode());
-		var type = precision > 0 ? getBitvectorTypeWithSize(precision) : IntegerType;
-		return ctx.getFormulaManager().makeVariable(type, name);
+		return getLastValueExpr(ctx);
 	}
 
 	@Override
 	public Formula getLastValueExpr(SolverContext ctx) {
-		String name = Integer.toString(hashCode());
-		var fmgr = ctx.getFormulaManager();
-		return precision > 0 ? 
-				fmgr.getBitvectorFormulaManager().makeVariable(precision, name) : 
-				fmgr.getIntegerFormulaManager().makeVariable(name);
+		var m = ctx.getFormulaManager();
+		if(0<precision) {
+			var b = m.getBitvectorFormulaManager();
+			if(null!=value)
+				return b.makeBitvector(precision, value);
+			return b.makeVariable(precision, Integer.toString(hashCode()));
+		}
+		else {
+			var i = m.getIntegerFormulaManager();
+			if(null!=value)
+				return i.makeNumber(value);
+			return i.makeVariable(Integer.toString(hashCode()));
+		}
 	}
 
 	@Override
 	public BigInteger getIntValue(Event e, Model model, SolverContext ctx) {
+		if(null!=value)
+			return value;
 		Object value = model.evaluate(toIntFormula(e, ctx));
 		if(value != null) {
 			return new BigInteger(value.toString());			
@@ -78,6 +99,8 @@ public class INonDet implements ExprInterface {
 		var fmgr = ctx.getFormulaManager();
 		var bmgr = fmgr.getBooleanFormulaManager();
 		var enc = bmgr.makeTrue();
+		if(null!=value)
+			return enc;
 		if(bp) {
 			boolean signed = !BigInteger.ZERO.equals(min);
 			var bvmgr = fmgr.getBitvectorFormulaManager();

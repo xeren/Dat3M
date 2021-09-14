@@ -81,8 +81,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 	private final List<Register> returnRegister = new ArrayList<>();
 	private String currentReturnName = null;
 	
-	private final Map<String, ExprInterface> constantsMap = new HashMap<>();
-	private final Map<String, Integer> constantsTypeMap = new HashMap<>();
+	private final HashMap<String,INonDet> constants = new HashMap<>();
 
 	protected Map<Integer, List<ExprInterface>> threadCallingValues = new HashMap<>();
 	
@@ -154,8 +153,8 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 		if(axiom instanceof Atom && ((Atom)axiom).getOp().equals(EQ)) {
 			var l = ((Atom) axiom).getLHS();
 			var r = ((Atom) axiom).getRHS();
-			if(l instanceof Register) {
-				constantsMap.put(((Register) l).getName(), r);
+			if(l instanceof INonDet && null!=r.toConstant()) {
+				((INonDet)l).assign(r.toConstant());
 				return null;
 			}
 			if(l instanceof Address && r instanceof IConst) {
@@ -176,7 +175,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 			if(ctx.getText().contains("ref;") && !procedures.containsKey(name) && !smackDummyVariables.contains(name) && ATOMICPROCEDURES.stream().noneMatch(name::startsWith)) {
 				programBuilder.getOrCreateLocation(name, precision);
 			} else {
-				constantsTypeMap.put(name, precision);
+				constants.put(name, new INonDet(null, null, precision));
 			}
 		}
 		return null;
@@ -210,7 +209,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 				String name = ident.getText();
 				String type = atiwC.typed_idents_where().typed_idents().type().getText();
 				int precision = type.contains("bv") ? Integer.parseInt(type.split("bv")[1]) : -1;
-				if(constantsTypeMap.containsKey(name)) {
+				if(constants.containsKey(name)) {
 	                throw new ParsingException("Variable " + name + " is already defined as a constant");
 				}
 				if(programBuilder.getLocation(name) != null) {
@@ -430,7 +429,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 	        if(smackDummyVariables.contains(name)) {
 	        	continue;
 	        }
-			if(constantsTypeMap.containsKey(name)) {
+			if(constants.containsKey(name)) {
 				throw new ParsingException("Constants cannot be assigned: " + ctx.getText());
 			}
 			if(initMode) {
@@ -637,13 +636,9 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 		if(currentCall != null && currentCall.getFunction().getBody() != null) {
 			return currentCall.replaceVarsByExprs(ctx);
 		}
-		if(constantsMap.containsKey(name)) {
-			return constantsMap.get(name);
-		}
-		if(constantsTypeMap.containsKey(name)) {
-			// Dummy register needed to parse axioms
-			return new Register(name, -1, constantsTypeMap.get(name));
-		}
+		var constant = constants.get(name);
+		if(null!=constant)
+			return constant;
         Register register = programBuilder.getRegister(threadCount, currentScope.getID() + ":" + name);
         if(register != null){
             return register;
