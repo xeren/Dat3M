@@ -9,7 +9,6 @@ import org.sosy_lab.java_smt.api.Formula;
 import org.sosy_lab.java_smt.api.Model;
 import org.sosy_lab.java_smt.api.SolverContext;
 
-import com.dat3m.dartagnan.expression.processing.ExpressionVisitor;
 import com.dat3m.dartagnan.program.memory.Location;
 import com.google.common.collect.ImmutableSet;
 import com.dat3m.dartagnan.program.Register;
@@ -76,7 +75,5 @@ public interface ExprInterface {
 	default ExprInterface getBase() {
 		return this;
 	}
-
-	<T> T visit(ExpressionVisitor<T> visitor);
 
 }

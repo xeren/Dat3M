@@ -1,7 +1,5 @@
 package com.dat3m.dartagnan.expression;
 
-import com.dat3m.dartagnan.expression.processing.ExpressionVisitor;
-
 import static com.dat3m.dartagnan.expression.INonDetTypes.UCHAR;
 import static com.dat3m.dartagnan.expression.INonDetTypes.UINT;
 import static com.dat3m.dartagnan.expression.INonDetTypes.ULONG;
@@ -74,11 +72,6 @@ public class INonDet implements ExprInterface {
 		return ImmutableSet.of();
 	}
 
-	@Override
-	public <T> T visit(ExpressionVisitor<T> visitor) {
-		return visitor.visit(this);
-	}
-	
 	@Override
 	public String toString() {
         switch(type){

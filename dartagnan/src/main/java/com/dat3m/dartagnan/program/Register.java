@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan.program;
 
 import com.dat3m.dartagnan.expression.ExprInterface;
-import com.dat3m.dartagnan.expression.processing.ExpressionVisitor;
 import com.dat3m.dartagnan.program.event.Event;
 import com.google.common.collect.ImmutableSet;
 import org.sosy_lab.java_smt.api.*;
@@ -99,11 +98,6 @@ public class Register implements ExprInterface {
 	@Override
 	public BigInteger getIntValue(Event e, Model model, SolverContext ctx){
 		return new BigInteger(model.evaluate(toIntFormula(e, ctx)).toString());
-	}
-
-	@Override
-	public <T> T visit(ExpressionVisitor<T> visitor) {
-		return visitor.visit(this);
 	}
 
 	@Override

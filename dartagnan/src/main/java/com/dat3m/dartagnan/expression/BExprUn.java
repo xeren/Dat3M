@@ -1,6 +1,5 @@
 package com.dat3m.dartagnan.expression;
 
-import com.dat3m.dartagnan.expression.processing.ExpressionVisitor;
 import com.dat3m.dartagnan.program.memory.Location;
 import com.google.common.collect.ImmutableSet;
 
@@ -107,11 +106,6 @@ public final class BExprUn implements ExprInterface {
     }
 
 	@Override
-    public <T> T visit(ExpressionVisitor<T> visitor) {
-        return visitor.visit(this);
-    }
-
-    @Override
     public int hashCode() {
         return op.hashCode() ^ b.hashCode();
     }

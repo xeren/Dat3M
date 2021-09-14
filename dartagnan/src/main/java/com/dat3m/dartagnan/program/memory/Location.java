@@ -1,6 +1,5 @@
 package com.dat3m.dartagnan.program.memory;
 
-import com.dat3m.dartagnan.expression.processing.ExpressionVisitor;
 import com.google.common.collect.ImmutableSet;
 
 import java.math.BigInteger;
@@ -115,11 +114,6 @@ public class Location implements ExprInterface {
 			return ((MemEvent) e).getMemValue().getBoolValue(e, model, ctx);
 		}
 		throw new RuntimeException("Attempt to encode memory value for illegal event");
-	}
-
-	@Override
-	public <T> T visit(ExpressionVisitor<T> visitor) {
-		return visitor.visit(this);
 	}
 
 	@Override

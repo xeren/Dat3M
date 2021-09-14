@@ -1,6 +1,5 @@
 package com.dat3m.dartagnan.expression;
 
-import com.dat3m.dartagnan.expression.processing.ExpressionVisitor;
 import com.dat3m.dartagnan.program.memory.Location;
 import com.google.common.collect.ImmutableSet;
 
@@ -64,11 +63,6 @@ public class IExprUn implements ExprInterface {
 	@Override
 	public int getPrecision() {
 		return b.getPrecision();
-	}
-
-	@Override
-	public <T> T visit(ExpressionVisitor<T> visitor) {
-		return visitor.visit(this);
 	}
 
 	@Override

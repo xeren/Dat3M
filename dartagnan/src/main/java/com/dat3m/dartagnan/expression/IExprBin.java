@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan.expression;
 
 import com.dat3m.dartagnan.expression.op.IOpUn;
-import com.dat3m.dartagnan.expression.processing.ExpressionVisitor;
 import com.dat3m.dartagnan.program.memory.Location;
 import com.google.common.collect.ImmutableSet;
 
@@ -138,12 +137,7 @@ public class IExprBin implements ExprInterface {
 		return lhs;
 	}
 
-    @Override
-    public <T> T visit(ExpressionVisitor<T> visitor) {
-        return visitor.visit(this);
-    }
-
-    @Override
+	@Override
     public int hashCode() {
         return (op.combine(BigInteger.valueOf(lhs.hashCode()), BigInteger.valueOf(rhs.hashCode()))).intValue();
     }

@@ -7,7 +7,6 @@ import org.sosy_lab.java_smt.api.Formula;
 import org.sosy_lab.java_smt.api.Model;
 import org.sosy_lab.java_smt.api.SolverContext;
 
-import com.dat3m.dartagnan.expression.processing.ExpressionVisitor;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.memory.Location;
@@ -98,11 +97,6 @@ public class IfExpr implements ExprInterface {
             throw new RuntimeException("The type of " + tbranch + " and " + fbranch + " does not match");
 		}
 		return tbranch.getPrecision();
-	}
-
-	@Override
-	public <T> T visit(ExpressionVisitor<T> visitor) {
-		return visitor.visit(this);
 	}
 
 	@Override
