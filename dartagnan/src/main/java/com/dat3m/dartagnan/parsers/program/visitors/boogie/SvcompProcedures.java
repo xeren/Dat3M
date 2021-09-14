@@ -10,6 +10,8 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Label;
 import com.dat3m.dartagnan.program.event.Local;
 import com.dat3m.dartagnan.program.utils.EType;
+import com.google.common.primitives.UnsignedInteger;
+import com.google.common.primitives.UnsignedLong;
 
 import java.math.BigInteger;
 import java.util.Arrays;
@@ -133,33 +135,42 @@ public class SvcompProcedures {
 	}
 	
 	private static void __VERIFIER_nondet(VisitorBoogie visitor, Call_cmdContext ctx, String name) {
-		INonDetTypes type = null;
+		BigInteger min;
+		BigInteger max;
 		switch (name) {
 			case "__VERIFIER_nondet_int":
-				type = INonDetTypes.INT;
+				min = BigInteger.valueOf(Integer.MIN_VALUE);
+				max = BigInteger.valueOf(Integer.MAX_VALUE);
 				break;
 			case "__VERIFIER_nondet_uint":
 			case "__VERIFIER_nondet_unsigned_int":
-				type = INonDetTypes.UINT;
+				min = BigInteger.ZERO;
+				max = BigInteger.valueOf(UnsignedInteger.MAX_VALUE.longValue());
 				break;
 			case "__VERIFIER_nondet_short":
-				type = INonDetTypes.SHORT;
+				min = BigInteger.valueOf(Short.MIN_VALUE);
+				max = BigInteger.valueOf(Short.MAX_VALUE);
 				break;
 			case "__VERIFIER_nondet_ushort":
 			case "__VERIFIER_nondet_unsigned_short":
-				type = INonDetTypes.USHORT;
+				min = BigInteger.ZERO;
+				max = BigInteger.valueOf(65535);
 				break;
 			case "__VERIFIER_nondet_long":
-				type = INonDetTypes.LONG;
+				min = BigInteger.valueOf(Long.MIN_VALUE);
+				max = BigInteger.valueOf(Long.MAX_VALUE);
 				break;
 			case "__VERIFIER_nondet_ulong":
-				type = INonDetTypes.ULONG;
+				min = BigInteger.ZERO;
+				max = BigInteger.valueOf(UnsignedLong.MAX_VALUE.longValue());
 				break;
 			case "__VERIFIER_nondet_char":
-				type = INonDetTypes.CHAR;
+				min = BigInteger.valueOf(-128);
+				max = BigInteger.valueOf(127);
 				break;
 			case "__VERIFIER_nondet_uchar":
-				type = INonDetTypes.UCHAR;
+				min = BigInteger.ZERO;
+				max = BigInteger.valueOf(255);
 				break;
 			default:
 				throw new ParsingException(name + " is not supported");
@@ -167,7 +178,7 @@ public class SvcompProcedures {
 		String registerName = ctx.call_params().Ident(0).getText();
 		Register register = visitor.programBuilder.getRegister(visitor.threadCount, visitor.currentScope.getID() + ":" + registerName);
 	    if(register != null){
-			visitor.programBuilder.addChild(visitor.threadCount, EventFactory.newLocal(register, new INonDet(type, register.getPrecision()), visitor.currentLine));
+			visitor.programBuilder.addChild(visitor.threadCount, EventFactory.newLocal(register, new INonDet(min, max, register.getPrecision()), visitor.currentLine));
 	    }
 	}
 

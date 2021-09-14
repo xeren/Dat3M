@@ -1,22 +1,13 @@
 package com.dat3m.dartagnan.expression;
 
-import static com.dat3m.dartagnan.expression.INonDetTypes.UCHAR;
-import static com.dat3m.dartagnan.expression.INonDetTypes.UINT;
-import static com.dat3m.dartagnan.expression.INonDetTypes.ULONG;
-import static com.dat3m.dartagnan.expression.INonDetTypes.USHORT;
 import static org.sosy_lab.java_smt.api.FormulaType.IntegerType;
 import static org.sosy_lab.java_smt.api.FormulaType.getBitvectorTypeWithSize;
 
 import java.math.BigInteger;
 
 import org.sosy_lab.java_smt.api.BitvectorFormula;
-import org.sosy_lab.java_smt.api.BitvectorFormulaManager;
 import org.sosy_lab.java_smt.api.BooleanFormula;
-import org.sosy_lab.java_smt.api.BooleanFormulaManager;
 import org.sosy_lab.java_smt.api.Formula;
-import org.sosy_lab.java_smt.api.FormulaManager;
-import org.sosy_lab.java_smt.api.FormulaType;
-import org.sosy_lab.java_smt.api.IntegerFormulaManager;
 import org.sosy_lab.java_smt.api.Model;
 import org.sosy_lab.java_smt.api.NumeralFormula.IntegerFormula;
 import org.sosy_lab.java_smt.api.SolverContext;
@@ -24,35 +15,41 @@ import org.sosy_lab.java_smt.api.SolverContext;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.primitives.UnsignedInteger;
-import com.google.common.primitives.UnsignedLong;
 
+/**
+ * Global variable of an associated program.
+ */
 public class INonDet implements ExprInterface {
-	
-	private final INonDetTypes type;
-	private final int precision;
-	
-	public INonDet(INonDetTypes type, int precision) {
-		this.type = type;
-		this.precision = precision;
-	}
 
-	public INonDetTypes getType() {
-		return type;
+	private final BigInteger min;
+	private final BigInteger max;
+	private final int precision;
+
+	/**
+	 * @param min
+	 * Nullable inclusive lower bound of allowed values for this variable.
+	 * @param max
+	 * Nullable inclusive upper bound of allowed values for this variable.
+	 * @param p
+	 * Bit precision for the variable.
+	 */
+	public INonDet(BigInteger min, BigInteger max, int p) {
+		this.min = min;
+		this.max = max;
+		precision = p;
 	}
 
 	@Override
 	public Formula toIntFormula(Event e, SolverContext ctx) {
 		String name = Integer.toString(hashCode());
-		FormulaManager fmgr = ctx.getFormulaManager();
-		FormulaType<?> type = precision > 0 ? getBitvectorTypeWithSize(precision) : IntegerType;
-		return fmgr.makeVariable(type, name);
+		var type = precision > 0 ? getBitvectorTypeWithSize(precision) : IntegerType;
+		return ctx.getFormulaManager().makeVariable(type, name);
 	}
 
 	@Override
 	public Formula getLastValueExpr(SolverContext ctx) {
 		String name = Integer.toString(hashCode());
-		FormulaManager fmgr = ctx.getFormulaManager();
+		var fmgr = ctx.getFormulaManager();
 		return precision > 0 ? 
 				fmgr.getBitvectorFormulaManager().makeVariable(precision, name) : 
 				fmgr.getIntegerFormulaManager().makeVariable(name);
@@ -73,90 +70,33 @@ public class INonDet implements ExprInterface {
 	}
 
 	@Override
-	public String toString() {
-        switch(type){
-        case INT:
-            return "nondet_int()";
-        case UINT:
-            return "nondet_uint()";
-		case LONG:
-			return "nondet_long()";
-		case ULONG:
-			return "nondet_ulong()";
-		case SHORT:
-			return "nondet_short()";
-		case USHORT:
-			return "nondet_ushort()";
-		case CHAR:
-			return "nondet_char()";
-		case UCHAR:
-			return "nondet_uchar()";
-        }
-        throw new UnsupportedOperationException("toString() not supported for " + this);
-	}
-
-	public long getMin() {
-        switch(type){
-        case UINT:
-		case ULONG:
-		case USHORT:
-		case UCHAR:
-            return 0;
-        case INT:
-            return Integer.MIN_VALUE;
-		case LONG:
-            return Long.MIN_VALUE;
-		case SHORT:
-            return Short.MIN_VALUE;
-		case CHAR:
-            return -128;
-        }
-        throw new UnsupportedOperationException("getMin() not supported for " + this);
-	}
-
-	public long getMax() {
-        switch(type){
-        case INT:
-            return Integer.MAX_VALUE;
-        case UINT:
-            return UnsignedInteger.MAX_VALUE.longValue();
-		case LONG:
-            return Long.MAX_VALUE;
-		case ULONG:
-            return UnsignedLong.MAX_VALUE.longValue();
-		case SHORT:
-            return Short.MAX_VALUE;
-		case USHORT:
-            return 65535;
-		case CHAR:
-            return 127;
-		case UCHAR:
-            return 255;
-        }
-        throw new UnsupportedOperationException("getMax() not supported for " + this);
-	}
-
-	@Override
 	public int getPrecision() {
 		return precision;
 	}
 	
 	public BooleanFormula encodeBounds(boolean bp, SolverContext ctx) {
-		FormulaManager fmgr = ctx.getFormulaManager();
-		BooleanFormulaManager bmgr = fmgr.getBooleanFormulaManager();
-		BooleanFormula enc = bmgr.makeTrue();
-		long min = getMin();
-		long max = getMax();
+		var fmgr = ctx.getFormulaManager();
+		var bmgr = fmgr.getBooleanFormulaManager();
+		var enc = bmgr.makeTrue();
 		if(bp) {
-			boolean signed = !(type.equals(UINT) || type.equals(ULONG) || type.equals(USHORT) || type.equals(UCHAR));
-			BitvectorFormulaManager bvmgr = fmgr.getBitvectorFormulaManager();
-			enc = bmgr.and(enc, bvmgr.greaterOrEquals((BitvectorFormula) toIntFormula(null,ctx), bvmgr.makeBitvector(precision, min), signed));
-	        enc = bmgr.and(enc, bvmgr.lessOrEquals((BitvectorFormula) toIntFormula(null,ctx), bvmgr.makeBitvector(precision, max), signed));
+			boolean signed = !BigInteger.ZERO.equals(min);
+			var bvmgr = fmgr.getBitvectorFormulaManager();
+			if(null!=min && signed)
+				enc = bmgr.and(enc, bvmgr.greaterOrEquals((BitvectorFormula) toIntFormula(null,ctx), bvmgr.makeBitvector(precision, min), true));
+			if(null!=max)
+				enc = bmgr.and(enc, bvmgr.lessOrEquals((BitvectorFormula) toIntFormula(null,ctx), bvmgr.makeBitvector(precision, max), signed));
 		} else {
-			IntegerFormulaManager imgr = fmgr.getIntegerFormulaManager();
-			enc = bmgr.and(enc, imgr.greaterOrEquals((IntegerFormula) toIntFormula(null,ctx), imgr.makeNumber(min)));
-			enc = bmgr.and(enc, imgr.lessOrEquals((IntegerFormula) toIntFormula(null,ctx), imgr.makeNumber(max)));
+			var imgr = fmgr.getIntegerFormulaManager();
+			if(null!=min)
+				enc = bmgr.and(enc, imgr.greaterOrEquals((IntegerFormula) toIntFormula(null,ctx), imgr.makeNumber(min)));
+			if(null!=max)
+				enc = bmgr.and(enc, imgr.lessOrEquals((IntegerFormula) toIntFormula(null,ctx), imgr.makeNumber(max)));
 		}
 		return enc;
+	}
+
+	@Override
+	public String toString() {
+		return "nondet("+(null!=min ? min.toString() : "")+","+(null!=max ? max.toString() : "")+")";
 	}
 }
