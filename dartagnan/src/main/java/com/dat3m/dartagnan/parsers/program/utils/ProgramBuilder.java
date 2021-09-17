@@ -158,15 +158,22 @@ public class ProgramBuilder {
         return null;
     }
 
-    public Register getOrCreateRegister(int threadId, String name, int precision){
-        initThread(threadId);
-        Thread thread = threads.get(threadId);
-        Register register = thread.getRegister(name);
-        if(register == null){
-            return thread.addRegister(name, precision);
-        }
-        return register;
-    }
+	/**
+	 * Looks up a register by thread and name.
+	 * Creates thread and register if not found.
+	 * @param t
+	 * Identifies a thread.
+	 * @param n
+	 * Identifies a register in a thread.
+	 * @param p
+	 * Bit precision for value storage with the register.
+	 * @return
+	 * Found or created register.
+	 */
+	public Register getOrCreateRegister(int t, String n, int p){
+		initThread(t);
+		return threads.get(t).register(n, p);
+	}
 
 	public Register getOrCreateRegister(int threadId, String name) {
 		return getOrCreateRegister(threadId, name, -1);
