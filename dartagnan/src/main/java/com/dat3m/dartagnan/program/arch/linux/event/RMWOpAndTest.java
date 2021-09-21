@@ -59,14 +59,13 @@ public class RMWOpAndTest extends RMWAbstract implements RegWriter, RegReaderDat
             RMWStore store = newRMWStore(load, address, dummy, Mo.RELAXED);
             Local test = newLocal(resultRegister, new Atom(dummy, COpBin.EQ, new IConst(BigInteger.ZERO, resultRegister.getPrecision())));
 
-            //TODO: Are the memory barriers really unconditional?
             List<Event> events = eventSequence(
-                    Linux.newMemoryBarrier(),
+                    mo.equals(Mo.MB) ? Linux.newMemoryBarrier() : null,
                     load,
                     localOp,
                     store,
                     test,
-                    Linux.newMemoryBarrier()
+                    mo.equals(Mo.MB) ? Linux.newMemoryBarrier() : null
             );
 
             return compileSequenceRecursive(target, nextId, predecessor, events, depth + 1);
