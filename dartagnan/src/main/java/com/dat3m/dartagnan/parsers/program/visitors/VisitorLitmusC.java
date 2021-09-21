@@ -268,8 +268,17 @@ public class VisitorLitmusC
     public IExpr visitReXchg(LitmusCParser.ReXchgContext ctx){
         Register register = getReturnRegister(true);
         ExprInterface value = (ExprInterface)ctx.value.accept(this);
-        Event event = EventFactory.Linux.newRMWExchange(getAddress(ctx.address), register, value, ctx.mo);
-        programBuilder.addChild(currentThread, event);
+		var address = getAddress(ctx.address);
+		if(ctx.mo.equals(Mo.MB))
+			programBuilder.addChild(currentThread, EventFactory.Linux.newMemoryBarrier());
+		var dummy = register!=value ? register : new Register(null, currentThread, register.getPrecision());
+		var load = EventFactory.newRMWLoad(dummy, address, Mo.loadMO(ctx.mo));
+		programBuilder.addChild(currentThread, load);
+		programBuilder.addChild(currentThread, EventFactory.newRMWStore(load, address, value, Mo.storeMO(ctx.mo)));
+		if(register==value)
+			programBuilder.addChild(currentThread, EventFactory.newLocal(register, dummy));
+		if(ctx.mo.equals(Mo.MB))
+			programBuilder.addChild(currentThread, EventFactory.Linux.newMemoryBarrier());
         return register;
     }
 

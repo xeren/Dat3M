@@ -374,10 +374,6 @@ public class EventFactory {
             return new RMWOpReturn(address, register, value, op, mo);
         }
 
-        public static RMWXchg newRMWExchange(IExpr address, Register register, ExprInterface value, String mo) {
-            return new RMWXchg(address, register, value, mo);
-        }
-
         public static FenceCond newConditionalBarrier(RMWReadCond loadEvent, String name) {
             return new FenceCond(loadEvent, name);
         }
