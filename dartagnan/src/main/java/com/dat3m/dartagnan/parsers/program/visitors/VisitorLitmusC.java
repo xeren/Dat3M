@@ -2,6 +2,8 @@ package com.dat3m.dartagnan.parsers.program.visitors;
 
 import com.dat3m.dartagnan.expression.*;
 import com.dat3m.dartagnan.expression.op.BOpUn;
+import com.dat3m.dartagnan.expression.op.COpBin;
+import com.dat3m.dartagnan.expression.op.IOpBin;
 import com.dat3m.dartagnan.parsers.LitmusCBaseVisitor;
 import com.dat3m.dartagnan.parsers.LitmusCParser;
 import com.dat3m.dartagnan.parsers.LitmusCVisitor;
@@ -251,7 +253,14 @@ public class VisitorLitmusC
         Register register = getReturnRegister(true);
         ExprInterface value = (ExprInterface)ctx.value.accept(this);
         ExprInterface cmp = (ExprInterface)ctx.cmp.accept(this);
-        programBuilder.addChild(currentThread, EventFactory.Linux.newRMWAddUnless(getAddress(ctx.address), register, cmp, value));
+		var address = getAddress(ctx.address);
+		var dummy = new Register(null, currentThread, register.getPrecision());
+		var load = EventFactory.Linux.newRMWReadCondUnless(dummy, cmp, address, Mo.RELAXED);
+		programBuilder.addChild(currentThread, EventFactory.Linux.newConditionalMemoryBarrier(load));
+		programBuilder.addChild(currentThread, load);
+		programBuilder.addChild(currentThread, EventFactory.Linux.newRMWStoreCond(load, address, new IExprBin(dummy, IOpBin.PLUS, value), Mo.RELAXED));
+		programBuilder.addChild(currentThread, EventFactory.newLocal(register, new Atom(dummy, COpBin.NEQ, cmp)));
+		programBuilder.addChild(currentThread, EventFactory.Linux.newConditionalMemoryBarrier(load));
         return register;
     }
 

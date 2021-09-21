@@ -354,10 +354,6 @@ public class EventFactory {
             return new RMWStoreCond(loadEvent, address, value, mo);
         }
 
-        public static RMWAddUnless newRMWAddUnless(IExpr address, Register register, ExprInterface cmp, ExprInterface value) {
-            return new RMWAddUnless(address, register, cmp, value);
-        }
-
         public static RMWCmpXchg newRMWCompareExchange(IExpr address, Register register, ExprInterface cmp, ExprInterface value, String mo) {
             return new RMWCmpXchg(address, register, cmp, value, mo);
         }
