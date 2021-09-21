@@ -358,10 +358,6 @@ public class EventFactory {
             return new RMWCmpXchg(address, register, cmp, value, mo);
         }
 
-        public static RMWFetchOp newRMWFetchOp(IExpr address, Register register, ExprInterface value, IOpBin op, String mo) {
-            return new RMWFetchOp(address, register, value, op, mo);
-        }
-
         public static RMWOp newRMWOp(IExpr address, Register register, ExprInterface value, IOpBin op) {
             return new RMWOp(address, register, value, op);
         }
