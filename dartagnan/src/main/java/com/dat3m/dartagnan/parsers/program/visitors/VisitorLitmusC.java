@@ -223,8 +223,16 @@ public class VisitorLitmusC
     public IExpr visitReAtomicOpReturn(LitmusCParser.ReAtomicOpReturnContext ctx){
         Register register = getReturnRegister(true);
         ExprInterface value = returnExpressionOrDefault(ctx.value, BigInteger.ONE);
-        Event event = EventFactory.Linux.newRMWOpReturn(getAddress(ctx.address), register, value, ctx.op, ctx.mo);
-        programBuilder.addChild(currentThread, event);
+		var address = getAddress(ctx.address);
+		if(ctx.mo.equals(Mo.MB))
+			programBuilder.addChild(currentThread, EventFactory.Linux.newMemoryBarrier());
+		var dummy = new Register(null, currentThread, register.getPrecision());
+		var load = EventFactory.newRMWLoad(dummy, address, Mo.loadMO(ctx.mo));
+		programBuilder.addChild(currentThread, load);
+		programBuilder.addChild(currentThread, EventFactory.newLocal(register, new IExprBin(dummy, ctx.op, value)));
+		programBuilder.addChild(currentThread, EventFactory.newRMWStore(load, address, register, Mo.storeMO(ctx.mo)));
+		if(ctx.mo.equals(Mo.MB))
+			programBuilder.addChild(currentThread, EventFactory.Linux.newMemoryBarrier());
         return register;
     }
 
