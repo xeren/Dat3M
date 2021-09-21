@@ -28,6 +28,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static com.dat3m.dartagnan.program.arch.linux.utils.EType.NORETURN;
+
 public class VisitorLitmusC
         extends LitmusCBaseVisitor<Object>
         implements LitmusCVisitor<Object> {
@@ -423,8 +425,12 @@ public class VisitorLitmusC
     public Object visitNreAtomicOp(LitmusCParser.NreAtomicOpContext ctx){
         ExprInterface value = returnExpressionOrDefault(ctx.value, BigInteger.ONE);
         Register register = programBuilder.getOrCreateRegister(scope, null, -1);
-        Event event = EventFactory.Linux.newRMWOp(getAddress(ctx.address), register, value, ctx.op);
-        return programBuilder.addChild(currentThread, event);
+		var address = getAddress(ctx.address);
+		var load = EventFactory.newRMWLoad(register, address, Mo.RELAXED);
+		load.addFilters(NORETURN);
+		programBuilder.addChild(currentThread, load);
+		programBuilder.addChild(currentThread, EventFactory.newRMWStore(load, address, new IExprBin(register, ctx.op, value), Mo.RELAXED));
+		return null;
     }
 
     @Override

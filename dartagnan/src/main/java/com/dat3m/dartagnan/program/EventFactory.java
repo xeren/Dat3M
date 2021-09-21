@@ -358,10 +358,6 @@ public class EventFactory {
             return new RMWCmpXchg(address, register, cmp, value, mo);
         }
 
-        public static RMWOp newRMWOp(IExpr address, Register register, ExprInterface value, IOpBin op) {
-            return new RMWOp(address, register, value, op);
-        }
-
         public static FenceCond newConditionalBarrier(RMWReadCond loadEvent, String name) {
             return new FenceCond(loadEvent, name);
         }
