@@ -3,7 +3,6 @@ package com.dat3m.dartagnan;
 import com.dat3m.dartagnan.analysis.Refinement;
 import com.dat3m.dartagnan.analysis.graphRefinement.RefinementTask;
 import com.dat3m.dartagnan.parsers.program.ProgramParser;
-import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.utils.TestHelper;
@@ -51,7 +50,7 @@ public abstract class AbstractSvCompTest {
         {
         	String property = path.substring(0, path.lastIndexOf("-")) + ".yml";
         	expected = readExpected(property);
-            Program program = new ProgramParser().parse(new File(path));
+			var program = new ProgramParser().parse(new File(path), Arch.NONE);
             VerificationTask task = new VerificationTask(program, wmm, Arch.NONE, settings);
             assertEquals(expected, runAnalysisTwoSolvers(ctx, prover1, prover2, task));
         } catch (Exception e){
@@ -66,7 +65,7 @@ public abstract class AbstractSvCompTest {
         {
         	String property = path.substring(0, path.lastIndexOf("-")) + ".yml";
         	expected = readExpected(property);
-            Program program = new ProgramParser().parse(new File(path));
+			var program = new ProgramParser().parse(new File(path), Arch.NONE);
             VerificationTask task = new VerificationTask(program, wmm, Arch.NONE, settings);
             assertEquals(expected, runAnalysisIncrementalSolver(ctx, prover, task));
         } catch (Exception e){
@@ -81,7 +80,7 @@ public abstract class AbstractSvCompTest {
         {
         	String property = path.substring(0, path.lastIndexOf("-")) + ".yml";
         	expected = readExpected(property);
-            Program program = new ProgramParser().parse(new File(path));
+			var program = new ProgramParser().parse(new File(path), Arch.NONE);
             VerificationTask task = new VerificationTask(program, wmm, Arch.NONE, settings);
             assertEquals(expected, runAnalysisAssumeSolver(ctx, prover, task));
         } catch (Exception e){
@@ -96,7 +95,7 @@ public abstract class AbstractSvCompTest {
         {
             String property = path.substring(0, path.lastIndexOf("-")) + ".yml";
             expected = readExpected(property);
-            Program program = new ProgramParser().parse(new File(path));
+			var program = new ProgramParser().parse(new File(path), Arch.NONE);
             VerificationTask task = new VerificationTask(program, wmm, Arch.NONE, settings);
             assertEquals(expected, Refinement.runAnalysisGraphRefinement(ctx, prover,
                     RefinementTask.fromVerificationTaskWithDefaultBaselineWMM(task)));

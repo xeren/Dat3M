@@ -4,7 +4,6 @@ import com.dat3m.dartagnan.analysis.graphRefinement.RefinementTask;
 import com.dat3m.dartagnan.parsers.cat.ParserCat;
 import com.dat3m.dartagnan.parsers.program.ProgramParser;
 import com.dat3m.dartagnan.parsers.witness.ParserWitness;
-import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.utils.Settings;
 import com.dat3m.dartagnan.utils.options.DartagnanOptions;
@@ -56,7 +55,7 @@ public class Dartagnan {
         }        
         
         Wmm mcm = new ParserCat().parse(new File(options.getTargetModelFilePath()));
-        Program p = new ProgramParser().parse(new File(options.getProgramFilePath()));        	
+		var p = new ProgramParser().parse(new File(options.getProgramFilePath()), options.getTarget());
 
         Arch target = p.getArch();
         if(target == null){

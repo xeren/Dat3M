@@ -4,7 +4,6 @@ import com.dat3m.dartagnan.analysis.Refinement;
 import com.dat3m.dartagnan.analysis.graphRefinement.RefinementTask;
 import com.dat3m.dartagnan.parsers.cat.ParserCat;
 import com.dat3m.dartagnan.parsers.program.ProgramParser;
-import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.utils.ResourceHelper;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.utils.Settings;
@@ -80,7 +79,7 @@ public abstract class AbstractDartagnanTest {
              ProverEnvironment prover1 = ctx.newProverEnvironment(ProverOptions.GENERATE_MODELS);
              ProverEnvironment prover2 = ctx.newProverEnvironment(ProverOptions.GENERATE_MODELS))
         {
-            Program program = new ProgramParser().parse(new File(path));
+			var program = new ProgramParser().parse(new File(path), target);
             if (program.getAss() != null) {
                 program.setAss(program.getAss().removeLocAssertions(REPLACE_BY_TRUE));
                 VerificationTask task = new VerificationTask(program, wmm, target, settings);
@@ -94,7 +93,7 @@ public abstract class AbstractDartagnanTest {
         try (SolverContext ctx = TestHelper.createContext();
              ProverEnvironment prover = ctx.newProverEnvironment(ProverOptions.GENERATE_MODELS))
         {
-            Program program = new ProgramParser().parse(new File(path));
+			var program = new ProgramParser().parse(new File(path), target);
             if (program.getAss() != null) {
                 program.setAss(program.getAss().removeLocAssertions(REPLACE_BY_TRUE));
                 VerificationTask task = new VerificationTask(program, wmm, target, settings);
@@ -112,7 +111,7 @@ public abstract class AbstractDartagnanTest {
              ProverEnvironment prover1 = ctx.newProverEnvironment(ProverOptions.GENERATE_MODELS);
              ProverEnvironment prover2 = ctx.newProverEnvironment(ProverOptions.GENERATE_MODELS))
         {
-            Program program = new ProgramParser().parse(new File(path));
+			var program = new ProgramParser().parse(new File(path), target);
             if (program.getAss() != null) {
                 VerificationTask task = new VerificationTask(program, wmm, target, settings);
                 assertEquals(expected, runAnalysisTwoSolvers(ctx, prover1, prover2, task));
@@ -127,7 +126,7 @@ public abstract class AbstractDartagnanTest {
         try (SolverContext ctx = TestHelper.createContext();
              ProverEnvironment prover = ctx.newProverEnvironment(ProverOptions.GENERATE_MODELS))
         {
-            Program program = new ProgramParser().parse(new File(path));
+			var program = new ProgramParser().parse(new File(path), target);
             if (program.getAss() != null) {
                 if (!program.getAss().getLocs().isEmpty()) {
                     // We assert true, because Refinement can't handle these assertions

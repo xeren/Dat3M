@@ -23,7 +23,7 @@ public class ProgramBuilderTest {
                     .filter(f -> (f.toString().endsWith("litmus")))
                     .forEach(f -> {
                                 try {
-                                    new ProgramParser().parse(new File(f.toString()));
+                                    new ProgramParser().parse(new File(f.toString()), null);
                                 } catch (ParsingException e) {
                                     // Test succeeded
                                 } catch (Exception e) {

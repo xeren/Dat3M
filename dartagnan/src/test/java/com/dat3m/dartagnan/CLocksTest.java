@@ -4,7 +4,6 @@ import com.dat3m.dartagnan.analysis.Refinement;
 import com.dat3m.dartagnan.analysis.graphRefinement.RefinementTask;
 import com.dat3m.dartagnan.parsers.cat.ParserCat;
 import com.dat3m.dartagnan.parsers.program.ProgramParser;
-import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.utils.ResourceHelper;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.utils.Settings;
@@ -140,7 +139,7 @@ public class CLocksTest {
         try (SolverContext ctx = TestHelper.createContext();
              ProverEnvironment prover = ctx.newProverEnvironment(ProverOptions.GENERATE_MODELS))
         {
-            Program program = new ProgramParser().parse(new File(path));
+			var program = new ProgramParser().parse(new File(path), target);
             VerificationTask task = new VerificationTask(program, wmm, target, settings);
             assertEquals(expected, runAnalysisAssumeSolver(ctx, prover, task));
         } catch (Exception e){
@@ -153,7 +152,7 @@ public class CLocksTest {
         try (SolverContext ctx = TestHelper.createContext();
              ProverEnvironment prover = ctx.newProverEnvironment(ProverOptions.GENERATE_MODELS))
         {
-            Program program = new ProgramParser().parse(new File(path));
+			var program = new ProgramParser().parse(new File(path), target);
             VerificationTask task = new VerificationTask(program, wmm, target, settings);
             assertEquals(expected, Refinement.runAnalysisGraphRefinement(ctx, prover,
                     RefinementTask.fromVerificationTaskWithDefaultBaselineWMM(task)));

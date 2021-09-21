@@ -2,7 +2,6 @@ package com.dat3m.dartagnan;
 
 import com.dat3m.dartagnan.parsers.cat.ParserCat;
 import com.dat3m.dartagnan.parsers.program.ProgramParser;
-import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.utils.ResourceHelper;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.utils.Settings;
@@ -100,7 +99,7 @@ public class DartagnanBranchTest {
              ProverEnvironment prover1 = ctx.newProverEnvironment(ProverOptions.GENERATE_MODELS);
              ProverEnvironment prover2 = ctx.newProverEnvironment(ProverOptions.GENERATE_MODELS))
         {
-            Program program = new ProgramParser().parse(new File(path));
+			var program = new ProgramParser().parse(new File(path), Arch.NONE);
             VerificationTask task = new VerificationTask(program, wmm, Arch.NONE, settings);
             assertEquals(expected, runAnalysisTwoSolvers(ctx, prover1, prover2, task));
         } catch (Exception e){

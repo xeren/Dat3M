@@ -2,6 +2,7 @@ package com.dat3m.dartagnan.parsers.program;
 
 import com.dat3m.dartagnan.parsers.program.utils.ParsingException;
 import com.dat3m.dartagnan.program.Program;
+import com.dat3m.dartagnan.wmm.utils.Arch;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 
@@ -17,12 +18,12 @@ public class ProgramParser {
     private static final String TYPE_LITMUS_X86         = "X86";
     private static final String TYPE_LITMUS_C           = "C";
 
-    public Program parse(File file) throws Exception {
+	public Program parse(File file, Arch target) throws Exception {
     	if(file.getPath().endsWith("c")) {
             compileWithClang(file);
             compileWithSmack(file);
             String name = file.getName().substring(0, file.getName().lastIndexOf('.'));
-            return new ProgramParser().parse(new File(System.getenv().get("DAT3M_HOME") + "/output/" + name + ".bpl"));    		
+			return new ProgramParser().parse(new File(System.getenv().get("DAT3M_HOME") + "/output/" + name + ".bpl"), target);
     	}
 
         Program program;
@@ -35,7 +36,7 @@ public class ProgramParser {
         return program;
     }
 
-    public Program parse(String raw, String format) throws Exception {
+	public Program parse(String raw, String format, Arch target) throws Exception {
         switch (format) {
         	case "c":
         	case "i":
@@ -49,7 +50,7 @@ public class ProgramParser {
 	            compileWithSmack(CFile);
 	            File BplFile = new File(System.getenv().get("DAT3M_HOME") + "/output/" + name + ".bpl");
 	            BplFile.deleteOnExit();
-	            Program p = new ProgramParser().parse(BplFile);
+				var p = new ProgramParser().parse(BplFile, target);
 	            CFile.delete();
 	            BplFile.delete();
 	            return p;

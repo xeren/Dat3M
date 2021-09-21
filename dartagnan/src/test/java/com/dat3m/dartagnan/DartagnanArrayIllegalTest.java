@@ -41,7 +41,7 @@ public class DartagnanArrayIllegalTest {
     @Test
     public void test() {
         try{
-            new ProgramParser().parse(new File(path));
+			new ProgramParser().parse(new File(path), null);
             fail("Didn't throw an exception");
         } catch(ParseCancellationException | ParsingException e){
             // Test succeeded
