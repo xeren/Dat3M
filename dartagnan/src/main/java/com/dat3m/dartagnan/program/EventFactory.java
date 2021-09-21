@@ -5,7 +5,6 @@ import com.dat3m.dartagnan.expression.op.BOpUn;
 import com.dat3m.dartagnan.expression.op.COpBin;
 import com.dat3m.dartagnan.expression.op.IOpBin;
 import com.dat3m.dartagnan.program.arch.aarch64.event.StoreExclusive;
-import com.dat3m.dartagnan.program.arch.linux.event.cond.*;
 import com.dat3m.dartagnan.program.arch.tso.event.Xchg;
 import com.dat3m.dartagnan.program.atomic.event.*;
 import com.dat3m.dartagnan.program.event.*;
@@ -341,28 +340,8 @@ public class EventFactory {
     public static class Linux {
         private Linux() {}
 
-        public static RMWReadCondCmp newRMWReadCondCmp(Register reg, ExprInterface cmp, IExpr address, String atomic) {
-            return new RMWReadCondCmp(reg, cmp, address, atomic);
-        }
-
-        public static RMWReadCondUnless newRMWReadCondUnless(Register reg, ExprInterface cmp, IExpr address, String mo) {
-            return new RMWReadCondUnless(reg, cmp, address, mo);
-        }
-
-        public static RMWStoreCond newRMWStoreCond(RMWReadCond loadEvent, IExpr address, ExprInterface value, String mo) {
-            return new RMWStoreCond(loadEvent, address, value, mo);
-        }
-
-        public static FenceCond newConditionalBarrier(RMWReadCond loadEvent, String name) {
-            return new FenceCond(loadEvent, name);
-        }
-
         public static Fence newMemoryBarrier() {
             return newFence("Mb");
-        }
-
-        public static Fence newConditionalMemoryBarrier(RMWReadCond loadEvent) {
-            return newConditionalBarrier(loadEvent, "Mb");
         }
 
     }

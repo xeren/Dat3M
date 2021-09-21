@@ -277,12 +277,15 @@ public class VisitorLitmusC
         ExprInterface cmp = (ExprInterface)ctx.cmp.accept(this);
 		var address = getAddress(ctx.address);
 		var dummy = new Register(null, currentThread, register.getPrecision());
-		var load = EventFactory.Linux.newRMWReadCondUnless(dummy, cmp, address, Mo.RELAXED);
-		programBuilder.addChild(currentThread, EventFactory.Linux.newConditionalMemoryBarrier(load));
+		var load = EventFactory.newRMWLoad(dummy, address, Mo.RELAXED);
+		optionalBarrier(ctx.mo);
 		programBuilder.addChild(currentThread, load);
-		programBuilder.addChild(currentThread, EventFactory.Linux.newRMWStoreCond(load, address, new IExprBin(dummy, IOpBin.PLUS, value), Mo.RELAXED));
+		var label = programBuilder.getOrCreateLabel("AddUnless_"+load.getOId());
+		programBuilder.addChild(currentThread, EventFactory.newJump(new Atom(dummy, COpBin.EQ, cmp), label));
+		programBuilder.addChild(currentThread, EventFactory.newRMWStore(load, address, new IExprBin(dummy, IOpBin.PLUS, value), Mo.RELAXED));
+		programBuilder.addChild(currentThread, label);
 		programBuilder.addChild(currentThread, EventFactory.newLocal(register, new Atom(dummy, COpBin.NEQ, cmp)));
-		programBuilder.addChild(currentThread, EventFactory.Linux.newConditionalMemoryBarrier(load));
+		optionalBarrier(ctx.mo);
         return register;
     }
 
@@ -310,9 +313,12 @@ public class VisitorLitmusC
 		var address = getAddress(ctx.address);
 		optionalBarrier(ctx.mo);
 		var dummy = register!=value && register!=cmp ? register : new Register(null, currentThread, register.getPrecision());
-		var load = EventFactory.Linux.newRMWReadCondCmp(dummy, cmp, address, Mo.loadMO(ctx.mo));
+		var load = EventFactory.newRMWLoad(dummy, address, Mo.loadMO(ctx.mo));
 		programBuilder.addChild(currentThread, load);
-		programBuilder.addChild(currentThread, EventFactory.Linux.newRMWStoreCond(load, address, value, Mo.storeMO(ctx.mo)));
+		var label = programBuilder.getOrCreateLabel("CmpXchg_"+load.getOId());
+		programBuilder.addChild(currentThread, EventFactory.newJump(new Atom(dummy, COpBin.NEQ, cmp), label));
+		programBuilder.addChild(currentThread, EventFactory.newRMWStore(load, address, value, Mo.storeMO(ctx.mo)));
+		programBuilder.addChild(currentThread, label);
 		if(dummy!=register)
 			programBuilder.addChild(currentThread, EventFactory.newLocal(register, dummy));
 		optionalBarrier(ctx.mo);
