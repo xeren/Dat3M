@@ -5,7 +5,6 @@ import com.dat3m.dartagnan.expression.op.BOpUn;
 import com.dat3m.dartagnan.expression.op.COpBin;
 import com.dat3m.dartagnan.expression.op.IOpBin;
 import com.dat3m.dartagnan.program.arch.aarch64.event.StoreExclusive;
-import com.dat3m.dartagnan.program.arch.linux.event.*;
 import com.dat3m.dartagnan.program.arch.linux.event.cond.*;
 import com.dat3m.dartagnan.program.arch.tso.event.Xchg;
 import com.dat3m.dartagnan.program.atomic.event.*;

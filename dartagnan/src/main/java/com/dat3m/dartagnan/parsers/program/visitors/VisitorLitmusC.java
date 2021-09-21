@@ -226,15 +226,13 @@ public class VisitorLitmusC
         Register register = getReturnRegister(true);
         ExprInterface value = returnExpressionOrDefault(ctx.value, BigInteger.ONE);
 		var address = getAddress(ctx.address);
-		if(ctx.mo.equals(Mo.MB))
-			programBuilder.addChild(currentThread, EventFactory.Linux.newMemoryBarrier());
+		optionalBarrier(ctx.mo);
 		var dummy = new Register(null, currentThread, register.getPrecision());
 		var load = EventFactory.newRMWLoad(dummy, address, Mo.loadMO(ctx.mo));
 		programBuilder.addChild(currentThread, load);
 		programBuilder.addChild(currentThread, EventFactory.newLocal(register, new IExprBin(dummy, ctx.op, value)));
 		programBuilder.addChild(currentThread, EventFactory.newRMWStore(load, address, register, Mo.storeMO(ctx.mo)));
-		if(ctx.mo.equals(Mo.MB))
-			programBuilder.addChild(currentThread, EventFactory.Linux.newMemoryBarrier());
+		optionalBarrier(ctx.mo);
         return register;
     }
 
@@ -244,16 +242,14 @@ public class VisitorLitmusC
         Register register = getReturnRegister(true);
         ExprInterface value = returnExpressionOrDefault(ctx.value, BigInteger.ONE);
 		var address = getAddress(ctx.address);
-		if(ctx.mo.equals(Mo.MB))
-			programBuilder.addChild(currentThread, EventFactory.Linux.newMemoryBarrier());
+		optionalBarrier(ctx.mo);
 		var dummy = register!=value ? register : new Register(null, currentThread, register.getPrecision());
 		var load = EventFactory.newRMWLoad(dummy, address, Mo.loadMO(ctx.mo));
 		programBuilder.addChild(currentThread, load);
 		programBuilder.addChild(currentThread, EventFactory.newRMWStore(load, address, new IExprBin(dummy, ctx.op, value), Mo.storeMO(ctx.mo)));
 		if(register==value)
 			programBuilder.addChild(currentThread, EventFactory.newLocal(register, dummy));
-		if(ctx.mo.equals(Mo.MB))
-			programBuilder.addChild(currentThread, EventFactory.Linux.newMemoryBarrier());
+		optionalBarrier(ctx.mo);
         return register;
     }
 
@@ -262,16 +258,14 @@ public class VisitorLitmusC
         Register register = getReturnRegister(true);
         ExprInterface value = returnExpressionOrDefault(ctx.value, BigInteger.ONE);
 		var address = getAddress(ctx.address);
-		if(ctx.mo.equals(Mo.MB))
-			programBuilder.addChild(currentThread, EventFactory.Linux.newMemoryBarrier());
+		optionalBarrier(ctx.mo);
 		var dummy = new Register(null, currentThread, register.getPrecision());
 		var load = EventFactory.newRMWLoad(dummy, address, Mo.RELAXED);
 		programBuilder.addChild(currentThread, load);
 		programBuilder.addChild(currentThread, EventFactory.newLocal(dummy, new IExprBin(dummy, ctx.op, value)));
 		programBuilder.addChild(currentThread, EventFactory.newRMWStore(load, address, dummy, Mo.RELAXED));
 		programBuilder.addChild(currentThread, EventFactory.newLocal(register, new Atom(dummy, COpBin.EQ, new IConst(BigInteger.ZERO, register.getPrecision()))));
-		if(ctx.mo.equals(Mo.MB))
-			programBuilder.addChild(currentThread, EventFactory.Linux.newMemoryBarrier());
+		optionalBarrier(ctx.mo);
         return register;
     }
 
@@ -297,16 +291,14 @@ public class VisitorLitmusC
         Register register = getReturnRegister(true);
         ExprInterface value = (ExprInterface)ctx.value.accept(this);
 		var address = getAddress(ctx.address);
-		if(ctx.mo.equals(Mo.MB))
-			programBuilder.addChild(currentThread, EventFactory.Linux.newMemoryBarrier());
+		optionalBarrier(ctx.mo);
 		var dummy = register!=value ? register : new Register(null, currentThread, register.getPrecision());
 		var load = EventFactory.newRMWLoad(dummy, address, Mo.loadMO(ctx.mo));
 		programBuilder.addChild(currentThread, load);
 		programBuilder.addChild(currentThread, EventFactory.newRMWStore(load, address, value, Mo.storeMO(ctx.mo)));
 		if(register==value)
 			programBuilder.addChild(currentThread, EventFactory.newLocal(register, dummy));
-		if(ctx.mo.equals(Mo.MB))
-			programBuilder.addChild(currentThread, EventFactory.Linux.newMemoryBarrier());
+		optionalBarrier(ctx.mo);
         return register;
     }
 
@@ -316,16 +308,14 @@ public class VisitorLitmusC
         ExprInterface cmp = (ExprInterface)ctx.cmp.accept(this);
         ExprInterface value = (ExprInterface)ctx.value.accept(this);
 		var address = getAddress(ctx.address);
-		if(ctx.mo.equals(Mo.MB))
-			programBuilder.addChild(currentThread, EventFactory.Linux.newMemoryBarrier());
+		optionalBarrier(ctx.mo);
 		var dummy = register!=value && register!=cmp ? register : new Register(null, currentThread, register.getPrecision());
 		var load = EventFactory.Linux.newRMWReadCondCmp(dummy, cmp, address, Mo.loadMO(ctx.mo));
 		programBuilder.addChild(currentThread, load);
 		programBuilder.addChild(currentThread, EventFactory.Linux.newRMWStoreCond(load, address, value, Mo.storeMO(ctx.mo)));
 		if(dummy!=register)
 			programBuilder.addChild(currentThread, EventFactory.newLocal(register, dummy));
-		if(ctx.mo.equals(Mo.MB))
-			programBuilder.addChild(currentThread, EventFactory.Linux.newMemoryBarrier());
+		optionalBarrier(ctx.mo);
         return register;
     }
 
@@ -552,4 +542,9 @@ public class VisitorLitmusC
         }
         return value;
     }
+
+	private void optionalBarrier(String mo) {
+		if(mo.equals(Mo.MB))
+			programBuilder.addChild(currentThread, EventFactory.Linux.newMemoryBarrier());
+	}
 }
