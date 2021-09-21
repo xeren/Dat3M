@@ -28,7 +28,18 @@ public class ProgramParser {
 
         Program program;
         try (FileInputStream stream = new FileInputStream(file)) {
-            ParserInterface parser = getConcreteParser(file);
+			ParserInterface parser;
+			String name = file.getName();
+			switch(name.substring(name.lastIndexOf(".") + 1)) {
+			case "bpl":
+				parser = new ParserBoogie(target);
+				break;
+			case "litmus":
+				parser = getConcreteLitmusParser(readFirstLine(file).toUpperCase());
+				break;
+			default:
+				throw new ParsingException("Unknown input file type");
+			}
             CharStream charStream = CharStreams.fromStream(stream);
             program = parser.parse(charStream);
         }
@@ -55,26 +66,14 @@ public class ProgramParser {
 	            BplFile.delete();
 	            return p;
             case "bpl":
-                return new ParserBoogie().parse(CharStreams.fromString(raw));
+                return new ParserBoogie(target).parse(CharStreams.fromString(raw));
             case "litmus":
                 return getConcreteLitmusParser(raw.toUpperCase()).parse(CharStreams.fromString(raw));
         }
         throw new ParsingException("Unknown input file type");
     }
 
-    private ParserInterface getConcreteParser(File file) throws IOException {
-        String name = file.getName();
-        String format = name.substring(name.lastIndexOf(".") + 1);
-        switch (format) {
-            case "bpl":
-                return new ParserBoogie();
-            case "litmus":
-                return getConcreteLitmusParser(readFirstLine(file).toUpperCase());
-        }
-        throw new ParsingException("Unknown input file type");
-    }
-
-    private ParserInterface getConcreteLitmusParser(String programText){
+	private ParserInterface getConcreteLitmusParser(String programText){
         if(programText.indexOf(TYPE_LITMUS_AARCH64) == 0){
             return new ParserLitmusAArch64();
         } else if(programText.indexOf(TYPE_LITMUS_C) == 0){

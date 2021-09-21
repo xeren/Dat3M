@@ -24,6 +24,7 @@ import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.program.memory.Location;
 import com.dat3m.dartagnan.program.svcomp.event.BeginAtomic;
 import com.dat3m.dartagnan.program.utils.EType;
+import com.dat3m.dartagnan.wmm.utils.Arch;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -55,8 +56,9 @@ import static com.dat3m.dartagnan.program.llvm.utils.SmackPredicates.smackPredic
 public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVisitor<Object> {
 
     private static final Logger logger = LogManager.getLogger(VisitorBoogie.class);
-	
-	protected ProgramBuilder programBuilder;
+
+	protected final Arch target;
+	protected final ProgramBuilder programBuilder = new ProgramBuilder();
 	protected int threadCount = 0;
 	protected int currentThread = 0;
     
@@ -93,10 +95,10 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 	 
 	private final List<String> smackDummyVariables = Arrays.asList("$M.0", "$exn", "$exnv", "$CurrAddr", "$GLOBALS_BOTTOM", "$EXTERNS_BOTTOM", "$MALLOC_TOP", "__SMACK_code", "__SMACK_decls", "__SMACK_top_decl", "$1024.ref", "$0.ref", "$1.ref", ".str.1", "env_value_str", ".str.1.3", ".str.19", "errno_global", "$CurrAddr");
 
-	public VisitorBoogie(ProgramBuilder pb) {
-		this.programBuilder = pb;
+	public VisitorBoogie(Arch t) {
+		target = t;
 	}
-	
+
     @Override
     public Object visitMain(MainContext ctx) {
     	visitLine_comment(ctx.line_comment(0));
