@@ -315,8 +315,17 @@ public class VisitorLitmusC
         Register register = getReturnRegister(true);
         ExprInterface cmp = (ExprInterface)ctx.cmp.accept(this);
         ExprInterface value = (ExprInterface)ctx.value.accept(this);
-        Event event = EventFactory.Linux.newRMWCompareExchange(getAddress(ctx.address), register, cmp, value, ctx.mo);
-        programBuilder.addChild(currentThread, event);
+		var address = getAddress(ctx.address);
+		if(ctx.mo.equals(Mo.MB))
+			programBuilder.addChild(currentThread, EventFactory.Linux.newMemoryBarrier());
+		var dummy = register!=value && register!=cmp ? register : new Register(null, currentThread, register.getPrecision());
+		var load = EventFactory.Linux.newRMWReadCondCmp(dummy, cmp, address, Mo.loadMO(ctx.mo));
+		programBuilder.addChild(currentThread, load);
+		programBuilder.addChild(currentThread, EventFactory.Linux.newRMWStoreCond(load, address, value, Mo.storeMO(ctx.mo)));
+		if(dummy!=register)
+			programBuilder.addChild(currentThread, EventFactory.newLocal(register, dummy));
+		if(ctx.mo.equals(Mo.MB))
+			programBuilder.addChild(currentThread, EventFactory.Linux.newMemoryBarrier());
         return register;
     }
 

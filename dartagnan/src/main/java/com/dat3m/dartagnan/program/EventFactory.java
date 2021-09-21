@@ -354,10 +354,6 @@ public class EventFactory {
             return new RMWStoreCond(loadEvent, address, value, mo);
         }
 
-        public static RMWCmpXchg newRMWCompareExchange(IExpr address, Register register, ExprInterface cmp, ExprInterface value, String mo) {
-            return new RMWCmpXchg(address, register, cmp, value, mo);
-        }
-
         public static FenceCond newConditionalBarrier(RMWReadCond loadEvent, String name) {
             return new FenceCond(loadEvent, name);
         }
