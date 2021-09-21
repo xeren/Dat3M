@@ -366,10 +366,6 @@ public class EventFactory {
             return new RMWOp(address, register, value, op);
         }
 
-        public static RMWOpAndTest newRMWOpAndTest(IExpr address, Register register, ExprInterface value, IOpBin op) {
-            return new RMWOpAndTest(address, register, value, op);
-        }
-
         public static FenceCond newConditionalBarrier(RMWReadCond loadEvent, String name) {
             return new FenceCond(loadEvent, name);
         }
