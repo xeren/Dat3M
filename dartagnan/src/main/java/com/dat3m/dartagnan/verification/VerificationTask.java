@@ -15,7 +15,6 @@ import com.dat3m.dartagnan.witness.WitnessGraph;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
 import com.dat3m.dartagnan.wmm.relation.Relation;
-import com.dat3m.dartagnan.wmm.utils.Arch;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sosy_lab.java_smt.api.BooleanFormula;
@@ -36,19 +35,17 @@ public class VerificationTask {
     private final Program program;
     private final Wmm memoryModel;
     private final WitnessGraph witness;
-    private final Arch target;
     private final Settings settings;
     private ThreadSymmetry threadSymmetry;
 
-    public VerificationTask(Program program, Wmm memoryModel, Arch target, Settings settings) {
-    	this(program, memoryModel, new WitnessGraph(), target, settings);
-    }
-    
-    public VerificationTask(Program program, Wmm memoryModel, WitnessGraph witness, Arch target, Settings settings) {
+	public VerificationTask(Program program, Wmm memoryModel, Settings settings) {
+		this(program, memoryModel, new WitnessGraph(), settings);
+	}
+
+	public VerificationTask(Program program, Wmm memoryModel, WitnessGraph witness, Settings settings) {
         this.program = program;
         this.memoryModel = memoryModel;
         this.witness = witness;
-        this.target = target;
         this.settings = settings;
     }
 
@@ -63,11 +60,7 @@ public class VerificationTask {
     public WitnessGraph getWitness() {
     	return witness;
     }
-    
-    public Arch getTarget() {
-    	return target;
-    }
-    
+
     public Settings getSettings() {
     	return settings;
     }

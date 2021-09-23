@@ -51,7 +51,7 @@ public abstract class AbstractSvCompTest {
         	String property = path.substring(0, path.lastIndexOf("-")) + ".yml";
         	expected = readExpected(property);
 			var program = new ProgramParser().parse(new File(path), Arch.NONE);
-            VerificationTask task = new VerificationTask(program, wmm, Arch.NONE, settings);
+			var task = new VerificationTask(program, wmm, settings);
             assertEquals(expected, runAnalysisTwoSolvers(ctx, prover1, prover2, task));
         } catch (Exception e){
             fail(e.getMessage());
@@ -66,7 +66,7 @@ public abstract class AbstractSvCompTest {
         	String property = path.substring(0, path.lastIndexOf("-")) + ".yml";
         	expected = readExpected(property);
 			var program = new ProgramParser().parse(new File(path), Arch.NONE);
-            VerificationTask task = new VerificationTask(program, wmm, Arch.NONE, settings);
+			var task = new VerificationTask(program, wmm, settings);
             assertEquals(expected, runAnalysisIncrementalSolver(ctx, prover, task));
         } catch (Exception e){
             fail(e.getMessage());
@@ -81,7 +81,7 @@ public abstract class AbstractSvCompTest {
         	String property = path.substring(0, path.lastIndexOf("-")) + ".yml";
         	expected = readExpected(property);
 			var program = new ProgramParser().parse(new File(path), Arch.NONE);
-            VerificationTask task = new VerificationTask(program, wmm, Arch.NONE, settings);
+			var task = new VerificationTask(program, wmm, settings);
             assertEquals(expected, runAnalysisAssumeSolver(ctx, prover, task));
         } catch (Exception e){
             fail(e.getMessage());
@@ -96,7 +96,7 @@ public abstract class AbstractSvCompTest {
             String property = path.substring(0, path.lastIndexOf("-")) + ".yml";
             expected = readExpected(property);
 			var program = new ProgramParser().parse(new File(path), Arch.NONE);
-            VerificationTask task = new VerificationTask(program, wmm, Arch.NONE, settings);
+			var task = new VerificationTask(program, wmm, settings);
             assertEquals(expected, Refinement.runAnalysisGraphRefinement(ctx, prover,
                     RefinementTask.fromVerificationTaskWithDefaultBaselineWMM(task)));
         } catch (Exception e){

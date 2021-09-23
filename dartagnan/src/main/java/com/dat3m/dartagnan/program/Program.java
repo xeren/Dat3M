@@ -7,7 +7,6 @@ import com.dat3m.dartagnan.program.utils.ThreadCache;
 import com.dat3m.dartagnan.utils.equivalence.BranchEquivalence;
 import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
-import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.google.common.collect.ImmutableSet;
 import com.dat3m.dartagnan.asserts.AbstractAssert;
 import com.dat3m.dartagnan.asserts.AssertCompositeOr;
@@ -39,7 +38,6 @@ public class Program {
 	private final List<Thread> threads;
 	private final ImmutableSet<Location> locations;
 	private final Memory memory;
-	private Arch arch;
     private ThreadCache cache;
     private boolean isUnrolled;
     private VerificationTask task;
@@ -66,14 +64,6 @@ public class Program {
 
 	public void setName(String name){
 	    this.name = name;
-    }
-
-	public void setArch(Arch arch){
-	    this.arch = arch;
-    }
-
-	public Arch getArch(){
-	    return arch;
     }
 
     public Memory getMemory(){

@@ -62,7 +62,7 @@ public class DartagnanArrayValidTest {
              ProverEnvironment prover2 = ctx.newProverEnvironment(ProverOptions.GENERATE_MODELS))
         {
 			var program = new ProgramParser().parse(new File(path), Arch.NONE);
-            VerificationTask task = new VerificationTask(program, wmm, Arch.NONE, settings);
+			var task = new VerificationTask(program, wmm, settings);
             assertEquals(runAnalysisTwoSolvers(ctx, prover1, prover2, task), FAIL);
         } catch (Exception e){
             fail("Missing resource file");

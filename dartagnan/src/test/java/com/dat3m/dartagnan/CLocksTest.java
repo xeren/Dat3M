@@ -140,7 +140,7 @@ public class CLocksTest {
              ProverEnvironment prover = ctx.newProverEnvironment(ProverOptions.GENERATE_MODELS))
         {
 			var program = new ProgramParser().parse(new File(path), target);
-            VerificationTask task = new VerificationTask(program, wmm, target, settings);
+			var task = new VerificationTask(program, wmm, settings);
             assertEquals(expected, runAnalysisAssumeSolver(ctx, prover, task));
         } catch (Exception e){
             fail(e.getMessage());
@@ -153,7 +153,7 @@ public class CLocksTest {
              ProverEnvironment prover = ctx.newProverEnvironment(ProverOptions.GENERATE_MODELS))
         {
 			var program = new ProgramParser().parse(new File(path), target);
-            VerificationTask task = new VerificationTask(program, wmm, target, settings);
+			var task = new VerificationTask(program, wmm, settings);
             assertEquals(expected, Refinement.runAnalysisGraphRefinement(ctx, prover,
                     RefinementTask.fromVerificationTaskWithDefaultBaselineWMM(task)));
         } catch (Exception e){

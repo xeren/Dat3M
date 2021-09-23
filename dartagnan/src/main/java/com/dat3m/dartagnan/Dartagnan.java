@@ -11,7 +11,6 @@ import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.witness.WitnessBuilder;
 import com.dat3m.dartagnan.witness.WitnessGraph;
 import com.dat3m.dartagnan.wmm.Wmm;
-import com.dat3m.dartagnan.wmm.utils.Arch;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -57,16 +56,10 @@ public class Dartagnan {
         Wmm mcm = new ParserCat().parse(new File(options.getTargetModelFilePath()));
 		var p = new ProgramParser().parse(new File(options.getProgramFilePath()), options.getTarget());
 
-        Arch target = p.getArch();
-        if(target == null){
-            target = options.getTarget();
-        }
-
         logger.info("Program path: " + options.getProgramFilePath());
         logger.info("CAT file path: " + options.getTargetModelFilePath());
         logger.info("Bound: " + options.getSettings().getBound());
         logger.info("Alias Analysis: " + options.getSettings().getAlias());
-        logger.info("Target: " + target);
 
         WitnessGraph witness = new WitnessGraph();
         if(options.getWitnessPath() != null) {
@@ -75,7 +68,7 @@ public class Dartagnan {
         }        
 
         Settings settings = options.getSettings();
-        VerificationTask task = new VerificationTask(p, mcm, witness, target, settings);
+		VerificationTask task = new VerificationTask(p, mcm, witness, settings);
 
         ShutdownManager sdm = ShutdownManager.create();
     	Thread t = new Thread(() -> {

@@ -6,7 +6,6 @@ import com.dat3m.dartagnan.parsers.program.utils.ParserErrorListener;
 import com.dat3m.dartagnan.parsers.program.utils.ProgramBuilder;
 import com.dat3m.dartagnan.parsers.program.visitors.VisitorLitmusAArch64;
 import com.dat3m.dartagnan.program.Program;
-import com.dat3m.dartagnan.wmm.utils.Arch;
 
 import org.antlr.v4.runtime.*;
 
@@ -24,8 +23,6 @@ class ParserLitmusAArch64 implements ParserInterface {
         ParserRuleContext parserEntryPoint = parser.main();
         VisitorLitmusAArch64 visitor = new VisitorLitmusAArch64(pb);
 
-        Program program = (Program) parserEntryPoint.accept(visitor);
-        program.setArch(Arch.ARM8);
-        return program;
+		return (Program) parserEntryPoint.accept(visitor);
     }
 }

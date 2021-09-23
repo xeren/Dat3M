@@ -100,7 +100,7 @@ public class DartagnanBranchTest {
              ProverEnvironment prover2 = ctx.newProverEnvironment(ProverOptions.GENERATE_MODELS))
         {
 			var program = new ProgramParser().parse(new File(path), Arch.NONE);
-            VerificationTask task = new VerificationTask(program, wmm, Arch.NONE, settings);
+			var task = new VerificationTask(program, wmm, settings);
             assertEquals(expected, runAnalysisTwoSolvers(ctx, prover1, prover2, task));
         } catch (Exception e){
             fail("Missing resource file");

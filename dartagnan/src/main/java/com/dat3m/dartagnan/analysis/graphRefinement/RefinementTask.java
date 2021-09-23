@@ -9,7 +9,6 @@ import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.axiom.Acyclic;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.relation.binary.RelUnion;
-import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.dat3m.dartagnan.wmm.utils.RelationRepository;
 import org.sosy_lab.java_smt.api.BooleanFormula;
 import org.sosy_lab.java_smt.api.SolverContext;
@@ -23,11 +22,10 @@ public class RefinementTask extends VerificationTask {
 
     private final Wmm baselineModel;
 
-    public RefinementTask(Program program, Wmm targetMemoryModel, Wmm baselineModel, WitnessGraph witness, Arch target,
-                          Settings settings) {
-        super(program, targetMemoryModel, witness, target, settings);
-        this.baselineModel = baselineModel;
-    }
+	public RefinementTask(Program program, Wmm targetMemoryModel, Wmm baselineModel, WitnessGraph witness, Settings settings) {
+		super(program, targetMemoryModel, witness, settings);
+		this.baselineModel = baselineModel;
+	}
 
     public Wmm getBaselineModel() {
         return baselineModel;
@@ -58,7 +56,6 @@ public class RefinementTask extends VerificationTask {
                 task.getMemoryModel(),
                 createDefaultWmm(),
                 task.getWitness(),
-                task.getTarget(),
                 task.getSettings()
         );
     }

@@ -5,7 +5,6 @@ import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.wmm.Wmm;
-import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.dat3m.ui.utils.UiOptions;
 import com.dat3m.ui.utils.Utils;
 import org.sosy_lab.common.ShutdownManager;
@@ -40,8 +39,7 @@ public class ReachabilityResult {
 
     private void run(){
         if(validate()){
-            Arch arch = program.getArch() != null ? program.getArch() : options.getTarget();
-            VerificationTask task = new VerificationTask(program, wmm, arch, options.getSettings());
+			VerificationTask task = new VerificationTask(program, wmm, options.getSettings());
             Result result = Result.UNKNOWN;
 
             ShutdownManager sdm = ShutdownManager.create();
@@ -105,12 +103,10 @@ public class ReachabilityResult {
     }
 
     private boolean validate(){
-        Arch target = program.getArch() == null ? options.getTarget() : program.getArch();
-        if(target == null) {
+        if(options.getTarget() == null) {
             Utils.showError("Missing target architecture.");
             return false;
         }
-        program.setArch(target);
         return true;
     }
 }

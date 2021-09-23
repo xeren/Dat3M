@@ -82,7 +82,7 @@ public abstract class AbstractDartagnanTest {
 			var program = new ProgramParser().parse(new File(path), target);
             if (program.getAss() != null) {
                 program.setAss(program.getAss().removeLocAssertions(REPLACE_BY_TRUE));
-                VerificationTask task = new VerificationTask(program, wmm, target, settings);
+				var task = new VerificationTask(program, wmm, settings);
                 res = runAnalysisTwoSolvers(ctx, prover1, prover2, task);
             }
         } catch (Exception e) {
@@ -96,7 +96,7 @@ public abstract class AbstractDartagnanTest {
 			var program = new ProgramParser().parse(new File(path), target);
             if (program.getAss() != null) {
                 program.setAss(program.getAss().removeLocAssertions(REPLACE_BY_TRUE));
-                VerificationTask task = new VerificationTask(program, wmm, target, settings);
+				var task = new VerificationTask(program, wmm, settings);
                 assertEquals(res, Refinement.runAnalysisGraphRefinement(ctx, prover,
                         RefinementTask.fromVerificationTaskWithDefaultBaselineWMM(task)));
             }
@@ -113,7 +113,7 @@ public abstract class AbstractDartagnanTest {
         {
 			var program = new ProgramParser().parse(new File(path), target);
             if (program.getAss() != null) {
-                VerificationTask task = new VerificationTask(program, wmm, target, settings);
+				var task = new VerificationTask(program, wmm, settings);
                 assertEquals(expected, runAnalysisTwoSolvers(ctx, prover1, prover2, task));
             }
         } catch (Exception e){
@@ -134,7 +134,7 @@ public abstract class AbstractDartagnanTest {
                     assertTrue(true);
                     return;
                 }
-                VerificationTask task = new VerificationTask(program, wmm, target, settings);
+				var task = new VerificationTask(program, wmm, settings);
                 assertEquals(expected, Refinement.runAnalysisGraphRefinement(ctx, prover,
                         RefinementTask.fromVerificationTaskWithDefaultBaselineWMM(task)));
             }

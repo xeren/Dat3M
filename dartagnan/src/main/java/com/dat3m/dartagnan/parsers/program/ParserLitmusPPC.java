@@ -6,7 +6,6 @@ import com.dat3m.dartagnan.parsers.program.utils.ParserErrorListener;
 import com.dat3m.dartagnan.parsers.program.utils.ProgramBuilder;
 import com.dat3m.dartagnan.parsers.program.visitors.VisitorLitmusPPC;
 import com.dat3m.dartagnan.program.Program;
-import com.dat3m.dartagnan.wmm.utils.Arch;
 
 import org.antlr.v4.runtime.*;
 
@@ -24,8 +23,6 @@ class ParserLitmusPPC implements ParserInterface {
         ParserRuleContext parserEntryPoint = parser.main();
         VisitorLitmusPPC visitor = new VisitorLitmusPPC(pb);
 
-        Program program = (Program) parserEntryPoint.accept(visitor);
-        program.setArch(Arch.POWER);
-        return program;
+		return (Program) parserEntryPoint.accept(visitor);
     }
 }
