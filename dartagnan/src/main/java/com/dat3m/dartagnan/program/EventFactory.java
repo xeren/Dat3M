@@ -164,14 +164,6 @@ public class EventFactory {
         public static Join newJoin(Register pthread_t, Register reg, Address address, Label label) {
             return new Join(pthread_t, reg, address, label);
         }
-
-        public static Lock newLock(String name, IExpr address, Register reg, Label label) {
-            return new Lock(name, address, reg, label);
-        }
-
-        public static Unlock newUnlock(String name, IExpr address, Register reg, Label label) {
-            return new Unlock(name, address, reg, label);
-        }
     }
 
     // =============================================================================================

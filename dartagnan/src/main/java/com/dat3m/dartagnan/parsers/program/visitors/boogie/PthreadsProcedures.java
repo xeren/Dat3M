@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.parsers.program.visitors.boogie;
 
+import com.dat3m.dartagnan.expression.Atom;
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IConst;
 import com.dat3m.dartagnan.expression.IExpr;
@@ -17,7 +18,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static com.dat3m.dartagnan.expression.op.COpBin.NEQ;
 import static com.dat3m.dartagnan.program.atomic.utils.Mo.SC;
+import static com.dat3m.dartagnan.program.utils.EType.LOCK;
 
 public class PthreadsProcedures {
 	
@@ -111,9 +114,11 @@ public class PthreadsProcedures {
         Register register = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, null, -1);
 		IExpr lockAddress = (IExpr)lock.accept(visitor);
        	Label label = visitor.programBuilder.getOrCreateLabel("END_OF_T" + visitor.threadCount);
-		if(lockAddress != null) {
-			visitor.programBuilder.addChild(visitor.threadCount, EventFactory.Pthread.newLock(lock.getText(), lockAddress, register, label));
-		}
+		if(lockAddress == null)
+			return;
+		visitor.programBuilder.addChild(visitor.threadCount, EventFactory.newRMWLoad(register, lockAddress, SC)).addFilters(LOCK);
+		visitor.programBuilder.addChild(visitor.threadCount, EventFactory.newJump(new Atom(register, NEQ, IConst.ZERO), label)).addFilters(LOCK);
+		visitor.programBuilder.addChild(visitor.threadCount, EventFactory.newRMWStore(lockAddress, IConst.ONE, SC)).addFilters(LOCK);
 	}
 	
 	private static void mutexUnlock(VisitorBoogie visitor, Call_cmdContext ctx) {
@@ -121,8 +126,10 @@ public class PthreadsProcedures {
         Register register = visitor.programBuilder.getOrCreateRegister(visitor.threadCount, null, -1);
 		IExpr lockAddress = (IExpr)lock.accept(visitor);
        	Label label = visitor.programBuilder.getOrCreateLabel("END_OF_T" + visitor.threadCount);
-		if(lockAddress != null) {
-			visitor.programBuilder.addChild(visitor.threadCount, EventFactory.Pthread.newUnlock(lock.getText(), lockAddress, register, label));
-		}
+		if(lockAddress == null)
+			return;
+		visitor.programBuilder.addChild(visitor.threadCount, EventFactory.newRMWLoad(register, lockAddress, SC)).addFilters(LOCK);
+		visitor.programBuilder.addChild(visitor.threadCount, EventFactory.newJump(new Atom(register, NEQ, IConst.ONE), label)).addFilters(LOCK);
+		visitor.programBuilder.addChild(visitor.threadCount, EventFactory.newRMWStore(lockAddress, IConst.ONE, SC)).addFilters(LOCK);
 	}
 }
