@@ -18,6 +18,7 @@ import java.util.List;
 
 import static com.dat3m.dartagnan.program.EventFactory.*;
 import static com.dat3m.dartagnan.program.atomic.utils.Mo.ACQUIRE;
+import static com.dat3m.dartagnan.program.atomic.utils.Mo.CONSUME;
 import static com.dat3m.dartagnan.program.atomic.utils.Mo.RELEASE;
 import static com.dat3m.dartagnan.program.atomic.utils.Mo.SC;
 import static com.dat3m.dartagnan.program.atomic.utils.Mo.intToMo;
@@ -97,7 +98,18 @@ public class AtomicProcedures {
 		if(ctx.call_params().exprs().expr().size() > 1) {
 			mo = intToMo(((IConst)ctx.call_params().exprs().expr().get(1).accept(visitor)).getIntValue().intValue());
 		}
-		visitor.programBuilder.addChild(visitor.threadCount, Atomic.newLoad(reg, add, mo));
+		if(Arch.POWER.equals(visitor.target) && List.of(SC, ACQUIRE, CONSUME).contains(mo))
+			visitor.programBuilder.addChild(visitor.threadCount, Power.newSyncBarrier());
+		var load = newLoad(reg, add, mo);
+		visitor.programBuilder.addChild(visitor.threadCount, load);
+		if(Arch.POWER.equals(visitor.target) && List.of(SC, ACQUIRE, CONSUME).contains(mo)) {
+			var label = newLabel("DepFake"+load.getOId());
+			visitor.programBuilder.addChild(visitor.threadCount, newFakeCtrlDep(reg, label));
+			visitor.programBuilder.addChild(visitor.threadCount, label);
+			visitor.programBuilder.addChild(visitor.threadCount, Power.newISyncBarrier());
+		}
+		if(Arch.ARM.equals(visitor.target) && List.of(SC, ACQUIRE, CONSUME).contains(mo))
+			visitor.programBuilder.addChild(visitor.threadCount, Arm.newISHBarrier());
 	}
 
 	private static void atomicFetchOp(VisitorBoogie visitor, Call_cmdContext ctx) {

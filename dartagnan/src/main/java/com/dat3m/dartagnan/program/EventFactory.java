@@ -229,10 +229,6 @@ public class EventFactory {
             return newFetchOp(register, address, new IConst(BigInteger.ONE, -1), IOpBin.PLUS, mo);
         }
 
-        public static AtomicLoad newLoad(Register register, IExpr address, String mo) {
-            return new AtomicLoad(register, address, mo);
-        }
-
         public static AtomicStore newStore(IExpr address, ExprInterface value, String mo) {
             return new AtomicStore(address, value, mo);
         }
