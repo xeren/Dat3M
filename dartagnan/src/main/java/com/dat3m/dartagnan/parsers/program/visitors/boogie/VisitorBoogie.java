@@ -53,6 +53,7 @@ import static com.dat3m.dartagnan.program.llvm.utils.LlvmUnary.LLVMUNARY;
 import static com.dat3m.dartagnan.program.llvm.utils.LlvmUnary.llvmUnary;
 import static com.dat3m.dartagnan.program.llvm.utils.SmackPredicates.SMACKPREDICATES;
 import static com.dat3m.dartagnan.program.llvm.utils.SmackPredicates.smackPredicate;
+import static com.dat3m.dartagnan.program.utils.EType.PTHREAD;
 
 public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVisitor<Object> {
 
@@ -237,7 +238,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
     		String name = ctx.proc_sign().Ident().getText();
             programBuilder.initThread(name, threadCount);
 			if(threadCount != 1)
-				pThreadStart();
+				pThreadLoad(pool.getPtrFromInt(threadCount), false);
     	}
 
     	currentScope = new Scope(nextScopeID, currentScope);
@@ -279,7 +280,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
         
     	if(create) {
 			if(threadCount != 1)
-				pThreadEnd();
+				pThreadStore(pool.getPtrFromInt(threadCount), false);
         	label = programBuilder.getOrCreateLabel("END_OF_T" + threadCount);
          	programBuilder.addChild(threadCount, label);
     	}
@@ -771,10 +772,11 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 	/**
 	 * Allows execution of threads after they have been created (pthread_create)
 	 */
-	private void pThreadStart() {
-		var address = programBuilder.getOrCreateLocation(pool.getPtrFromInt(threadCount) + "_active", -1).getAddress();
+	void pThreadLoad(Register ptr, boolean value) {
+		var address = programBuilder.getOrCreateLocation(ptr+"_active", -1).getAddress();
 		Register reg = programBuilder.getOrCreateRegister(threadCount, null, -1);
 		var load = EventFactory.newLoad(reg, address, SC);
+		load.addFilters(PTHREAD);
 		programBuilder.addChild(threadCount, load);
 		if(Arch.POWER.equals(target)) {
 			var label = EventFactory.newLabel("FakeDep"+load.getOId());
@@ -786,21 +788,21 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 			programBuilder.addChild(threadCount, EventFactory.Arm.newISHBarrier());
 		if(Arch.ARM8.equals(target))
 			programBuilder.addChild(threadCount, EventFactory.Arm8.DMB.newISHBarrier());
-		programBuilder.addChild(threadCount, EventFactory.newJump(new Atom(reg, NEQ, IConst.ONE), programBuilder.getOrCreateLabel("END_OF_T" + threadCount)));
+		programBuilder.addChild(threadCount, EventFactory.newJump(new Atom(reg, NEQ, value ? IConst.ONE : IConst.ZERO), programBuilder.getOrCreateLabel("END_OF_T" + threadCount)));
 	}
 
 	/**
 	 * Marks the end of the execution of a thread (used by pthread_join)
 	 */
-	private void pThreadEnd() {
-		var address = programBuilder.getOrCreateLocation(pool.getPtrFromInt(threadCount) + "_active", -1).getAddress();
+	void pThreadStore(Register ptr, boolean value) {
+		var address = programBuilder.getOrCreateLocation(ptr+"_active", -1).getAddress();
 		if(Arch.POWER.equals(target))
 			programBuilder.addChild(threadCount, EventFactory.Power.newSyncBarrier());
 		if(Arch.ARM.equals(target))
 			programBuilder.addChild(threadCount, EventFactory.Arm.newISHBarrier());
 		if(Arch.ARM8.equals(target))
 			programBuilder.addChild(threadCount, EventFactory.Arm8.DMB.newISHBarrier());
-		programBuilder.addChild(threadCount, EventFactory.newStore(address, IConst.ZERO, SC));
+		programBuilder.addChild(threadCount, EventFactory.newStore(address, value ? IConst.ONE : IConst.ZERO, SC)).addFilters(PTHREAD);
 		if(Arch.TSO.equals(target))
 			programBuilder.addChild(threadCount, EventFactory.X86.newMemoryFence());
 		if(Arch.ARM.equals(target))

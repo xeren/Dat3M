@@ -4,8 +4,6 @@ import com.dat3m.dartagnan.expression.*;
 import com.dat3m.dartagnan.expression.op.BOpUn;
 import com.dat3m.dartagnan.expression.op.COpBin;
 import com.dat3m.dartagnan.program.event.*;
-import com.dat3m.dartagnan.program.event.pthread.*;
-import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.program.svcomp.event.BeginAtomic;
 import com.dat3m.dartagnan.program.svcomp.event.EndAtomic;
 import com.dat3m.dartagnan.program.utils.EType;
@@ -146,25 +144,6 @@ public class EventFactory {
 		store.addFilters(EType.RMW);
 		return store;
 	}
-
-
-    // =============================================================================================
-    // ========================================== Pthread ==========================================
-    // =============================================================================================
-
-    public static class Pthread {
-        private Pthread() {}
-
-        public static Create newCreate(Register pthread_t, String routine, Address address, int cLine) {
-            Create create = new Create(pthread_t, routine, address);
-            create.setCLine(cLine);
-            return create;
-        }
-
-        public static Join newJoin(Register pthread_t, Register reg, Address address, Label label) {
-            return new Join(pthread_t, reg, address, label);
-        }
-    }
 
     // =============================================================================================
     // ========================================== Atomics ==========================================
