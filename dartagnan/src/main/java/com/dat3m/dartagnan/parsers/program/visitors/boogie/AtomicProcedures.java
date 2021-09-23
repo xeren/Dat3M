@@ -88,7 +88,19 @@ public class AtomicProcedures {
 		if(ctx.call_params().exprs().expr().size() > 2) {
 			mo = intToMo(((IConst)ctx.call_params().exprs().expr().get(2).accept(visitor)).getIntValue().intValue());
 		}
-		visitor.programBuilder.addChild(visitor.threadCount, Atomic.newStore(add, value, mo));
+		if(Arch.POWER.equals(visitor.target)) {
+			if(SC.equals(mo))
+				visitor.programBuilder.addChild(visitor.threadCount, Power.newSyncBarrier());
+			else if(RELEASE.equals(mo))
+				visitor.programBuilder.addChild(visitor.threadCount, Power.newLwSyncBarrier());
+		}
+		if(Arch.ARM.equals(visitor.target) && List.of(SC, RELEASE).contains(mo))
+			visitor.programBuilder.addChild(visitor.threadCount, Arm.newISHBarrier());
+		visitor.programBuilder.addChild(visitor.threadCount, newStore(add, value, mo));
+		if(Arch.TSO.equals(visitor.target) && SC.equals(mo))
+			visitor.programBuilder.addChild(visitor.threadCount, X86.newMemoryFence());
+		if(Arch.ARM.equals(visitor.target) && SC.equals(mo))
+			visitor.programBuilder.addChild(visitor.threadCount, Arm.newISHBarrier());
 	}
 
 	private static void atomicLoad(VisitorBoogie visitor, Call_cmdContext ctx) {
