@@ -15,6 +15,8 @@ import org.antlr.v4.runtime.misc.Interval;
 
 import java.math.BigInteger;
 
+import static com.dat3m.dartagnan.program.arch.tso.utils.EType.ATOM;
+
 public class VisitorLitmusX86
         extends LitmusX86BaseVisitor<Object>
         implements LitmusX86Visitor<Object> {
@@ -137,8 +139,12 @@ public class VisitorLitmusX86
     @Override
     public Object visitExchangeRegisterLocation(LitmusX86Parser.ExchangeRegisterLocationContext ctx) {
         Register register = programBuilder.getOrErrorRegister(mainThread, ctx.register().getText());
-        Location location = programBuilder.getOrCreateLocation(ctx.location().getText(), -1);
-        return programBuilder.addChild(mainThread, EventFactory.X86.newExchange(location.getAddress(), register));
+		var address = programBuilder.getOrCreateLocation(ctx.location().getText(), -1).getAddress();
+		var dummy = new Register(null, mainThread, register.getPrecision());
+		programBuilder.addChild(mainThread, EventFactory.newLocal(dummy, register));
+		programBuilder.addChild(mainThread, EventFactory.newRMWLoad(register, address, null)).addFilters(ATOM);
+		programBuilder.addChild(mainThread, EventFactory.newRMWStore(address, dummy, null)).addFilters(ATOM);
+		return null;
     }
 
     @Override

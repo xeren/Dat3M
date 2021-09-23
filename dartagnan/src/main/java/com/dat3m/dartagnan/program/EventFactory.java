@@ -4,7 +4,6 @@ import com.dat3m.dartagnan.expression.*;
 import com.dat3m.dartagnan.expression.op.BOpUn;
 import com.dat3m.dartagnan.expression.op.COpBin;
 import com.dat3m.dartagnan.program.arch.aarch64.event.StoreExclusive;
-import com.dat3m.dartagnan.program.arch.tso.event.Xchg;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.event.pthread.*;
 import com.dat3m.dartagnan.program.event.rmw.RMWStoreExclusive;
@@ -308,10 +307,6 @@ public class EventFactory {
     // =============================================================================================
     public static class X86 {
         private X86() {}
-
-        public static Xchg newExchange(Address address, Register register) {
-            return new Xchg(address, register);
-        }
 
         public static Fence newMemoryFence() {
             return newFence("Mfence");
