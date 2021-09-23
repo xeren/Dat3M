@@ -151,9 +151,7 @@ public class EventFactory {
 	}
 
     public static Load newRMWLoadExclusive(Register reg, IExpr address, String mo) {
-        Load load = new Load(reg, address, mo);
-        load.addFilters(EType.RMW, EType.EXCL);
-        return load;
+		return newRMWLoad(reg, address, mo);
     }
 
     public static RMWStoreExclusive newRMWStoreExclusive(IExpr address, ExprInterface value, String mo, boolean isStrong) {

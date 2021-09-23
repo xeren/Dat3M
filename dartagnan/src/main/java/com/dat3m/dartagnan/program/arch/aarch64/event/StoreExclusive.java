@@ -26,7 +26,7 @@ public class StoreExclusive extends Store implements RegWriter, RegReaderData {
     public StoreExclusive(Register register, IExpr address, ExprInterface value, String mo){
         super(address, value, mo);
         this.register = register;
-        addFilters(EType.EXCL, EType.REG_WRITER);
+        addFilters(EType.REG_WRITER);
     }
 
     private StoreExclusive(StoreExclusive other){

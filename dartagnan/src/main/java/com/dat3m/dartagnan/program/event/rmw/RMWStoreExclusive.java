@@ -19,7 +19,6 @@ public class RMWStoreExclusive extends Store implements RegReaderData {
 
     public RMWStoreExclusive(IExpr address, ExprInterface value, String mo, boolean strong){
         super(address, value, mo);
-        addFilters(EType.EXCL);
         if(strong) {
         	addFilters(EType.STRONG);
         }
