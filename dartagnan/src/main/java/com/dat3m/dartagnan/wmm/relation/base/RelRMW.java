@@ -1,14 +1,10 @@
 package com.dat3m.dartagnan.wmm.relation.base;
 
-import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Load;
 import com.dat3m.dartagnan.program.event.MemEvent;
-import com.dat3m.dartagnan.program.event.rmw.RMWStore;
 import com.dat3m.dartagnan.program.svcomp.event.EndAtomic;
 import com.dat3m.dartagnan.program.utils.EType;
-import com.dat3m.dartagnan.verification.VerificationTask;
-import com.dat3m.dartagnan.wmm.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.filter.FilterIntersection;
 import com.dat3m.dartagnan.wmm.relation.base.stat.StaticRelation;
@@ -23,8 +19,11 @@ import org.sosy_lab.java_smt.api.BooleanFormulaManager;
 import org.sosy_lab.java_smt.api.FormulaManager;
 import org.sosy_lab.java_smt.api.SolverContext;
 
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static com.dat3m.dartagnan.program.utils.EType.SVCOMPATOMIC;
 import static com.dat3m.dartagnan.program.utils.Utils.generalEqual;
@@ -39,35 +38,15 @@ public class RelRMW extends StaticRelation {
 
 	private static final Logger logger = LogManager.getLogger(RelRMW.class);
 
-    private final FilterAbstract loadExclFilter = FilterIntersection.get(
-            FilterBasic.get(EType.EXCL),
-            FilterBasic.get(EType.READ)
-    );
-
-    private final FilterAbstract storeExclFilter = FilterIntersection.get(
-            FilterBasic.get(EType.EXCL),
-            FilterBasic.get(EType.WRITE)
-    );
-
-    // Set without exclusive events
-    private TupleSet baseMaxTupleSet;
-
     public RelRMW(){
         term = RMW;
         forceDoEncode = true;
     }
 
     @Override
-    public void initialise(VerificationTask task, SolverContext ctx){
-        super.initialise(task, ctx);
-        this.baseMaxTupleSet = null;
-    }
-
-    @Override
     public TupleSet getMinTupleSet(){
         if(minTupleSet == null){
             getMaxTupleSet();
-            minTupleSet = baseMaxTupleSet;
 
         }
         return minTupleSet;
@@ -77,54 +56,59 @@ public class RelRMW extends StaticRelation {
     public TupleSet getMaxTupleSet(){
         if(maxTupleSet == null){
         	logger.info("Computing maxTupleSet for " + getName());
-            baseMaxTupleSet = new TupleSet();
-
-            // RMWLoad -> RMWStore
-            FilterAbstract filter = FilterIntersection.get(FilterBasic.get(EType.RMW), FilterBasic.get(EType.WRITE));
-            for(Event store : task.getProgram().getCache().getEvents(filter)){
-            	if(store instanceof RMWStore) {
-                    baseMaxTupleSet.add(new Tuple(((RMWStore)store).getLoadEvent(), store));            		
-            	}
-            }
-
-            //Locks: Load -> CondJump -> Store
-            filter = FilterIntersection.get(FilterBasic.get(EType.RMW), FilterBasic.get(EType.LOCK));
-            for(Event e : task.getProgram().getCache().getEvents(filter)){
-            	if(e instanceof Load) {
-            	    // Connect Load to Store
-            		baseMaxTupleSet.add(new Tuple(e, e.getSuccessor().getSuccessor()));
-            	}
-            }
+			minTupleSet = new TupleSet();
 
             // Atomics blocks: BeginAtomic -> EndAtomic
-            filter = FilterIntersection.get(FilterBasic.get(EType.RMW), FilterBasic.get(SVCOMPATOMIC));
-            for(Event end : task.getProgram().getCache().getEvents(filter)){
+			for(Event end : task.getProgram().getCache().getEvents(FilterIntersection.get(FilterBasic.get(EType.RMW), FilterBasic.get(SVCOMPATOMIC)))){
                 List<Event> block = ((EndAtomic)end).getBlock().stream().filter(x -> x.is(EType.VISIBLE)).collect(Collectors.toList());
                 for (int i = 0; i < block.size(); i++) {
                     for (int j = i + 1; j < block.size(); j++) {
-                        baseMaxTupleSet.add(new Tuple(block.get(i), block.get(j)));
+						minTupleSet.add(new Tuple(block.get(i), block.get(j)));
                     }
 
                 }
             }
-            removeMutuallyExclusiveTuples(baseMaxTupleSet);
+			removeMutuallyExclusiveTuples(minTupleSet);
 
             maxTupleSet = new TupleSet();
-            maxTupleSet.addAll(baseMaxTupleSet);
 
-            // LoadExcl -> StoreExcl
-            //TODO: This can be improved using branching analysis
-            // to find guaranteed pairs (the encoding can then also be improved)
-            for(Thread thread : task.getProgram().getThreads()){
-                for(Event load : thread.getCache().getEvents(loadExclFilter)){
-                    for(Event store : thread.getCache().getEvents(storeExclFilter)){
-                        if(load.getCId() < store.getCId()){
-                            maxTupleSet.add(new Tuple(load, store));
-                        }
-                    }
-                }
-            }
-            removeMutuallyExclusiveTuples(maxTupleSet);
+			var eq = task.getProgram().getBranchEquivalence();
+			for(var w : task.getProgram().getCache().getEvents(FilterIntersection.get(FilterBasic.get(EType.RMW), FilterBasic.get(EType.WRITE)))) {
+				var id = w.getCId();
+				//RMW events before store
+				var candidate = w.getThread().getCache().getEvents(FilterBasic.get(EType.RMW)).stream()
+				.filter(l -> l.getCId() < id)
+				.collect(Collectors.toUnmodifiableList());
+				//assert cId order
+				//filter candidates overwritten by implications of w
+				var begin = IntStream.range(1, candidate.size() + 1)
+				.map(i -> candidate.size() - i)
+				.filter(i -> eq.isImplied(w, candidate.get(i)))
+				.findFirst().orElse(0);
+				//filter candidates overwritten by intermediates
+				//TODO some returned loads may be branch-covered and should not appear
+				//current implementation ensures singleton except for reserve/exclusive in litmus tests
+				var result = IntStream.range(begin, candidate.size())
+				.filter(i -> IntStream.range(i+1, candidate.size())
+					.noneMatch(j -> eq.isImplied(candidate.get(i), candidate.get(j))))
+				.mapToObj(candidate::get)
+				//filter loads
+				.filter(Load.class::isInstance)
+				//filter impossible pairs
+				.filter(l -> !eq.areMutuallyExclusive(l, w))
+				.toArray(Event[]::new);
+				if(result.length == 0)
+					throw new IllegalStateException("missing load to rmw store " + w);
+				for(int i = 0; i < result.length; ++i) {
+					var r = result[i];
+					(Arrays.stream(result, i + 1, result.length)
+						.allMatch(a -> eq.areMutuallyExclusive(a, r))
+						? minTupleSet
+						: maxTupleSet)
+					.add(new Tuple(r, w));
+				}
+			}
+			maxTupleSet.addAll(minTupleSet);
             logger.info("maxTupleSet size for " + getName() + ": " + maxTupleSet.size());
         }
         return maxTupleSet;
@@ -137,57 +121,38 @@ public class RelRMW extends StaticRelation {
         
         // Encode base (not exclusive pairs) RMW
         TupleSet origEncodeTupleSet = encodeTupleSet;
-        encodeTupleSet = new TupleSet(Sets.intersection(encodeTupleSet, baseMaxTupleSet));
+		encodeTupleSet = new TupleSet(Sets.intersection(encodeTupleSet, minTupleSet));
         BooleanFormula enc = super.encodeApprox(ctx);
         encodeTupleSet = origEncodeTupleSet;
 
         // Encode RMW for exclusive pairs
 		BooleanFormula unpredictable = bmgr.makeFalse();
-        for(Thread thread : task.getProgram().getThreads()) {
-            for (Event store : thread.getCache().getEvents(storeExclFilter)) {
-            	BooleanFormula storeExec = bmgr.makeFalse();
-                for (Event load : thread.getCache().getEvents(loadExclFilter)) {
-                    if (load.getCId() < store.getCId()) {
-
-                        // Encode if load and store form an exclusive pair
-                    	BooleanFormula isPair = exclPair(load, store, ctx);
-                    	BooleanFormula isExecPair = bmgr.and(isPair, store.exec());
-                        enc = bmgr.and(enc, bmgr.equivalence(isPair, pairingCond(thread, load, store, ctx)));
-
-                        // If load and store have the same address
-                        BooleanFormula sameAddress = generalEqual(((MemEvent)load).getMemAddressExpr(), ((MemEvent)store).getMemAddressExpr(), ctx);
-                        unpredictable = bmgr.or(unpredictable, bmgr.and(isExecPair, bmgr.not(sameAddress)));
-
-                        // Relation between exclusive load and store
-                        enc = bmgr.and(enc, bmgr.equivalence(this.getSMTVar(load, store, ctx), bmgr.and(isExecPair, sameAddress)));
-
-                        // Can be executed if addresses mismatch, but behaviour is "constrained unpredictable"
-                        // The implementation does not include all possible unpredictable cases: in case of address
-                        // mismatch, addresses of read and write are unknown, i.e. read and write can use any address
-                        storeExec = bmgr.or(storeExec, isPair);
-                    }
-                }
-                enc = bmgr.and(enc, bmgr.implication(store.exec(), storeExec));
-            }
-        }
+		var m = new HashMap<Event,BooleanFormula>();
+		for(var t : maxTupleSet) {
+			var variable = getSMTVar(t, ctx);
+			var first = maxTupleSet.getBySecond(t.getSecond());
+			assert !first.isEmpty();
+			if(first.size() == 1) {
+				enc = bmgr.and(enc, bmgr.equivalence(variable, getExecPair(t, ctx)));
+				continue;
+			}
+			var intermediate = bmgr.and(t.getFirst().exec(), t.getSecond().cf());
+			for(var u : first) {
+				var f = u.getFirst();
+				if(t.getFirst().getCId() < f.getCId())
+					continue;
+				intermediate = bmgr.and(intermediate, bmgr.not(f.is(EType.WRITE) ? f.cf() : f.exec()));
+			}
+			var isPair = exclPair(t.getFirst(), t.getSecond(), ctx);
+			m.compute(t.getSecond(), (k, v) -> null==v ? isPair : bmgr.or(v, isPair));
+			enc = bmgr.and(enc, bmgr.equivalence(isPair, intermediate));
+			var loc = generalEqual(((MemEvent)t.getFirst()).getMemAddressExpr(), ((MemEvent)t.getSecond()).getMemAddressExpr(), ctx);
+			enc = bmgr.and(enc, bmgr.equivalence(variable, bmgr.and(isPair, loc)));
+			unpredictable = bmgr.or(unpredictable, bmgr.and(isPair, bmgr.not(loc)));
+		}
+		for(var e : m.entrySet())
+			enc = bmgr.and(enc, bmgr.implication(e.getKey().exec(), e.getValue()));
         return bmgr.and(enc, bmgr.equivalence(Flag.ARM_UNPREDICTABLE_BEHAVIOUR.repr(ctx), unpredictable));
-    }
-
-    private BooleanFormula pairingCond(Thread thread, Event load, Event store, SolverContext ctx){
-    	BooleanFormulaManager bmgr = ctx.getFormulaManager().getBooleanFormulaManager();
-		BooleanFormula pairingCond = bmgr.and(load.exec(), store.cf());
-
-        for (Event otherLoad : thread.getCache().getEvents(loadExclFilter)) {
-            if (otherLoad.getCId() > load.getCId() && otherLoad.getCId() < store.getCId()) {
-                pairingCond = bmgr.and(pairingCond, bmgr.not(otherLoad.exec()));
-            }
-        }
-        for (Event otherStore : thread.getCache().getEvents(storeExclFilter)) {
-            if (otherStore.getCId() > load.getCId() && otherStore.getCId() < store.getCId()) {
-                pairingCond = bmgr.and(pairingCond, bmgr.not(otherStore.cf()));
-            }
-        }
-        return pairingCond;
     }
 
     private BooleanFormula exclPair(Event load, Event store, SolverContext ctx){

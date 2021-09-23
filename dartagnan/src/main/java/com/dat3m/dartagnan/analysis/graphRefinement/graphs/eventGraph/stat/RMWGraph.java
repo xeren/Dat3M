@@ -3,7 +3,6 @@ package com.dat3m.dartagnan.analysis.graphRefinement.graphs.eventGraph.stat;
 import com.dat3m.dartagnan.analysis.graphRefinement.graphs.eventGraph.EventGraph;
 import com.dat3m.dartagnan.analysis.graphRefinement.graphs.eventGraph.utils.MaterializedGraph;
 import com.dat3m.dartagnan.analysis.graphRefinement.util.GraphVisitor;
-import com.dat3m.dartagnan.program.event.rmw.RMWStore;
 import com.dat3m.dartagnan.verification.model.Edge;
 import com.dat3m.dartagnan.verification.model.EventData;
 import com.dat3m.dartagnan.verification.model.ExecutionModel;
@@ -55,32 +54,19 @@ public class RMWGraph extends MaterializedGraph {
 
         for (List<EventData> events : model.getThreadEventsMap().values()) {
             EventData lastExclLoad = null;
-            for (int i = 0; i < events.size(); i++) {
-                EventData e = events.get(i);
-                if (e.isRead()) {
-                    if (e.isLock()) {   // Locks ~ (Load -> CondJump -> Store)
-                        if (i + 1 < events.size()) {
-                            // The condition fails, if the lock was not obtained cause then
-                            // it will be the last event of the thread (we terminate on failed locks)
-                            EventData next = events.get(i + 1);
-                            simpleGraph.add(new Edge(e, next));
-                        }
-                    } else if (e.isExclusive()) {  // LoadExcl
-                        lastExclLoad = e;
-                    }
-                } else if (e.isWrite()) {
-                    if (e.isExclusive()) { // StoreExcl
-                        if (lastExclLoad == null) {
-                            throw new IllegalStateException("Exclusive store was executed without preceding exclusive load.");
-                        }
-                        simpleGraph.add(new Edge(lastExclLoad, e));
-                        lastExclLoad = null;
-                    } else if (e.getEvent() instanceof RMWStore) { // RMWStore
-                        EventData load = model.getData(((RMWStore) e.getEvent()).getLoadEvent());
-                        simpleGraph.add(new Edge(load, e));
-                    }
-                }
-            }
+			for(EventData e : events) {
+				if(!e.isRMW())
+					continue;
+				if(e.isRead()) {
+					lastExclLoad = e;
+				}
+				else if(e.isWrite()) {
+					if(lastExclLoad == null)
+						throw new IllegalStateException("Exclusive store was executed without preceding exclusive load.");
+					simpleGraph.add(new Edge(lastExclLoad, e));
+					lastExclLoad = null;
+				}
+			}
         }
     }
 }
