@@ -6,7 +6,6 @@ import com.dat3m.dartagnan.boogie.FunctionCall;
 import com.dat3m.dartagnan.boogie.PthreadPool;
 import com.dat3m.dartagnan.boogie.Scope;
 import com.dat3m.dartagnan.expression.*;
-import com.dat3m.dartagnan.expression.op.COpBin;
 import com.dat3m.dartagnan.expression.op.IOpUn;
 import com.dat3m.dartagnan.parsers.BoogieBaseVisitor;
 import com.dat3m.dartagnan.parsers.BoogieParser;
@@ -35,6 +34,7 @@ import java.util.stream.Collectors;
 
 import static com.dat3m.dartagnan.expression.op.BOpUn.NOT;
 import static com.dat3m.dartagnan.expression.op.COpBin.EQ;
+import static com.dat3m.dartagnan.expression.op.COpBin.NEQ;
 import static com.dat3m.dartagnan.parsers.program.visitors.boogie.AtomicProcedures.ATOMICPROCEDURES;
 import static com.dat3m.dartagnan.parsers.program.visitors.boogie.AtomicProcedures.handleAtomicFunction;
 import static com.dat3m.dartagnan.parsers.program.visitors.boogie.DummyProcedures.DUMMYPROCEDURES;
@@ -236,13 +236,8 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
          	threadCount ++;
     		String name = ctx.proc_sign().Ident().getText();
             programBuilder.initThread(name, threadCount);
-            if(threadCount != 1) {
-            	// Used to allow execution of threads after they have been created (pthread_create)
-        		Location loc = programBuilder.getOrCreateLocation(pool.getPtrFromInt(threadCount) + "_active", -1);
-        		Register reg = programBuilder.getOrCreateRegister(threadCount, null, -1);
-               	Label label = programBuilder.getOrCreateLabel("END_OF_T" + threadCount);
-               	programBuilder.addChild(threadCount, EventFactory.Pthread.newStart(reg, loc.getAddress(), label));
-            }
+			if(threadCount != 1)
+				pThreadStart();
     	}
 
     	currentScope = new Scope(nextScopeID, currentScope);
@@ -304,7 +299,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 		event.addFilters(EType.ASSERTION);
 		programBuilder.addChild(threadCount, event);
        	Label end = programBuilder.getOrCreateLabel("END_OF_T" + threadCount);
-		programBuilder.addChild(threadCount, EventFactory.newJump(new Atom(ass, COpBin.NEQ, new IConst(BigInteger.ONE, -1)), end));
+		programBuilder.addChild(threadCount, EventFactory.newJump(new Atom(ass, NEQ, new IConst(BigInteger.ONE, -1)), end));
     	return null;
     }
     
@@ -340,7 +335,7 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 			event.addFilters(EType.ASSERTION);
 			programBuilder.addChild(threadCount, event);
 	       	Label end = programBuilder.getOrCreateLabel("END_OF_T" + threadCount);
-			programBuilder.addChild(threadCount, EventFactory.newJump(new Atom(ass, COpBin.NEQ, new IConst(BigInteger.ONE, -1)), end));
+			programBuilder.addChild(threadCount, EventFactory.newJump(new Atom(ass, NEQ, new IConst(BigInteger.ONE, -1)), end));
 			return null;
 		}
 
@@ -771,6 +766,27 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 		line = line.substring(line.indexOf("version") + 8, line.indexOf("for"));
 		logger.info("SMACK version: " + line);
 		return null;
+	}
+
+	/**
+	 * Allows execution of threads after they have been created (pthread_create)
+	 */
+	private void pThreadStart() {
+		var address = programBuilder.getOrCreateLocation(pool.getPtrFromInt(threadCount) + "_active", -1).getAddress();
+		Register reg = programBuilder.getOrCreateRegister(threadCount, null, -1);
+		var load = EventFactory.newLoad(reg, address, SC);
+		programBuilder.addChild(threadCount, load);
+		if(Arch.POWER.equals(target)) {
+			var label = EventFactory.newLabel("FakeDep"+load.getOId());
+			programBuilder.addChild(threadCount, EventFactory.newFakeCtrlDep(reg, label));
+			programBuilder.addChild(threadCount, label);
+			programBuilder.addChild(threadCount, EventFactory.Power.newISyncBarrier());
+		}
+		if(Arch.ARM.equals(target))
+			programBuilder.addChild(threadCount, EventFactory.Arm.newISHBarrier());
+		if(Arch.ARM8.equals(target))
+			programBuilder.addChild(threadCount, EventFactory.Arm8.DMB.newISHBarrier());
+		programBuilder.addChild(threadCount, EventFactory.newJump(new Atom(reg, NEQ, IConst.ONE), programBuilder.getOrCreateLabel("END_OF_T" + threadCount)));
 	}
 
 	/**

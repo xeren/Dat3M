@@ -173,10 +173,6 @@ public class EventFactory {
             return new Lock(name, address, reg, label);
         }
 
-        public static Start newStart(Register reg, Address address, Label label) {
-            return new Start(reg, address, label);
-        }
-
         public static Unlock newUnlock(String name, IExpr address, Register reg, Label label) {
             return new Unlock(name, address, reg, label);
         }
