@@ -231,7 +231,7 @@ public class VisitorLitmusC
 		var load = EventFactory.newRMWLoad(dummy, address, Mo.loadMO(ctx.mo));
 		programBuilder.addChild(currentThread, load);
 		programBuilder.addChild(currentThread, EventFactory.newLocal(register, new IExprBin(dummy, ctx.op, value)));
-		programBuilder.addChild(currentThread, EventFactory.newRMWStore(load, address, register, Mo.storeMO(ctx.mo)));
+		programBuilder.addChild(currentThread, EventFactory.newRMWStore(address, register, Mo.storeMO(ctx.mo)));
 		optionalBarrier(ctx.mo);
         return register;
     }
@@ -246,7 +246,7 @@ public class VisitorLitmusC
 		var dummy = register!=value ? register : new Register(null, currentThread, register.getPrecision());
 		var load = EventFactory.newRMWLoad(dummy, address, Mo.loadMO(ctx.mo));
 		programBuilder.addChild(currentThread, load);
-		programBuilder.addChild(currentThread, EventFactory.newRMWStore(load, address, new IExprBin(dummy, ctx.op, value), Mo.storeMO(ctx.mo)));
+		programBuilder.addChild(currentThread, EventFactory.newRMWStore(address, new IExprBin(dummy, ctx.op, value), Mo.storeMO(ctx.mo)));
 		if(register==value)
 			programBuilder.addChild(currentThread, EventFactory.newLocal(register, dummy));
 		optionalBarrier(ctx.mo);
@@ -263,7 +263,7 @@ public class VisitorLitmusC
 		var load = EventFactory.newRMWLoad(dummy, address, Mo.RELAXED);
 		programBuilder.addChild(currentThread, load);
 		programBuilder.addChild(currentThread, EventFactory.newLocal(dummy, new IExprBin(dummy, ctx.op, value)));
-		programBuilder.addChild(currentThread, EventFactory.newRMWStore(load, address, dummy, Mo.RELAXED));
+		programBuilder.addChild(currentThread, EventFactory.newRMWStore(address, dummy, Mo.RELAXED));
 		programBuilder.addChild(currentThread, EventFactory.newLocal(register, new Atom(dummy, COpBin.EQ, new IConst(BigInteger.ZERO, register.getPrecision()))));
 		optionalBarrier(ctx.mo);
         return register;
@@ -282,7 +282,7 @@ public class VisitorLitmusC
 		programBuilder.addChild(currentThread, load);
 		var label = programBuilder.getOrCreateLabel("AddUnless_"+load.getOId());
 		programBuilder.addChild(currentThread, EventFactory.newJump(new Atom(dummy, COpBin.EQ, cmp), label));
-		programBuilder.addChild(currentThread, EventFactory.newRMWStore(load, address, new IExprBin(dummy, IOpBin.PLUS, value), Mo.RELAXED));
+		programBuilder.addChild(currentThread, EventFactory.newRMWStore(address, new IExprBin(dummy, IOpBin.PLUS, value), Mo.RELAXED));
 		programBuilder.addChild(currentThread, label);
 		programBuilder.addChild(currentThread, EventFactory.newLocal(register, new Atom(dummy, COpBin.NEQ, cmp)));
 		optionalBarrier(ctx.mo);
@@ -298,7 +298,7 @@ public class VisitorLitmusC
 		var dummy = register!=value ? register : new Register(null, currentThread, register.getPrecision());
 		var load = EventFactory.newRMWLoad(dummy, address, Mo.loadMO(ctx.mo));
 		programBuilder.addChild(currentThread, load);
-		programBuilder.addChild(currentThread, EventFactory.newRMWStore(load, address, value, Mo.storeMO(ctx.mo)));
+		programBuilder.addChild(currentThread, EventFactory.newRMWStore(address, value, Mo.storeMO(ctx.mo)));
 		if(register==value)
 			programBuilder.addChild(currentThread, EventFactory.newLocal(register, dummy));
 		optionalBarrier(ctx.mo);
@@ -317,7 +317,7 @@ public class VisitorLitmusC
 		programBuilder.addChild(currentThread, load);
 		var label = programBuilder.getOrCreateLabel("CmpXchg_"+load.getOId());
 		programBuilder.addChild(currentThread, EventFactory.newJump(new Atom(dummy, COpBin.NEQ, cmp), label));
-		programBuilder.addChild(currentThread, EventFactory.newRMWStore(load, address, value, Mo.storeMO(ctx.mo)));
+		programBuilder.addChild(currentThread, EventFactory.newRMWStore(address, value, Mo.storeMO(ctx.mo)));
 		programBuilder.addChild(currentThread, label);
 		if(dummy!=register)
 			programBuilder.addChild(currentThread, EventFactory.newLocal(register, dummy));
@@ -434,7 +434,7 @@ public class VisitorLitmusC
 		var load = EventFactory.newRMWLoad(register, address, Mo.RELAXED);
 		load.addFilters(NORETURN);
 		programBuilder.addChild(currentThread, load);
-		programBuilder.addChild(currentThread, EventFactory.newRMWStore(load, address, new IExprBin(register, ctx.op, value), Mo.RELAXED));
+		programBuilder.addChild(currentThread, EventFactory.newRMWStore(address, new IExprBin(register, ctx.op, value), Mo.RELAXED));
 		return null;
     }
 

@@ -69,7 +69,7 @@ public class Xchg extends MemEvent implements RegWriter, RegReaderData {
             Load load = newRMWLoad(dummyReg, address, null);
             load.addFilters(EType.ATOM);
 
-			var store = newRMWStore(load, address, resultRegister, null);
+			var store = newRMWStore(address, resultRegister, null);
             store.addFilters(EType.ATOM);
 
             Local updateReg = newLocal(resultRegister, dummyReg);

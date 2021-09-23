@@ -144,7 +144,7 @@ public class EventFactory {
         return load;
     }
 
-	public static Store newRMWStore(Load loadEvent, IExpr address, ExprInterface value, String mo) {
+	public static Store newRMWStore(IExpr address, ExprInterface value, String mo) {
 		var store = new Store(address, value, mo);
 		store.addFilters(EType.RMW);
 		return store;

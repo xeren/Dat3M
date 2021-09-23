@@ -161,7 +161,7 @@ public class AtomicProcedures {
 			visitor.programBuilder.addChild(visitor.threadCount, newFakeCtrlDep(reg, label));
 			visitor.programBuilder.addChild(visitor.threadCount, label);
 		}
-		visitor.programBuilder.addChild(visitor.threadCount, newRMWStore(load, add, new IExprBin(reg, op, value), mo));
+		visitor.programBuilder.addChild(visitor.threadCount, newRMWStore(add, new IExprBin(reg, op, value), mo));
 		if(Arch.POWER.equals(visitor.target) && ACQUIRE.equals(mo))
 			visitor.programBuilder.addChild(visitor.threadCount, Power.newISyncBarrier());
 	}
@@ -187,7 +187,7 @@ public class AtomicProcedures {
 			visitor.programBuilder.addChild(visitor.threadCount, newFakeCtrlDep(reg, label));
 			visitor.programBuilder.addChild(visitor.threadCount, label);
 		}
-		visitor.programBuilder.addChild(visitor.threadCount, newRMWStore(load, add, value, mo));
+		visitor.programBuilder.addChild(visitor.threadCount, newRMWStore(add, value, mo));
 		if(Arch.POWER.equals(visitor.target) && ACQUIRE.equals(mo))
 			visitor.programBuilder.addChild(visitor.threadCount, Power.newISyncBarrier());
 	}
@@ -208,7 +208,7 @@ public class AtomicProcedures {
 		visitor.programBuilder.addChild(visitor.threadCount, newLocal(reg, new Atom(expectedVal, COpBin.NEQ, registerValue)));
 		var exit = newLabel("CmpXchg_exit_"+load.getOId());
 		visitor.programBuilder.addChild(visitor.threadCount, newJump(new Atom(reg, COpBin.EQ, new IConst(BigInteger.ONE, reg.getPrecision())), exit));
-		visitor.programBuilder.addChild(visitor.threadCount, newRMWStore(load, addr, desiredVal, mo));
+		visitor.programBuilder.addChild(visitor.threadCount, newRMWStore(addr, desiredVal, mo));
 		visitor.programBuilder.addChild(visitor.threadCount, exit);
 	}
 
@@ -260,7 +260,7 @@ public class AtomicProcedures {
 		visitor.programBuilder.addChild(visitor.threadCount, newJump(new BNonDet(-1), fail));
 		visitor.programBuilder.addChild(visitor.threadCount, newAssume(new Atom(registerExpected, COpBin.EQ, registerValue)));
 		visitor.programBuilder.addChild(visitor.threadCount, newLocal(reg, new IConst(BigInteger.ZERO, reg.getPrecision())));
-		visitor.programBuilder.addChild(visitor.threadCount, newRMWStore(load, addr, desiredVal, mo));
+		visitor.programBuilder.addChild(visitor.threadCount, newRMWStore(addr, desiredVal, mo));
 		var exit = newLabel("CmpXchg_exit_"+load.getOId());
 		visitor.programBuilder.addChild(visitor.threadCount, newGoto(exit));
 		visitor.programBuilder.addChild(visitor.threadCount, fail);
