@@ -9,7 +9,6 @@ import com.dat3m.dartagnan.program.arch.tso.event.Xchg;
 import com.dat3m.dartagnan.program.atomic.event.*;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.event.pthread.*;
-import com.dat3m.dartagnan.program.event.rmw.RMWStore;
 import com.dat3m.dartagnan.program.event.rmw.RMWStoreExclusive;
 import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.program.svcomp.event.BeginAtomic;
@@ -148,9 +147,11 @@ public class EventFactory {
         return load;
     }
 
-    public static RMWStore newRMWStore(Load loadEvent, IExpr address, ExprInterface value, String mo) {
-        return new RMWStore(loadEvent, address, value, mo);
-    }
+	public static Store newRMWStore(Load loadEvent, IExpr address, ExprInterface value, String mo) {
+		var store = new Store(address, value, mo);
+		store.addFilters(EType.RMW);
+		return store;
+	}
 
     public static Load newRMWLoadExclusive(Register reg, IExpr address, String mo) {
         Load load = new Load(reg, address, mo);

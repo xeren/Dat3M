@@ -6,7 +6,6 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Load;
 import com.dat3m.dartagnan.program.event.Local;
 import com.dat3m.dartagnan.program.event.MemEvent;
-import com.dat3m.dartagnan.program.event.rmw.RMWStore;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.event.utils.RegWriter;
 import com.dat3m.dartagnan.program.memory.Address;
@@ -70,7 +69,7 @@ public class Xchg extends MemEvent implements RegWriter, RegReaderData {
             Load load = newRMWLoad(dummyReg, address, null);
             load.addFilters(EType.ATOM);
 
-            RMWStore store = newRMWStore(load, address, resultRegister, null);
+			var store = newRMWStore(load, address, resultRegister, null);
             store.addFilters(EType.ATOM);
 
             Local updateReg = newLocal(resultRegister, dummyReg);
