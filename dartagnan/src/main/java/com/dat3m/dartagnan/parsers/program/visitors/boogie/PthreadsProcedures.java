@@ -17,6 +17,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static com.dat3m.dartagnan.program.atomic.utils.Mo.SC;
+
 public class PthreadsProcedures {
 	
 	public static List<String> PTHREADPROCEDURES = Arrays.asList( 
@@ -99,9 +101,9 @@ public class PthreadsProcedures {
 		ExprContext lock = ctx.call_params().exprs().expr(0);
 		IExpr lockAddress = (IExpr)lock.accept(visitor);
 		IExpr value = (IExpr)ctx.call_params().exprs().expr(1).accept(visitor);
-		if(lockAddress != null) {
-			visitor.programBuilder.addChild(visitor.threadCount, EventFactory.Pthread.newInitLock(lock.getText(), lockAddress, value));
-		}
+		if(lockAddress == null)
+			return;
+		visitor.programBuilder.addChild(visitor.threadCount, EventFactory.newStore(lockAddress, value, SC));
 	}
 	
 	private static void mutexLock(VisitorBoogie visitor, Call_cmdContext ctx) {

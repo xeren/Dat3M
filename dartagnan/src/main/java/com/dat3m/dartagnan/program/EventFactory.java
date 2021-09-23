@@ -161,10 +161,6 @@ public class EventFactory {
             return create;
         }
 
-        public static InitLock newInitLock(String name, IExpr address, IExpr value) {
-            return new InitLock(name, address, value);
-        }
-
         public static Join newJoin(Register pthread_t, Register reg, Address address, Label label) {
             return new Join(pthread_t, reg, address, label);
         }
