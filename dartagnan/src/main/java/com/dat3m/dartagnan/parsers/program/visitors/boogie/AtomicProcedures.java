@@ -10,12 +10,16 @@ import com.dat3m.dartagnan.expression.op.IOpBin;
 import com.dat3m.dartagnan.parsers.BoogieParser;
 import com.dat3m.dartagnan.parsers.BoogieParser.Call_cmdContext;
 import com.dat3m.dartagnan.program.Register;
+import com.dat3m.dartagnan.wmm.utils.Arch;
 
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.List;
 
 import static com.dat3m.dartagnan.program.EventFactory.*;
+import static com.dat3m.dartagnan.program.atomic.utils.Mo.ACQUIRE;
+import static com.dat3m.dartagnan.program.atomic.utils.Mo.RELEASE;
+import static com.dat3m.dartagnan.program.atomic.utils.Mo.SC;
 import static com.dat3m.dartagnan.program.atomic.utils.Mo.intToMo;
 
 public class AtomicProcedures {
@@ -129,7 +133,22 @@ public class AtomicProcedures {
 		if(ctx.call_params().exprs().expr().size() > 2) {
 			mo = intToMo(((IConst)ctx.call_params().exprs().expr().get(2).accept(visitor)).getIntValue().intValue());
 		}
-		visitor.programBuilder.addChild(visitor.threadCount, Atomic.newExchange(reg, add, value, mo));
+		if(Arch.POWER.equals(visitor.target)) {
+			if(SC.equals(mo))
+				visitor.programBuilder.addChild(visitor.threadCount, Power.newSyncBarrier());
+			else if(RELEASE.equals(mo))
+				visitor.programBuilder.addChild(visitor.threadCount, Power.newLwSyncBarrier());
+		}
+		var load = newRMWLoad(reg, add, mo);
+		visitor.programBuilder.addChild(visitor.threadCount, load);
+		if(List.of(Arch.ARM8, Arch.POWER).contains(visitor.target)) {
+			var label = newLabel("FakeDep"+load.getOId());
+			visitor.programBuilder.addChild(visitor.threadCount, newFakeCtrlDep(reg, label));
+			visitor.programBuilder.addChild(visitor.threadCount, label);
+		}
+		visitor.programBuilder.addChild(visitor.threadCount, newRMWStore(load, add, value, mo));
+		if(Arch.POWER.equals(visitor.target) && ACQUIRE.equals(mo))
+			visitor.programBuilder.addChild(visitor.threadCount, Power.newISyncBarrier());
 	}
 
 	private static void DAT3M_CAS(VisitorBoogie visitor, Call_cmdContext ctx) {

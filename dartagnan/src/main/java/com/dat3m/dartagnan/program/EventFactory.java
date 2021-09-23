@@ -240,10 +240,6 @@ public class EventFactory {
         public static AtomicThreadFence newFence(String mo) {
             return new AtomicThreadFence(mo);
         }
-
-        public static AtomicXchg newExchange(Register register, IExpr address, ExprInterface value, String mo) {
-            return new AtomicXchg(register, address, value, mo);
-        }
     }
 
     // =============================================================================================
