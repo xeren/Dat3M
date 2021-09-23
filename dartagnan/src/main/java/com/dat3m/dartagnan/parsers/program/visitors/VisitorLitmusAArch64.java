@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.parsers.program.visitors;
 
 import com.dat3m.dartagnan.expression.Atom;
+import com.dat3m.dartagnan.expression.BNonDet;
 import com.dat3m.dartagnan.expression.IConst;
 import com.dat3m.dartagnan.expression.IExpr;
 import com.dat3m.dartagnan.expression.IExprBin;
@@ -13,7 +14,6 @@ import com.dat3m.dartagnan.parsers.program.utils.ParsingException;
 import com.dat3m.dartagnan.parsers.program.utils.ProgramBuilder;
 import com.dat3m.dartagnan.program.EventFactory;
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.arch.aarch64.event.StoreExclusive;
 import com.dat3m.dartagnan.program.event.Cmp;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Label;
@@ -21,6 +21,8 @@ import com.dat3m.dartagnan.program.event.Load;
 import org.antlr.v4.runtime.misc.Interval;
 
 import java.math.BigInteger;
+
+import static com.dat3m.dartagnan.expression.op.COpBin.EQ;
 
 public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
         implements LitmusAArch64Visitor<Object> {
@@ -149,7 +151,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
         if(ctx.offset() != null){
             address = visitOffset(ctx.offset(), address);
         }
-        Load load = EventFactory.newRMWLoadExclusive(register, address, ctx.loadExclusiveInstruction().mo);
+		Load load = EventFactory.newRMWLoad(register, address, ctx.loadExclusiveInstruction().mo);
         return programBuilder.addChild(mainThread, load);
     }
 
@@ -171,8 +173,13 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object>
         if(ctx.offset() != null){
             address = visitOffset(ctx.offset(), address);
         }
-        StoreExclusive event = EventFactory.Arm8.newExclusiveStore(statusReg, address, register, ctx.storeExclusiveInstruction().mo);
-        return programBuilder.addChild(mainThread, event);
+		var status = EventFactory.newLocal(statusReg, new BNonDet(-1));
+		programBuilder.addChild(mainThread, status);
+		var skip = EventFactory.newLabel("Skip"+status.getOId());
+		programBuilder.addChild(mainThread, EventFactory.newJump(new Atom(statusReg, EQ, IConst.ONE), skip));
+		programBuilder.addChild(mainThread, EventFactory.newRMWStore(address, register, ctx.storeExclusiveInstruction().mo));
+		programBuilder.addChild(mainThread, skip);
+		return null;
     }
 
     @Override

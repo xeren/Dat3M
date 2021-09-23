@@ -3,10 +3,8 @@ package com.dat3m.dartagnan.program;
 import com.dat3m.dartagnan.expression.*;
 import com.dat3m.dartagnan.expression.op.BOpUn;
 import com.dat3m.dartagnan.expression.op.COpBin;
-import com.dat3m.dartagnan.program.arch.aarch64.event.StoreExclusive;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.event.pthread.*;
-import com.dat3m.dartagnan.program.event.rmw.RMWStoreExclusive;
 import com.dat3m.dartagnan.program.memory.Address;
 import com.dat3m.dartagnan.program.svcomp.event.BeginAtomic;
 import com.dat3m.dartagnan.program.svcomp.event.EndAtomic;
@@ -149,22 +147,6 @@ public class EventFactory {
 		return store;
 	}
 
-    public static Load newRMWLoadExclusive(Register reg, IExpr address, String mo) {
-		return newRMWLoad(reg, address, mo);
-    }
-
-    public static RMWStoreExclusive newRMWStoreExclusive(IExpr address, ExprInterface value, String mo, boolean isStrong) {
-        return new RMWStoreExclusive(address, value, mo, isStrong);
-    }
-
-    public static RMWStoreExclusive newRMWStoreExclusive(IExpr address, ExprInterface value, String mo) {
-        return newRMWStoreExclusive(address, value, mo, false);
-    }
-
-    public static ExecutionStatus newExecutionStatus(Register register, Event event) {
-        return new ExecutionStatus(register, event);
-    }
-
 
     // =============================================================================================
     // ========================================== Pthread ==========================================
@@ -234,10 +216,6 @@ public class EventFactory {
     // =============================================================================================
     private static class ArmCommon {
         private ArmCommon() {}
-
-        public static StoreExclusive newExclusiveStore(Register register, IExpr address, ExprInterface value, String mo) {
-            return new StoreExclusive(register, address, value, mo);
-        }
     }
 
     public static class Arm extends ArmCommon {
