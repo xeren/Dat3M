@@ -9,8 +9,6 @@ import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.utils.RegReaderData;
 import com.dat3m.dartagnan.program.utils.EType;
 import com.dat3m.dartagnan.utils.recursion.RecursiveAction;
-import com.dat3m.dartagnan.utils.recursion.RecursiveFunction;
-import com.dat3m.dartagnan.wmm.utils.Arch;
 import com.google.common.collect.ImmutableSet;
 import org.sosy_lab.java_smt.api.BooleanFormula;
 import org.sosy_lab.java_smt.api.BooleanFormulaManager;
@@ -167,18 +165,6 @@ public class CondJump extends Event implements RegReaderData {
     @Override
     public CondJump getCopy(){
     	return new CondJump(this);
-    }
-
-    
-    // Compilation
-    // -----------------------------------------------------------------------------------------------------------------
-
-    @Override
-    protected RecursiveFunction<Integer> compileRecursive(Arch target, int nextId, Event predecessor, int depth) {
-        if(successor == null){
-            throw new RuntimeException("Malformed CondJump event");
-        }
-        return super.compileRecursive(target, nextId, predecessor, depth);
     }
 
 

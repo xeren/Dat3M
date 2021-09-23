@@ -113,7 +113,6 @@ public class VerificationTask {
         }
         program.simplify();
         program.unroll(settings.getBound(), 0);
-        program.compile(target, 0);
         if (GlobalSettings.ENABLE_SYMMETRY_REDUCTION) {
             // Test code
             new SymmetryReduction(program).apply();

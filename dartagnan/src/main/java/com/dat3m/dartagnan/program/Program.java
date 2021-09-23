@@ -42,7 +42,6 @@ public class Program {
 	private Arch arch;
     private ThreadCache cache;
     private boolean isUnrolled;
-    private boolean isCompiled;
     private VerificationTask task;
     private BranchEquivalence branchEquivalence;
 
@@ -58,8 +57,8 @@ public class Program {
 	}
 
 	public boolean isCompiled(){
-        return isCompiled;
-    }
+		return isUnrolled;
+	}
 
     public boolean isUnrolled(){
         return isUnrolled;
@@ -181,28 +180,11 @@ public class Program {
     }
 
 
-    // Compilation
-    // -----------------------------------------------------------------------------------------------------------------
-
-    public int compile(Arch target, int nextId) {
-        if (!isUnrolled()) {
-            throw new IllegalStateException("The program needs to be unrolled first.");
-        }
-
-        for(Thread thread : threads){
-            nextId = thread.compile(target, nextId);
-        }
-        isCompiled = true;
-        cache = null;
-        return nextId;
-    }
-
-
     // Encoding
     // -----------------------------------------------------------------------------------------------------------------
 
     public void initialise(VerificationTask task, SolverContext ctx) {
-        if (!isCompiled) {
+		if(!isUnrolled) {
             throw new IllegalStateException("The program needs to be compiled first.");
         }
         this.task = task;
