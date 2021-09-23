@@ -5,6 +5,21 @@ import java.util.Arrays;
 public enum Arch {
 	NONE, ARM, ARM8, POWER, TSO;
 
+	/**
+	 * @return
+	 * This architecture has a strong atomicity implementation.
+	 * Otherwise, it relies on the Load-Reserve / Store-Exclusive paradigm.
+	 */
+	public boolean isStrong() {
+		switch(this) {
+		case NONE:
+		case TSO:
+			return false;
+		default:
+			return true;
+		}
+	}
+
     public static Arch get(String arch){
         if(arch != null){
             arch = arch.trim();

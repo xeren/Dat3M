@@ -217,14 +217,6 @@ public class EventFactory {
     public static class Atomic {
         private Atomic() {}
 
-        public static AtomicCmpXchg newCompareExchange(Register register, IExpr address, IExpr expectedAddr, ExprInterface desiredValue, String mo, boolean isStrong) {
-            return new AtomicCmpXchg(register, address, expectedAddr, desiredValue, mo, isStrong);
-        }
-
-        public static AtomicCmpXchg newCompareExchange(Register register, IExpr address, IExpr expectedAddr, ExprInterface desiredValue, String mo) {
-            return newCompareExchange(register, address, expectedAddr, desiredValue, mo, false);
-        }
-
         public static AtomicFetchOp newFetchOp(Register register, IExpr address, ExprInterface value, IOpBin op, String mo) {
             return new AtomicFetchOp(register, address, value, op, mo);
         }

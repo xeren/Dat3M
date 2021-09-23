@@ -1,18 +1,21 @@
 package com.dat3m.dartagnan.parsers.program.visitors.boogie;
 
+import com.dat3m.dartagnan.expression.Atom;
+import com.dat3m.dartagnan.expression.BNonDet;
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IConst;
 import com.dat3m.dartagnan.expression.IExpr;
+import com.dat3m.dartagnan.expression.op.COpBin;
 import com.dat3m.dartagnan.expression.op.IOpBin;
 import com.dat3m.dartagnan.parsers.BoogieParser;
 import com.dat3m.dartagnan.parsers.BoogieParser.Call_cmdContext;
 import com.dat3m.dartagnan.program.Register;
 
+import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.List;
 
-import static com.dat3m.dartagnan.program.EventFactory.Atomic;
-import static com.dat3m.dartagnan.program.EventFactory.newStore;
+import static com.dat3m.dartagnan.program.EventFactory.*;
 import static com.dat3m.dartagnan.program.atomic.utils.Mo.intToMo;
 
 public class AtomicProcedures {
@@ -154,12 +157,29 @@ public class AtomicProcedures {
 		IExpr expectedAddr = (IExpr) params.get(1).accept(visitor); // NOTE: We assume a register here
 		ExprInterface desiredVal = (ExprInterface) params.get(2).accept(visitor);
 		String mo = null;
-		boolean strong = ctx.getText().contains("strong");
 		if(params.size() > 3) {
 			mo = intToMo(((IConst) params.get(3).accept(visitor)).getIntValue().intValue());
 			// NOTE: We forget about the 5th parameter (MO on fail) because it is never used
 			// (see issue #123 for an explanation)
 		}
-		visitor.programBuilder.addChild(visitor.threadCount, Atomic.newCompareExchange(reg, addr, expectedAddr, desiredVal, mo, strong));
+		var registerExpected = new Register(null, visitor.threadCount, -1);
+		var loadExpected = newLoad(registerExpected, expectedAddr, null);
+		visitor.programBuilder.addChild(visitor.threadCount, loadExpected);
+		var registerValue = new Register(null, visitor.threadCount, -1);
+		var load = newRMWLoad(registerValue, addr, mo);
+		visitor.programBuilder.addChild(visitor.threadCount, load);
+		var fail = newLabel("CmpXchg_fail_"+load.getOId());
+		visitor.programBuilder.addChild(visitor.threadCount, newJump(new BNonDet(-1), fail));
+		visitor.programBuilder.addChild(visitor.threadCount, newAssume(new Atom(registerExpected, COpBin.EQ, registerValue)));
+		visitor.programBuilder.addChild(visitor.threadCount, newLocal(reg, new IConst(BigInteger.ZERO, reg.getPrecision())));
+		visitor.programBuilder.addChild(visitor.threadCount, newRMWStore(load, addr, desiredVal, mo));
+		var exit = newLabel("CmpXchg_exit_"+load.getOId());
+		visitor.programBuilder.addChild(visitor.threadCount, newGoto(exit));
+		visitor.programBuilder.addChild(visitor.threadCount, fail);
+		if(ctx.getText().contains("strong") || visitor.target.isStrong())
+			visitor.programBuilder.addChild(visitor.threadCount, newAssume(new Atom(registerExpected, COpBin.NEQ, registerValue)));
+		visitor.programBuilder.addChild(visitor.threadCount, newStore(expectedAddr, registerValue, null));
+		visitor.programBuilder.addChild(visitor.threadCount, newLocal(reg, new IConst(BigInteger.ONE, reg.getPrecision())));
+		visitor.programBuilder.addChild(visitor.threadCount, exit);
 	}
 }
