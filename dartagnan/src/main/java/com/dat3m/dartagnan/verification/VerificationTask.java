@@ -89,9 +89,8 @@ public class VerificationTask {
     }
 
     public ThreadSymmetry getThreadSymmetry() {
-        if (!program.isCompiled()) {
-            throw new IllegalStateException("ThreadSymmetry is only available after compilation");
-        }
+		if(!program.isUnrolled())
+			throw new IllegalStateException("ThreadSymmetry is only available after unrolling");
         if (threadSymmetry == null) {
             threadSymmetry = new ThreadSymmetry(program);
         }

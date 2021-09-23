@@ -61,10 +61,6 @@ public abstract class Event implements Comparable<Event> {
 		this.oId = id;
 	}
 
-	public int getUId(){
-		return cId;
-	}
-
 	public int getCId() {
 		return cId;
 	}

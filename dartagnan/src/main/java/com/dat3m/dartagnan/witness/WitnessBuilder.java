@@ -130,13 +130,13 @@ public class WitnessBuilder {
 				
 				if(e instanceof Load) {
 					RegWriter l = (RegWriter)e;
-					edge.addAttribute(EVENTID.toString(), valueOf(e.getUId()));
+					edge.addAttribute(EVENTID.toString(), valueOf(e.getCId()));
 					edge.addAttribute(LOADEDVALUE.toString(), l.getWrittenValue(e, model, ctx).toString());
 				}
 
 				if(e instanceof Store) {
 					Store s = (Store)e;
-					edge.addAttribute(EVENTID.toString(), valueOf(e.getUId()));
+					edge.addAttribute(EVENTID.toString(), valueOf(e.getCId()));
 					edge.addAttribute(STOREDVALUE.toString(), s.getMemValue().getIntValue(s, model, ctx).toString());
 				}
 

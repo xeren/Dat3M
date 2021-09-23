@@ -106,9 +106,6 @@ public class Printer {
                     idSb.append("(").append(event.getOId()).append(")");
                     break;
                 case UNROLLED:
-                    idSb.append("[").append(event.getUId()).append("]");
-                    break;
-                case COMPILED:
                     idSb.append(event.getCId()).append(":");
                     break;
                 default:
@@ -126,9 +123,6 @@ public class Printer {
 
     private IDType resolveIDType(Program program){
         if(idType == IDType.AUTO){
-            if(program.isCompiled()) {
-                return IDType.COMPILED;
-            }
             if(program.isUnrolled()){
                 return IDType.UNROLLED;
             }

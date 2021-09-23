@@ -56,10 +56,6 @@ public class Program {
 		this.threads = new ArrayList<>();
 	}
 
-	public boolean isCompiled(){
-		return isUnrolled;
-	}
-
     public boolean isUnrolled(){
         return isUnrolled;
     }

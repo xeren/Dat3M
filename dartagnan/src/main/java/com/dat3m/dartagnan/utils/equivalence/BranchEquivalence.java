@@ -106,8 +106,8 @@ public class BranchEquivalence extends AbstractEquivalence<Event> {
 
     public BranchEquivalence(Program program) {
         this.program = program;
-        if (!program.isCompiled())
-            throw new IllegalArgumentException("The program needs to be compiled first.");
+		if(!program.isUnrolled())
+			throw new IllegalArgumentException("The program needs to be unrolled first.");
 
         Map<Thread, Map<Event, Branch>> threadBranches = new HashMap<>();
         for (Thread t : program.getThreads()) {
