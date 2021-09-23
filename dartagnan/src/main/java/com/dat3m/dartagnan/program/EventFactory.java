@@ -244,10 +244,6 @@ public class EventFactory {
         public static AtomicXchg newExchange(Register register, IExpr address, ExprInterface value, String mo) {
             return new AtomicXchg(register, address, value, mo);
         }
-
-        public static Dat3mCAS newDat3mCAS(Register register, IExpr address, IExpr expected, ExprInterface value, String mo) {
-            return new Dat3mCAS(register, address, expected, value, mo);
-        }
     }
 
     // =============================================================================================

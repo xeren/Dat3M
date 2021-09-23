@@ -142,7 +142,14 @@ public class AtomicProcedures {
 		if(params.size() > 3) {
 			mo = intToMo(((IConst) params.get(3).accept(visitor)).getIntValue().intValue());
 		}
-		visitor.programBuilder.addChild(visitor.threadCount, Atomic.newDat3mCAS(reg, addr, expectedVal, desiredVal, mo));
+		var registerValue = new Register(null, visitor.threadCount, -1);
+		var load = newRMWLoad(registerValue, addr, mo);
+		visitor.programBuilder.addChild(visitor.threadCount, load);
+		visitor.programBuilder.addChild(visitor.threadCount, newLocal(reg, new Atom(expectedVal, COpBin.NEQ, registerValue)));
+		var exit = newLabel("CmpXchg_exit_"+load.getOId());
+		visitor.programBuilder.addChild(visitor.threadCount, newJump(new Atom(reg, COpBin.EQ, new IConst(BigInteger.ONE, reg.getPrecision())), exit));
+		visitor.programBuilder.addChild(visitor.threadCount, newRMWStore(load, addr, desiredVal, mo));
+		visitor.programBuilder.addChild(visitor.threadCount, exit);
 	}
 
 	private static void atomicThreadFence(VisitorBoogie visitor, Call_cmdContext ctx) {
