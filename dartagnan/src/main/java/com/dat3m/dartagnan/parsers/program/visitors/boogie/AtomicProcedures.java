@@ -18,6 +18,7 @@ import java.util.List;
 
 import static com.dat3m.dartagnan.program.EventFactory.*;
 import static com.dat3m.dartagnan.program.atomic.utils.Mo.ACQUIRE;
+import static com.dat3m.dartagnan.program.atomic.utils.Mo.ACQ_REL;
 import static com.dat3m.dartagnan.program.atomic.utils.Mo.CONSUME;
 import static com.dat3m.dartagnan.program.atomic.utils.Mo.RELEASE;
 import static com.dat3m.dartagnan.program.atomic.utils.Mo.SC;
@@ -197,7 +198,28 @@ public class AtomicProcedures {
 
 	private static void atomicThreadFence(VisitorBoogie visitor, Call_cmdContext ctx) {
 		String mo = intToMo(((IConst)ctx.call_params().exprs().expr().get(0).accept(visitor)).getIntValue().intValue());
-		visitor.programBuilder.addChild(visitor.threadCount, Atomic.newFence(mo));
+		switch(visitor.target) {
+		case NONE:
+			break;
+		case TSO:
+			visitor.programBuilder.addChild(visitor.threadCount, X86.newMemoryFence());
+			break;
+		case POWER:
+			if(List.of(SC, ACQUIRE, RELEASE, ACQ_REL).contains(mo))
+				visitor.programBuilder.addChild(visitor.threadCount, Power.newLwSyncBarrier());
+			break;
+		case ARM:
+			if(List.of(SC, ACQUIRE, RELEASE, ACQ_REL).contains(mo))
+				visitor.programBuilder.addChild(visitor.threadCount, Arm.newISHBarrier());
+			break;
+		case ARM8:
+			if(List.of(SC, RELEASE, ACQ_REL).contains(mo))
+				visitor.programBuilder.addChild(visitor.threadCount, Arm8.DMB.newISHBarrier());
+			else if(ACQUIRE.equals(mo))
+				visitor.programBuilder.addChild(visitor.threadCount, Arm8.DSB.newISHLDBarrier());
+		default:
+			throw new UnsupportedOperationException("no support for atomic_thread_fence on " + visitor.target);
+		}
 	}
 	
 	private static void atomicCmpXchg(VisitorBoogie visitor, Call_cmdContext ctx) {

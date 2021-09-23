@@ -228,10 +228,6 @@ public class EventFactory {
         public static AtomicFetchOp newIncrement(Register register, IExpr address, String mo) {
             return newFetchOp(register, address, new IConst(BigInteger.ONE, -1), IOpBin.PLUS, mo);
         }
-
-        public static AtomicThreadFence newFence(String mo) {
-            return new AtomicThreadFence(mo);
-        }
     }
 
     // =============================================================================================
