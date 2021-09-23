@@ -5,6 +5,7 @@ import com.dat3m.dartagnan.expression.BNonDet;
 import com.dat3m.dartagnan.expression.ExprInterface;
 import com.dat3m.dartagnan.expression.IConst;
 import com.dat3m.dartagnan.expression.IExpr;
+import com.dat3m.dartagnan.expression.IExprBin;
 import com.dat3m.dartagnan.expression.op.COpBin;
 import com.dat3m.dartagnan.expression.op.IOpBin;
 import com.dat3m.dartagnan.parsers.BoogieParser;
@@ -147,7 +148,22 @@ public class AtomicProcedures {
 		if(ctx.call_params().exprs().expr().size() > 2) {
 			mo = intToMo(((IConst)ctx.call_params().exprs().expr().get(2).accept(visitor)).getIntValue().intValue());
 		}
-		visitor.programBuilder.addChild(visitor.threadCount, Atomic.newFetchOp(reg, add, value, op, mo));
+		if(Arch.POWER.equals(visitor.target)) {
+			if(SC.equals(mo))
+				visitor.programBuilder.addChild(visitor.threadCount, Power.newSyncBarrier());
+			else if(RELEASE.equals(mo))
+				visitor.programBuilder.addChild(visitor.threadCount, Power.newLwSyncBarrier());
+		}
+		var load = newRMWLoad(reg, add, mo);
+		visitor.programBuilder.addChild(visitor.threadCount, load);
+		if(List.of(Arch.POWER, Arch.ARM8).contains(visitor.target)) {
+			var label = newLabel("FakeDep"+load.getOId());
+			visitor.programBuilder.addChild(visitor.threadCount, newFakeCtrlDep(reg, label));
+			visitor.programBuilder.addChild(visitor.threadCount, label);
+		}
+		visitor.programBuilder.addChild(visitor.threadCount, newRMWStore(load, add, new IExprBin(reg, op, value), mo));
+		if(Arch.POWER.equals(visitor.target) && ACQUIRE.equals(mo))
+			visitor.programBuilder.addChild(visitor.threadCount, Power.newISyncBarrier());
 	}
 
 	private static void atomicXchg(VisitorBoogie visitor, Call_cmdContext ctx) {

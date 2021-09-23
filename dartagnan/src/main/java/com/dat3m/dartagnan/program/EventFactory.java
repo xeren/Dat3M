@@ -3,10 +3,8 @@ package com.dat3m.dartagnan.program;
 import com.dat3m.dartagnan.expression.*;
 import com.dat3m.dartagnan.expression.op.BOpUn;
 import com.dat3m.dartagnan.expression.op.COpBin;
-import com.dat3m.dartagnan.expression.op.IOpBin;
 import com.dat3m.dartagnan.program.arch.aarch64.event.StoreExclusive;
 import com.dat3m.dartagnan.program.arch.tso.event.Xchg;
-import com.dat3m.dartagnan.program.atomic.event.*;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.event.pthread.*;
 import com.dat3m.dartagnan.program.event.rmw.RMWStoreExclusive;
@@ -15,7 +13,6 @@ import com.dat3m.dartagnan.program.svcomp.event.BeginAtomic;
 import com.dat3m.dartagnan.program.svcomp.event.EndAtomic;
 import com.dat3m.dartagnan.program.utils.EType;
 
-import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -216,18 +213,6 @@ public class EventFactory {
 
     public static class Atomic {
         private Atomic() {}
-
-        public static AtomicFetchOp newFetchOp(Register register, IExpr address, ExprInterface value, IOpBin op, String mo) {
-            return new AtomicFetchOp(register, address, value, op, mo);
-        }
-
-        public static AtomicFetchOp newFADD(Register register, IExpr address, ExprInterface value, String mo) {
-            return newFetchOp(register, address, value, IOpBin.PLUS, mo);
-        }
-
-        public static AtomicFetchOp newIncrement(Register register, IExpr address, String mo) {
-            return newFetchOp(register, address, new IConst(BigInteger.ONE, -1), IOpBin.PLUS, mo);
-        }
     }
 
     // =============================================================================================
