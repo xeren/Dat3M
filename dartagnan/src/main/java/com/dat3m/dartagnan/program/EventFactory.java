@@ -161,10 +161,6 @@ public class EventFactory {
             return create;
         }
 
-        public static End newEnd(Address address){
-            return new End(address);
-        }
-
         public static InitLock newInitLock(String name, IExpr address, IExpr value) {
             return new InitLock(name, address, value);
         }

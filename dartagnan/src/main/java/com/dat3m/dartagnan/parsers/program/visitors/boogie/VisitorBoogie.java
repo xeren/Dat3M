@@ -44,6 +44,7 @@ import static com.dat3m.dartagnan.parsers.program.visitors.boogie.StdProcedures.
 import static com.dat3m.dartagnan.parsers.program.visitors.boogie.StdProcedures.handleStdFunction;
 import static com.dat3m.dartagnan.parsers.program.visitors.boogie.SvcompProcedures.SVCOMPPROCEDURES;
 import static com.dat3m.dartagnan.parsers.program.visitors.boogie.SvcompProcedures.handleSvcompFunction;
+import static com.dat3m.dartagnan.program.atomic.utils.Mo.SC;
 import static com.dat3m.dartagnan.program.llvm.utils.LlvmFunctions.LLVMFUNCTIONS;
 import static com.dat3m.dartagnan.program.llvm.utils.LlvmFunctions.llvmFunction;
 import static com.dat3m.dartagnan.program.llvm.utils.LlvmPredicates.LLVMPREDICATES;
@@ -282,11 +283,8 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
         currentScope = currentScope.getParent();
         
     	if(create) {
-         	if(threadCount != 1) {
-         		// Used to mark the end of the execution of a thread (used by pthread_join)
-        		Location loc = programBuilder.getOrCreateLocation(pool.getPtrFromInt(threadCount) + "_active", -1);
-        		programBuilder.addChild(threadCount, EventFactory.Pthread.newEnd(loc.getAddress()));
-         	}
+			if(threadCount != 1)
+				pThreadEnd();
         	label = programBuilder.getOrCreateLabel("END_OF_T" + threadCount);
          	programBuilder.addChild(threadCount, label);
     	}
@@ -775,4 +773,23 @@ public class VisitorBoogie extends BoogieBaseVisitor<Object> implements BoogieVi
 		return null;
 	}
 
+	/**
+	 * Marks the end of the execution of a thread (used by pthread_join)
+	 */
+	private void pThreadEnd() {
+		var address = programBuilder.getOrCreateLocation(pool.getPtrFromInt(threadCount) + "_active", -1).getAddress();
+		if(Arch.POWER.equals(target))
+			programBuilder.addChild(threadCount, EventFactory.Power.newSyncBarrier());
+		if(Arch.ARM.equals(target))
+			programBuilder.addChild(threadCount, EventFactory.Arm.newISHBarrier());
+		if(Arch.ARM8.equals(target))
+			programBuilder.addChild(threadCount, EventFactory.Arm8.DMB.newISHBarrier());
+		programBuilder.addChild(threadCount, EventFactory.newStore(address, IConst.ZERO, SC));
+		if(Arch.TSO.equals(target))
+			programBuilder.addChild(threadCount, EventFactory.X86.newMemoryFence());
+		if(Arch.ARM.equals(target))
+			programBuilder.addChild(threadCount, EventFactory.Arm.newISHBarrier());
+		if(Arch.ARM8.equals(target))
+			programBuilder.addChild(threadCount, EventFactory.Arm8.DMB.newISHBarrier());
+	}
 }
