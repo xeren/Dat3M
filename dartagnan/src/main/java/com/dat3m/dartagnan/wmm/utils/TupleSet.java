@@ -8,6 +8,8 @@ import com.google.common.collect.Iterables;
 import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 
 //TODO: This class should probably be replaced
@@ -238,6 +240,9 @@ public class TupleSet implements Set<Tuple>{
     }
 
     // =============== Static utility functions =================
+    public static Collector<Tuple, ?, TupleSet> collector() {
+        return Collectors.toCollection(TupleSet::new);
+    }
 
     public static TupleSet approximateTransitiveMustReduction(ExecutionAnalysis exec, TupleSet minSet) {
         // Approximative must-transitive reduction of minSet:

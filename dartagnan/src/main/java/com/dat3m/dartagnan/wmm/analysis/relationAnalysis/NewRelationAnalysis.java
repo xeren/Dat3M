@@ -26,16 +26,21 @@ public class NewRelationAnalysis {
     private final Set<Constraint> constraints = new HashSet<>();
     private final List<Relation> relations = new ArrayList<>();
     private final DependencyGraph<Relation> dependencyGraph;
+    private final Map<Relation, Set<Constraint>> relToConstraintsMap;
 
 
     public NewRelationAnalysis() {
         //TODO: Take input parameters
+
+        relToConstraintsMap = new HashMap<>(relations.size());
+        relations.forEach(r -> relToConstraintsMap.put(r,
+                constraints.stream().filter(c -> c.getConstrainedRelations().contains(r)).collect(Collectors.toSet())
+        ));
         dependencyGraph = DependencyGraph.from(relations);
     }
 
-    private List<Constraint> getConstraintsForRelation(Relation rel) {
-        //TODO
-        return null;
+    private Set<Constraint> getConstraintsForRelation(Relation rel) {
+        return relToConstraintsMap.get(rel);
     }
 
 
@@ -47,11 +52,6 @@ public class NewRelationAnalysis {
 
 
     // ======================= Derivations and defining knowledge =======================
-
-    private Knowledge.SetDelta setJoin(Knowledge k, Knowledge.SetDelta delta) {
-        // TODO
-        return new Knowledge.SetDelta();
-    }
 
     /**
      * Computes the defining knowledge of a single stratum of relations, given knowledge about the previous strata.
@@ -102,12 +102,24 @@ public class NewRelationAnalysis {
         }
     }
 
+    private Map<Relation, Knowledge> computeInitialKnowledge() {
+        // Computes the initial knowledge by going over all strata in topological order
+        Map<Relation, Knowledge> know = new HashMap<>(relations.size());
+        for (Set<DependencyGraph<Relation>.Node> scc : dependencyGraph.getSCCs()) {
+            Set<Relation> stratum = scc.stream().map(DependencyGraph.Node::getContent).collect(Collectors.toSet());
+            computeDefiningKnowledge(stratum, know);
+        }
+
+        return know;
+    }
+
     private List<DerivationTask> processDerivationTask(DerivationTask task, Map<Relation, Knowledge> curKnow) {
         Relation target = task.to;
         Relation from = task.from;
 
-        Knowledge.SetDelta newDelta = setJoin(curKnow.get(target),
-                target.getDefiningConstraint().computeIncrementalDefiningKnowledge(from, task.delta, curKnow));
+        Knowledge.SetDelta newDelta = curKnow.get(target).joinSet(
+                target.getDefiningConstraint().computeIncrementalDefiningKnowledge(from, task.delta, curKnow)
+        );
         if (newDelta.isEmpty()) {
             // Nothing has changed, so we don't create new tasks
             return Collections.emptyList();
@@ -120,27 +132,24 @@ public class NewRelationAnalysis {
     }
 
 
-    private Map<Relation, Knowledge> computeInitialKnowledge() {
-        // Computes the initial knowledge by going over all strata in topological order
-        Map<Relation, Knowledge> know = new HashMap<>(relations.size());
-        for (Set<DependencyGraph<Relation>.Node> scc : dependencyGraph.getSCCs()) {
-            Set<Relation> stratum = scc.stream().map(DependencyGraph.Node::getContent).collect(Collectors.toSet());
-            computeDefiningKnowledge(stratum, know);
-        }
-
-        return know;
-    }
-
 
     // ======================= Knowledge closure =======================
 
-    // Update <k> by adding <delta> and return the actual change <deltaNew>
-    private Knowledge.Delta join(Knowledge k, Knowledge.Delta delta) {
-        // TODO
-        if (delta.isEmpty()) {
-            return delta;
-        }
-        return new Knowledge.Delta();
+
+    private void computeKnowledgeClosure(Map<Relation, Knowledge> know) {
+        Queue<RelToConstraintTask> rQueue = new ArrayDeque<>();
+        Queue<ConstraintToRelTask> cQueue = new ArrayDeque<>(initializeKnowledgeClosure(constraints, know));
+
+        // TODO: Multiple tasks with same (from, to) pair should get merged into a single task (with combined deltas)
+        do {
+            while (!cQueue.isEmpty()) {
+                rQueue.addAll(processConstraintTask(cQueue.poll(), know));
+            }
+            while (!rQueue.isEmpty()) {
+                cQueue.addAll(processRelationTask(rQueue.poll(), know));
+            }
+        } while (!cQueue.isEmpty());
+
     }
 
     private List<ConstraintToRelTask> initializeKnowledgeClosure(Set<Constraint> constraints, Map<Relation, Knowledge> know) {
@@ -167,7 +176,7 @@ public class NewRelationAnalysis {
 
     private List<RelToConstraintTask> processConstraintTask(ConstraintToRelTask task, Map<Relation, Knowledge> know) {
         Relation rel = task.to;
-        Knowledge.Delta newDelta = join(know.get(rel), task.delta);
+        Knowledge.Delta newDelta = know.get(rel).join(task.delta);
         if (newDelta.isEmpty()) {
             return Collections.emptyList();
         }
@@ -194,66 +203,43 @@ public class NewRelationAnalysis {
         return result;
     }
 
-    private void computeKnowledgeClosure(Map<Relation, Knowledge> know) {
-        Queue<RelToConstraintTask> rQueue = new ArrayDeque<>();
-        Queue<ConstraintToRelTask> cQueue = new ArrayDeque<>(initializeKnowledgeClosure(constraints, know));
-
-        // TODO: Multiple tasks with same (from, to) pair should get merged into a single task (with combined deltas)
-        do {
-            while (!cQueue.isEmpty()) {
-                rQueue.addAll(processConstraintTask(cQueue.poll(), know));
-            }
-
-            while (!rQueue.isEmpty()) {
-                cQueue.addAll(processRelationTask(rQueue.poll(), know));
-            }
-        } while (!cQueue.isEmpty());
-
-    }
-
 
 
 
     // =================================== Internal Task classes ============================
     // TODO: In Java 14+, we could actually use records here
 
-    // -------------------- Derivations --------------------
+    private static abstract class Task<TFrom, TTo, TDelta> {
+        final TFrom from;
+        final TTo to;
+        final TDelta delta;
 
-    private static class DerivationTask {
-        Relation from;
-        Relation to;
-        Knowledge.SetDelta delta;
-
-        public DerivationTask(Relation from, Relation to, Knowledge.SetDelta delta) {
+        public Task(TFrom from, TTo to, TDelta delta) {
             this.from = from;
             this.to = to;
             this.delta = delta;
+        }
+    }
+
+    // --------------------- Derivations --------------------
+
+    private static class DerivationTask extends Task<Relation, Relation, Knowledge.SetDelta> {
+        public DerivationTask(Relation from, Relation to, Knowledge.SetDelta delta) {
+            super(from, to, delta);
         }
     }
 
     // --------------------- Knowledge closure --------------------
 
-    private static class RelToConstraintTask {
-        Relation from;
-        Constraint to;
-        Knowledge.Delta delta;
-
+    private static class RelToConstraintTask extends Task<Relation, Constraint, Knowledge.Delta> {
         public RelToConstraintTask(Relation from, Constraint to, Knowledge.Delta delta) {
-            this.from = from;
-            this.to = to;
-            this.delta = delta;
+            super(from, to, delta);
         }
     }
 
-    private static class ConstraintToRelTask {
-        Constraint from;
-        Relation to;
-        Knowledge.Delta delta;
-
+    private static class ConstraintToRelTask extends Task<Constraint, Relation, Knowledge.Delta> {
         public ConstraintToRelTask(Constraint from, Relation to, Knowledge.Delta delta) {
-            this.from = from;
-            this.to = to;
-            this.delta = delta;
+            super(from, to, delta);
         }
     }
 

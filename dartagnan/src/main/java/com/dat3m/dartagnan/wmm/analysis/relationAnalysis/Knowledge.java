@@ -1,25 +1,31 @@
 package com.dat3m.dartagnan.wmm.analysis.relationAnalysis;
 
+import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 /**
  * Knowledge contains static must-information about a relation
  * by assigning unknown (?), true (T), false (F) and contradiction (TF) to each tuple of the relation.
+ * The lattice ordering is ? <= F, T <= TF.
  * To represent these 4 cases, we use two sets:
- * <br> - The maySet is the complement of the must-false knowledge
- * <br> - and the mustSet is the must-true knowledge.
+ * <ul>
+ *     <li> maySet is the complement of the must-false knowledge </li>
+ *     <li> mustSet is the must-true knowledge </li>
+ * </ul>
+ * We then have that a tuple is
+ * <ul>
+ *     <li> ?, if (may, not must) </li>
+ *     <li> F, if (not may, not must) </li>
+ *     <li> T, if (may, must) </li>
+ *     <li> TF, if (not may, must) </li>
+ * </ul>
  *
- * <br> We then have that a tuple is
- * <br> - ?, if it is in may but not in must,
- * <br> - F, if it is not in may,
- * <br> - T, if it is in must and may,
- * <br> - TF, if it is in must but not may.
- * <br> The lattice ordering is ? <= F, T <= TF.
  *
- *
- * We also use Knowledge with the standard subset ordering (element-wise).
+ * <p>We also use Knowledge with the standard subset ordering (element-wise).
  * For that ordering, we use "SetDelta" to represent changes, while for
  * the typical knowledge, we use "Delta".
+ * <br>
+ * This class is mutable and its methods are mutating.
  */
 public class Knowledge {
     private final TupleSet maySet;
@@ -45,8 +51,45 @@ public class Knowledge {
         return new SetDelta(maySet, mustSet);
     }
 
+    public SetDelta joinSet(SetDelta delta) {
+        if (delta.isEmpty()) {
+            return delta;
+        }
+        return new SetDelta(
+                delta.addedMaySet.stream().filter(maySet::add).collect(TupleSet.collector()),
+                delta.addedMustSet.stream().filter(mustSet::add).collect(TupleSet.collector())
+        );
+    }
 
 
+    public Delta join(Delta delta) {
+        if (delta.isEmpty()) {
+            return delta;
+        }
+        return new Delta(
+                delta.disabledSet.stream().filter(maySet::remove).collect(TupleSet.collector()),
+                delta.enabledSet.stream().filter(mustSet::add).collect(TupleSet.collector())
+        );
+    }
+
+    public boolean isUnknown(Tuple t) {
+        return maySet.contains(t) && !mustSet.contains(t);
+    }
+
+    public boolean isTrue(Tuple t) {
+        return mustSet.contains(t) && maySet.contains(t);
+    }
+
+    public boolean isFalse(Tuple t) {
+        return !maySet.contains(t) && !mustSet.contains(t);
+    }
+
+    public boolean isContradicting(Tuple t) {
+        return !maySet.contains(t) && mustSet.contains(t);
+    }
+
+    // =========================== Delta classes ===========================
+    // NOTE: These classes are to be treated as immutable (although immutability cannot be enforced)
 
     // When treated as set
     public static class SetDelta {
