@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-interface DefiningConstraint extends Constraint {
+public interface DefiningConstraint extends Constraint {
 
     // This relation shall be the last element of <getConstrainedRelation>
     default Relation getDefinedRelation() {
