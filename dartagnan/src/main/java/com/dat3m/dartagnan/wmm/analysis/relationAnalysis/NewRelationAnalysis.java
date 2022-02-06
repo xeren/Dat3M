@@ -1,6 +1,9 @@
 package com.dat3m.dartagnan.wmm.analysis.relationAnalysis;
 
 import com.dat3m.dartagnan.utils.dependable.DependencyGraph;
+import com.dat3m.dartagnan.wmm.utils.Tuple;
+import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import com.google.common.collect.Sets;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -28,6 +31,8 @@ public class NewRelationAnalysis {
     private final DependencyGraph<Relation> dependencyGraph;
     private final Map<Relation, Set<Constraint>> relToConstraintsMap;
 
+    private Map<Relation, Knowledge.Delta> discrepancyMap = new HashMap<>();
+
 
     public NewRelationAnalysis() {
         //TODO: Take input parameters
@@ -47,7 +52,54 @@ public class NewRelationAnalysis {
     public Map<Relation, Knowledge> algorithm() {
         Map<Relation, Knowledge> know = computeInitialKnowledge();
         computeKnowledgeClosure(know);
+        this.discrepancyMap = computeDiscrepancyAndUpdate(know);
         return know;
+    }
+
+
+    private Map<Relation, Knowledge.Delta> computeDiscrepancyAndUpdate(Map<Relation, Knowledge> know) {
+        // Proceed bottom-up and
+        // (1) compute discrepancy between knowledge of strata
+        // (2) update information of upper stratum if lower stratum has more knowledge (could happen due to incomplete propagation)
+        Map<Relation, Knowledge.Delta> discrepancyMap = new HashMap<>(know.size());
+
+        for (Set<DependencyGraph<Relation>.Node> scc : dependencyGraph.getSCCs()) {
+            Set<Relation> stratum = scc.stream().map(DependencyGraph.Node::getContent).collect(Collectors.toSet());
+            if (stratum.size() == 1 && stratum.stream().findAny().get().getDependencies().isEmpty()) {
+                discrepancyMap.put(stratum.stream().findAny().get(), new Knowledge.Delta());
+                continue; // We have a base relation, so we keep the current knowledge
+            }
+            Map<Relation, Knowledge> knowCopy = new HashMap<>(know); // Copy since the next method updates in-place
+            computeDefiningKnowledge(stratum, knowCopy);
+
+            // <knowCopy> should contain less knowledge than <know> (if it contains more, we can add it to <know>)
+            for (Relation rel : stratum) {
+                Knowledge full = know.get(rel);
+                Knowledge derived = knowCopy.get(rel);
+                TupleSet deltaMay = new TupleSet();
+                TupleSet deltaMust = new TupleSet();
+
+                for (Tuple t : Sets.symmetricDifference(full.getMaySet(), derived.getMaySet())) {
+                    if (derived.getMaySet().contains(t)) {
+                        deltaMay.add(t);
+                    } else {
+                        full.getMaySet().add(t); // We derived more knowledge and can update <full>
+                    }
+                }
+
+                for (Tuple t : Sets.symmetricDifference(full.getMustSet(), derived.getMustSet())) {
+                    if (full.getMustSet().contains(t)) {
+                        deltaMust.add(t);
+                    } else {
+                        full.getMustSet().add(t); // We derived more knowledge and can update <full>
+                    }
+                }
+
+                discrepancyMap.put(rel, new Knowledge.Delta(deltaMay, deltaMust));
+            }
+        }
+
+        return discrepancyMap;
     }
 
 
