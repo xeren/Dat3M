@@ -1,8 +1,8 @@
 package com.dat3m.dartagnan.wmm.analysis.relationAnalysis.example;
 
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.DefiningConstraint;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Knowledge;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Relation;
+import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.DefiningConstraint;
+import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 

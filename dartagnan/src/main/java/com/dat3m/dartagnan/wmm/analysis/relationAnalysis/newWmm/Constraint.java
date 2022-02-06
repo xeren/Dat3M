@@ -1,5 +1,7 @@
-package com.dat3m.dartagnan.wmm.analysis.relationAnalysis;
+package com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm;
 
+
+import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Knowledge;
 
 import java.util.List;
 import java.util.Map;

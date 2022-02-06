@@ -1,6 +1,9 @@
 package com.dat3m.dartagnan.wmm.analysis.relationAnalysis;
 
 import com.dat3m.dartagnan.utils.dependable.DependencyGraph;
+import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.Constraint;
+import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.DefiningConstraint;
+import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.google.common.collect.Sets;
@@ -69,6 +72,7 @@ public class NewRelationAnalysis {
                 discrepancyMap.put(stratum.stream().findAny().get(), new Knowledge.Delta());
                 continue; // We have a base relation, so we keep the current knowledge
             }
+            // We have a derived relation
             Map<Relation, Knowledge> knowCopy = new HashMap<>(know); // Copy since the next method updates in-place
             computeDefiningKnowledge(stratum, knowCopy);
 

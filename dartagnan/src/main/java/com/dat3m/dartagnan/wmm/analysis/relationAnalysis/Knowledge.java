@@ -34,6 +34,8 @@ public class Knowledge {
     public TupleSet getMaySet() { return maySet; }
     public TupleSet getMustSet() { return mustSet; }
 
+    // ======================== Construction ========================
+
     public Knowledge(TupleSet may, TupleSet must) {
         this.maySet = may;
         this.mustSet = must;
@@ -45,6 +47,21 @@ public class Knowledge {
 
     public static Knowledge newEmptySet() {
         return new Knowledge();
+    }
+
+    // ======================== Utility ========================
+
+    public boolean isUnknown(Tuple t) {
+        return maySet.contains(t) && !mustSet.contains(t);
+    }
+    public boolean isTrue(Tuple t) {
+        return mustSet.contains(t) && maySet.contains(t);
+    }
+    public boolean isFalse(Tuple t) {
+        return !maySet.contains(t) && !mustSet.contains(t);
+    }
+    public boolean isContradicting(Tuple t) {
+        return !maySet.contains(t) && mustSet.contains(t);
     }
 
     public SetDelta asSetDelta() {
@@ -70,22 +87,6 @@ public class Knowledge {
                 delta.disabledSet.stream().filter(maySet::remove).collect(TupleSet.collector()),
                 delta.enabledSet.stream().filter(mustSet::add).collect(TupleSet.collector())
         );
-    }
-
-    public boolean isUnknown(Tuple t) {
-        return maySet.contains(t) && !mustSet.contains(t);
-    }
-
-    public boolean isTrue(Tuple t) {
-        return mustSet.contains(t) && maySet.contains(t);
-    }
-
-    public boolean isFalse(Tuple t) {
-        return !maySet.contains(t) && !mustSet.contains(t);
-    }
-
-    public boolean isContradicting(Tuple t) {
-        return !maySet.contains(t) && mustSet.contains(t);
     }
 
     // =========================== Delta classes ===========================
