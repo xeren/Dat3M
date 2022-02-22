@@ -3,10 +3,8 @@ package com.dat3m.dartagnan.wmm.analysis.relationAnalysis.example;
 import com.dat3m.dartagnan.program.analysis.ExecutionAnalysis;
 import com.dat3m.dartagnan.program.event.Tag;
 import com.dat3m.dartagnan.program.event.core.Event;
-import com.dat3m.dartagnan.verification.Context;
-import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Knowledge;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.Constraint;
+import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.AxiomaticConstraint;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -17,26 +15,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class Acyclic implements Constraint {
+public class Acyclic extends AxiomaticConstraint {
 
-    private final Relation rel;
-    private VerificationTask task;
-    private Context analysisContext;
     private TupleSet transitiveMinSet;
 
-    public Acyclic(Relation rel) {
-        this.rel = rel;
-    }
-
-    public void initToTask(VerificationTask task, Context analysisContext) {
-        this.task = task;
-        this.analysisContext = analysisContext;
-    }
-
-    @Override
-    public List<Relation> getConstrainedRelations() {
-        return Collections.singletonList(rel);
-    }
+    public Acyclic(Relation rel) { super(rel);}
 
     @Override
     public List<Knowledge.Delta> computeInitialKnowledgeClosure(Map<Relation, Knowledge> know) {
@@ -81,6 +64,7 @@ public class Acyclic implements Constraint {
 
     @Override
     public List<Knowledge.Delta> computeIncrementalKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
+        //TODO
         // (1) add <delta.getEnabledSet()> to <transitiveMinSet>
         // (2) compute the new transitive closure
         // (3) disable the inverse of added edges

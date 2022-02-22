@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm;
 
 import com.dat3m.dartagnan.utils.dependable.Dependent;
+import com.google.common.base.Preconditions;
 
 import java.util.List;
 
@@ -19,7 +20,7 @@ public class Relation implements Dependent<Relation> {
 
     public DefiningConstraint getDefiningConstraint() { return definingConstraint; }
     public void setDefiningConstraint(DefiningConstraint constr) {
-        this.definingConstraint = constr;
+        this.definingConstraint = Preconditions.checkNotNull(constr);
     }
 
     public String getName() { return name; }

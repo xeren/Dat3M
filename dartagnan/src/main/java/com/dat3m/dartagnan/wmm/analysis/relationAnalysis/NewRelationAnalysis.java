@@ -1,6 +1,8 @@
 package com.dat3m.dartagnan.wmm.analysis.relationAnalysis;
 
 import com.dat3m.dartagnan.utils.dependable.DependencyGraph;
+import com.dat3m.dartagnan.verification.Context;
+import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.Constraint;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.DefiningConstraint;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.Relation;
@@ -52,7 +54,9 @@ public class NewRelationAnalysis {
     }
 
 
-    public Map<Relation, Knowledge> algorithm() {
+    public Map<Relation, Knowledge> algorithm(VerificationTask task, Context analysisContext) {
+        constraints.forEach(c -> c.initializeToTask(task, analysisContext));
+
         Map<Relation, Knowledge> know = computeInitialKnowledge();
         computeKnowledgeClosure(know);
         this.discrepancyMap = computeDiscrepancyAndUpdate(know);
@@ -125,7 +129,7 @@ public class NewRelationAnalysis {
             Relation rel = stratum.stream().findAny().get();
             know.put(rel, rel.getDefiningConstraint().computeInitialDefiningKnowledge(know));
         } else {
-            // Stratum with mutually recursive relations
+            // Stratum with mutually recursive relations, so we need to compute the lfp
 
             // Initialize all relations in the stratum
             know.keySet().removeAll(stratum);
@@ -210,7 +214,7 @@ public class NewRelationAnalysis {
 
     private List<ConstraintToRelTask> initializeKnowledgeClosure(Set<Constraint> constraints, Map<Relation, Knowledge> know) {
         // Initialization phase
-        List<ConstraintToRelTask> result = new ArrayList<>();
+        List<ConstraintToRelTask> newTasks = new ArrayList<>();
         for (Constraint c : constraints) {
             if (c instanceof DefiningConstraint) {
                 // We assume that all defining constraints have been evaluated before
@@ -223,11 +227,11 @@ public class NewRelationAnalysis {
 
             for (int i = 0; i < deltas.size(); i++) {
                 if (!deltas.get(i).isEmpty()) {
-                    result.add(new ConstraintToRelTask(c, rels.get(i), deltas.get(i)));
+                    newTasks.add(new ConstraintToRelTask(c, rels.get(i), deltas.get(i)));
                 }
             }
         }
-        return result;
+        return newTasks;
     }
 
     private List<RelToConstraintTask> processConstraintTask(ConstraintToRelTask task, Map<Relation, Knowledge> know) {
@@ -237,26 +241,27 @@ public class NewRelationAnalysis {
             return Collections.emptyList();
         }
 
-        return getConstraintsForRelation(rel).stream()
-                    .filter(c -> c != task.from)
-                    .map(c -> new RelToConstraintTask(rel, c, newDelta))
-                    .collect(Collectors.toList());
+        List<RelToConstraintTask> newTasks = getConstraintsForRelation(rel).stream()
+                .filter(c -> c != task.from)
+                .map(c -> new RelToConstraintTask(rel, c, newDelta))
+                .collect(Collectors.toList());
+        return newTasks;
     }
 
     private List<ConstraintToRelTask> processRelationTask(RelToConstraintTask task, Map<Relation, Knowledge> know) {
-        Constraint c = task.to;
-        List<Relation> rels = c.getConstrainedRelations();
-        List<Knowledge.Delta> newDeltas = c.computeIncrementalKnowledgeClosure(task.from, task.delta, know);
+        Constraint constr = task.to;
+        List<Relation> rels = constr.getConstrainedRelations();
+        List<Knowledge.Delta> newDeltas = constr.computeIncrementalKnowledgeClosure(task.from, task.delta, know);
         assert rels.size() == newDeltas.size();
 
-        List<ConstraintToRelTask> result = new ArrayList<>(rels.size());
+        List<ConstraintToRelTask> newTasks = new ArrayList<>(rels.size());
         for (int i = 0; i < rels.size(); i++) {
             if (!newDeltas.get(i).isEmpty()) {
-                result.add(new ConstraintToRelTask(c, rels.get(i), newDeltas.get(i)));
+                newTasks.add(new ConstraintToRelTask(constr, rels.get(i), newDeltas.get(i)));
             }
         }
 
-        return result;
+        return newTasks;
     }
 
 

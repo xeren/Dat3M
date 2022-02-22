@@ -6,12 +6,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/*
+    DefiningConstraints are of two types:
+        - Base relation constraints
+        - Derived relation constraints
+    Each relation has exactly one associated defining constraint
+ */
 public interface DefiningConstraint extends Constraint {
 
     // This relation shall be the last element of <getConstrainedRelation>
     default Relation getDefinedRelation() {
         List<Relation> rels = getConstrainedRelations();
         return rels.get(rels.size() - 1);
+    }
+
+    default List<Relation> getDependencies() {
+        List<Relation> rels = getConstrainedRelations();
+        return rels.subList(0, rels.size() - 1);
     }
 
     // Returns the Knowledge that can be computed about <getDefinedRelation>

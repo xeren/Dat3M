@@ -1,6 +1,8 @@
 package com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm;
 
 
+import com.dat3m.dartagnan.verification.Context;
+import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Knowledge;
 
 import java.util.List;
@@ -9,9 +11,10 @@ import java.util.Map;
 //TODO: This class should be part of the wmm package and not of the relation analysis
 //TODO 2: Add (i) encoding methods, (ii) active set computation method
 /*
-    Constraints are of two types:
-    - Defining
-    - Non-defining
+    The Constraint interface is the core component of the Relation Analysis.
+    Its implementation can be roughly categorized into two categories:
+        - Defining constraints (for base relations and derived relations)
+        - Non-defining constraints (e.g. the CAT axioms, assumptions, witnesses, symmetries...)
  */
 public interface Constraint {
 
@@ -25,7 +28,8 @@ public interface Constraint {
 
     List<Knowledge.Delta> computeIncrementalKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know);
 
-
+    // Any constraint needs to get initialized to the task before computing its knowledge
+    void initializeToTask(VerificationTask task, Context analysisContext);
 
 }
 

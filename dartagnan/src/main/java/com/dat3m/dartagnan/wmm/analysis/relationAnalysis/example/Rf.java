@@ -4,10 +4,8 @@ import com.dat3m.dartagnan.program.analysis.AliasAnalysis;
 import com.dat3m.dartagnan.program.event.core.Event;
 import com.dat3m.dartagnan.program.event.core.MemEvent;
 import com.dat3m.dartagnan.program.filter.FilterBasic;
-import com.dat3m.dartagnan.verification.Context;
-import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Knowledge;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.DefiningConstraint;
+import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.BaseRelationConstraint;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -19,29 +17,10 @@ import java.util.Map;
 import static com.dat3m.dartagnan.program.event.Tag.READ;
 import static com.dat3m.dartagnan.program.event.Tag.WRITE;
 
-public class Rf implements DefiningConstraint {
+public class Rf extends BaseRelationConstraint {
 
-    private final Relation rel;
-    private VerificationTask task;
-    private Context analysisContext;
-
-    public Rf(Relation rf) {
-        this.rel = rf;
-    }
-
-    public void initToTask(VerificationTask task, Context analysisContext) {
-        this.task = task;
-        this.analysisContext = analysisContext;
-    }
-
-    @Override
-    public Relation getDefinedRelation() {
-        return rel;
-    }
-
-    @Override
-    public List<Relation> getConstrainedRelations() {
-        return Collections.singletonList(rel);
+    public Rf(Relation baseRel) {
+        super(baseRel);
     }
 
     @Override
@@ -68,10 +47,5 @@ public class Rf implements DefiningConstraint {
         }
 
         return new Knowledge(maxTupleSet, minTupleSet);
-    }
-
-    @Override
-    public Knowledge.SetDelta computeIncrementalDefiningKnowledge(Relation changed, Knowledge.SetDelta delta, Map<Relation, Knowledge> know) {
-        return new Knowledge.SetDelta(); // Not possible
     }
 }
