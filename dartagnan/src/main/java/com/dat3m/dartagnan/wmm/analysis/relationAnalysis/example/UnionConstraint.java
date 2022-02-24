@@ -43,13 +43,13 @@ public class UnionConstraint extends DerivedRelationConstraint {
         Knowledge defKnow = know.get(getDefinedRelation());
 
         for (Tuple t : delta.getDisabledSet()) {
-            long unknowns = kList.stream().filter(k -> k.isUnknown(t)).count();
-            if (unknowns == 0) {
-                // (1) If <changed(t)> was the only ?, we can propagate F upwards
+            long falses = kList.stream().filter(k -> k.isFalse(t)).count();
+            if (falses == deps.size()) {
+                // ... all deps are F now, so their union will be F as well (propagate upwards)
                 defDelta.getDisabledSet().add(t);
                 // TODO: If defKnow.isTrue(t), we would have a TF that could be propagated as well
-            } else if (unknowns == 1 && defKnow.isTrue(t)) {
-                // (2) If there is a single r with ? and the defined rel has T, we can propagate T to r.
+            } else if (falses == deps.size() - 1 && defKnow.isStrictlyTrue(t)) {
+                // ... all but one dep is F but the union is T, so the last remaining one dep must also be T
                 for (int i = 0; i < kList.size(); i++) {
                     if (kList.get(i).isUnknown(t)) {
                         deltas.get(i).getEnabledSet().add(t);
@@ -58,7 +58,7 @@ public class UnionConstraint extends DerivedRelationConstraint {
                 }
             }
         }
-        return null;
+        return deltas;
     }
 
     // This method propagates knowledge top-down
@@ -80,20 +80,20 @@ public class UnionConstraint extends DerivedRelationConstraint {
         List<Knowledge> kList = new ArrayList<>(Lists.transform(deps, know::get)); // We copy to avoid repeated lookups
         for (Tuple t : delta.getEnabledSet()) {
             // If 2+ relations have unknown knowledge ? about <t>, then we cannot propagate
-            // If exactly 1 has entry ?, then we can change it to T
+            // If exactly 1 has entry ?, and all others are F, we can propagate T downwards
             for (int i = 0; i < kList.size(); i++) {
-                if (kList.get(i).getMaySet().contains(t)) {
-                    if (kList.subList(i + 1, kList.size()).stream().noneMatch(k -> k.getMaySet().contains(t))) {
-                        // Exactly 1 relation has ?
+                if (!kList.get(i).isFalse(t)) {
+                    if (kList.subList(i + 1, kList.size()).stream().allMatch(k -> k.isFalse(t))) {
+                        // Exactly 1 relation has ?, all others are at least F
                         deltas.get(i).getEnabledSet().add(t);
                     } else {
-                        // We have found 2 relations with ? entries, so we cannot propagate
+                        // We have found 2 relations that are not false entries (? or T), so we cannot propagate
                         break;
                     }
                 }
             }
         }
-        return null;
+        return deltas;
     }
 
     @Override

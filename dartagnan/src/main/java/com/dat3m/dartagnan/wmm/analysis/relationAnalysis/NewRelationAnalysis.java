@@ -91,7 +91,7 @@ public class NewRelationAnalysis {
                     if (derived.getMaySet().contains(t)) {
                         deltaMay.add(t);
                     } else {
-                        full.getMaySet().add(t); // We derived more knowledge and can update <full>
+                        full.getMaySet().remove(t); // We derived more knowledge and can update <full>
                     }
                 }
 

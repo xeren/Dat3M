@@ -59,16 +59,24 @@ public class Acyclic extends AxiomaticConstraint {
 
         // Disable all edges opposing the transitive min set
         this.transitiveMinSet = transMinSet;
-        return Collections.singletonList(new Knowledge.Delta(transitiveMinSet, new TupleSet()));
+        return Collections.singletonList(new Knowledge.Delta(transitiveMinSet.inverse(), new TupleSet()));
     }
 
     @Override
     public List<Knowledge.Delta> computeIncrementalKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
-        //TODO
-        // (1) add <delta.getEnabledSet()> to <transitiveMinSet>
-        // (2) compute the new transitive closure
-        // (3) disable the inverse of added edges
-        // NOTE: delta.getDisabledSet() is irrelevant, we cannot every derive new knowledge from that
-        return Collections.singletonList(new Knowledge.Delta());
+        assert  changed == getConstrainedRelation();
+        Knowledge.Delta newDelta = new Knowledge.Delta();
+        if (delta.getEnabledSet().isEmpty()) {
+            // We can only derive new knowledge from added edges, so if we have none, we return early
+            return Collections.singletonList(newDelta);
+        }
+
+        for (Tuple t : delta.getEnabledSet()) {
+            if (transitiveMinSet.add(t)) {
+                newDelta.getDisabledSet().add(t.getInverse());
+            }
+        }
+        //TODO: we should transitively close <transitiveMinSet>
+        return Collections.singletonList(newDelta);
     }
 }

@@ -51,17 +51,21 @@ public class Knowledge {
 
     // ======================== Utility ========================
 
+
+    public boolean isFalse(Tuple t) {return !maySet.contains(t); }
+    public boolean isTrue(Tuple t) { return mustSet.contains(t); }
+
     public boolean isUnknown(Tuple t) {
-        return maySet.contains(t) && !mustSet.contains(t);
+        return !isFalse(t) && !isTrue(t);
     }
-    public boolean isTrue(Tuple t) {
-        return mustSet.contains(t) && maySet.contains(t);
+    public boolean isStrictlyTrue(Tuple t) {
+        return isTrue(t) && !isFalse(t);
     }
-    public boolean isFalse(Tuple t) {
-        return !maySet.contains(t) && !mustSet.contains(t);
+    public boolean isStrictlyFalse(Tuple t) {
+        return isFalse(t) && !isTrue(t);
     }
     public boolean isContradicting(Tuple t) {
-        return !maySet.contains(t) && mustSet.contains(t);
+        return isFalse(t) && isTrue(t);
     }
 
     public SetDelta asSetDelta() {
@@ -87,6 +91,10 @@ public class Knowledge {
                 delta.disabledSet.stream().filter(maySet::remove).collect(TupleSet.collector()),
                 delta.enabledSet.stream().filter(mustSet::add).collect(TupleSet.collector())
         );
+    }
+
+    public Knowledge copy() {
+        return new Knowledge(new TupleSet(maySet), new TupleSet(mustSet));
     }
 
     // =========================== Delta classes ===========================
