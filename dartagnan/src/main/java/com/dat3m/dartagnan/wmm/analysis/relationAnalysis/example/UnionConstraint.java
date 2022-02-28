@@ -112,4 +112,9 @@ public class UnionConstraint extends DerivedRelationConstraint {
         assert getDependencies().contains(changed);
         return delta; // Changes are propagated as they are for union
     }
+
+    @Override
+    public List<TupleSet> propagateActiveSet(TupleSet activeSet, Map<Relation, Knowledge> know) {
+        return Lists.transform(getDependencies(), dep -> activeSet);
+    }
 }

@@ -3,19 +3,18 @@ package com.dat3m.dartagnan.wmm.analysis.relationAnalysis.example;
 import com.dat3m.dartagnan.program.analysis.ExecutionAnalysis;
 import com.dat3m.dartagnan.program.event.Tag;
 import com.dat3m.dartagnan.program.event.core.Event;
+import com.dat3m.dartagnan.utils.dependable.DependencyGraph;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Knowledge;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.AxiomaticConstraint;
+import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.CATConstraint;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import com.google.common.collect.Sets;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
-public class Acyclic extends AxiomaticConstraint {
+public class Acyclic extends CATConstraint {
 
     private TupleSet transitiveMinSet;
 
@@ -78,5 +77,38 @@ public class Acyclic extends AxiomaticConstraint {
         }
         //TODO: we should transitively close <transitiveMinSet>
         return Collections.singletonList(newDelta);
+    }
+
+    @Override
+    public List<TupleSet> computeActiveSets(Map<Relation, Knowledge> know) {
+        // ====== Construct [Event -> Successor] mapping ======
+        Map<Event, Collection<Event>> succMap = new HashMap<>();
+        TupleSet relMay = know.get(rel).getMaySet();
+        for (Tuple t : relMay) {
+            succMap.computeIfAbsent(t.getFirst(), key -> new ArrayList<>()).add(t.getSecond());
+        }
+
+        // ====== Compute SCCs ======
+        DependencyGraph<Event> depGraph = DependencyGraph.from(succMap.keySet(), succMap);
+        TupleSet activeSet = new TupleSet();
+        for (Set<DependencyGraph<Event>.Node> scc : depGraph.getSCCs()) {
+            for (DependencyGraph<Event>.Node node1 : scc) {
+                for (DependencyGraph<Event>.Node node2 : scc) {
+                    Tuple t = new Tuple(node1.getContent(), node2.getContent());
+                    if (relMay.contains(t)) {
+                        activeSet.add(t);
+                    }
+                }
+            }
+        }
+
+        //TODO: Recompute <transitiveMinSet> as it may be outdated
+        // and worse yet, it may be actually wrong (though this should not happen)
+        TupleSet reduct = TupleSet.approximateTransitiveMustReduction(
+                analysisContext.get(ExecutionAnalysis.class), transitiveMinSet);
+        // Remove (must(r)+ \ reduct(must(r)+)
+        activeSet.removeAll(Sets.difference(transitiveMinSet, reduct));
+
+        return Collections.singletonList(activeSet);
     }
 }

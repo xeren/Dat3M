@@ -126,4 +126,10 @@ public class IntersectionConstraint extends DerivedRelationConstraint {
         }
         return intersectDelta;
     }
+
+    @Override
+    public List<TupleSet> propagateActiveSet(TupleSet activeSet, Map<Relation, Knowledge> know) {
+        return Lists.transform(getDependencies(), dep -> activeSet);
+    }
+
 }

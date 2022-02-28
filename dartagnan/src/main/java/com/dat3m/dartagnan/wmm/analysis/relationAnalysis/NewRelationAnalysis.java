@@ -3,10 +3,10 @@ package com.dat3m.dartagnan.wmm.analysis.relationAnalysis;
 import com.dat3m.dartagnan.utils.dependable.DependencyGraph;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.verification.VerificationTask;
+import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.AxiomaticConstraint;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.Constraint;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.DefiningConstraint;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.Relation;
-import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.google.common.collect.Sets;
 
@@ -38,6 +38,10 @@ public class NewRelationAnalysis {
 
     private Map<Relation, Knowledge.Delta> discrepancyMap = new HashMap<>();
 
+    private Set<Constraint> getConstraintsForRelation(Relation rel) {
+        return relToConstraintsMap.get(rel);
+    }
+
 
     public NewRelationAnalysis() {
         //TODO: Take input parameters
@@ -49,74 +53,100 @@ public class NewRelationAnalysis {
         dependencyGraph = DependencyGraph.from(relations);
     }
 
-    private Set<Constraint> getConstraintsForRelation(Relation rel) {
-        return relToConstraintsMap.get(rel);
-    }
 
+    // =====================================================================================
+    // ============================== Knowledge computation ================================
+    // =====================================================================================
 
-    public Map<Relation, Knowledge> algorithm(VerificationTask task, Context analysisContext) {
+    /**
+     * This method computes the full knowledge about all relations of the memory model
+     * induced by its constraints.
+     * The computation is mostly side-effect free with the exception of
+     * initializing all constraints to the given task and analysis context.
+     * @param task The verification task which forms the basis of computation
+     * @param analysisContext The analyses performed about the task (e.g. alias analysis, cf analysis etc.)
+     * @return a mapping [Relation -> Knowledge] that maps each relation to the computed knowledge
+     */
+    public Map<Relation, Knowledge> computeKnowledge(VerificationTask task, Context analysisContext) {
         constraints.forEach(c -> c.initializeToTask(task, analysisContext));
 
-        Map<Relation, Knowledge> know = computeInitialKnowledge();
-        computeKnowledgeClosure(know);
-        this.discrepancyMap = computeDiscrepancyAndUpdate(know);
+        Map<Relation, Knowledge> know = computeInitialKnowledge(); // Initial bottom-up computation
+        computeKnowledgeClosure(know); // Iterative refinement via propagation
+        updateBottomUpDiscrepancies(know); // Final bottom-up propagation
         return know;
     }
 
-
-    private Map<Relation, Knowledge.Delta> computeDiscrepancyAndUpdate(Map<Relation, Knowledge> know) {
-        // Proceed bottom-up and
-        // (1) compute discrepancy between knowledge of strata
-        // (2) update information of upper stratum if lower stratum has more knowledge (could happen due to incomplete propagation)
-        Map<Relation, Knowledge.Delta> discrepancyMap = new HashMap<>(know.size());
-
+    private void updateBottomUpDiscrepancies(Map<Relation, Knowledge> know)  {
+        // Performs a final bottom-up knowledge propagation to make sure that the knowledge in <know>
+        // is at least as accurate as the knowledge obtained from the defining constraints
+        // NOTE: This is only needed in the presence of fixed points because the knowledge closure
+        // does not take lfp semantics into account when propagating.
         for (Set<DependencyGraph<Relation>.Node> scc : dependencyGraph.getSCCs()) {
             Set<Relation> stratum = scc.stream().map(DependencyGraph.Node::getContent).collect(Collectors.toSet());
             if (stratum.size() == 1 && stratum.stream().findAny().get().getDependencies().isEmpty()) {
-                discrepancyMap.put(stratum.stream().findAny().get(), new Knowledge.Delta());
+                continue; // We have a base relation, so we keep the current knowledge
+            }
+            // We have a derived relation
+            Map<Relation, Knowledge> knowCopy = new HashMap<>(know); // Copy since the next method updates in-place
+            computeDefiningKnowledge(stratum, knowCopy);
+            for (Relation rel : stratum) {
+                Knowledge full = know.get(rel);
+                Knowledge derived = knowCopy.get(rel);
+                full.getMaySet().removeIf(t -> !derived.getMaySet().contains(t));
+                full.getMustSet().addAll(derived.getMustSet());
+            }
+        }
+    }
+
+
+    private Map<Relation, Knowledge.Delta> computeDeltaMap(Map<Relation, Knowledge> know) {
+        // Proceeds bottom-up and compute discrepancy between knowledge of strata
+        // This method is similar to <updateBottomUpDiscrepancies> but it assumes that
+        // the knowledge discrepancies are positive (as enforced by the <updateBottomUpDiscrepancies>)
+        // meaning that "know[r] = defKnow[r] join delta[r]"
+
+        Map<Relation, Knowledge.Delta> deltaMap = new HashMap<>(know.size());
+        for (Set<DependencyGraph<Relation>.Node> scc : dependencyGraph.getSCCs()) {
+            Set<Relation> stratum = scc.stream().map(DependencyGraph.Node::getContent).collect(Collectors.toSet());
+            if (stratum.size() == 1 && stratum.stream().findAny().get().getDependencies().isEmpty()) {
+                deltaMap.put(stratum.stream().findAny().get(), new Knowledge.Delta());
                 continue; // We have a base relation, so we keep the current knowledge
             }
             // We have a derived relation
             Map<Relation, Knowledge> knowCopy = new HashMap<>(know); // Copy since the next method updates in-place
             computeDefiningKnowledge(stratum, knowCopy);
 
-            // <knowCopy> should contain less knowledge than <know> (if it contains more, we can add it to <know>)
+            // <knowCopy> should contain less knowledge than <know>
             for (Relation rel : stratum) {
                 Knowledge full = know.get(rel);
                 Knowledge derived = knowCopy.get(rel);
-                TupleSet deltaMay = new TupleSet();
-                TupleSet deltaMust = new TupleSet();
-
-                for (Tuple t : Sets.symmetricDifference(full.getMaySet(), derived.getMaySet())) {
-                    if (derived.getMaySet().contains(t)) {
-                        deltaMay.add(t);
-                    } else {
-                        full.getMaySet().remove(t); // We derived more knowledge and can update <full>
-                    }
-                }
-
-                for (Tuple t : Sets.symmetricDifference(full.getMustSet(), derived.getMustSet())) {
-                    if (full.getMustSet().contains(t)) {
-                        deltaMust.add(t);
-                    } else {
-                        full.getMustSet().add(t); // We derived more knowledge and can update <full>
-                    }
-                }
-
-                discrepancyMap.put(rel, new Knowledge.Delta(deltaMay, deltaMust));
+                TupleSet deltaMay = new TupleSet(Sets.difference(derived.getMaySet(), full.getMaySet()));
+                TupleSet deltaMust = new TupleSet(Sets.difference(full.getMustSet(), derived.getMustSet()));
+                deltaMap.put(rel, new Knowledge.Delta(deltaMay, deltaMust));
             }
         }
 
-        return discrepancyMap;
+        return deltaMap;
     }
 
 
-    // ======================= Derivations and defining knowledge =======================
+    // -------------------------- Derivations and defining knowledge --------------------------
+
+    private Map<Relation, Knowledge> computeInitialKnowledge() {
+        // Computes the initial knowledge by going over all strata in topological order
+        Map<Relation, Knowledge> know = new HashMap<>(relations.size());
+        for (Set<DependencyGraph<Relation>.Node> scc : dependencyGraph.getSCCs()) {
+            Set<Relation> stratum = scc.stream().map(DependencyGraph.Node::getContent).collect(Collectors.toSet());
+            computeDefiningKnowledge(stratum, know);
+        }
+
+        return know;
+    }
 
     /**
      * Computes the defining knowledge of a single stratum of relations, given knowledge about the previous strata.
      * Updates the provided knowledge map with the knowledge about the stratum
-     * (overwrites all knowledge about that stratum!)
+     * (overwrites all previous knowledge about that stratum!)
      * Unlike the typical knowledge propagation, this takes into account the lfp semantics
      * of fixed points.
      * @param stratum The non-empty stratum of relations (a single SCC in the dependency graph)
@@ -162,17 +192,6 @@ public class NewRelationAnalysis {
         }
     }
 
-    private Map<Relation, Knowledge> computeInitialKnowledge() {
-        // Computes the initial knowledge by going over all strata in topological order
-        Map<Relation, Knowledge> know = new HashMap<>(relations.size());
-        for (Set<DependencyGraph<Relation>.Node> scc : dependencyGraph.getSCCs()) {
-            Set<Relation> stratum = scc.stream().map(DependencyGraph.Node::getContent).collect(Collectors.toSet());
-            computeDefiningKnowledge(stratum, know);
-        }
-
-        return know;
-    }
-
     private List<DerivationTask> processDerivationTask(DerivationTask task, Map<Relation, Knowledge> curKnow) {
         Relation target = task.to;
         Relation from = task.from;
@@ -193,7 +212,7 @@ public class NewRelationAnalysis {
 
 
 
-    // ======================= Knowledge closure =======================
+    // --------------------------  Knowledge closure --------------------------
 
 
     private void computeKnowledgeClosure(Map<Relation, Knowledge> know) {
@@ -216,12 +235,12 @@ public class NewRelationAnalysis {
         // Initialization phase
         List<ConstraintToRelTask> newTasks = new ArrayList<>();
         for (Constraint c : constraints) {
-            if (c instanceof DefiningConstraint) {
+            if (!(c instanceof AxiomaticConstraint)) {
                 // We assume that all defining constraints have been evaluated before
                 // to get the initial approximation
                 continue;
             }
-            List<Knowledge.Delta> deltas = c.computeInitialKnowledgeClosure(know);
+            List<Knowledge.Delta> deltas = ((AxiomaticConstraint)c).computeInitialKnowledgeClosure(know);
             List<Relation> rels = c.getConstrainedRelations();
             assert deltas.size() == rels.size();
 
@@ -266,6 +285,74 @@ public class NewRelationAnalysis {
 
 
 
+    // =====================================================================================
+    // ============================== Active set computation ===============================
+    // =====================================================================================
+
+    public Map<Relation, TupleSet> computeActiveSets(Map<Relation, Knowledge> know) {
+        Queue<ActiveSetTask> propTasks = new ArrayDeque<>();
+        Map<Relation, TupleSet> activeSetMap = new HashMap<>(relations.size());
+        relations.forEach(rel -> activeSetMap.put(rel, new TupleSet()));
+
+        // (1) Traverse all axiomatic constraints and get their active sets
+        for (Constraint constraint : constraints) {
+            if (!(constraint instanceof AxiomaticConstraint)) {
+                continue;
+            }
+            AxiomaticConstraint axConstr = (AxiomaticConstraint) constraint;
+            List<Relation> deps = axConstr.getConstrainedRelations();
+            List<TupleSet> activeSets = axConstr.computeActiveSets(know);
+            for (int i = 0; i < deps.size(); i++) {
+                Knowledge kRel = know.get(deps.get(i));
+                // We only propagate along unknowns.
+                TupleSet activeSet = new TupleSet(Sets.filter(activeSets.get(i), kRel::isUnknown));
+                if (!activeSet.isEmpty()) {
+                    propTasks.add(new ActiveSetTask(axConstr, deps.get(i), activeSet));
+                }
+            }
+        }
+
+        // (2) Compute active sets due to discrepancies
+        Map<Relation, Knowledge.Delta> deltaMap = computeDeltaMap(know);
+        for (Relation rel : relations) {
+            Knowledge.Delta delta = deltaMap.get(rel);
+            if (!delta.isEmpty()) {
+                TupleSet differences = new TupleSet(Sets.union(delta.getDisabledSet(), delta.getEnabledSet()));
+                List<Relation> deps = rel.getDefiningConstraint().getDependencies();
+                List<TupleSet> propagations = rel.getDefiningConstraint().propagateActiveSet(differences, know);
+                for (int i = 0; i < deps.size(); i++) {
+                    propTasks.add(new ActiveSetTask(rel.getDefiningConstraint(), deps.get(i), propagations.get(i)));
+                }
+            }
+        }
+
+
+        // (3) Propagate active sets
+        while (!propTasks.isEmpty()) {
+            ActiveSetTask task = propTasks.poll();
+            Relation rel = task.to;
+            TupleSet curActiveSet = activeSetMap.get(rel);
+            TupleSet change = new TupleSet(Sets.difference(task.delta, curActiveSet));
+            DefiningConstraint defConstr = rel.getDefiningConstraint();
+            List<Relation> deps = defConstr.getDependencies();
+
+            if (change.isEmpty()) {
+                continue;
+            }
+
+            curActiveSet.addAll(change);
+            List<TupleSet> newActiveSets = defConstr.propagateActiveSet(change, know);
+            for (int i = 0; i < newActiveSets.size(); i++) {
+                TupleSet toPropagate = new TupleSet(Sets.filter(newActiveSets.get(i), know.get(deps.get(i))::isUnknown));
+                propTasks.add(new ActiveSetTask(defConstr, deps.get(i), toPropagate));
+            }
+        }
+
+        return activeSetMap;
+
+
+    }
+
 
     // =================================== Internal Task classes ============================
     // TODO: In Java 14+, we could actually use records here
@@ -302,6 +389,12 @@ public class NewRelationAnalysis {
         public ConstraintToRelTask(Constraint from, Relation to, Knowledge.Delta delta) {
             super(from, to, delta);
         }
+    }
+
+
+    // --------------------- Active Sets --------------------
+    private static class ActiveSetTask extends Task<Constraint, Relation, TupleSet> {
+        public ActiveSetTask(Constraint from, Relation to, TupleSet tuples) { super(from, to, tuples);}
     }
 
 }

@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm;
 
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Knowledge;
+import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 import java.util.Collections;
 import java.util.List;
@@ -27,5 +28,10 @@ public abstract class BaseRelationConstraint extends AbstractConstraint implemen
     @Override
     public Knowledge.SetDelta computeIncrementalDefiningKnowledge(Relation changed, Knowledge.SetDelta delta, Map<Relation, Knowledge> know) {
         return new Knowledge.SetDelta(); // This method is never called for base relations as they are never part of an SCC
+    }
+
+    @Override
+    public List<TupleSet> propagateActiveSet(TupleSet activeSet, Map<Relation, Knowledge> know) {
+        return Collections.emptyList();
     }
 }

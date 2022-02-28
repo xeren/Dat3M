@@ -1,16 +1,17 @@
 package com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm;
 
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Knowledge;
+import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /*
     DefiningConstraints are of two types:
         - Base relation constraints
         - Derived relation constraints
-    Each relation has exactly one associated defining constraint
+    Each relation has exactly one associated defining constraint.
+    A defining constraint is responsible for creating SMT-variables
  */
 public interface DefiningConstraint extends Constraint {
 
@@ -34,11 +35,8 @@ public interface DefiningConstraint extends Constraint {
     // recursive relations.
     Knowledge.SetDelta computeIncrementalDefiningKnowledge(Relation changed, Knowledge.SetDelta delta, Map<Relation, Knowledge> know);
 
+    // The evaluation of <activeSet> depends on evaluations of tuples of this constraint's dependencies
+    // This method computes the tuples of each immediate dependency that can affect the evaluation of <activeSet>
+    List<TupleSet> propagateActiveSet(TupleSet activeSet, Map<Relation, Knowledge> know);
 
-    // A default implementation cause this method does not get called for defining constraints
-    @Override
-    default List<Knowledge.Delta> computeInitialKnowledgeClosure(Map<Relation, Knowledge> know) {
-        Knowledge.Delta empty = new Knowledge.Delta();
-        return getConstrainedRelations().stream().map(r -> empty).collect(Collectors.toList());
-    }
 }
