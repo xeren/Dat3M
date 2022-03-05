@@ -3,11 +3,9 @@ package com.dat3m.dartagnan.wmm.analysis.relationAnalysis;
 import com.dat3m.dartagnan.utils.dependable.DependencyGraph;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.verification.VerificationTask;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.AxiomaticConstraint;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.Constraint;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.DefiningConstraint;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.Relation;
+import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.*;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 import java.util.*;
@@ -36,15 +34,17 @@ public class NewRelationAnalysis {
     private final DependencyGraph<Relation> dependencyGraph;
     private final Map<Relation, Set<Constraint>> relToConstraintsMap;
 
-    private Map<Relation, Knowledge.Delta> discrepancyMap = new HashMap<>();
-
     private Set<Constraint> getConstraintsForRelation(Relation rel) {
         return relToConstraintsMap.get(rel);
     }
 
 
-    public NewRelationAnalysis() {
+    public NewRelationAnalysis(NewWmm wmm) {
         //TODO: Take input parameters
+
+        this.relations.addAll(wmm.getRelations());
+        this.constraints.addAll(wmm.getAxiomaticConstraints());
+        this.constraints.addAll(Lists.transform(relations, Relation::getDefinition));
 
         relToConstraintsMap = new HashMap<>(relations.size());
         relations.forEach(r -> relToConstraintsMap.put(r,
@@ -154,14 +154,31 @@ public class NewRelationAnalysis {
      */
     private void computeDefiningKnowledge(Set<Relation> stratum, Map<Relation, Knowledge> know) {
         assert !stratum.isEmpty();
-        if (stratum.size() == 1) {
+        if (stratum.size() == 1 && !stratum.stream().findAny().get().isRecursive()) {
             // Stratum with single relation
             Relation rel = stratum.stream().findAny().get();
-            know.put(rel, rel.getDefiningConstraint().computeInitialDefiningKnowledge(know));
+            know.put(rel, rel.getDefinition().computeInitialDefiningKnowledge(know));
         } else {
             // Stratum with mutually recursive relations, so we need to compute the lfp
 
             // Initialize all relations in the stratum
+            //TODO: Actually, it would be better to compute a minimal "Feedback vertex set (FVS)"
+            // and only initialize those relations to "empty"
+            for (Relation rel : stratum) {
+                know.put(rel, Knowledge.newEmptySet());
+            }
+            for (Relation rel : stratum) {
+                know.put(rel, rel.getDefinition().computeInitialDefiningKnowledge(know));
+            }
+
+            Queue<DerivationTask> workQueue = new ArrayDeque<>();
+            stratum.forEach(r -> {
+                for (Relation dep : r.getDependencies()) {
+                    workQueue.add(new DerivationTask(dep, r, know.get(dep).asSetDelta()));
+                }
+            });
+
+            /*
             know.keySet().removeAll(stratum);
             Queue<Relation> initQueue = new ArrayDeque<>(stratum);
             while (!initQueue.isEmpty()) {
@@ -169,7 +186,7 @@ public class NewRelationAnalysis {
                 if (rel.isRecursive()) {
                     know.put(rel, Knowledge.newEmptySet());
                 } else if (know.keySet().containsAll(rel.getDependencies())) {
-                    know.put(rel, rel.getDefiningConstraint().computeInitialDefiningKnowledge(know));
+                    know.put(rel, rel.getDefinition().computeInitialDefiningKnowledge(know));
                 } else {
                     initQueue.add(rel);
                 }
@@ -182,6 +199,7 @@ public class NewRelationAnalysis {
                     workQueue.add(new DerivationTask(dep, r, know.get(dep).asSetDelta()));
                 }
             });
+            */
 
             // Propagate within the stratum until the lfp is reached
             while (!workQueue.isEmpty()) {
@@ -197,7 +215,7 @@ public class NewRelationAnalysis {
         Relation from = task.from;
 
         Knowledge.SetDelta newDelta = curKnow.get(target).joinSet(
-                target.getDefiningConstraint().computeIncrementalDefiningKnowledge(from, task.delta, curKnow)
+                target.getDefinition().computeIncrementalDefiningKnowledge(from, task.delta, curKnow)
         );
         if (newDelta.isEmpty()) {
             // Nothing has changed, so we don't create new tasks
@@ -240,8 +258,11 @@ public class NewRelationAnalysis {
                 // to get the initial approximation
                 continue;
             }
-            List<Knowledge.Delta> deltas = ((AxiomaticConstraint)c).computeInitialKnowledgeClosure(know);
             List<Relation> rels = c.getConstrainedRelations();
+            List<Knowledge.Delta> deltas = ((AxiomaticConstraint)c).computeInitialKnowledgeClosure(know);
+            if (deltas.isEmpty()) {
+                continue;
+            }
             assert deltas.size() == rels.size();
 
             for (int i = 0; i < deltas.size(); i++) {
@@ -271,6 +292,9 @@ public class NewRelationAnalysis {
         Constraint constr = task.to;
         List<Relation> rels = constr.getConstrainedRelations();
         List<Knowledge.Delta> newDeltas = constr.computeIncrementalKnowledgeClosure(task.from, task.delta, know);
+        if (newDeltas.isEmpty()) {
+            return Collections.emptyList();
+        }
         assert rels.size() == newDeltas.size();
 
         List<ConstraintToRelTask> newTasks = new ArrayList<>(rels.size());
@@ -296,18 +320,17 @@ public class NewRelationAnalysis {
 
         // (1) Traverse all axiomatic constraints and get their active sets
         for (Constraint constraint : constraints) {
-            if (!(constraint instanceof AxiomaticConstraint)) {
+            List<Relation> deps = constraint.getConstrainedRelations();
+            List<TupleSet> activeSets = constraint.computeActiveSets(know);
+            if (activeSets.isEmpty()) {
                 continue;
             }
-            AxiomaticConstraint axConstr = (AxiomaticConstraint) constraint;
-            List<Relation> deps = axConstr.getConstrainedRelations();
-            List<TupleSet> activeSets = axConstr.computeActiveSets(know);
             for (int i = 0; i < deps.size(); i++) {
                 Knowledge kRel = know.get(deps.get(i));
                 // We only propagate along unknowns.
                 TupleSet activeSet = new TupleSet(Sets.filter(activeSets.get(i), kRel::isUnknown));
                 if (!activeSet.isEmpty()) {
-                    propTasks.add(new ActiveSetTask(axConstr, deps.get(i), activeSet));
+                    propTasks.add(new ActiveSetTask(constraint, deps.get(i), activeSet));
                 }
             }
         }
@@ -318,10 +341,10 @@ public class NewRelationAnalysis {
             Knowledge.Delta delta = deltaMap.get(rel);
             if (!delta.isEmpty()) {
                 TupleSet differences = new TupleSet(Sets.union(delta.getDisabledSet(), delta.getEnabledSet()));
-                List<Relation> deps = rel.getDefiningConstraint().getDependencies();
-                List<TupleSet> propagations = rel.getDefiningConstraint().propagateActiveSet(differences, know);
+                List<Relation> deps = rel.getDefinition().getDependencies();
+                List<TupleSet> propagations = rel.getDefinition().propagateActiveSet(differences, know);
                 for (int i = 0; i < deps.size(); i++) {
-                    propTasks.add(new ActiveSetTask(rel.getDefiningConstraint(), deps.get(i), propagations.get(i)));
+                    propTasks.add(new ActiveSetTask(rel.getDefinition(), deps.get(i), propagations.get(i)));
                 }
             }
         }
@@ -333,7 +356,7 @@ public class NewRelationAnalysis {
             Relation rel = task.to;
             TupleSet curActiveSet = activeSetMap.get(rel);
             TupleSet change = new TupleSet(Sets.difference(task.delta, curActiveSet));
-            DefiningConstraint defConstr = rel.getDefiningConstraint();
+            Definition defConstr = rel.getDefinition();
             List<Relation> deps = defConstr.getDependencies();
 
             if (change.isEmpty()) {

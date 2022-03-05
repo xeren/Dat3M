@@ -4,6 +4,7 @@ package com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Knowledge;
+import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 import java.util.List;
 import java.util.Map;
@@ -13,8 +14,8 @@ import java.util.Map;
 /*
     The Constraint interface is the core component of the Relation Analysis.
     Its implementation can be roughly categorized into two categories:
-        - Defining constraints (for base relations and derived relations)
-        - Non-defining constraints (e.g. the CAT axioms, assumptions, witnesses, symmetries...)
+        - Definitions (for base relations and derived relations)
+        - Axioms (e.g. the CAT axioms, assumptions, witnesses, symmetries...)
  */
 public interface Constraint {
 
@@ -34,6 +35,14 @@ public interface Constraint {
     //      (or larger than the initial knowledge (1) for the very first call).
     List<Knowledge.Delta> computeIncrementalKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know);
 
+    // This method computes the set of tuples the Constraint depends on (for each single dependency)
+    // PRECONDITIONS:
+    // - The method can assume that the given knowledge <know> is reliable and that AT LEAST this knowledge
+    //   will get provided in a subsequent call to <encode>
+    // - The method may NOT assume that the given <know> is in any way related to previously computed knowledge
+    //   via any of this Constraint's methods.
+    //   For all intents and purposes, <know> may have been guessed non-deterministically.
+    List<TupleSet> computeActiveSets(Map<Relation, Knowledge> know);
 
 }
 

@@ -5,8 +5,9 @@ import com.dat3m.dartagnan.program.event.core.Event;
 import com.dat3m.dartagnan.program.event.core.MemEvent;
 import com.dat3m.dartagnan.program.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Knowledge;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.BaseRelationConstraint;
+import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.BaseDefinition;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.Relation;
+import com.dat3m.dartagnan.wmm.relation.RelationNameRepository;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
@@ -17,16 +18,27 @@ import java.util.Map;
 import static com.dat3m.dartagnan.program.event.Tag.READ;
 import static com.dat3m.dartagnan.program.event.Tag.WRITE;
 
-public class Rf extends BaseRelationConstraint {
+public class ReadFrom extends BaseDefinition {
 
-    public Rf(Relation baseRel) {
+    public ReadFrom(Relation baseRel) {
         super(baseRel);
     }
 
     @Override
+    public String getTerm() {
+        return "__" + RelationNameRepository.RF;
+    }
+
+    @Override
     public List<Knowledge.Delta> computeIncrementalKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
-        return Collections.singletonList(new Knowledge.Delta());
+        return Collections.emptyList();
         // One could check if there is only a single possible rf-edge remaining and set it to T.
+        // Or if some rf-edge is T, then one can disable other read froms
+    }
+
+    @Override
+    public List<TupleSet> computeActiveSets(Map<Relation, Knowledge> know) {
+        return Collections.singletonList(know.get(baseRel).getMaySet());
     }
 
     @Override

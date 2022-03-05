@@ -8,11 +8,16 @@ import java.util.List;
 import java.util.Map;
 
 
-public abstract class BaseRelationConstraint extends AbstractConstraint implements DefiningConstraint {
+public abstract class BaseDefinition extends AbstractConstraint implements Definition {
     protected final Relation baseRel;
 
-    public BaseRelationConstraint(Relation baseRel) {
+    public BaseDefinition(Relation baseRel) {
         this.baseRel = baseRel;
+    }
+
+    @Override
+    public String toString() {
+        return getTerm();
     }
 
     @Override
@@ -34,4 +39,5 @@ public abstract class BaseRelationConstraint extends AbstractConstraint implemen
     public List<TupleSet> propagateActiveSet(TupleSet activeSet, Map<Relation, Knowledge> know) {
         return Collections.emptyList();
     }
+
 }

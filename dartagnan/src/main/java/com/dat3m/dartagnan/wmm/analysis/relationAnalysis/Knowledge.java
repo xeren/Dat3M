@@ -52,6 +52,11 @@ public class Knowledge {
     // ======================== Utility ========================
 
 
+    @Override
+    public String toString() {
+        return String.format("(must: %s, may: %s)", mustSet.size(), maySet.size());
+    }
+
     public boolean isFalse(Tuple t) {return !maySet.contains(t); }
     public boolean isTrue(Tuple t) { return mustSet.contains(t); }
 

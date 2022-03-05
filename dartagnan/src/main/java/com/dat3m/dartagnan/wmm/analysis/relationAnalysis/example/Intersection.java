@@ -1,37 +1,41 @@
 package com.dat3m.dartagnan.wmm.analysis.relationAnalysis.example;
 
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Knowledge;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.DerivedRelationConstraint;
+import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.DerivedDefinition;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-// Example implementation of an n-ary union
-public class IntersectionConstraint extends DerivedRelationConstraint {
+// Example implementation of an n-ary intersection
+public class Intersection extends DerivedDefinition {
 
-    public IntersectionConstraint(Relation definedRel, List<Relation> intersectRels) {
+    public Intersection(Relation definedRel, List<Relation> intersectRels) {
         super(definedRel, intersectRels);
     }
 
-    @Override
-    public List<Knowledge.Delta> computeIncrementalKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
-        assert getConstrainedRelations().contains(changed);
-        return changed == getDefinedRelation() ? topDownClosure(delta, know) : bottomUpClosure(delta, know);
+    public Intersection(Relation definedRel, Relation... dependencies) {
+        this(definedRel, Arrays.asList(dependencies));
     }
 
-    private List<Knowledge.Delta> bottomUpClosure(Knowledge.Delta delta, Map<Relation, Knowledge> know) {
+
+    @Override
+    protected String getOperationSymbol() { return " & "; }
+
+    @Override
+    protected List<Knowledge.Delta> bottomUpKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
         final List<Relation> deps = getDependencies();
         List<Knowledge.Delta> deltas = new ArrayList<>(deps.size() + 1);
         for (int i = 0; i < deps.size(); i++) {
             deltas.add(new Knowledge.Delta());
         }
         // disabled sets always propagate upwards
-        Knowledge.Delta defDelta = new Knowledge.Delta(delta.getDisabledSet(), delta.getDisabledSet());
+        Knowledge.Delta defDelta = new Knowledge.Delta(delta.getDisabledSet(), new TupleSet());
         deltas.add(defDelta);
 
         if (delta.getEnabledSet().isEmpty()) {
@@ -60,7 +64,8 @@ public class IntersectionConstraint extends DerivedRelationConstraint {
     }
 
     // This method propagates knowledge top-down
-    private List<Knowledge.Delta> topDownClosure(Knowledge.Delta delta, Map<Relation, Knowledge> know) {
+    @Override
+    protected List<Knowledge.Delta> topDownKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
         final List<Relation> deps = getDependencies();
         List<Knowledge.Delta> deltas = new ArrayList<>(deps.size() + 1);
         // --- Enabled sets ---
@@ -93,6 +98,7 @@ public class IntersectionConstraint extends DerivedRelationConstraint {
         }
         return deltas;
     }
+
 
     @Override
     public Knowledge computeInitialDefiningKnowledge(Map<Relation, Knowledge> know) {

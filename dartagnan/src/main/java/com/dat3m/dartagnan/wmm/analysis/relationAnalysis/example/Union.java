@@ -1,30 +1,33 @@
 package com.dat3m.dartagnan.wmm.analysis.relationAnalysis.example;
 
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Knowledge;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.DerivedRelationConstraint;
+import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.DerivedDefinition;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 // Example implementation of an n-ary union
-public class UnionConstraint extends DerivedRelationConstraint {
+public class Union extends DerivedDefinition {
 
-    public UnionConstraint(Relation definedRel, List<Relation> unionRels) {
+    public Union(Relation definedRel, List<Relation> unionRels) {
         super(definedRel, unionRels);
     }
 
+    public Union(Relation definedRel, Relation... dependencies) { this(definedRel, Arrays.asList(dependencies)); }
+
     @Override
-    public List<Knowledge.Delta> computeIncrementalKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
-        assert getConstrainedRelations().contains(changed);
-        return changed == getDefinedRelation() ? topDownClosure(delta, know) : bottomUpClosure(delta, know);
+    protected String getOperationSymbol() {
+        return " + ";
     }
 
-    private List<Knowledge.Delta> bottomUpClosure(Knowledge.Delta delta, Map<Relation, Knowledge> know) {
+    @Override
+    protected List<Knowledge.Delta> bottomUpKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
         final List<Relation> deps = getDependencies();
         List<Knowledge.Delta> deltas = new ArrayList<>(deps.size() + 1);
         for (int i = 0; i < deps.size(); i++) {
@@ -62,7 +65,8 @@ public class UnionConstraint extends DerivedRelationConstraint {
     }
 
     // This method propagates knowledge top-down
-    private List<Knowledge.Delta> topDownClosure(Knowledge.Delta delta, Map<Relation, Knowledge> know) {
+    @Override
+    protected List<Knowledge.Delta> topDownKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
         final List<Relation> deps = getDependencies();
         List<Knowledge.Delta> deltas = new ArrayList<>(deps.size() + 1);
         // --- Disabled sets ---

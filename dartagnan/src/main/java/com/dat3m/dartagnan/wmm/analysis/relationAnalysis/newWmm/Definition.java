@@ -13,7 +13,9 @@ import java.util.Map;
     Each relation has exactly one associated defining constraint.
     A defining constraint is responsible for creating SMT-variables
  */
-public interface DefiningConstraint extends Constraint {
+public interface Definition extends Constraint {
+
+    String getTerm();
 
     // This relation shall be the last element of <getConstrainedRelation>
     default Relation getDefinedRelation() {
@@ -31,8 +33,7 @@ public interface DefiningConstraint extends Constraint {
     // It can be assumed that the provided map does contain all these knowledges.
     Knowledge computeInitialDefiningKnowledge(Map<Relation, Knowledge> know);
 
-    // This is used to perform incremental computation of
-    // recursive relations.
+    // This is used to perform incremental computation of recursive relations.
     Knowledge.SetDelta computeIncrementalDefiningKnowledge(Relation changed, Knowledge.SetDelta delta, Map<Relation, Knowledge> know);
 
     // The evaluation of <activeSet> depends on evaluations of tuples of this constraint's dependencies

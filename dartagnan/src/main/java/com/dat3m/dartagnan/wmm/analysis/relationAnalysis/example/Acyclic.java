@@ -3,18 +3,20 @@ package com.dat3m.dartagnan.wmm.analysis.relationAnalysis.example;
 import com.dat3m.dartagnan.program.analysis.ExecutionAnalysis;
 import com.dat3m.dartagnan.program.event.Tag;
 import com.dat3m.dartagnan.program.event.core.Event;
+import com.dat3m.dartagnan.program.filter.FilterBasic;
 import com.dat3m.dartagnan.utils.dependable.DependencyGraph;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Knowledge;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.CATConstraint;
+import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.CATAxiom;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class Acyclic extends CATConstraint {
+public class Acyclic extends CATAxiom {
 
     private TupleSet transitiveMinSet;
 
@@ -31,7 +33,7 @@ public class Acyclic extends CATConstraint {
         List<Tuple> crossEdges = minSet.stream()
                 .filter(t -> t.isCrossThread() && !t.getFirst().is(Tag.INIT))
                 .collect(Collectors.toList());
-        TupleSet transMinSet = crossEdges.isEmpty() ? minSet : new TupleSet(minSet);
+        TupleSet transMinSet = new TupleSet(minSet);
         for (Tuple crossEdge : crossEdges) {
             Event e1 = crossEdge.getFirst();
             Event e2 = crossEdge.getSecond();
@@ -58,18 +60,23 @@ public class Acyclic extends CATConstraint {
 
         // Disable all edges opposing the transitive min set
         this.transitiveMinSet = transMinSet;
-        return Collections.singletonList(new Knowledge.Delta(transitiveMinSet.inverse(), new TupleSet()));
+        Knowledge.Delta delta = new Knowledge.Delta(new TupleSet(transitiveMinSet.inverse()), new TupleSet());
+        // Disable the diagonal
+        delta.getDisabledSet().addAll(
+                Lists.transform(task.getProgram().getCache().getEvents(FilterBasic.get(Tag.VISIBLE)), e -> new Tuple(e, e))
+        );
+        return Collections.singletonList(delta);
     }
 
     @Override
     public List<Knowledge.Delta> computeIncrementalKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
         assert  changed == getConstrainedRelation();
-        Knowledge.Delta newDelta = new Knowledge.Delta();
         if (delta.getEnabledSet().isEmpty()) {
             // We can only derive new knowledge from added edges, so if we have none, we return early
-            return Collections.singletonList(newDelta);
+            return Collections.emptyList();
         }
 
+        Knowledge.Delta newDelta = new Knowledge.Delta();
         for (Tuple t : delta.getEnabledSet()) {
             if (transitiveMinSet.add(t)) {
                 newDelta.getDisabledSet().add(t.getInverse());
