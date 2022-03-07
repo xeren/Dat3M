@@ -5,30 +5,21 @@ import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
-public abstract class DerivedDefinition extends AbstractConstraint implements Definition {
+public abstract class DerivedDefinition extends AbstractDefinition {
 
-    protected final Relation definedRel;
-    protected final List<Relation> constrainedRelations;
 
     public DerivedDefinition(Relation definedRel, List<Relation> dependencies) {
-        Preconditions.checkArgument(!dependencies.isEmpty(), "Derived relation must have dependencies.");
-        this.definedRel = Preconditions.checkNotNull(definedRel);
-        constrainedRelations = new ArrayList<>(dependencies);
-        constrainedRelations.add(definedRel);
+        super(definedRel, dependencies);
+        Preconditions.checkArgument(!dependencies.isEmpty(), "A derived relation must have dependencies.");
     }
 
     public DerivedDefinition(Relation definedRel, Relation... dependencies) {
         this(definedRel, Arrays.asList(dependencies));
-    }
-
-    @Override
-    public Relation getDefinedRelation() { return definedRel; }
-
-    @Override
-    public List<Relation> getConstrainedRelations() {
-        return constrainedRelations;
     }
 
     protected abstract String getOperationSymbol();
@@ -68,8 +59,8 @@ public abstract class DerivedDefinition extends AbstractConstraint implements De
 
     @Override
     public String toString() {
-        if (definedRel.isNamed()) {
-            return definedRel.getName() + " := " + getTerm();
+        if (definedRelation.isNamed()) {
+            return definedRelation.getName() + " := " + getTerm();
         } else {
             return getTerm();
         }

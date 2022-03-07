@@ -1,7 +1,9 @@
 package com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm;
 
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Knowledge;
+import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import org.sosy_lab.java_smt.api.BooleanFormula;
 
 import java.util.List;
 import java.util.Map;
@@ -39,5 +41,9 @@ public interface Definition extends Constraint {
     // The evaluation of <activeSet> depends on evaluations of tuples of this constraint's dependencies
     // This method computes the tuples of each immediate dependency that can affect the evaluation of <activeSet>
     List<TupleSet> propagateActiveSet(TupleSet activeSet, Map<Relation, Knowledge> know);
+
+    // Returns an SMTVar for <tuple>. This variable may not yet be encoded.
+    // It is allowed to use knowledge or any other information to
+    BooleanFormula getSMTVar(Tuple tuple, Knowledge kRel, EncodingContext ctx);
 
 }

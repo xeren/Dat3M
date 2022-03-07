@@ -3,8 +3,13 @@ package com.dat3m.dartagnan.wmm.analysis.relationAnalysis.example;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Knowledge;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.AbstractConstraint;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.AxiomaticConstraint;
+import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.EncodingContext;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.Relation;
+import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import com.google.common.collect.Sets;
+import org.sosy_lab.java_smt.api.BooleanFormula;
+import org.sosy_lab.java_smt.api.BooleanFormulaManager;
 
 import java.util.Collections;
 import java.util.List;
@@ -39,6 +44,24 @@ public class Assumption extends AbstractConstraint implements AxiomaticConstrain
 
     @Override
     public List<TupleSet> computeActiveSets(Map<Relation, Knowledge> know) {
-        return Collections.emptyList();
+        Knowledge kRel = know.get(relation);
+        // This should ideally be empty if the knowledge propagation worked as expected
+        return Collections.singletonList(new TupleSet(Sets.filter(Sets.union(enabled, disabled), kRel::isUnknown)));
+    }
+
+    @Override
+    public BooleanFormula encode(Map<Relation, Knowledge> know, EncodingContext ctx) {
+        Knowledge kRel = know.get(relation);
+        BooleanFormulaManager bmgr = ctx.getBmgr();
+        BooleanFormula enc = bmgr.makeTrue();
+
+        for (Tuple t : Sets.difference(enabled, kRel.getMustSet())) {
+            enc = bmgr.and(enc, bmgr.equivalence(relation.getSMTVar(t, kRel, ctx), ctx.execPair(t)));
+        }
+        for (Tuple t : Sets.intersection(disabled, kRel.getMaySet())) {
+            enc = bmgr.and(enc, bmgr.implication(relation.getSMTVar(t, kRel, ctx), bmgr.makeFalse()));
+        }
+
+        return enc;
     }
 }

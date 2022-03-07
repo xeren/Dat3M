@@ -7,11 +7,15 @@ import com.dat3m.dartagnan.program.filter.FilterBasic;
 import com.dat3m.dartagnan.utils.dependable.DependencyGraph;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Knowledge;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.CATAxiom;
+import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.EncodingContext;
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import org.sosy_lab.java_smt.api.BooleanFormula;
+import org.sosy_lab.java_smt.api.BooleanFormulaManager;
+import org.sosy_lab.java_smt.api.IntegerFormulaManager;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -19,6 +23,7 @@ import java.util.stream.Collectors;
 public class Acyclic extends CATAxiom {
 
     private TupleSet transitiveMinSet;
+    private TupleSet activeSet;
 
     public Acyclic(Relation rel) { super(rel);}
 
@@ -116,6 +121,24 @@ public class Acyclic extends CATAxiom {
         // Remove (must(r)+ \ reduct(must(r)+)
         activeSet.removeAll(Sets.difference(transitiveMinSet, reduct));
 
+        this.activeSet = activeSet;
         return Collections.singletonList(activeSet);
+    }
+
+    @Override
+    public BooleanFormula encode(Map<Relation, Knowledge> know, EncodingContext ctx) {
+        Knowledge kRel = know.get(rel);
+
+        BooleanFormulaManager bmgr = ctx.getBmgr();
+        IntegerFormulaManager imgr = ctx.getImgr();
+
+        BooleanFormula enc = bmgr.makeTrue();
+        for(Tuple tuple : activeSet) {
+            Event e1 = tuple.getFirst();
+            Event e2 = tuple.getSecond();
+            enc = bmgr.and(enc, bmgr.implication(rel.getSMTVar(tuple, kRel, ctx),
+                    imgr.lessThan(ctx.clockVar(rel.getNameOrTerm(), e1), ctx.clockVar(rel.getNameOrTerm(), e2))));
+        }
+        return enc;
     }
 }

@@ -50,7 +50,7 @@ public class NewWmm {
     public static NewWmm createAnarchicWmm() {
         NewWmm wmm = createEmptyWmm();
         // Set up the basic anarchic relations (rf, co, idd etc.)
-        // TODO: Add definitions
+        // TODO: Add definitions for co, idd, addrDirect etc.
         wmm.addDefinition(new ReadFrom(wmm.newRelationWithName("rf")));
         wmm.newRelationWithName("co"); // Technically not part of the anarchic semantics
         wmm.newRelationWithName("idd");
@@ -75,6 +75,8 @@ public class NewWmm {
         return newRel;
     }
 
+    // Deletes a relation from this WMM and all constraints associated with it
+    // WARNING: This causes relations that were dependent on the deleted relation to become "undefined".
     public boolean deleteRelation(Relation rel) {
         if (relations.remove(rel)) {
             name2RelMap.remove(rel.getNameOrTerm());
@@ -104,6 +106,7 @@ public class NewWmm {
         return true;
     }
 
+    // The added Definition overwrites the previous definition of its defined relation.
     public Definition addDefinition(Definition definition) {
         Preconditions.checkArgument(relations.containsAll(definition.getConstrainedRelations()),
                 "The defining constraint refers to relations that are not part of this Wmm");

@@ -154,8 +154,8 @@ public class NewRelationAnalysis {
      */
     private void computeDefiningKnowledge(Set<Relation> stratum, Map<Relation, Knowledge> know) {
         assert !stratum.isEmpty();
-        if (stratum.size() == 1 && !stratum.stream().findAny().get().isRecursive()) {
-            // Stratum with single relation
+        if (stratum.size() == 1 && stratum.stream().noneMatch(r -> r.getDependencies().contains(r))) {
+            // Stratum with single relation that does not depend on itself
             Relation rel = stratum.stream().findAny().get();
             know.put(rel, rel.getDefinition().computeInitialDefiningKnowledge(know));
         } else {
@@ -348,8 +348,6 @@ public class NewRelationAnalysis {
                 }
             }
         }
-
-
         // (3) Propagate active sets
         while (!propTasks.isEmpty()) {
             ActiveSetTask task = propTasks.poll();

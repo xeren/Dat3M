@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm;
 
 import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Knowledge;
+import org.sosy_lab.java_smt.api.BooleanFormula;
 
 import java.util.List;
 import java.util.Map;
@@ -18,5 +19,5 @@ public interface AxiomaticConstraint extends Constraint {
     // - Furthermore, it is guaranteed that <computeActiveSet> was called before encoding and that
     //   (1) the provided knowledge to <computeActiveSet> was at least as accurate as <know>
     //   and (2) that all tuples returned by <computeActiveSet> have been encoded.
-   // BooleanFormula encode(Map<Relation, Knowledge> know, SolverContext ctx);
+    BooleanFormula encode(Map<Relation, Knowledge> know, EncodingContext ctx);
 }

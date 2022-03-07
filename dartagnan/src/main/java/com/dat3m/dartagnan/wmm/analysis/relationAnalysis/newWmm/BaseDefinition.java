@@ -8,26 +8,15 @@ import java.util.List;
 import java.util.Map;
 
 
-public abstract class BaseDefinition extends AbstractConstraint implements Definition {
-    protected final Relation baseRel;
+public abstract class BaseDefinition extends AbstractDefinition {
 
     public BaseDefinition(Relation baseRel) {
-        this.baseRel = baseRel;
+        super(baseRel, Collections.emptyList());
     }
 
     @Override
     public String toString() {
         return getTerm();
-    }
-
-    @Override
-    public Relation getDefinedRelation() {
-        return baseRel;
-    }
-
-    @Override
-    public List<Relation> getConstrainedRelations() {
-        return Collections.singletonList(baseRel);
     }
 
     @Override
