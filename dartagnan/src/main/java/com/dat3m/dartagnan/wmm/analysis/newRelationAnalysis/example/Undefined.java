@@ -1,13 +1,15 @@
-package com.dat3m.dartagnan.wmm.analysis.relationAnalysis.example;
+package com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.example;
 
 import com.dat3m.dartagnan.program.event.Tag;
 import com.dat3m.dartagnan.program.event.core.Event;
 import com.dat3m.dartagnan.program.filter.FilterBasic;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Knowledge;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.BaseDefinition;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.Relation;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.Knowledge;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.newWmm.BaseDefinition;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.newWmm.EncodingContext;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.newWmm.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
+import org.sosy_lab.java_smt.api.BooleanFormula;
 
 import java.util.Collections;
 import java.util.List;
@@ -48,5 +50,10 @@ public class Undefined extends BaseDefinition {
             }
         }
         return new Knowledge(maySet, new TupleSet());
+    }
+
+    @Override
+    public BooleanFormula encodeDefinitions(TupleSet toBeEncoded, Map<Relation, Knowledge> know, EncodingContext ctx) {
+        return ctx.getBmgr().makeTrue(); // Variables are unconstrained
     }
 }

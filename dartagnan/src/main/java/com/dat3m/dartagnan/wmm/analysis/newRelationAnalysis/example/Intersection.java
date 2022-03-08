@@ -1,11 +1,14 @@
-package com.dat3m.dartagnan.wmm.analysis.relationAnalysis.example;
+package com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.example;
 
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Knowledge;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.DerivedDefinition;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.Relation;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.Knowledge;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.newWmm.DerivedDefinition;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.newWmm.EncodingContext;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.newWmm.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.google.common.collect.Lists;
+import org.sosy_lab.java_smt.api.BooleanFormula;
+import org.sosy_lab.java_smt.api.BooleanFormulaManager;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -136,6 +139,23 @@ public class Intersection extends DerivedDefinition {
     @Override
     public List<TupleSet> propagateActiveSet(TupleSet activeSet, Map<Relation, Knowledge> know) {
         return Lists.transform(getDependencies(), dep -> activeSet);
+    }
+
+    public BooleanFormula encodeDefinitions(TupleSet toBeEncoded, Map<Relation, Knowledge> know, EncodingContext ctx) {
+        Knowledge kRel = know.get(definedRelation);
+        List<Knowledge> kDeps = new ArrayList<>(Lists.transform(dependencies, know::get));
+        BooleanFormulaManager bmgr = ctx.getBmgr();
+        BooleanFormula enc = bmgr.makeTrue();
+
+        for (Tuple t : toBeEncoded) {
+            BooleanFormula intersection = bmgr.makeTrue();
+            for (int i = 0; i < dependencies.size(); i++) {
+                intersection = bmgr.and(intersection, dependencies.get(i).getSMTVar(t, kDeps.get(i), ctx));
+            }
+            enc = bmgr.and(enc, bmgr.equivalence(getSMTVar(t, kRel, ctx), intersection));
+        }
+
+        return enc;
     }
 
 }

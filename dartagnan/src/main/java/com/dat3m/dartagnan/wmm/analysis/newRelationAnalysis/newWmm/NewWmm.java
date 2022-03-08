@@ -1,4 +1,4 @@
-package com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm;
+package com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.newWmm;
 
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Tag;
@@ -7,13 +7,16 @@ import com.dat3m.dartagnan.program.filter.FilterBasic;
 import com.dat3m.dartagnan.utils.dependable.DependencyGraph;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.verification.VerificationTask;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Knowledge;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.NewRelationAnalysis;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.example.*;
-import com.dat3m.dartagnan.wmm.axiom.Axiom;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.Knowledge;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.NewRelationAnalysis;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.RelationAnalysisResult;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.example.*;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.google.common.base.Preconditions;
+import org.sosy_lab.java_smt.api.BooleanFormula;
+import org.sosy_lab.java_smt.api.BooleanFormulaManager;
+import org.sosy_lab.java_smt.api.SolverContext;
 
 import java.util.*;
 
@@ -21,14 +24,14 @@ public class NewWmm {
 
     // ============================== Properties ==============================
 
-    private final Set<AxiomaticConstraint> axiomaticConstraints = new HashSet<>();
+    private final Set<Axiom> axioms = new HashSet<>();
     private final Set<Relation> relations = new HashSet<>();
     private final Map<String, Relation> name2RelMap = new HashMap<>();
 
     private int nextId = 0;
 
     public Set<Relation> getRelations() { return relations; }
-    public Set<AxiomaticConstraint> getAxiomaticConstraints() { return axiomaticConstraints; }
+    public Set<Axiom> getAxiomaticConstraints() { return axioms; }
 
     public Relation getRelationByNameOrTerm(String nameOrTerm) {
         if (name2RelMap.containsKey(nameOrTerm)) {
@@ -80,7 +83,7 @@ public class NewWmm {
     public boolean deleteRelation(Relation rel) {
         if (relations.remove(rel)) {
             name2RelMap.remove(rel.getNameOrTerm());
-            axiomaticConstraints.removeIf(ax -> ax.getConstrainedRelations().contains(rel));
+            axioms.removeIf(ax -> ax.getConstrainedRelations().contains(rel));
 
             for (Relation r : relations) {
                 if (r.getDependencies().contains(rel)) {
@@ -114,37 +117,22 @@ public class NewWmm {
         Definition oldDefinition = definedRel.getDefinition();
         definedRel.setDefinition(definition);
 
-        updateMetadata();
-
         return oldDefinition;
     }
 
-    public boolean addAxiom(AxiomaticConstraint axiom) {
+    public boolean addAxiom(Axiom axiom) {
+        Preconditions.checkArgument(!(axiom instanceof Definition), "The provided axiom is also a definition." +
+                "Use addDefinition instead.");
         Preconditions.checkArgument(relations.containsAll(axiom.getConstrainedRelations()),
                 "The axiomatic constraint refers to relations that are not part of this Wmm");
-        return axiomaticConstraints.add(axiom);
+        return axioms.add(axiom);
     }
 
-    public boolean removeAxiom(AxiomaticConstraint axiom) {
-        return axiomaticConstraints.remove(axiom);
+    public boolean removeAxiom(Axiom axiom) {
+        return axioms.remove(axiom);
     }
 
     // =========================================================================
-
-
-    private void updateMetadata() {
-        DependencyGraph<Relation> depGraph = DependencyGraph.from(relations);
-        for (Set<DependencyGraph<Relation>.Node> scc : depGraph.getSCCs()) {
-            boolean isRec = scc.size() > 1;
-            scc.forEach(r -> r.getContent().setIsRecursive(isRec));
-
-            if (scc.size() == 1) {
-                // For strange SCCs with a single self-loop (i.e. "let rec A = A")
-                Relation rel = scc.stream().findAny().get().getContent();
-                rel.setIsRecursive(rel.getDependencies().contains(rel));
-            }
-        }
-    }
 
     @Override
     public String toString() {
@@ -155,7 +143,7 @@ public class NewWmm {
             builder.append(rel).append("\n");
         }
 
-        for (AxiomaticConstraint ax : axiomaticConstraints) {
+        for (Axiom ax : axioms) {
             builder.append(ax).append("\n");
         }
 
@@ -165,8 +153,37 @@ public class NewWmm {
 
     // ============================== Testing code ==============================
 
+    //TODO: This code should most likely go into the WmmEncoder class.
+    //TODO 2: If we never need the active sets outside of encoding, we could also
+    // make this method invoke the active set computation.
+    public BooleanFormula encode(RelationAnalysisResult relAnalysis, EncodingContext ctx) {
+        Preconditions.checkArgument(relAnalysis.hasActiveSets(),
+                "No active sets have been computed. Encoding is impossible");
+        Map<Relation, Knowledge> knowledgeMap = relAnalysis.getKnowledgeMap();
+        Map<Relation, TupleSet> activeSets = relAnalysis.getActiveSetsMap();
+
+        BooleanFormulaManager bmgr = ctx.getBmgr();
+        BooleanFormula enc = bmgr.makeTrue();
+
+        // Maybe this should be done in topological order, although it shouldn't matter, actually.
+        for (Relation rel : relations) {
+            Definition definition = rel.getDefinition();
+            enc = bmgr.and(enc, definition.encodeDefinitions(activeSets.get(rel), knowledgeMap, ctx));
+            if (definition instanceof Axiom) {
+                // Some definitions like Rf, Co and Idd have also global constraints involved
+                enc = bmgr.and(enc, ((Axiom) definition).encodeAxiom(knowledgeMap, ctx));
+            }
+        }
+
+        for (Axiom ax : axioms) {
+            enc = bmgr.and(enc, ax.encodeAxiom(knowledgeMap, ctx));
+        }
+
+        return enc;
+    }
+
     // This is some temporary code to test the results of the analysis
-    public static void test(VerificationTask task, Context analysisContext) {
+    public static void test(VerificationTask task, Context analysisContext, SolverContext ctx) {
         NewWmm wmm = createAnarchicWmm();
         Relation rf = wmm.getRelationByNameOrTerm("rf");
         Relation co = wmm.getRelationByNameOrTerm("co");
@@ -182,7 +199,7 @@ public class NewWmm {
         wmm.addAxiom(new Acyclic(porf));
         wmm.addAxiom(new Acyclic(poco));
 
-        // ---- Assume po ----
+        // ---- Assume po ---- (We have not definition for po yet)
         TupleSet enabled = new TupleSet();
         for (Thread t : task.getProgram().getThreads()) {
             List<Event> events = t.getCache().getEvents(FilterBasic.get(Tag.VISIBLE));
@@ -198,6 +215,12 @@ public class NewWmm {
         Map<Relation, Knowledge> know = analysis.computeKnowledge(task, analysisContext);
         Map<Relation, TupleSet> activeSet = analysis.computeActiveSets(know);
         System.out.println("Analysis time test 1 : " + (System.nanoTime() - time) / 1000000 + "ms");
+
+        time = System.nanoTime();
+        EncodingContext encCtx = new EncodingContext(ctx, analysisContext);
+        BooleanFormula formula = wmm.encode(new RelationAnalysisResult(know, activeSet), encCtx);
+        System.out.println("Formula construction time test 1 : " + (System.nanoTime() - time) / 1000000 + "ms");
+
     }
 
     public static void test2(VerificationTask task, Context analysisContext) {
@@ -221,7 +244,7 @@ public class NewWmm {
             }
         }
 
-        for (Axiom ax : task.getMemoryModel().getAxioms()) {
+        for (com.dat3m.dartagnan.wmm.axiom.Axiom ax : task.getMemoryModel().getAxioms()) {
             wmm.addAxiom(new Acyclic(wmm.getRelationByNameOrTerm(ax.getRelation().getName())));
         }
 

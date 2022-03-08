@@ -1,14 +1,14 @@
-package com.dat3m.dartagnan.wmm.analysis.relationAnalysis.example;
+package com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.example;
 
 import com.dat3m.dartagnan.program.analysis.ExecutionAnalysis;
 import com.dat3m.dartagnan.program.event.Tag;
 import com.dat3m.dartagnan.program.event.core.Event;
 import com.dat3m.dartagnan.program.filter.FilterBasic;
 import com.dat3m.dartagnan.utils.dependable.DependencyGraph;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Knowledge;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.CATAxiom;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.EncodingContext;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.Relation;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.Knowledge;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.newWmm.CATAxiom;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.newWmm.EncodingContext;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.newWmm.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.google.common.collect.Lists;
@@ -126,7 +126,7 @@ public class Acyclic extends CATAxiom {
     }
 
     @Override
-    public BooleanFormula encode(Map<Relation, Knowledge> know, EncodingContext ctx) {
+    public BooleanFormula encodeAxiom(Map<Relation, Knowledge> know, EncodingContext ctx) {
         Knowledge kRel = know.get(rel);
 
         BooleanFormulaManager bmgr = ctx.getBmgr();

@@ -1,6 +1,6 @@
-package com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm;
+package com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.newWmm;
 
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Knowledge;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.Knowledge;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 import java.util.Collections;

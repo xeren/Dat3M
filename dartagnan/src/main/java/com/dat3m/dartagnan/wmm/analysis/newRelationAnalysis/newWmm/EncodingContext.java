@@ -1,9 +1,10 @@
-package com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm;
+package com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.newWmm;
 
 import com.dat3m.dartagnan.program.analysis.ExecutionAnalysis;
 import com.dat3m.dartagnan.program.event.core.Event;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
+import com.google.common.base.Preconditions;
 import org.sosy_lab.java_smt.api.*;
 
 import static org.sosy_lab.java_smt.api.FormulaType.BooleanType;
@@ -62,6 +63,28 @@ public class EncodingContext {
     public NumeralFormula.IntegerFormula clockVar(String name, Event e) {
         FormulaManager fmgr = solverContext.getFormulaManager();
         return fmgr.makeVariable(IntegerType, fmgr.escape(name) + "(" + e.repr() + ")");
+    }
+
+
+    public BooleanFormula generalEqual(Formula f1, Formula f2) {
+        Preconditions.checkArgument(f1.getClass().equals(f2.getClass()),
+                String.format("Formulas %s and %s have different types or are of unsupported type for generalEqual", f1, f2));
+        Preconditions.checkArgument(f1 instanceof NumeralFormula.IntegerFormula || f1 instanceof BitvectorFormula,
+                "generalEqual inputs must be IntegerFormula or BitvectorFormula");
+
+        if(f1 instanceof NumeralFormula.IntegerFormula) {
+            // By the preconditions, f1 and f2 are guaranteed to be IntegerFormula
+            return getImgr().equal((NumeralFormula.IntegerFormula)f1, (NumeralFormula.IntegerFormula)f2);
+        } else {
+            // By the preconditions, f1 and f2 are guaranteed to be BitvectorFormula
+            return getBvmgr().equal((BitvectorFormula)f1, (BitvectorFormula)f2);
+        }
+    }
+
+    public NumeralFormula.IntegerFormula convertToIntegerFormula(Formula f) {
+        return f instanceof BitvectorFormula ?
+                getBvmgr().toIntegerFormula((BitvectorFormula) f, false) :
+                (NumeralFormula.IntegerFormula)f;
     }
 
 }

@@ -1,9 +1,9 @@
-package com.dat3m.dartagnan.wmm.analysis.relationAnalysis;
+package com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis;
 
 import com.dat3m.dartagnan.utils.dependable.DependencyGraph;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.verification.VerificationTask;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.*;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.newWmm.*;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -96,37 +96,6 @@ public class NewRelationAnalysis {
                 full.getMustSet().addAll(derived.getMustSet());
             }
         }
-    }
-
-
-    private Map<Relation, Knowledge.Delta> computeDeltaMap(Map<Relation, Knowledge> know) {
-        // Proceeds bottom-up and compute discrepancy between knowledge of strata
-        // This method is similar to <updateBottomUpDiscrepancies> but it assumes that
-        // the knowledge discrepancies are positive (as enforced by the <updateBottomUpDiscrepancies>)
-        // meaning that "know[r] = defKnow[r] join delta[r]"
-
-        Map<Relation, Knowledge.Delta> deltaMap = new HashMap<>(know.size());
-        for (Set<DependencyGraph<Relation>.Node> scc : dependencyGraph.getSCCs()) {
-            Set<Relation> stratum = scc.stream().map(DependencyGraph.Node::getContent).collect(Collectors.toSet());
-            if (stratum.size() == 1 && stratum.stream().findAny().get().getDependencies().isEmpty()) {
-                deltaMap.put(stratum.stream().findAny().get(), new Knowledge.Delta());
-                continue; // We have a base relation, so we keep the current knowledge
-            }
-            // We have a derived relation
-            Map<Relation, Knowledge> knowCopy = new HashMap<>(know); // Copy since the next method updates in-place
-            computeDefiningKnowledge(stratum, knowCopy);
-
-            // <knowCopy> should contain less knowledge than <know>
-            for (Relation rel : stratum) {
-                Knowledge full = know.get(rel);
-                Knowledge derived = knowCopy.get(rel);
-                TupleSet deltaMay = new TupleSet(Sets.difference(derived.getMaySet(), full.getMaySet()));
-                TupleSet deltaMust = new TupleSet(Sets.difference(full.getMustSet(), derived.getMustSet()));
-                deltaMap.put(rel, new Knowledge.Delta(deltaMay, deltaMust));
-            }
-        }
-
-        return deltaMap;
     }
 
 
@@ -253,13 +222,13 @@ public class NewRelationAnalysis {
         // Initialization phase
         List<ConstraintToRelTask> newTasks = new ArrayList<>();
         for (Constraint c : constraints) {
-            if (!(c instanceof AxiomaticConstraint)) {
+            if (!(c instanceof Axiom)) {
                 // We assume that all defining constraints have been evaluated before
                 // to get the initial approximation
                 continue;
             }
             List<Relation> rels = c.getConstrainedRelations();
-            List<Knowledge.Delta> deltas = ((AxiomaticConstraint)c).computeInitialKnowledgeClosure(know);
+            List<Knowledge.Delta> deltas = ((Axiom)c).computeInitialKnowledgeClosure(know);
             if (deltas.isEmpty()) {
                 continue;
             }
@@ -370,8 +339,36 @@ public class NewRelationAnalysis {
         }
 
         return activeSetMap;
+    }
 
+    private Map<Relation, Knowledge.Delta> computeDeltaMap(Map<Relation, Knowledge> know) {
+        // Proceeds bottom-up and compute discrepancy between knowledge of strata
+        // This method is similar to <updateBottomUpDiscrepancies> but it assumes that
+        // the knowledge discrepancies are positive (as enforced by the <updateBottomUpDiscrepancies>)
+        // meaning that "know[r] = defKnow[r] join delta[r]"
 
+        Map<Relation, Knowledge.Delta> deltaMap = new HashMap<>(know.size());
+        for (Set<DependencyGraph<Relation>.Node> scc : dependencyGraph.getSCCs()) {
+            Set<Relation> stratum = scc.stream().map(DependencyGraph.Node::getContent).collect(Collectors.toSet());
+            if (stratum.size() == 1 && stratum.stream().findAny().get().getDependencies().isEmpty()) {
+                deltaMap.put(stratum.stream().findAny().get(), new Knowledge.Delta());
+                continue; // We have a base relation, so we keep the current knowledge
+            }
+            // We have a derived relation
+            Map<Relation, Knowledge> knowCopy = new HashMap<>(know); // Copy since the next method updates in-place
+            computeDefiningKnowledge(stratum, knowCopy);
+
+            // <knowCopy> should contain less knowledge than <know>
+            for (Relation rel : stratum) {
+                Knowledge full = know.get(rel);
+                Knowledge derived = knowCopy.get(rel);
+                TupleSet deltaMay = new TupleSet(Sets.difference(derived.getMaySet(), full.getMaySet()));
+                TupleSet deltaMust = new TupleSet(Sets.difference(full.getMustSet(), derived.getMustSet()));
+                deltaMap.put(rel, new Knowledge.Delta(deltaMay, deltaMust));
+            }
+        }
+
+        return deltaMap;
     }
 
 

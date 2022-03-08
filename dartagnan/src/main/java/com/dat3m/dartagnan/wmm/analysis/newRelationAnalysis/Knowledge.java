@@ -1,4 +1,4 @@
-package com.dat3m.dartagnan.wmm.analysis.relationAnalysis;
+package com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis;
 
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;

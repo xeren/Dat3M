@@ -1,12 +1,12 @@
-package com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm;
+package com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.newWmm;
 
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Knowledge;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.Knowledge;
 import org.sosy_lab.java_smt.api.BooleanFormula;
 
 import java.util.List;
 import java.util.Map;
 
-public interface AxiomaticConstraint extends Constraint {
+public interface Axiom extends Constraint {
 
     // Returns a list of Knowledge.Delta's matching the relation list returned by <getConstrainedRelations>
     // This method is sound even if it returns imprecise information.
@@ -19,5 +19,5 @@ public interface AxiomaticConstraint extends Constraint {
     // - Furthermore, it is guaranteed that <computeActiveSet> was called before encoding and that
     //   (1) the provided knowledge to <computeActiveSet> was at least as accurate as <know>
     //   and (2) that all tuples returned by <computeActiveSet> have been encoded.
-    BooleanFormula encode(Map<Relation, Knowledge> know, EncodingContext ctx);
+    BooleanFormula encodeAxiom(Map<Relation, Knowledge> know, EncodingContext ctx);
 }

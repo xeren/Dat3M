@@ -1,8 +1,8 @@
-package com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm;
+package com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.newWmm;
 
 import com.dat3m.dartagnan.utils.dependable.Dependent;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Knowledge;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.example.Undefined;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.Knowledge;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.example.Undefined;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.google.common.base.Preconditions;
 import org.sosy_lab.java_smt.api.BooleanFormula;
@@ -46,12 +46,7 @@ public class Relation implements Dependent<Relation> {
     public String getNameOrTerm() {
         return isNamed() ? name : getTerm();
     }
-
-    public boolean isRecursive() { return isRecursive; }
-
     void setName(String name) { this.name = name;}
-    void setIsRecursive(boolean isRecursive) { this.isRecursive = isRecursive; }
-
 
     public BooleanFormula getSMTVar(Tuple t, Knowledge kRel, EncodingContext ctx) {
         return definition.getSMTVar(t, kRel, ctx);

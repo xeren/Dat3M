@@ -1,9 +1,9 @@
-package com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm;
+package com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.newWmm;
 
 import java.util.Collections;
 import java.util.List;
 
-public abstract class CATAxiom extends AbstractConstraint implements AxiomaticConstraint {
+public abstract class CATAxiom extends AbstractConstraint implements Axiom {
     protected final Relation rel;
 
     public CATAxiom(Relation baseRel) {

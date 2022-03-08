@@ -1,10 +1,10 @@
-package com.dat3m.dartagnan.wmm.analysis.relationAnalysis.example;
+package com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.example;
 
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.Knowledge;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.AbstractConstraint;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.AxiomaticConstraint;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.EncodingContext;
-import com.dat3m.dartagnan.wmm.analysis.relationAnalysis.newWmm.Relation;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.Knowledge;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.newWmm.AbstractConstraint;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.newWmm.Axiom;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.newWmm.EncodingContext;
+import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.newWmm.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.google.common.collect.Sets;
@@ -15,7 +15,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class Assumption extends AbstractConstraint implements AxiomaticConstraint {
+public class Assumption extends AbstractConstraint implements Axiom {
 
     private final Relation relation;
     private final TupleSet enabled;
@@ -50,7 +50,7 @@ public class Assumption extends AbstractConstraint implements AxiomaticConstrain
     }
 
     @Override
-    public BooleanFormula encode(Map<Relation, Knowledge> know, EncodingContext ctx) {
+    public BooleanFormula encodeAxiom(Map<Relation, Knowledge> know, EncodingContext ctx) {
         Knowledge kRel = know.get(relation);
         BooleanFormulaManager bmgr = ctx.getBmgr();
         BooleanFormula enc = bmgr.makeTrue();
