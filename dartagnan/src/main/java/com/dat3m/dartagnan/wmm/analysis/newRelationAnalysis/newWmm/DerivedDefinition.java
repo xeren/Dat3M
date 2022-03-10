@@ -33,7 +33,7 @@ public abstract class DerivedDefinition extends AbstractDefinition {
         List<Relation> deps = getDependencies();
         recursionFlag = true;
         String term = deps.size() > 1 ?
-                String.join(getOperationSymbol(), Iterables.transform(getDependencies(), Relation::getNameOrTerm))
+                "(" + String.join(getOperationSymbol(), Iterables.transform(getDependencies(), Relation::getNameOrTerm)) + ")"
                 : deps.get(0).getNameOrTerm() + getOperationSymbol();
         recursionFlag = false;
         return term;
