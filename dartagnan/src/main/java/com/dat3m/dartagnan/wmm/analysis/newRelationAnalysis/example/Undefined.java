@@ -11,7 +11,6 @@ import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import org.sosy_lab.java_smt.api.BooleanFormula;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -31,13 +30,13 @@ public class Undefined extends BaseDefinition {
     }
 
     @Override
-    public List<Knowledge.Delta> computeIncrementalKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
-        return Collections.singletonList(new Knowledge.Delta());
+    public Map<Relation,Knowledge.Delta> computeIncrementalKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
+        return Map.of();
     }
 
     @Override
-    public List<TupleSet> computeActiveSets(Map<Relation, Knowledge> know) {
-        return Collections.emptyList();
+    public Map<Relation,TupleSet> computeActiveSets(Map<Relation, Knowledge> know) {
+        return Map.of();
     }
 
     @Override

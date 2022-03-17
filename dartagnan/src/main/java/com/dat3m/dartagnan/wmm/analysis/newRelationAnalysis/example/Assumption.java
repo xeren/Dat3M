@@ -28,8 +28,8 @@ public class Assumption extends AbstractConstraint implements Axiom {
     }
 
     @Override
-    public List<Knowledge.Delta> computeInitialKnowledgeClosure(Map<Relation, Knowledge> know) {
-        return Collections.singletonList(new Knowledge.Delta(disabled, enabled));
+    public Map<Relation,Knowledge.Delta> computeInitialKnowledgeClosure(Map<Relation, Knowledge> know) {
+        return Map.of(relation,new Knowledge.Delta(disabled, enabled));
     }
 
     @Override
@@ -38,15 +38,15 @@ public class Assumption extends AbstractConstraint implements Axiom {
     }
 
     @Override
-    public List<Knowledge.Delta> computeIncrementalKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
-        return Collections.emptyList();
+    public Map<Relation,Knowledge.Delta> computeIncrementalKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
+        return Map.of();
     }
 
     @Override
-    public List<TupleSet> computeActiveSets(Map<Relation, Knowledge> know) {
+    public Map<Relation,TupleSet> computeActiveSets(Map<Relation, Knowledge> know) {
         Knowledge kRel = know.get(relation);
         // This should ideally be empty if the knowledge propagation worked as expected
-        return Collections.singletonList(new TupleSet(Sets.filter(Sets.union(enabled, disabled), kRel::isUnknown)));
+        return Map.of(relation,new TupleSet(Sets.filter(Sets.union(enabled, disabled), kRel::isUnknown)));
     }
 
     @Override

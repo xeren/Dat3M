@@ -33,7 +33,7 @@ public interface Constraint {
     //      - OR DefiningConstraint.computeInitialDefiningKnowledge
     // (2) the given knowledge <know> is at least as large as it was when the method was called the last time
     //      (or larger than the initial knowledge (1) for the very first call).
-    List<Knowledge.Delta> computeIncrementalKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know);
+    Map<Relation,Knowledge.Delta> computeIncrementalKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know);
 
     // This method computes the set of tuples the Constraint depends on (for each single dependency)
     // PRECONDITIONS:
@@ -42,7 +42,7 @@ public interface Constraint {
     // - The method may NOT assume that the given <know> is in any way related to previously computed knowledge
     //   via any of this Constraint's methods.
     //   For all intents and purposes, <know> may have been guessed non-deterministically.
-    List<TupleSet> computeActiveSets(Map<Relation, Knowledge> know);
+    Map<Relation,TupleSet> computeActiveSets(Map<Relation, Knowledge> know);
 
 }
 

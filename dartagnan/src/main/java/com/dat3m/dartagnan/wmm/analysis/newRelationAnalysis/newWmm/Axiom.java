@@ -3,14 +3,13 @@ package com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.newWmm;
 import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.Knowledge;
 import org.sosy_lab.java_smt.api.BooleanFormula;
 
-import java.util.List;
 import java.util.Map;
 
 public interface Axiom extends Constraint {
 
     // Returns a list of Knowledge.Delta's matching the relation list returned by <getConstrainedRelations>
     // This method is sound even if it returns imprecise information.
-    List<Knowledge.Delta> computeInitialKnowledgeClosure(Map<Relation, Knowledge> know);
+    Map<Relation,Knowledge.Delta> computeInitialKnowledgeClosure(Map<Relation, Knowledge> know);
 
 
     // Encodes this constraint into a formula.

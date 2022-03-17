@@ -7,13 +7,11 @@ import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.newWmm.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.sosy_lab.java_smt.api.BooleanFormula;
 import org.sosy_lab.java_smt.api.BooleanFormulaManager;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 // Example implementation of an n-ary intersection
 public class Intersection extends DerivedDefinition {
@@ -31,21 +29,21 @@ public class Intersection extends DerivedDefinition {
     protected String getOperationSymbol() { return " & "; }
 
     @Override
-    protected List<Knowledge.Delta> bottomUpKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
-        final List<Relation> deps = getDependencies();
-        List<Knowledge.Delta> deltas = new ArrayList<>(deps.size() + 1);
-        for (int i = 0; i < deps.size(); i++) {
-            deltas.add(new Knowledge.Delta());
-        }
+    protected Map<Relation,Knowledge.Delta> bottomUpKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
         // disabled sets always propagate upwards
         Knowledge.Delta defDelta = new Knowledge.Delta(delta.getDisabledSet(), new TupleSet());
-        deltas.add(defDelta);
-
         if (delta.getEnabledSet().isEmpty()) {
-            return deltas;
+            return Map.of(definedRelation, defDelta);
         }
 
-        List<Knowledge> kList = new ArrayList<>(Lists.transform(getDependencies(), know::get));
+        final List<Relation> deps = getDependencies();
+        Map<Relation,Knowledge.Delta> deltas = new HashMap<>();
+        for (Relation r : deps) {
+            deltas.put(r, new Knowledge.Delta());
+        }
+        deltas.put(definedRelation, defDelta);
+
+        List<Knowledge> kList = new ArrayList<>(Lists.transform(deps, know::get));
         Knowledge defKnow = know.get(getDefinedRelation());
 
         for (Tuple t : delta.getEnabledSet()) {
@@ -57,7 +55,7 @@ public class Intersection extends DerivedDefinition {
                 // ... all but one dep is T but the intersection is F, so the last remaining one dep must be F
                 for (int i = 0; i < kList.size(); i++) {
                     if (kList.get(i).isUnknown(t)) {
-                        deltas.get(i).getDisabledSet().add(t);
+                        deltas.get(deps.get(i)).getDisabledSet().add(t);
                         break;
                     }
                 }
@@ -68,15 +66,15 @@ public class Intersection extends DerivedDefinition {
 
     // This method propagates knowledge top-down
     @Override
-    protected List<Knowledge.Delta> topDownKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
+    protected Map<Relation,Knowledge.Delta> topDownKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
         final List<Relation> deps = getDependencies();
-        List<Knowledge.Delta> deltas = new ArrayList<>(deps.size() + 1);
+        Map<Relation,Knowledge.Delta> deltas = new HashMap<>();
         // --- Enabled sets ---
-        for (int i = 0; i < deps.size(); i++) {
+        for (Relation r : deps) {
             // Enabled sets always propagate downwards to each dependency
-            deltas.add(new Knowledge.Delta(new TupleSet(), delta.getEnabledSet()));
+            deltas.put(r, new Knowledge.Delta(new TupleSet(), delta.getEnabledSet()));
         }
-        deltas.add(new Knowledge.Delta()); // The defined relation has no change
+        deltas.put(definedRelation, new Knowledge.Delta()); // The defined relation has no change
 
         // --- Disabled sets ---
         if (delta.getDisabledSet().isEmpty()) {
@@ -137,8 +135,8 @@ public class Intersection extends DerivedDefinition {
     }
 
     @Override
-    public List<TupleSet> propagateActiveSet(TupleSet activeSet, Map<Relation, Knowledge> know) {
-        return Lists.transform(getDependencies(), dep -> activeSet);
+    public Map<Relation,TupleSet> propagateActiveSet(TupleSet activeSet, Map<Relation, Knowledge> know) {
+        return Maps.asMap(Set.copyOf(getDependencies()), dep -> activeSet);
     }
 
     public BooleanFormula encodeDefinitions(TupleSet toBeEncoded, Map<Relation, Knowledge> know, EncodingContext ctx) {

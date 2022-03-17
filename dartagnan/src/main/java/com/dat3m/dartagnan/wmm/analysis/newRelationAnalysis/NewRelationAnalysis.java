@@ -227,16 +227,9 @@ public class NewRelationAnalysis {
                 // to get the initial approximation
                 continue;
             }
-            List<Relation> rels = c.getConstrainedRelations();
-            List<Knowledge.Delta> deltas = ((Axiom)c).computeInitialKnowledgeClosure(know);
-            if (deltas.isEmpty()) {
-                continue;
-            }
-            assert deltas.size() == rels.size();
-
-            for (int i = 0; i < deltas.size(); i++) {
-                if (!deltas.get(i).isEmpty()) {
-                    newTasks.add(new ConstraintToRelTask(c, rels.get(i), deltas.get(i)));
+            for (Map.Entry<Relation,Knowledge.Delta> e : ((Axiom)c).computeInitialKnowledgeClosure(know).entrySet()) {
+                if (!e.getValue().isEmpty()) {
+                    newTasks.add(new ConstraintToRelTask(c, e.getKey(), e.getValue()));
                 }
             }
         }
@@ -259,17 +252,16 @@ public class NewRelationAnalysis {
 
     private List<ConstraintToRelTask> processRelationTask(RelToConstraintTask task, Map<Relation, Knowledge> know) {
         Constraint constr = task.to;
-        List<Relation> rels = constr.getConstrainedRelations();
-        List<Knowledge.Delta> newDeltas = constr.computeIncrementalKnowledgeClosure(task.from, task.delta, know);
+        Map<Relation,Knowledge.Delta> newDeltas = constr.computeIncrementalKnowledgeClosure(task.from, task.delta, know);
         if (newDeltas.isEmpty()) {
             return Collections.emptyList();
         }
-        assert rels.size() == newDeltas.size();
+        assert constr.getConstrainedRelations().containsAll(newDeltas.keySet());
 
-        List<ConstraintToRelTask> newTasks = new ArrayList<>(rels.size());
-        for (int i = 0; i < rels.size(); i++) {
-            if (!newDeltas.get(i).isEmpty()) {
-                newTasks.add(new ConstraintToRelTask(constr, rels.get(i), newDeltas.get(i)));
+        List<ConstraintToRelTask> newTasks = new ArrayList<>(newDeltas.size());
+        for (Map.Entry<Relation,Knowledge.Delta> e : newDeltas.entrySet()) {
+            if (!e.getValue().isEmpty()) {
+                newTasks.add(new ConstraintToRelTask(constr,e.getKey(),e.getValue()));
             }
         }
 
@@ -289,17 +281,17 @@ public class NewRelationAnalysis {
 
         // (1) Traverse all axiomatic constraints and get their active sets
         for (Constraint constraint : constraints) {
-            List<Relation> deps = constraint.getConstrainedRelations();
-            List<TupleSet> activeSets = constraint.computeActiveSets(know);
+            Map<Relation,TupleSet> activeSets = constraint.computeActiveSets(know);
             if (activeSets.isEmpty()) {
                 continue;
             }
-            for (int i = 0; i < deps.size(); i++) {
-                Knowledge kRel = know.get(deps.get(i));
+            assert constraint.getConstrainedRelations().containsAll(activeSets.keySet());
+            for (Map.Entry<Relation,TupleSet> e : activeSets.entrySet()) {
+                Knowledge kRel = know.get(e.getKey());
                 // We only propagate along unknowns.
-                TupleSet activeSet = new TupleSet(Sets.filter(activeSets.get(i), kRel::isUnknown));
+                TupleSet activeSet = new TupleSet(Sets.filter(e.getValue(), kRel::isUnknown));
                 if (!activeSet.isEmpty()) {
-                    propTasks.add(new ActiveSetTask(constraint, deps.get(i), activeSet));
+                    propTasks.add(new ActiveSetTask(constraint, e.getKey(), activeSet));
                 }
             }
         }
@@ -310,10 +302,10 @@ public class NewRelationAnalysis {
             Knowledge.Delta delta = deltaMap.get(rel);
             if (!delta.isEmpty()) {
                 TupleSet differences = new TupleSet(Sets.union(delta.getDisabledSet(), delta.getEnabledSet()));
-                List<Relation> deps = rel.getDefinition().getDependencies();
-                List<TupleSet> propagations = rel.getDefinition().propagateActiveSet(differences, know);
-                for (int i = 0; i < deps.size(); i++) {
-                    propTasks.add(new ActiveSetTask(rel.getDefinition(), deps.get(i), propagations.get(i)));
+                Map<Relation,TupleSet> propagations = rel.getDefinition().propagateActiveSet(differences, know);
+                assert rel.getDefinition().getDependencies().containsAll(propagations.keySet());
+                for (Map.Entry<Relation,TupleSet> e : propagations.entrySet()) {
+                    propTasks.add(new ActiveSetTask(rel.getDefinition(), e.getKey(), e.getValue()));
                 }
             }
         }
@@ -324,17 +316,17 @@ public class NewRelationAnalysis {
             TupleSet curActiveSet = activeSetMap.get(rel);
             TupleSet change = new TupleSet(Sets.difference(task.delta, curActiveSet));
             Definition defConstr = rel.getDefinition();
-            List<Relation> deps = defConstr.getDependencies();
 
             if (change.isEmpty()) {
                 continue;
             }
 
             curActiveSet.addAll(change);
-            List<TupleSet> newActiveSets = defConstr.propagateActiveSet(change, know);
-            for (int i = 0; i < newActiveSets.size(); i++) {
-                TupleSet toPropagate = new TupleSet(Sets.filter(newActiveSets.get(i), know.get(deps.get(i))::isUnknown));
-                propTasks.add(new ActiveSetTask(defConstr, deps.get(i), toPropagate));
+            Map<Relation,TupleSet> newActiveSets = defConstr.propagateActiveSet(change, know);
+            assert defConstr.getDependencies().containsAll(newActiveSets.keySet());
+            for (Map.Entry<Relation,TupleSet> e : newActiveSets.entrySet()) {
+                TupleSet toPropagate = new TupleSet(Sets.filter(e.getValue(), know.get(e.getKey())::isUnknown));
+                propTasks.add(new ActiveSetTask(defConstr, e.getKey(), toPropagate));
             }
         }
 

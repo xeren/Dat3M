@@ -5,8 +5,6 @@ import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -16,10 +14,6 @@ public abstract class DerivedDefinition extends AbstractDefinition {
     public DerivedDefinition(Relation definedRel, List<Relation> dependencies) {
         super(definedRel, dependencies);
         Preconditions.checkArgument(!dependencies.isEmpty(), "A derived relation must have dependencies.");
-    }
-
-    public DerivedDefinition(Relation definedRel, Relation... dependencies) {
-        this(definedRel, Arrays.asList(dependencies));
     }
 
     protected abstract String getOperationSymbol();
@@ -40,11 +34,11 @@ public abstract class DerivedDefinition extends AbstractDefinition {
     }
 
 
-    protected abstract List<Knowledge.Delta> bottomUpKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know);
-    protected abstract List<Knowledge.Delta> topDownKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know);
+    protected abstract Map<Relation,Knowledge.Delta> bottomUpKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know);
+    protected abstract Map<Relation,Knowledge.Delta> topDownKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know);
 
     @Override
-    public List<Knowledge.Delta> computeIncrementalKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
+    public Map<Relation,Knowledge.Delta> computeIncrementalKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
         assert getConstrainedRelations().contains(changed);
         return changed == getDefinedRelation() ?
                 topDownKnowledgeClosure(changed, delta, know)
@@ -52,9 +46,9 @@ public abstract class DerivedDefinition extends AbstractDefinition {
     }
 
     @Override
-    public List<TupleSet> computeActiveSets(Map<Relation, Knowledge> know) {
+    public Map<Relation,TupleSet> computeActiveSets(Map<Relation, Knowledge> know) {
         // Derived relations have no inherent active sets
-        return Collections.emptyList();
+        return Map.of();
     }
 
     @Override

@@ -43,7 +43,7 @@ public interface Definition extends Constraint {
         The evaluation of <activeSet> depends on evaluations of tuples of this constraint's dependencies.
         This method computes the tuples of each immediate dependency that can affect the evaluation of <activeSet>
      */
-    List<TupleSet> propagateActiveSet(TupleSet activeSet, Map<Relation, Knowledge> know);
+    Map<Relation,TupleSet> propagateActiveSet(TupleSet activeSet, Map<Relation, Knowledge> know);
 
     /*
         Returns an SMT-Variable for <tuple>. The definition of that variable may not yet be encoded.

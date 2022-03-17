@@ -34,15 +34,15 @@ public class ReadFrom extends BaseDefinition implements Axiom {
     }
 
     @Override
-    public List<Knowledge.Delta> computeIncrementalKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
-        return Collections.emptyList();
+    public Map<Relation,Knowledge.Delta> computeIncrementalKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
+        return Map.of();
         // One could check if there is only a single possible rf-edge remaining and set it to T.
         // Or if some rf-edge is T, then one can disable other read froms
     }
 
     @Override
-    public List<TupleSet> computeActiveSets(Map<Relation, Knowledge> know) {
-        return Collections.singletonList(know.get(definedRelation).getMaySet());
+    public Map<Relation,TupleSet> computeActiveSets(Map<Relation, Knowledge> know) {
+        return Map.of(definedRelation,know.get(definedRelation).getMaySet());
     }
 
     @Override
@@ -66,8 +66,8 @@ public class ReadFrom extends BaseDefinition implements Axiom {
     }
 
     @Override
-    public List<Knowledge.Delta> computeInitialKnowledgeClosure(Map<Relation, Knowledge> know) {
-        return Collections.emptyList(); // Has been computed already
+    public Map<Relation,Knowledge.Delta> computeInitialKnowledgeClosure(Map<Relation, Knowledge> know) {
+        return Map.of(); // Has been computed already
     }
 
     @Override

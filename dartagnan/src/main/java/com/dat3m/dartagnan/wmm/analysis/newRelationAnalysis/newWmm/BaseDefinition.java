@@ -4,10 +4,12 @@ import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.Knowledge;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 
 
+/**
+ * Definitions that do not use other relations.
+ */
 public abstract class BaseDefinition extends AbstractDefinition {
 
     public BaseDefinition(Relation baseRel) {
@@ -25,8 +27,8 @@ public abstract class BaseDefinition extends AbstractDefinition {
     }
 
     @Override
-    public List<TupleSet> propagateActiveSet(TupleSet activeSet, Map<Relation, Knowledge> know) {
-        return Collections.emptyList();
+    public Map<Relation,TupleSet> propagateActiveSet(TupleSet activeSet, Map<Relation, Knowledge> know) {
+        return Map.of();
     }
 
 }

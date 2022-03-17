@@ -28,7 +28,7 @@ public class Acyclic extends CATAxiom {
     public Acyclic(Relation rel) { super(rel);}
 
     @Override
-    public List<Knowledge.Delta> computeInitialKnowledgeClosure(Map<Relation, Knowledge> know) {
+    public Map<Relation,Knowledge.Delta> computeInitialKnowledgeClosure(Map<Relation, Knowledge> know) {
         Knowledge k = know.get(rel);
 
         ExecutionAnalysis exec = analysisContext.get(ExecutionAnalysis.class);
@@ -70,15 +70,15 @@ public class Acyclic extends CATAxiom {
         delta.getDisabledSet().addAll(
                 Lists.transform(task.getProgram().getCache().getEvents(FilterBasic.get(Tag.VISIBLE)), e -> new Tuple(e, e))
         );
-        return Collections.singletonList(delta);
+        return Map.of(rel,delta);
     }
 
     @Override
-    public List<Knowledge.Delta> computeIncrementalKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
+    public Map<Relation,Knowledge.Delta> computeIncrementalKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
         assert  changed == getConstrainedRelation();
         if (delta.getEnabledSet().isEmpty()) {
             // We can only derive new knowledge from added edges, so if we have none, we return early
-            return Collections.emptyList();
+            return Map.of();
         }
 
         Knowledge.Delta newDelta = new Knowledge.Delta();
@@ -88,11 +88,11 @@ public class Acyclic extends CATAxiom {
             }
         }
         //TODO: we should transitively close <transitiveMinSet>
-        return Collections.singletonList(newDelta);
+        return Map.of(rel,newDelta);
     }
 
     @Override
-    public List<TupleSet> computeActiveSets(Map<Relation, Knowledge> know) {
+    public Map<Relation,TupleSet> computeActiveSets(Map<Relation, Knowledge> know) {
         // ====== Construct [Event -> Successor] mapping ======
         Map<Event, Collection<Event>> succMap = new HashMap<>();
         TupleSet relMay = know.get(rel).getMaySet();
@@ -122,7 +122,7 @@ public class Acyclic extends CATAxiom {
         activeSet.removeAll(Sets.difference(transitiveMinSet, reduct));
 
         this.activeSet = activeSet;
-        return Collections.singletonList(activeSet);
+        return Map.of(rel,activeSet);
     }
 
     @Override
