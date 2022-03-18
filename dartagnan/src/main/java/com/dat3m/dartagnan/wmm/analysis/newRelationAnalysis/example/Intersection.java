@@ -36,7 +36,7 @@ public class Intersection extends DerivedDefinition {
             return Map.of(definedRelation, defDelta);
         }
 
-        final List<Relation> deps = getDependencies();
+        final List<Relation> deps = dependencies;
         Map<Relation,Knowledge.Delta> deltas = new HashMap<>();
         for (Relation r : deps) {
             deltas.put(r, new Knowledge.Delta());
@@ -67,7 +67,7 @@ public class Intersection extends DerivedDefinition {
     // This method propagates knowledge top-down
     @Override
     protected Map<Relation,Knowledge.Delta> topDownKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
-        final List<Relation> deps = getDependencies();
+        final List<Relation> deps = dependencies;
         Map<Relation,Knowledge.Delta> deltas = new HashMap<>();
         // --- Enabled sets ---
         for (Relation r : deps) {
@@ -103,7 +103,7 @@ public class Intersection extends DerivedDefinition {
 
     @Override
     public Knowledge computeInitialDefiningKnowledge(Map<Relation, Knowledge> know) {
-        List<Knowledge> kList = Lists.transform(getDependencies(), know::get);
+        List<Knowledge> kList = Lists.transform(dependencies, know::get);
         Knowledge k = kList.get(0).copy();
         for (Knowledge kRel : kList.subList(1, kList.size())) {
             k.getMaySet().removeIf(kRel::isFalse);
@@ -114,9 +114,9 @@ public class Intersection extends DerivedDefinition {
 
     @Override
     public Knowledge.SetDelta computeIncrementalDefiningKnowledge(Relation changed, Knowledge.SetDelta delta, Map<Relation, Knowledge> know) {
-        assert getDependencies().contains(changed);
+        assert dependencies.contains(changed);
         Knowledge.SetDelta intersectDelta = new Knowledge.SetDelta();
-        List<Knowledge> kList = new ArrayList<>(Lists.transform(getDependencies(), know::get));
+        List<Knowledge> kList = new ArrayList<>(Lists.transform(dependencies, know::get));
 
         // If the tuple is never F in any relation, then it is also not F in the intersection
         for (Tuple t : delta.getAddedMaySet()) {
@@ -136,7 +136,7 @@ public class Intersection extends DerivedDefinition {
 
     @Override
     public Map<Relation,TupleSet> propagateActiveSet(TupleSet activeSet, Map<Relation, Knowledge> know) {
-        return Maps.asMap(Set.copyOf(getDependencies()), dep -> activeSet);
+        return Maps.asMap(Set.copyOf(dependencies), dep -> activeSet);
     }
 
     public BooleanFormula encodeDefinitions(TupleSet toBeEncoded, Map<Relation, Knowledge> know, EncodingContext ctx) {

@@ -24,10 +24,10 @@ public abstract class DerivedDefinition extends AbstractDefinition {
         if (recursionFlag) {
             return "__this";
         }
-        List<Relation> deps = getDependencies();
+        List<Relation> deps = dependencies;
         recursionFlag = true;
         String term = deps.size() > 1 ?
-                "(" + String.join(getOperationSymbol(), Iterables.transform(getDependencies(), Relation::getNameOrTerm)) + ")"
+                "(" + String.join(getOperationSymbol(), Iterables.transform(dependencies, Relation::getNameOrTerm)) + ")"
                 : deps.get(0).getNameOrTerm() + getOperationSymbol();
         recursionFlag = false;
         return term;

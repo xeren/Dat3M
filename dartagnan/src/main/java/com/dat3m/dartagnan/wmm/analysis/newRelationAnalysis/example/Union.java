@@ -35,14 +35,14 @@ public class Union extends DerivedDefinition {
             return Map.of(definedRelation, defDelta);
         }
 
-        final List<Relation> deps = getDependencies();
+        final List<Relation> deps = dependencies;
         Map<Relation,Knowledge.Delta> deltas = new HashMap<>();
         for (Relation r : deps) {
             deltas.put(r, new Knowledge.Delta());
         }
         deltas.put(definedRelation, defDelta);
 
-        List<Knowledge> kList = new ArrayList<>(Lists.transform(getDependencies(), know::get));
+        List<Knowledge> kList = new ArrayList<>(Lists.transform(dependencies, know::get));
         Knowledge defKnow = know.get(getDefinedRelation());
 
         for (Tuple t : delta.getDisabledSet()) {
@@ -72,7 +72,7 @@ public class Union extends DerivedDefinition {
             return Map.of();
         }
 
-        final List<Relation> deps = getDependencies();
+        final List<Relation> deps = dependencies;
         Map<Relation,Knowledge.Delta> deltas = new HashMap<>();
         // --- Disabled sets ---
         for (Relation r : deps) {
@@ -103,7 +103,7 @@ public class Union extends DerivedDefinition {
     @Override
     public Knowledge computeInitialDefiningKnowledge(Map<Relation, Knowledge> know) {
         Knowledge k = new Knowledge();
-        for (Relation rel : getDependencies()) {
+        for (Relation rel : dependencies) {
             Knowledge kRel = know.get(rel);
             k.getMaySet().addAll(kRel.getMaySet());
             k.getMustSet().addAll(kRel.getMustSet());
@@ -113,13 +113,13 @@ public class Union extends DerivedDefinition {
 
     @Override
     public Knowledge.SetDelta computeIncrementalDefiningKnowledge(Relation changed, Knowledge.SetDelta delta, Map<Relation, Knowledge> know) {
-        assert getDependencies().contains(changed);
+        assert dependencies.contains(changed);
         return delta; // Changes are propagated as they are for union
     }
 
     @Override
     public Map<Relation,TupleSet> propagateActiveSet(TupleSet activeSet, Map<Relation, Knowledge> know) {
-        return Maps.asMap(Set.copyOf(getDependencies()), dep -> activeSet);
+        return Maps.asMap(Set.copyOf(dependencies), dep -> activeSet);
     }
 
     @Override
