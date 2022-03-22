@@ -30,5 +30,4 @@ public abstract class BaseDefinition extends AbstractDefinition {
     public Map<Relation,TupleSet> propagateActiveSet(TupleSet activeSet, Map<Relation, Knowledge> know) {
         return Map.of();
     }
-
 }

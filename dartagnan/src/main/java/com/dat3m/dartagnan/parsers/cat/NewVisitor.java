@@ -283,6 +283,7 @@ public class NewVisitor extends NewCatBaseVisitor<Object> implements NewCatVisit
     private Relation getOrCreateSameAddress() {
         if(sameAddress == null) {
             sameAddress = wmm.newRelationWithName(LOC);
+            wmm.addDefinition(new SameAddress(sameAddress));
         }
         return sameAddress;
     }
@@ -300,7 +301,7 @@ public class NewVisitor extends NewCatBaseVisitor<Object> implements NewCatVisit
     private Relation getOrCreateMemoryOrder() {
         if(memoryOrder == null) {
             memoryOrder = wmm.newRelationWithName(CO);
-            //TODO wmm.addDefinition();
+            wmm.addDefinition(new MemoryOrder(memoryOrder));
         }
         return memoryOrder;
     }

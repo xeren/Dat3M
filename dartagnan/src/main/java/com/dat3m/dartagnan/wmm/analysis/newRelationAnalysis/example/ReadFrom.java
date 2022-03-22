@@ -1,9 +1,11 @@
 package com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.example;
 
 import com.dat3m.dartagnan.program.analysis.alias.AliasAnalysis;
+import com.dat3m.dartagnan.program.analysis.ExecutionAnalysis;
 import com.dat3m.dartagnan.program.event.core.Event;
 import com.dat3m.dartagnan.program.event.core.MemEvent;
 import com.dat3m.dartagnan.program.filter.FilterBasic;
+import com.dat3m.dartagnan.wmm.analysis.WmmAnalysis;
 import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.Knowledge;
 import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.newWmm.Axiom;
 import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.newWmm.BaseDefinition;
@@ -48,15 +50,22 @@ public class ReadFrom extends BaseDefinition implements Axiom {
     @Override
     public Knowledge computeInitialDefiningKnowledge(Map<Relation, Knowledge> know) {
         AliasAnalysis alias = analysisContext.get(AliasAnalysis.class);
+        ExecutionAnalysis exec = analysisContext.get(ExecutionAnalysis.class);
+        WmmAnalysis wmm = analysisContext.get(WmmAnalysis.class);
         TupleSet maxTupleSet = new TupleSet();
         TupleSet minTupleSet = new TupleSet();
 
         List<Event> loadEvents = task.getProgram().getCache().getEvents(FilterBasic.get(READ));
         List<Event> storeEvents = task.getProgram().getCache().getEvents(FilterBasic.get(WRITE));
+        boolean lc = wmm.isLocallyConsistent();
 
         for(Event e1 : storeEvents){
             for(Event e2 : loadEvents){
-                if(alias.mayAlias((MemEvent) e1, (MemEvent) e2)){
+                if(!(lc && e1.getThread() == e2.getThread() && (e1.getCId() > e2.getCId()
+                                || e1.getThread().getCache().getEvents(FilterBasic.get(WRITE)).stream()
+                                .anyMatch(e3 -> e1.getCId() < e2.getCId() && e2.getCId() < e3.getCId())))
+                        && !exec.areMutuallyExclusive(e1,e2)
+                        && alias.mayAlias((MemEvent) e1, (MemEvent) e2)){
                     maxTupleSet.add(new Tuple(e1, e2));
                 }
             }
