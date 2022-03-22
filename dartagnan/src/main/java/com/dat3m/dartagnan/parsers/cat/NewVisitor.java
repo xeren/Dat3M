@@ -46,12 +46,16 @@ public class NewVisitor extends NewCatBaseVisitor<Object> implements NewCatVisit
 
     @Override
     public Void visitIrreflexiveDefinition(IrreflexiveDefinitionContext ctx) {
-        throw new UnsupportedOperationException("irreflexivity");
+        Relation r = (Relation)ctx.e.accept(this);
+        wmm.addAxiom(new Irreflexive(r));
+        return null;
     }
 
     @Override
     public Void visitEmptyDefinition(EmptyDefinitionContext ctx) {
-        throw new UnsupportedOperationException("emptiness");
+        Relation r = (Relation)ctx.e.accept(this);
+        wmm.addAxiom(new Empty(r));
+        return null;
     }
 
     @Override
