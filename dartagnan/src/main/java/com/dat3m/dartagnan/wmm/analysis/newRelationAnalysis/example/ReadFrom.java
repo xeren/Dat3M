@@ -63,7 +63,8 @@ public class ReadFrom extends BaseDefinition implements Axiom {
             for(Event e2 : loadEvents){
                 if(!(lc && e1.getThread() == e2.getThread() && (e1.getCId() > e2.getCId()
                                 || e1.getThread().getCache().getEvents(FilterBasic.get(WRITE)).stream()
-                                .anyMatch(e3 -> e1.getCId() < e2.getCId() && e2.getCId() < e3.getCId())))
+                                .filter(e -> e1.getCId() < e.getCId() && e.getCId() < e2.getCId())
+                                .anyMatch(e -> !exec.areMutuallyExclusive(e1,e) && !exec.areMutuallyExclusive(e,e2))))
                         && !exec.areMutuallyExclusive(e1,e2)
                         && alias.mayAlias((MemEvent) e1, (MemEvent) e2)){
                     maxTupleSet.add(new Tuple(e1, e2));

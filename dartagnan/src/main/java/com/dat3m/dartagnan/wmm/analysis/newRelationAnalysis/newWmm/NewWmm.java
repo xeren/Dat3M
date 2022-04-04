@@ -55,7 +55,7 @@ public class NewWmm {
         // Set up the basic anarchic relations (rf, co, idd etc.)
         // TODO: Add definitions for co, idd, addrDirect etc.
         wmm.addDefinition(new ReadFrom(wmm.newRelationWithName("rf")));
-        wmm.newRelationWithName("co"); // Technically not part of the anarchic semantics
+        wmm.addDefinition(new MemoryOrder(wmm.newRelationWithName("co"))); // Technically not part of the anarchic semantics
         wmm.newRelationWithName("idd");
         wmm.newRelationWithName("addrDirect");
 

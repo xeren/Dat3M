@@ -50,7 +50,8 @@ public class MemoryOrder extends BaseDefinition {
 
         for(Event e1 : storeEvents) {
             for(Event e2 : storeEvents) {
-                if(lc && e1.getThread()==e2.getThread() && e1.getCId()>e2.getCId()
+                if(e1==e2
+                        || lc && e1.getThread()==e2.getThread() && e1.getCId()>e2.getCId()
                         || exec.areMutuallyExclusive(e1,e2)
                         || !alias.mayAlias((MemEvent)e1,(MemEvent)e2)) {
                     continue;
