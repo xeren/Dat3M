@@ -75,19 +75,37 @@ public class Acyclic extends CATAxiom {
 
     @Override
     public Map<Relation,Knowledge.Delta> computeIncrementalKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
-        assert  changed == getConstrainedRelation();
+        assert changed == getConstrainedRelation();
         if (delta.getEnabledSet().isEmpty()) {
             // We can only derive new knowledge from added edges, so if we have none, we return early
             return Map.of();
         }
+
+        ExecutionAnalysis exec = analysisContext.get(ExecutionAnalysis.class);
 
         Knowledge.Delta newDelta = new Knowledge.Delta();
         for (Tuple t : delta.getEnabledSet()) {
             if (transitiveMinSet.add(t)) {
                 newDelta.getDisabledSet().add(t.getInverse());
             }
+            Event x = t.getFirst();
+            Event y = t.getSecond();
+            boolean implies = exec.isImplied(x, y);
+            boolean impliedBy = exec.isImplied(y, x);
+            for (Tuple s : transitiveMinSet.getBySecond(x)) {
+                Event w = s.getFirst();
+                if ((impliedBy || exec.isImplied(w, x)) && transitiveMinSet.add(new Tuple(w, y))) {
+                    newDelta.getDisabledSet().add(new Tuple(y, w));
+                }
+            }
+            for (Tuple u : transitiveMinSet.getByFirst(y)) {
+                Event z = u.getSecond();
+                if ((implies || exec.isImplied(z, y)) && transitiveMinSet.add(new Tuple(x, z))) {
+                    newDelta.getDisabledSet().add(new Tuple(z, x));
+                }
+            }
         }
-        //TODO: we should transitively close <transitiveMinSet>
+
         return Map.of(rel,newDelta);
     }
 

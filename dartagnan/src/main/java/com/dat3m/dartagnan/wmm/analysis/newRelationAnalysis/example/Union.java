@@ -67,21 +67,19 @@ public class Union extends DerivedDefinition {
     // This method propagates knowledge top-down
     @Override
     protected Map<Relation,Knowledge.Delta> topDownKnowledgeClosure(Relation changed, Knowledge.Delta delta, Map<Relation, Knowledge> know) {
-        // --- Enabled sets ---
-        if (delta.getEnabledSet().isEmpty()) {
-            return Map.of();
-        }
 
         final List<Relation> deps = dependencies;
         Map<Relation,Knowledge.Delta> deltas = new HashMap<>();
         // --- Disabled sets ---
-        for (Relation r : deps) {
-            // Disabled sets always propagate downwards to each dependency
-            deltas.put(r, new Knowledge.Delta(delta.getDisabledSet(), new TupleSet()));
+        if (!delta.getDisabledSet().isEmpty()) {
+            for (Relation r : deps) {
+                // Disabled sets always propagate downwards to each dependency
+                deltas.put(r, new Knowledge.Delta(delta.getDisabledSet(), new TupleSet()));
+            }
         }
-        deltas.put(definedRelation, new Knowledge.Delta()); // The defined relation has no change
 
         List<Knowledge> kList = new ArrayList<>(Lists.transform(deps, know::get)); // We copy to avoid repeated lookups
+        // --- Enabled sets ---
         for (Tuple t : delta.getEnabledSet()) {
             // If 2+ relations have unknown knowledge ? about <t>, then we cannot propagate
             // If exactly 1 has entry ?, and all others are F, we can propagate T downwards
