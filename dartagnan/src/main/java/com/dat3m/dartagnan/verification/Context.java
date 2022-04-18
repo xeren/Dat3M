@@ -4,21 +4,34 @@ import com.dat3m.dartagnan.exception.UnsatisfiedRequirementException;
 import com.google.common.collect.ClassToInstanceMap;
 import com.google.common.collect.MutableClassToInstanceMap;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 public class Context {
     private final ClassToInstanceMap<Object> metaDataMap;
+    private final VerificationTask task;
 
-    private Context() {
+    private Context(VerificationTask t) {
         metaDataMap = MutableClassToInstanceMap.create();
+        task = checkNotNull(t);
     }
 
-    public static Context create() {
-        return new Context();
+    public static Context create(VerificationTask task) {
+        return new Context(task);
     }
 
-    public static Context createCopyFrom(Context context) {
-        Context ctx = new Context();
+    public static Context createCopyFrom(VerificationTask task, Context context) {
+        Context ctx = new Context(task);
         ctx.metaDataMap.putAll(context.metaDataMap);
         return ctx;
+    }
+
+    // =============================================
+
+    /**
+     * Collection of program, memory model and specification which the analyses in this instance refer to.
+     */
+    public VerificationTask getTask() {
+        return task;
     }
 
     // =============================================

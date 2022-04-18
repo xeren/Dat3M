@@ -64,7 +64,7 @@ public class VerificationTask {
         this.memoryModel = checkNotNull(memoryModel);
         this.witness = checkNotNull(witness);
         this.config = checkNotNull(config);
-        this.analysisContext = Context.create();
+        this.analysisContext = Context.create(this);
 
         config.recursiveInject(this);
     }

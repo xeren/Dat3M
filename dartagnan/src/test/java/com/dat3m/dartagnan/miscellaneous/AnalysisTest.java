@@ -17,6 +17,8 @@ import com.dat3m.dartagnan.program.memory.MemoryObject;
 import com.dat3m.dartagnan.program.processing.LoopUnrolling;
 import com.dat3m.dartagnan.program.processing.compilation.Compilation;
 import com.dat3m.dartagnan.verification.Context;
+import com.dat3m.dartagnan.verification.RegularVerificationTask;
+import com.dat3m.dartagnan.wmm.Wmm;
 import org.junit.Test;
 import org.sosy_lab.common.configuration.Configuration;
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
@@ -72,7 +74,7 @@ public class AnalysisTest {
         LoopUnrolling.newInstance().run(program);
         Compilation.newInstance().run(program);
         Configuration config = Configuration.defaultConfiguration();
-        Context context = Context.create();
+        Context context = Context.create(RegularVerificationTask.builder().build(program,new Wmm()));
         context.register(BranchEquivalence.class,BranchEquivalence.fromConfig(program,config));
         context.register(ExecutionAnalysis.class,ExecutionAnalysis.fromConfig(program,context,config));
         Dependency dep = Dependency.fromConfig(program,context,config);
