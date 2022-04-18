@@ -3,7 +3,7 @@ package com.dat3m.ui.result;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.verification.RefinementTask;
-import com.dat3m.dartagnan.verification.VerificationTask;
+import com.dat3m.dartagnan.verification.RegularVerificationTask;
 import com.dat3m.dartagnan.verification.solving.AssumeSolver;
 import com.dat3m.dartagnan.verification.solving.IncrementalSolver;
 import com.dat3m.dartagnan.verification.solving.RefinementSolver;
@@ -59,7 +59,7 @@ public class ReachabilityResult {
             try {
                 Result result = Result.UNKNOWN;
                 Arch arch = program.getArch() != null ? program.getArch() : options.getTarget();
-                VerificationTask task = VerificationTask.builder()
+                RegularVerificationTask task = RegularVerificationTask.builder()
                         .withBound(options.getBound())
                         .withSolverTimeout(options.getTimeout())
                         .withTarget(arch)

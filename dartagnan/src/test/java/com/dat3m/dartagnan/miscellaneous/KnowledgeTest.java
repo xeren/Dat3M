@@ -12,7 +12,7 @@ import com.dat3m.dartagnan.program.filter.FilterBasic;
 import com.dat3m.dartagnan.program.memory.Memory;
 import com.dat3m.dartagnan.program.memory.MemoryObject;
 import com.dat3m.dartagnan.verification.Context;
-import com.dat3m.dartagnan.verification.VerificationTask;
+import com.dat3m.dartagnan.verification.RegularVerificationTask;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.Knowledge;
 import com.dat3m.dartagnan.wmm.analysis.newRelationAnalysis.NewRelationAnalysis;
@@ -93,7 +93,7 @@ public class KnowledgeTest {
         m.addDefinition(new Union(hb,po,rf,co,fr));
         m.addAxiom(new Acyclic(hb));
 
-        VerificationTask task = VerificationTask.builder().build(p,new Wmm());
+        RegularVerificationTask task = RegularVerificationTask.builder().build(p,new Wmm());
         task.preprocessProgram();
         task.performStaticProgramAnalyses();
         task.performStaticWmmAnalyses();

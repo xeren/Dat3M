@@ -8,7 +8,7 @@ import com.dat3m.dartagnan.utils.rules.Provider;
 import com.dat3m.dartagnan.utils.rules.Providers;
 import com.dat3m.dartagnan.utils.rules.RequestShutdownOnError;
 import com.dat3m.dartagnan.verification.RefinementTask;
-import com.dat3m.dartagnan.verification.VerificationTask;
+import com.dat3m.dartagnan.verification.RegularVerificationTask;
 import com.dat3m.dartagnan.verification.solving.RefinementSolver;
 import com.dat3m.dartagnan.verification.solving.TwoSolvers;
 import com.dat3m.dartagnan.wmm.Wmm;
@@ -101,8 +101,8 @@ public abstract class AbstractLitmusTest {
     protected final Provider<Wmm> wmmProvider = getWmmProvider();
     protected final Provider<Result> expectedResultProvider = Provider.fromSupplier(() ->
     	getExpectedResults().get(filePathProvider.get().substring(filePathProvider.get().indexOf("/") + 1)));
-    protected final Provider<VerificationTask> taskProvider = Provider.fromSupplier(() ->
-        VerificationTask.builder()
+    protected final Provider<RegularVerificationTask> taskProvider = Provider.fromSupplier(() ->
+        RegularVerificationTask.builder()
         .withConfig(Configuration.builder()
             .setOption(INITIALIZE_REGISTERS,String.valueOf(DO_INITIALIZE_REGISTERS))
             .build())

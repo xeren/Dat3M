@@ -8,7 +8,7 @@ import com.dat3m.dartagnan.program.Program.SourceLanguage;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.utils.options.BaseOptions;
 import com.dat3m.dartagnan.verification.RefinementTask;
-import com.dat3m.dartagnan.verification.VerificationTask;
+import com.dat3m.dartagnan.verification.RegularVerificationTask;
 import com.dat3m.dartagnan.verification.solving.*;
 import com.dat3m.dartagnan.witness.WitnessBuilder;
 import com.dat3m.dartagnan.witness.WitnessGraph;
@@ -88,7 +88,7 @@ public class Dartagnan extends BaseOptions {
         	witness = new ParserWitness().parse(new File(o.getWitnessPath()));
         }
 
-        VerificationTask task = VerificationTask.builder()
+        RegularVerificationTask task = RegularVerificationTask.builder()
                 .withConfig(config)
                 .withWitness(witness)
                 .build(p, mcm);

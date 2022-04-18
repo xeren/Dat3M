@@ -6,7 +6,7 @@ import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.utils.ResourceHelper;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.utils.TestHelper;
-import com.dat3m.dartagnan.verification.VerificationTask;
+import com.dat3m.dartagnan.verification.RegularVerificationTask;
 import com.dat3m.dartagnan.verification.solving.TwoSolvers;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.google.common.collect.ImmutableMap;
@@ -95,7 +95,7 @@ public class BranchTest {
              ProverEnvironment prover2 = ctx.newProverEnvironment(ProverOptions.GENERATE_MODELS))
         {
             Program program = new ProgramParser().parse(new File(path));
-            VerificationTask task = VerificationTask.builder()
+            RegularVerificationTask task = RegularVerificationTask.builder()
                     .withSolverTimeout(60)
                     .build(program, wmm);
             assertEquals(expected, TwoSolvers.run(ctx, prover1, prover2, task));

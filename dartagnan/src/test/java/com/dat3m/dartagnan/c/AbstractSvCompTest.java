@@ -7,7 +7,7 @@ import com.dat3m.dartagnan.utils.rules.Provider;
 import com.dat3m.dartagnan.utils.rules.Providers;
 import com.dat3m.dartagnan.utils.rules.RequestShutdownOnError;
 import com.dat3m.dartagnan.verification.RefinementTask;
-import com.dat3m.dartagnan.verification.VerificationTask;
+import com.dat3m.dartagnan.verification.RegularVerificationTask;
 import com.dat3m.dartagnan.verification.solving.AssumeSolver;
 import com.dat3m.dartagnan.verification.solving.IncrementalSolver;
 import com.dat3m.dartagnan.verification.solving.RefinementSolver;
@@ -70,7 +70,7 @@ public abstract class AbstractSvCompTest {
     protected final Provider<Wmm> wmmProvider = getWmmProvider();
     protected final Provider<Result> expectedResultProvider = Provider.fromSupplier(() ->
     	readExpected(filePathProvider.get().substring(0, filePathProvider.get().lastIndexOf("-")) + ".yml", "unreach-call.prp"));
-    protected final Provider<VerificationTask> taskProvider = Providers.createTask(programProvider, wmmProvider, targetProvider, boundProvider, timeoutProvider);
+    protected final Provider<RegularVerificationTask> taskProvider = Providers.createTask(programProvider, wmmProvider, targetProvider, boundProvider, timeoutProvider);
     protected final Provider<SolverContext> contextProvider = Providers.createSolverContextFromManager(shutdownManagerProvider);
     protected final Provider<ProverEnvironment> proverProvider = Providers.createProverWithFixedOptions(contextProvider, SolverContext.ProverOptions.GENERATE_MODELS);
     protected final Provider<ProverEnvironment> prover2Provider = Providers.createProverWithFixedOptions(contextProvider, SolverContext.ProverOptions.GENERATE_MODELS);

@@ -5,7 +5,7 @@ import com.dat3m.dartagnan.parsers.program.ProgramParser;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.utils.ResourceHelper;
 import com.dat3m.dartagnan.utils.TestHelper;
-import com.dat3m.dartagnan.verification.VerificationTask;
+import com.dat3m.dartagnan.verification.RegularVerificationTask;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.configuration.Arch;
 import org.sosy_lab.common.ShutdownManager;
@@ -56,9 +56,9 @@ public class Providers {
 
     // =========================== Task related providers ==============================
 
-    public static Provider<VerificationTask> createTask(Supplier<Program> programSupplier, Supplier<Wmm> wmmSupplier,
+    public static Provider<RegularVerificationTask> createTask(Supplier<Program> programSupplier, Supplier<Wmm> wmmSupplier,
                                                         Supplier<Arch> targetSupplier, Supplier<Integer> boundSupplier, Supplier<Integer> timeoutSupplier) {
-    	return Provider.fromSupplier(() -> VerificationTask.builder().
+    	return Provider.fromSupplier(() -> RegularVerificationTask.builder().
     			withTarget(targetSupplier.get()).
     			withBound(boundSupplier.get()).
     			withSolverTimeout(timeoutSupplier.get()).

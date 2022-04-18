@@ -20,7 +20,7 @@ import com.dat3m.dartagnan.program.processing.LoopUnrolling;
 import com.dat3m.dartagnan.program.processing.compilation.Compilation;
 import com.dat3m.dartagnan.utils.ResourceHelper;
 import com.dat3m.dartagnan.verification.Context;
-import com.dat3m.dartagnan.verification.VerificationTask;
+import com.dat3m.dartagnan.verification.RegularVerificationTask;
 import com.dat3m.dartagnan.wmm.Wmm;
 import org.junit.Test;
 import org.sosy_lab.common.configuration.Configuration;
@@ -77,7 +77,7 @@ public class ExceptionsTest {
     	Program p = pb.build(SourceLanguage.LITMUS);
 		Wmm cat = new ParserCat().parse(new File(ResourceHelper.CAT_RESOURCE_PATH+ "cat/tso.cat"));
 		Configuration config = Configuration.defaultConfiguration();
-		VerificationTask task = VerificationTask.builder()
+        RegularVerificationTask task = RegularVerificationTask.builder()
                 .withConfig(config)
                 .build(p, cat);
 		// The program must be compiled before being able to construct an Encoder for it

@@ -69,10 +69,6 @@ public class VerificationTask {
         config.recursiveInject(this);
     }
 
-    public static VerificationTaskBuilder builder() {
-        return new VerificationTaskBuilder();
-    }
-
     public Program getProgram() {
     	return program;
     }
@@ -150,42 +146,40 @@ public class VerificationTask {
 
     // ==================== Builder =====================
 
-    public static class VerificationTaskBuilder {
+    public static abstract class VerificationTaskBuilder<T extends VerificationTask> {
         protected WitnessGraph witness = new WitnessGraph();
         protected ConfigurationBuilder config = Configuration.builder();
 
         protected VerificationTaskBuilder() { }
 
-        public VerificationTaskBuilder withWitness(WitnessGraph witness) {
+        public VerificationTaskBuilder<T> withWitness(WitnessGraph witness) {
             this.witness = checkNotNull(witness, "Witness may not be null.");
             return this;
         }
 
-        public VerificationTaskBuilder withTarget(Arch target) {
+        public VerificationTaskBuilder<T> withTarget(Arch target) {
             checkNotNull(target, "Target may not be null.");
             this.config.setOption(TARGET, target.toString());
             return this;
         }
 
-        public VerificationTaskBuilder withBound(int k) {
+        public VerificationTaskBuilder<T> withBound(int k) {
             checkArgument(k > 0 , "Unrolling bound must be positive.");
             this.config.setOption(BOUND, Integer.toString(k));
             return this;
         }
 
-        public VerificationTaskBuilder withSolverTimeout(int t) {
+        public VerificationTaskBuilder<T> withSolverTimeout(int t) {
             this.config.setOption(TIMEOUT, Integer.toString(t));
             return this;
         }
 
-        public VerificationTaskBuilder withConfig(Configuration config) {
+        public VerificationTaskBuilder<T> withConfig(Configuration config) {
             this.config.copyFrom(config);
             return this;
         }
 
-        public VerificationTask build(Program program, Wmm memoryModel) throws InvalidConfigurationException {
-            return new VerificationTask(program, memoryModel, witness, config.build());
-        }
+        public abstract T build(Program program, Wmm memoryModel) throws InvalidConfigurationException;
     }
 
     private void updateAssertions(Program program) {

@@ -1,6 +1,5 @@
 package com.dat3m.dartagnan.verification;
 
-import com.dat3m.dartagnan.configuration.Arch;
 import com.dat3m.dartagnan.configuration.Baseline;
 import com.dat3m.dartagnan.encoding.ProgramEncoder;
 import com.dat3m.dartagnan.encoding.PropertyEncoder;
@@ -39,7 +38,7 @@ import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.*;
  Currently, we only have a custom theory solver (CAAT) to solve such tasks but any CEGAR-like approach could be used.
  */
 @Options
-public class RefinementTask extends VerificationTask {
+public final class RefinementTask extends VerificationTask {
 
 	private static final Logger logger = LogManager.getLogger(RefinementTask.class);
 
@@ -153,27 +152,9 @@ public class RefinementTask extends VerificationTask {
 
     // ==================== Builder =====================
 
-    public static class RefinementTaskBuilder extends VerificationTaskBuilder {
+    private static final class RefinementTaskBuilder extends VerificationTaskBuilder<RefinementTask> {
 
         private Wmm baselineModel;
-
-        @Override
-        public RefinementTaskBuilder withWitness(WitnessGraph witness) {
-            super.withWitness(witness);
-            return this;
-        }
-
-        @Override
-        public RefinementTaskBuilder withTarget(Arch target) {
-            super.withTarget(target);
-            return this;
-        }
-
-        @Override
-        public RefinementTaskBuilder withConfig(Configuration config) {
-            super.withConfig(config);
-            return this;
-        }
 
         public RefinementTaskBuilder withBaselineWMM(Wmm baselineModel) {
             this.baselineModel = baselineModel;

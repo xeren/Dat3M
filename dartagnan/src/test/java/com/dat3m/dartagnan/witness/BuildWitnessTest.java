@@ -6,7 +6,7 @@ import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.utils.ResourceHelper;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.utils.TestHelper;
-import com.dat3m.dartagnan.verification.VerificationTask;
+import com.dat3m.dartagnan.verification.RegularVerificationTask;
 import com.dat3m.dartagnan.verification.solving.IncrementalSolver;
 import com.dat3m.dartagnan.wmm.Wmm;
 import org.junit.Test;
@@ -36,7 +36,7 @@ public class BuildWitnessTest {
     	
     	Program p = new ProgramParser().parse(new File(ResourceHelper.TEST_RESOURCE_PATH + "witness/lazy01-for-witness.bpl"));
     	Wmm wmm = new ParserCat().parse(new File(ResourceHelper.CAT_RESOURCE_PATH + "cat/svcomp.cat"));
-    	VerificationTask task = VerificationTask.builder().withConfig(config).build(p, wmm);
+		RegularVerificationTask task = RegularVerificationTask.builder().withConfig(config).build(p, wmm);
     	try (SolverContext ctx = TestHelper.createContext();
     			ProverEnvironment prover = ctx.newProverEnvironment(ProverOptions.GENERATE_MODELS))
     	{
