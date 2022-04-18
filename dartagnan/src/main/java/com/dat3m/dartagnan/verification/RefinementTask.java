@@ -96,7 +96,7 @@ public final class RefinementTask extends VerificationTask {
 		logger.info("{}: {}", BASELINE, baselines);
     }
 
-    public static RefinementTask fromVerificationTaskWithDefaultBaselineWMM(VerificationTask task)
+    public static RefinementTask fromVerificationTaskWithDefaultBaselineWMM(RegularVerificationTask task)
             throws InvalidConfigurationException {
         return new RefinementTaskBuilder()
                 .withWitness(task.getWitness())

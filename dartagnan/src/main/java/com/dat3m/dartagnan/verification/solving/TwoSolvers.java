@@ -6,7 +6,7 @@ import com.dat3m.dartagnan.encoding.PropertyEncoder;
 import com.dat3m.dartagnan.encoding.SymmetryEncoder;
 import com.dat3m.dartagnan.encoding.WmmEncoder;
 import com.dat3m.dartagnan.utils.Result;
-import com.dat3m.dartagnan.verification.VerificationTask;
+import com.dat3m.dartagnan.verification.RegularVerificationTask;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
@@ -22,7 +22,7 @@ public class TwoSolvers {
 
     private static final Logger logger = LogManager.getLogger(TwoSolvers.class);
 
-    public static Result run(SolverContext ctx, ProverEnvironment prover1, ProverEnvironment prover2, VerificationTask task)
+    public static Result run(SolverContext ctx, ProverEnvironment prover1, ProverEnvironment prover2, RegularVerificationTask task)
             throws InterruptedException, SolverException, InvalidConfigurationException {
     	Result res = Result.UNKNOWN;
     	
