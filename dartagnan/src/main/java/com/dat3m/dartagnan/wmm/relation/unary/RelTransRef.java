@@ -94,8 +94,8 @@ public class RelTransRef extends RelTrans {
     }
 
     @Override
-    protected BooleanFormula encodeApprox(SolverContext ctx) {
-    	return invokeEncode(super::encodeApprox, ctx);
+    public BooleanFormula encode(SolverContext ctx) {
+    	return invokeEncode(super::encode, ctx);
     }
 
     private BooleanFormula invokeEncode(Function<SolverContext, BooleanFormula> originalMethod, SolverContext ctx) {

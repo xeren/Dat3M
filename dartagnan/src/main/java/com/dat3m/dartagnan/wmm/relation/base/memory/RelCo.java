@@ -51,7 +51,6 @@ public class RelCo extends Relation {
 
     public RelCo(){
         term = CO;
-        forceDoEncode = true;
     }
 
     @Override
@@ -133,7 +132,7 @@ public class RelCo extends Relation {
     }
 
     @Override
-    protected BooleanFormula encodeApprox(SolverContext ctx) {
+    public BooleanFormula encode(SolverContext ctx) {
         AliasAnalysis alias = analysisContext.get(AliasAnalysis.class);
         WmmAnalysis wmmAnalysis = analysisContext.get(WmmAnalysis.class);
     	FormulaManager fmgr = ctx.getFormulaManager();

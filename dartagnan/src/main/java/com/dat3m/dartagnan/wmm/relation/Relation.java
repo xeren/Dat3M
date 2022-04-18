@@ -38,8 +38,6 @@ public abstract class Relation implements Encoder, Dependent<Relation> {
     protected VerificationTask task;
     protected Context analysisContext;
 
-    protected boolean isEncoded;
-
     protected TupleSet minTupleSet = null;
     protected TupleSet maxTupleSet = null;
     protected TupleSet encodeTupleSet = null;
@@ -47,7 +45,6 @@ public abstract class Relation implements Encoder, Dependent<Relation> {
     protected int recursiveGroupId = 0;
     protected boolean forceUpdateRecursiveGroupId = false;
     protected boolean isRecursive = false;
-    protected boolean forceDoEncode = false;
 
     public Relation() { }
 
@@ -82,7 +79,6 @@ public abstract class Relation implements Encoder, Dependent<Relation> {
     public void initializeEncoding(SolverContext ctx) {
         Preconditions.checkState(this.maxTupleSet != null && this.minTupleSet != null,
                 "No available relation data to encode. Perform RelationAnalysis before encoding.");
-        this.isEncoded = false;
         this.encodeTupleSet = new TupleSet();
     }
 
@@ -157,19 +153,6 @@ public abstract class Relation implements Encoder, Dependent<Relation> {
     }
 
     public BooleanFormula encode(SolverContext ctx) {
-        if(isEncoded){
-            return ctx.getFormulaManager().getBooleanFormulaManager().makeTrue();
-        }
-        isEncoded = true;
-        return doEncode(ctx);
-    }
-
-    protected abstract BooleanFormula encodeApprox(SolverContext ctx);
-
-    protected BooleanFormula doEncode(SolverContext ctx){
-        if(!encodeTupleSet.isEmpty() || forceDoEncode){
-        	return encodeApprox(ctx);
-        }
         return ctx.getFormulaManager().getBooleanFormulaManager().makeTrue();
     }
 

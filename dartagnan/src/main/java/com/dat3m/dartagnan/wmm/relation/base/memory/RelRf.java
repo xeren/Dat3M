@@ -32,7 +32,6 @@ public class RelRf extends Relation {
 
     public RelRf(){
         term = RF;
-        forceDoEncode = true;
     }
 
     @Override
@@ -165,7 +164,7 @@ public class RelRf extends Relation {
     }
 
     @Override
-    protected BooleanFormula encodeApprox(SolverContext ctx) {
+    public BooleanFormula encode(SolverContext ctx) {
     	FormulaManager fmgr = ctx.getFormulaManager();
 		BooleanFormulaManager bmgr = fmgr.getBooleanFormulaManager();
 

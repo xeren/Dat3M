@@ -98,8 +98,10 @@ public class WmmEncoder implements Encoder {
         logger.info("Encoding relations");
         BooleanFormulaManager bmgr = ctx.getFormulaManager().getBooleanFormulaManager();
         BooleanFormula enc = encodeAnarchicSemantics(ctx);
-        for (Axiom ax : memoryModel.getAxioms()) {
-            enc = bmgr.and(enc, ax.getRelation().encode(ctx));
+        for(Relation r : memoryModel.getRelationRepository().getRelations()) {
+            if(!Wmm.BASE_RELATIONS.contains(r.getName())) {
+                enc = bmgr.and(enc, r.encode(ctx));
+            }
         }
         return enc;
     }

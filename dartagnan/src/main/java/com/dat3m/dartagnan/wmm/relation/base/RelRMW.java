@@ -55,7 +55,6 @@ public class RelRMW extends StaticRelation {
 
     public RelRMW(){
         term = RMW;
-        forceDoEncode = true;
     }
 
 
@@ -133,14 +132,14 @@ public class RelRMW extends StaticRelation {
     }
 
     @Override
-    protected BooleanFormula encodeApprox(SolverContext ctx) {
+    public BooleanFormula encode(SolverContext ctx) {
         FormulaManager fmgr = ctx.getFormulaManager();
 		BooleanFormulaManager bmgr = fmgr.getBooleanFormulaManager();
         
         // Encode base (not exclusive pairs) RMW
         TupleSet origEncodeTupleSet = encodeTupleSet;
         encodeTupleSet = new TupleSet(Sets.intersection(encodeTupleSet, baseMaxTupleSet));
-        BooleanFormula enc = super.encodeApprox(ctx);
+        BooleanFormula enc = super.encode(ctx);
         encodeTupleSet = origEncodeTupleSet;
 
         // Encode RMW for exclusive pairs
