@@ -44,7 +44,6 @@ public abstract class Relation implements Encoder, Dependent<Relation> {
 
     protected int recursiveGroupId = 0;
     protected boolean forceUpdateRecursiveGroupId = false;
-    protected boolean isRecursive = false;
 
     public Relation() { }
 

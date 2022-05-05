@@ -55,10 +55,8 @@ public class RecursiveRelation extends Relation {
     }
 
     public void setConcreteRelation(Relation r1){
-        r1.isRecursive = true;
         r1.setName(name);
         this.r1 = r1;
-        this.isRecursive = true;
         this.term = r1.getTerm();
     }
 
