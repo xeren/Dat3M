@@ -6,7 +6,7 @@ import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
-import com.dat3m.dartagnan.wmm.relation.Relation;
+import com.dat3m.dartagnan.wmm.Relation;
 import com.dat3m.dartagnan.wmm.utils.RecursiveGroup;
 import org.sosy_lab.common.configuration.Configuration;
 import org.sosy_lab.common.configuration.InvalidConfigurationException;

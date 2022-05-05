@@ -12,7 +12,7 @@ import com.dat3m.dartagnan.wmm.analysis.RelationAnalysis;
 import com.dat3m.dartagnan.wmm.analysis.WmmAnalysis;
 import com.dat3m.dartagnan.wmm.axiom.Acyclic;
 import com.dat3m.dartagnan.wmm.axiom.Empty;
-import com.dat3m.dartagnan.wmm.relation.Relation;
+import com.dat3m.dartagnan.wmm.Relation;
 import com.dat3m.dartagnan.wmm.relation.binary.RelComposition;
 import com.dat3m.dartagnan.wmm.relation.binary.RelIntersection;
 import com.dat3m.dartagnan.wmm.relation.binary.RelUnion;

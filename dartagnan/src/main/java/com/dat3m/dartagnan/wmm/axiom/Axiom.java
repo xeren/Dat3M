@@ -3,7 +3,7 @@ package com.dat3m.dartagnan.wmm.axiom;
 import com.dat3m.dartagnan.utils.dependable.Dependent;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.verification.VerificationTask;
-import com.dat3m.dartagnan.wmm.relation.Relation;
+import com.dat3m.dartagnan.wmm.Relation;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.google.common.base.Preconditions;
 import org.sosy_lab.java_smt.api.BooleanFormula;

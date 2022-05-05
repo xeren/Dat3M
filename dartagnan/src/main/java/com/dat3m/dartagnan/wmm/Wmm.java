@@ -5,7 +5,6 @@ import com.dat3m.dartagnan.program.filter.FilterBasic;
 import com.dat3m.dartagnan.utils.dependable.DependencyGraph;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
 import com.dat3m.dartagnan.wmm.relation.RecursiveRelation;
-import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.RecursiveGroup;
 import com.dat3m.dartagnan.wmm.utils.RelationRepository;
 import com.google.common.base.Preconditions;

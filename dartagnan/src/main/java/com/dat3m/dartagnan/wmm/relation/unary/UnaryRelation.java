@@ -1,6 +1,6 @@
 package com.dat3m.dartagnan.wmm.relation.unary;
 
-import com.dat3m.dartagnan.wmm.relation.Relation;
+import com.dat3m.dartagnan.wmm.Relation;
 import org.sosy_lab.java_smt.api.SolverContext;
 
 import java.util.Collections;

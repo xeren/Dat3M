@@ -5,7 +5,7 @@ import com.dat3m.dartagnan.program.analysis.AliasAnalysis;
 import com.dat3m.dartagnan.program.event.core.Event;
 import com.dat3m.dartagnan.program.event.core.MemEvent;
 import com.dat3m.dartagnan.program.filter.FilterBasic;
-import com.dat3m.dartagnan.wmm.relation.Relation;
+import com.dat3m.dartagnan.wmm.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import org.sosy_lab.java_smt.api.BooleanFormula;

@@ -15,7 +15,7 @@ import com.dat3m.dartagnan.solver.caat4wmm.basePredicates.*;
 import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.verification.model.ExecutionModel;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
-import com.dat3m.dartagnan.wmm.relation.Relation;
+import com.dat3m.dartagnan.wmm.Relation;
 import com.dat3m.dartagnan.wmm.relation.base.RelRMW;
 import com.dat3m.dartagnan.wmm.relation.base.memory.RelCo;
 import com.dat3m.dartagnan.wmm.relation.base.memory.RelLoc;

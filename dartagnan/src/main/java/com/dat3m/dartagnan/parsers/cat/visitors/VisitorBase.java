@@ -8,7 +8,7 @@ import com.dat3m.dartagnan.program.filter.FilterAbstract;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
 import com.dat3m.dartagnan.wmm.relation.RecursiveRelation;
-import com.dat3m.dartagnan.wmm.relation.Relation;
+import com.dat3m.dartagnan.wmm.Relation;
 import com.dat3m.dartagnan.wmm.utils.RelationRepository;
 
 import java.lang.reflect.Constructor;

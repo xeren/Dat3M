@@ -3,7 +3,7 @@ package com.dat3m.dartagnan.solver.caat4wmm.basePredicates;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.RelationGraph;
 import com.dat3m.dartagnan.verification.model.EventData;
-import com.dat3m.dartagnan.wmm.relation.Relation;
+import com.dat3m.dartagnan.wmm.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 
 import java.util.Collections;

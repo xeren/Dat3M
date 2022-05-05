@@ -225,11 +225,11 @@ public class NewWmm {
 
     public static void test2(VerificationTask task, Context analysisContext) {
         NewWmm wmm = createEmptyWmm();
-        for (com.dat3m.dartagnan.wmm.relation.Relation rel : task.getRelations()) {
+        for (com.dat3m.dartagnan.wmm.Relation rel : task.getRelations()) {
             wmm.newRelationWithName(rel.getName());
         }
 
-        for (com.dat3m.dartagnan.wmm.relation.Relation rel : task.getRelations()) {
+        for (com.dat3m.dartagnan.wmm.Relation rel : task.getRelations()) {
             Relation r = wmm.getRelationByNameOrTerm(rel.getName());
             if (rel.isRecursiveRelation()) {
                 rel = rel.getInner();

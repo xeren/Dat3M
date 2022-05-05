@@ -8,7 +8,7 @@ import com.dat3m.dartagnan.program.event.core.MemEvent;
 import com.dat3m.dartagnan.program.filter.FilterBasic;
 import com.dat3m.dartagnan.program.filter.FilterMinus;
 import com.dat3m.dartagnan.wmm.analysis.WmmAnalysis;
-import com.dat3m.dartagnan.wmm.relation.Relation;
+import com.dat3m.dartagnan.wmm.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.google.common.base.Preconditions;
