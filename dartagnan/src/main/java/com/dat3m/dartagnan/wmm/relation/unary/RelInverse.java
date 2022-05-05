@@ -3,7 +3,6 @@ package com.dat3m.dartagnan.wmm.relation.unary;
 import com.dat3m.dartagnan.wmm.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
-import com.google.common.collect.Sets;
 import org.sosy_lab.java_smt.api.BooleanFormula;
 import org.sosy_lab.java_smt.api.BooleanFormulaManager;
 import org.sosy_lab.java_smt.api.SolverContext;
@@ -48,9 +47,8 @@ public class RelInverse extends UnaryRelation {
 
     @Override
     public void addEncodeTupleSet(TupleSet tuples){
-        TupleSet activeSet = new TupleSet(Sets.intersection(Sets.difference(tuples, encodeTupleSet), maxTupleSet));
+        TupleSet activeSet = truncated(tuples);
         encodeTupleSet.addAll(activeSet);
-        activeSet.removeAll(getMinTupleSet());
 
         if(!activeSet.isEmpty()){
             r1.addEncodeTupleSet(activeSet.inverse());

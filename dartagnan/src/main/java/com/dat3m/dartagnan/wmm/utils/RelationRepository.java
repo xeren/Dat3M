@@ -47,13 +47,14 @@ public class RelationRepository {
 
     public Relation getRelation(String name){
         Relation relation = relationMap.get(name);
-        if(relation == null){
-            relation = getBasicRelation(name);
-            if(relation != null){
-                addRelation(relation);
-            }
+        if(relation != null) {
+            return relation;
         }
-        return relation;
+        Relation basic = getBasicRelation(name);
+        if(basic != null) {
+            addRelation(basic);
+        }
+        return basic;
     }
 
     public Relation getRelation(Class<?> cls, Object... args){
@@ -61,14 +62,13 @@ public class RelationRepository {
         try{
             Method method = cls.getMethod("makeTerm", argClasses);
             String term = (String)method.invoke(null, args);
-            Relation relation;
-            if(containsRelation(term)) {
-            	relation = relationMap.get(term);
-            } else {
-                Constructor<?> constructor = cls.getConstructor(argClasses);
-                relation = (Relation)constructor.newInstance(args);
-                addRelation(relation);            	
+            Relation existing = relationMap.get(term);
+            if(existing != null) {
+            	return existing;
             }
+            Constructor<?> constructor = cls.getConstructor(argClasses);
+            Relation relation = (Relation)constructor.newInstance(args);
+            addRelation(relation);
             return relation;
         } catch (Exception e){
             e.printStackTrace();
