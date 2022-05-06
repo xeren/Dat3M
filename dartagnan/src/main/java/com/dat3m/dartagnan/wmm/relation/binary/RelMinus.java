@@ -23,11 +23,6 @@ public class RelMinus extends BinaryRelation {
         term = makeTerm(r1, r2);
     }
 
-    public RelMinus(Relation r1, Relation r2, String name) {
-        super(r1, r2, name);
-        term = makeTerm(r1, r2);
-    }
-
     @Override
     public void initializeEncoding(SolverContext ctx){
         super.initializeEncoding(ctx);

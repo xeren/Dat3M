@@ -20,11 +20,6 @@ public class RelRangeIdentity extends UnaryRelation {
         term = makeTerm(r1);
     }
 
-    public RelRangeIdentity(Relation r1, String name) {
-        super(r1, name);
-        term = makeTerm(r1);
-    }
-
     @Override
     public TupleSet getMinTupleSet(){
         if(minTupleSet == null){

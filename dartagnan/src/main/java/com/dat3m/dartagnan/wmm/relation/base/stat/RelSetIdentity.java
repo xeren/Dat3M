@@ -19,12 +19,6 @@ public class RelSetIdentity extends StaticRelation {
         term = makeTerm(filter);
     }
 
-    public RelSetIdentity(FilterAbstract filter, String name) {
-        super(name);
-        this.filter = filter;
-        term = makeTerm(filter);
-    }
-
     public FilterAbstract getFilter() {
         return filter;
     }

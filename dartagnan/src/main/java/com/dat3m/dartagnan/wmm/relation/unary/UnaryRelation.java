@@ -18,11 +18,6 @@ public abstract class UnaryRelation extends Relation {
         this.r1 = r1;
     }
 
-    UnaryRelation(Relation r1, String name) {
-        super(name);
-        this.r1 = r1;
-    }
-
     public Relation getInner() {
         return r1;
     }

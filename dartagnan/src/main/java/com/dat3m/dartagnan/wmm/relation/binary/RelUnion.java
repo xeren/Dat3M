@@ -24,11 +24,6 @@ public class RelUnion extends BinaryRelation {
         term = makeTerm(r1, r2);
     }
 
-    public RelUnion(Relation r1, Relation r2, String name) {
-        super(r1, r2, name);
-        term = makeTerm(r1, r2);
-    }
-
     @Override
     public TupleSet getMinTupleSet(){
         if(minTupleSet == null){

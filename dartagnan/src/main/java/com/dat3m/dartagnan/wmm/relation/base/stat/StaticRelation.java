@@ -20,10 +20,6 @@ public abstract class StaticRelation extends Relation {
         super();
     }
 
-    public StaticRelation(String name) {
-        super(name);
-    }
-
     @Override
     public TupleSet getMinTupleSet(){
         if(minTupleSet == null){

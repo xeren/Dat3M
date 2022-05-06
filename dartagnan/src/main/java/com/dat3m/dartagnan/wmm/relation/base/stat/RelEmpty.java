@@ -5,7 +5,7 @@ import com.dat3m.dartagnan.wmm.utils.TupleSet;
 public class RelEmpty extends StaticRelation {
 
     public RelEmpty(String name) {
-        super(name);
+        setName(name);
         term = name;
     }
 

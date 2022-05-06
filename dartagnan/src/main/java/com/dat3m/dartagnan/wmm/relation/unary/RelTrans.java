@@ -33,11 +33,6 @@ public class RelTrans extends UnaryRelation {
         term = makeTerm(r1);
     }
 
-    public RelTrans(Relation r1, String name) {
-        super(r1, name);
-        term = makeTerm(r1);
-    }
-
     @Override
     public void initializeRelationAnalysis(VerificationTask task, Context context) {
         super.initializeRelationAnalysis(task, context);

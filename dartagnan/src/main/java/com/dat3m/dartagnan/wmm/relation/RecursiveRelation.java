@@ -29,7 +29,7 @@ public class RecursiveRelation extends Relation {
     }
 
     public RecursiveRelation(String name) {
-        super(name);
+        setName(name);
         term = name;
     }
 

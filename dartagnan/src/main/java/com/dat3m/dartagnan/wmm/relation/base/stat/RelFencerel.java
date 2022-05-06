@@ -26,12 +26,6 @@ public class RelFencerel extends StaticRelation {
         term = makeTerm(fenceName);
     }
 
-    public RelFencerel(String fenceName, String name) {
-        super(name);
-        this.fenceName = fenceName;
-        term = makeTerm(fenceName);
-    }
-
     public String getFenceName() { return fenceName; }
 
     @Override
