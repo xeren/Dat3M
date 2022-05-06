@@ -13,11 +13,8 @@ import com.dat3m.dartagnan.wmm.analysis.WmmAnalysis;
 import com.dat3m.dartagnan.wmm.axiom.Acyclic;
 import com.dat3m.dartagnan.wmm.axiom.Empty;
 import com.dat3m.dartagnan.wmm.Relation;
-import com.dat3m.dartagnan.wmm.relation.binary.RelComposition;
-import com.dat3m.dartagnan.wmm.relation.binary.RelIntersection;
-import com.dat3m.dartagnan.wmm.relation.binary.RelUnion;
-import com.dat3m.dartagnan.wmm.utils.RelationRepository;
 import org.apache.logging.log4j.LogManager;
+import com.dat3m.dartagnan.wmm.utils.RelationRepository;
 import org.apache.logging.log4j.Logger;
 import org.sosy_lab.common.configuration.Configuration;
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
@@ -114,12 +111,9 @@ public final class RefinementTask extends VerificationTask {
 	        Relation poloc = repo.getRelation(POLOC);
 	        Relation co = repo.getRelation(CO);
 	        Relation fr = repo.getRelation(FR);
-	        Relation porf = new RelUnion(poloc, rf);
-	        repo.addRelation(porf);
-	        Relation porfco = new RelUnion(porf, co);
-	        repo.addRelation(porfco);
-	        Relation porfcofr = new RelUnion(porfco, fr);
-	        repo.addRelation(porfcofr);
+	        Relation porf = repo.union(poloc, rf);
+	        Relation porfco =repo.union(porf, co);
+	        Relation porfcofr = repo.union(porfco, fr);
 	        baseline.addAxiom(new Acyclic(porfcofr));
         }
         if(baselines.contains(NO_OOTA)) {
@@ -127,12 +121,8 @@ public final class RefinementTask extends VerificationTask {
             Relation data = repo.getRelation(DATA);
             Relation ctrl = repo.getRelation(CTRL);
             Relation addr = repo.getRelation(ADDR);
-            Relation dep = new RelUnion(data, addr);
-            repo.addRelation(dep);
-            dep = new RelUnion(ctrl, dep);
-            repo.addRelation(dep);
-            Relation hb = new RelUnion(dep, rf);
-            repo.addRelation(hb);
+            Relation dep = repo.union(data, addr);
+            Relation hb = repo.union(repo.union(ctrl, dep), rf);
             baseline.addAxiom(new Acyclic(hb));
         }
         if(baselines.contains(ATOMIC_RMW)) {
@@ -140,10 +130,8 @@ public final class RefinementTask extends VerificationTask {
             Relation rmw = repo.getRelation(RMW);
             Relation coe = repo.getRelation(COE);
             Relation fre = repo.getRelation(FRE);
-            Relation frecoe = new RelComposition(fre, coe);
-            repo.addRelation(frecoe);
-            Relation rmwANDfrecoe = new RelIntersection(rmw, frecoe);
-            repo.addRelation(rmwANDfrecoe);
+            Relation frecoe = repo.composition(fre, coe);
+            Relation rmwANDfrecoe = repo.intersection(rmw, frecoe);
             baseline.addAxiom(new Empty(rmwANDfrecoe));
         }
         

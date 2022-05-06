@@ -58,8 +58,7 @@ public class VisitorBase extends CatBaseVisitor<Object> implements CatVisitor<Ob
     public Object visitLetDefinition(CatParser.LetDefinitionContext ctx) {
         Relation r = ctx.e.accept(relationVisitor);
         if(r != null){
-            r.setName(ctx.n.getText());
-            relationRepository.updateRelation(r);
+            wmm.getRelationRepository().nameRelation(r,ctx.n.getText());
         } else {
             FilterAbstract f = ctx.e.accept(filterVisitor);
             f.setName(ctx.n.getText());
@@ -73,9 +72,9 @@ public class VisitorBase extends CatBaseVisitor<Object> implements CatVisitor<Ob
         recursiveGroup = new HashSet<>();
         recursiveDef = true;
 
-        RecursiveRelation rRecursive = (RecursiveRelation)relationRepository.getRelation(RecursiveRelation.class, ctx.n.getText());
+        RecursiveRelation rRecursive = wmm.getRelationRepository().recursive(ctx.n.getText());
         Relation rConcrete = ctx.e.accept(relationVisitor);
-        if(rRecursive == null || rConcrete == null){
+        if(rConcrete == null){
             throw new ParsingException(ctx.getText());
         }
 
@@ -93,9 +92,9 @@ public class VisitorBase extends CatBaseVisitor<Object> implements CatVisitor<Ob
 
     @Override
     public Object visitLetRecAndDefinition(CatParser.LetRecAndDefinitionContext ctx) {
-        RecursiveRelation rRecursive = (RecursiveRelation)relationRepository.getRelation(RecursiveRelation.class, ctx.n.getText());
+        RecursiveRelation rRecursive = wmm.getRelationRepository().recursive(ctx.n.getText());
         Relation rConcrete = ctx.e.accept(relationVisitor);
-        if(rRecursive == null || rConcrete == null){
+        if(rConcrete == null){
             throw new ParsingException(ctx.getText());
         }
         rRecursive.setConcreteRelation(rConcrete);
