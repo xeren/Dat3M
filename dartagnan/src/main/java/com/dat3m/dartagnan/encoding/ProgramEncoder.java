@@ -3,12 +3,15 @@ package com.dat3m.dartagnan.encoding;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.Thread;
+import com.dat3m.dartagnan.program.analysis.AliasAnalysis;
 import com.dat3m.dartagnan.program.analysis.BranchEquivalence;
 import com.dat3m.dartagnan.program.analysis.Dependency;
+import com.dat3m.dartagnan.program.analysis.ExclusiveAccesses;
 import com.dat3m.dartagnan.program.analysis.ExecutionAnalysis;
 import com.dat3m.dartagnan.program.event.core.CondJump;
 import com.dat3m.dartagnan.program.event.core.Event;
 import com.dat3m.dartagnan.program.event.core.Label;
+import com.dat3m.dartagnan.program.event.core.MemEvent;
 import com.dat3m.dartagnan.program.event.core.utils.RegWriter;
 import com.dat3m.dartagnan.program.memory.Memory;
 import com.dat3m.dartagnan.verification.Context;
@@ -29,6 +32,8 @@ import static com.dat3m.dartagnan.GlobalSettings.ARCH_PRECISION;
 import static com.dat3m.dartagnan.configuration.OptionNames.*;
 import static com.dat3m.dartagnan.expression.utils.Utils.generalEqual;
 import static com.dat3m.dartagnan.expression.utils.Utils.generalEqualZero;
+import static com.dat3m.dartagnan.program.event.Tag.WRITE;
+import static com.dat3m.dartagnan.wmm.utils.Flag.ARM_UNPREDICTABLE_BEHAVIOUR;
 import static com.google.common.collect.Lists.reverse;
 
 @Options
@@ -60,6 +65,8 @@ public class ProgramEncoder implements Encoder {
     private final BranchEquivalence eq;
     private final ExecutionAnalysis exec;
     private final Dependency dep;
+    private final ExclusiveAccesses excl;
+    private final AliasAnalysis alias;
     private boolean isInitialized = false;
 
     private ProgramEncoder(Program program, Context context, Configuration config) throws InvalidConfigurationException {
@@ -68,6 +75,8 @@ public class ProgramEncoder implements Encoder {
         this.eq = context.requires(BranchEquivalence.class);
         this.exec = context.requires(ExecutionAnalysis.class);
         this.dep = context.requires(Dependency.class);
+        this.excl = context.requires(ExclusiveAccesses.class);
+        this.alias = context.requires(AliasAnalysis.class);
         config.inject(this);
 
         logger.info("{}: {}", ALLOW_PARTIAL_EXECUTIONS, shouldAllowPartialExecutions);
@@ -107,7 +116,8 @@ public class ProgramEncoder implements Encoder {
                 encodeMemory(ctx),
                 encodeControlFlow(ctx),
                 encodeFinalRegisterValues(ctx),
-                encodeDependencies(ctx));
+                encodeDependencies(ctx),
+                encodeUnpredictableBehavior(ctx));
     }
 
     public BooleanFormula encodeControlFlow(SolverContext ctx) {
@@ -306,6 +316,39 @@ public class ProgramEncoder implements Encoder {
             }
         }
         return enc;
+    }
+
+    public static BooleanFormula exclusivePairVariable(Event load, Event store, SolverContext ctx) {
+        return ctx.getFormulaManager().getBooleanFormulaManager().makeVariable("excl(" + load.getCId() + "," + store.getCId() + ")");
+    }
+
+    /**
+     * Describes ARM- load-reserve/store-exclusive pairs:
+     * Exclusive stores can only be executed, when they .
+     */
+    public BooleanFormula encodeUnpredictableBehavior(SolverContext ctx) {
+        BooleanFormulaManager bmgr = ctx.getFormulaManager().getBooleanFormulaManager();
+        BooleanFormula enc = bmgr.makeTrue();
+        // Encode RMW for exclusive pairs
+        BooleanFormula unpredictable = bmgr.makeFalse();
+        for(MemEvent store : excl.getStores()) {
+            BooleanFormula storeExec = bmgr.makeFalse();
+            for(ExclusiveAccesses.LoadInfo info : excl.getLoads(store)) {
+                BooleanFormula condition = bmgr.and(store.cf(),info.load.exec());
+                for(Event e : info.intermediates) {
+                    condition = bmgr.and(condition, bmgr.not(e.is(WRITE) ? e.cf() : e.exec()));
+                }
+                BooleanFormula variable = exclusivePairVariable(info.load,store,ctx);
+                storeExec = bmgr.or(storeExec,variable);
+                enc = bmgr.and(enc,bmgr.equivalence(variable,condition));
+                if(!alias.mustAlias(info.load,store)) {
+                    BooleanFormula sameAddress = generalEqual(info.load.getMemAddressExpr(),store.getMemAddressExpr(),ctx);
+                    unpredictable = bmgr.or(unpredictable,bmgr.and(variable,bmgr.not(sameAddress)));
+                }
+            }
+            enc = bmgr.and(enc,bmgr.implication(store.exec(),storeExec));
+        }
+        return bmgr.and(enc,bmgr.equivalence(ARM_UNPREDICTABLE_BEHAVIOUR.repr(ctx),unpredictable));
     }
 
     private static BooleanFormula dependencyEdgeVariable(Event writer, Event reader, BooleanFormulaManager bmgr) {

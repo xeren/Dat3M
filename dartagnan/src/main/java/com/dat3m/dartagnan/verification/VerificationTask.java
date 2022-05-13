@@ -114,6 +114,7 @@ public class VerificationTask {
         analysisContext.register(BranchEquivalence.class, BranchEquivalence.fromConfig(program, config));
         analysisContext.register(ExecutionAnalysis.class, ExecutionAnalysis.fromConfig(program, analysisContext, config));
         analysisContext.register(Dependency.class, Dependency.fromConfig(program, analysisContext, config));
+        analysisContext.register(ExclusiveAccesses.class, ExclusiveAccesses.fromConfig(program,analysisContext, config));
         analysisContext.register(AliasAnalysis.class, AliasAnalysis.fromConfig(program, config));
         analysisContext.register(ThreadSymmetry.class, ThreadSymmetry.fromConfig(program, config));
 
