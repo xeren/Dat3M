@@ -40,7 +40,7 @@ import static com.google.common.base.Preconditions.*;
 
 
 @Options
-public class PropertyEncoder implements Encoder {
+public class PropertyEncoder {
 
     private static final Logger logger = LogManager.getLogger(PropertyEncoder.class);
 
@@ -63,7 +63,6 @@ public class PropertyEncoder implements Encoder {
         return new PropertyEncoder(program, wmm, context, config);
     }
 
-    @Override
     public void initializeEncoding(SolverContext context) { }
 
     public BooleanFormula encodeSpecification(EnumSet<Property> property, SolverContext ctx) {

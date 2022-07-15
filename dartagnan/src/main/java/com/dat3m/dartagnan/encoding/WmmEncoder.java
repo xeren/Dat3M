@@ -20,7 +20,7 @@ import org.sosy_lab.java_smt.api.BooleanFormulaManager;
 import org.sosy_lab.java_smt.api.SolverContext;
 
 
-public class WmmEncoder implements Encoder {
+public class WmmEncoder {
 
     private static final Logger logger = LogManager.getLogger(WmmEncoder.class);
 
@@ -38,7 +38,6 @@ public class WmmEncoder implements Encoder {
         return new WmmEncoder(memoryModel, context);
     }
 
-    @Override
     public void initializeEncoding(SolverContext ctx) {
         for(String relName : Wmm.BASE_RELATIONS) {
             memoryModel.getRelationRepository().getRelation(relName);
