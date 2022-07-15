@@ -22,6 +22,7 @@ import org.sosy_lab.java_smt.api.SolverContext;
 
 import java.util.List;
 
+import static com.dat3m.dartagnan.encoding.ProgramEncoder.execution;
 import static com.dat3m.dartagnan.expression.utils.Utils.generalEqual;
 import static com.dat3m.dartagnan.program.event.Tag.SVCOMP.SVCOMPATOMIC;
 import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.RMW;
@@ -155,6 +156,7 @@ public class RelRMW extends StaticRelation {
             enc = bmgr.and(enc, bmgr.implication(store.exec(), storeExec));
         }
 
+        final ExecutionAnalysis exec = analysisContext.get(ExecutionAnalysis.class);
         final AliasAnalysis alias = analysisContext.requires(AliasAnalysis.class);
         for(Tuple tuple : encodeTupleSet) {
             MemEvent load = (MemEvent) tuple.getFirst();
@@ -163,7 +165,7 @@ public class RelRMW extends StaticRelation {
                     : generalEqual(load.getMemAddressExpr(), store.getMemAddressExpr(), ctx);
             enc = bmgr.and(enc, bmgr.equivalence(
                     getSMTVar(tuple, ctx),
-                    minTupleSet.contains(tuple) ? getExecPair(tuple, ctx) :
+                    minTupleSet.contains(tuple) ? execution(load, store, exec, ctx) :
                             // Relation between exclusive load and store
                             bmgr.and(store.exec(), exclPair(load, store, ctx), sameAddress)));
         }

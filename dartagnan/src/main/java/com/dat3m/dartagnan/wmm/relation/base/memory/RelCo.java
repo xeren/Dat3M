@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 
 import static com.dat3m.dartagnan.configuration.OptionNames.IDL_TO_SAT;
 import static com.dat3m.dartagnan.configuration.Property.LIVENESS;
+import static com.dat3m.dartagnan.encoding.ProgramEncoder.execution;
 import static com.dat3m.dartagnan.expression.utils.Utils.generalEqual;
 import static com.dat3m.dartagnan.program.Program.SourceLanguage.LITMUS;
 import static com.dat3m.dartagnan.program.event.Tag.INIT;
@@ -133,6 +134,7 @@ public class RelCo extends Relation {
     }
 
     private BooleanFormula encodeIDL(SolverContext ctx) {
+        final ExecutionAnalysis exec = analysisContext.get(ExecutionAnalysis.class);
         final AliasAnalysis alias = analysisContext.get(AliasAnalysis.class);
         final BooleanFormulaManager bmgr = ctx.getFormulaManager().getBooleanFormulaManager();
         final IntegerFormulaManager imgr = ctx.getFormulaManager().getIntegerFormulaManager();
@@ -161,7 +163,7 @@ public class RelCo extends Relation {
                     continue;
                 }
 
-                BooleanFormula execPair = getExecPair(t, ctx);
+                BooleanFormula execPair = execution(w1, w2, exec, ctx);
                 BooleanFormula sameAddress = alias.mustAlias(w1, w2) ? bmgr.makeTrue() :
                         generalEqual(w1.getMemAddressExpr(), w2.getMemAddressExpr(), ctx);
                 BooleanFormula pairingCond = bmgr.and(execPair, sameAddress);
@@ -184,6 +186,7 @@ public class RelCo extends Relation {
     }
 
     protected BooleanFormula encodeSAT(SolverContext ctx) {
+        final ExecutionAnalysis exec = analysisContext.get(ExecutionAnalysis.class);
         final AliasAnalysis alias = analysisContext.get(AliasAnalysis.class);
         final BooleanFormulaManager bmgr = ctx.getFormulaManager().getBooleanFormulaManager();
         final EventCache cache = task.getProgram().getCache();
@@ -205,7 +208,7 @@ public class RelCo extends Relation {
                     continue;
                 }
 
-                BooleanFormula execPair = getExecPair(t, ctx);
+                BooleanFormula execPair = execution(w1, w2, exec, ctx);
                 BooleanFormula sameAddress = alias.mustAlias(w1, w2) ? bmgr.makeTrue() :
                         generalEqual(w1.getMemAddressExpr(), w2.getMemAddressExpr(), ctx);
                 BooleanFormula pairingCond = bmgr.and(execPair, sameAddress);
