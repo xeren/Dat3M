@@ -52,29 +52,24 @@ public class DataRaceSolver extends ModelChecker {
 		performStaticProgramAnalyses(task, analysisContext, config);
 		performStaticWmmAnalyses(task, analysisContext, config);
 
-		ProgramEncoder programEncoder = ProgramEncoder.fromConfig(program, analysisContext, config);
-		PropertyEncoder propertyEncoder = PropertyEncoder.fromConfig(program, memoryModel,analysisContext, config);
-		WmmEncoder wmmEncoder = WmmEncoder.fromConfig(memoryModel, analysisContext, config);
-		SymmetryEncoder symmetryEncoder = SymmetryEncoder.fromConfig(memoryModel, analysisContext, config);
-
-		programEncoder.initializeEncoding(ctx);
-		propertyEncoder.initializeEncoding(ctx);
-		wmmEncoder.initializeEncoding(ctx);
-		symmetryEncoder.initializeEncoding(ctx);
+		ProgramEncoder programEncoder = ProgramEncoder.fromConfig(program, analysisContext, config, ctx);
+		PropertyEncoder propertyEncoder = PropertyEncoder.fromConfig(program, memoryModel, analysisContext, config, ctx);
+		WmmEncoder wmmEncoder = WmmEncoder.fromConfig(memoryModel, analysisContext, config, ctx);
+		SymmetryEncoder symmetryEncoder = SymmetryEncoder.fromConfig(memoryModel, analysisContext, config, ctx);
 		
 		Result res = UNKNOWN;
 			
 		logger.info("Starting encoding using " + ctx.getVersion());
-		prover.addConstraint(programEncoder.encodeFullProgram(ctx));
-		prover.addConstraint(wmmEncoder.encodeFullMemoryModel(ctx));
+		prover.addConstraint(programEncoder.encodeFullProgram());
+		prover.addConstraint(wmmEncoder.encodeFullMemoryModel());
 		prover.push();
 
-		prover.addConstraint(propertyEncoder.encodeDataRaces(ctx));
+		prover.addConstraint(propertyEncoder.encodeDataRaces());
 
 		logger.info("Starting first solver.check()");
 		if(prover.isUnsat()) {
 			prover.pop();
-			prover.addConstraint(propertyEncoder.encodeBoundEventExec(ctx));
+			prover.addConstraint(propertyEncoder.encodeBoundEventExec());
 			logger.info("Starting second solver.check()");
 			res = prover.isUnsat() ? PASS : UNKNOWN;
 		} else {
