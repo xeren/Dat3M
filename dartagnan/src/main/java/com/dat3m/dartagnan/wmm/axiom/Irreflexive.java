@@ -22,6 +22,11 @@ public class Irreflexive extends Axiom {
     }
 
     @Override
+    public <T> T visit(Visitor<? extends T> v) {
+        return v.visitIrreflexivity(this);
+    }
+
+    @Override
     public TupleSet getEncodeTupleSet(){
         TupleSet set = new TupleSet();
         rel.getMaxTupleSet().stream().filter(Tuple::isLoop).forEach(set::add);

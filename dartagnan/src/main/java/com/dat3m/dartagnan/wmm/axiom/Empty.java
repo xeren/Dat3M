@@ -18,6 +18,11 @@ public class Empty extends Axiom {
     }
 
     @Override
+    public <T> T visit(Visitor<? extends T> v) {
+        return v.visitEmptiness(this);
+    }
+
+    @Override
     public TupleSet getEncodeTupleSet(){
         return rel.getMaxTupleSet();
     }

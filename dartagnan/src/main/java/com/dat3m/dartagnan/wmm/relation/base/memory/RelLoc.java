@@ -27,6 +27,11 @@ public class RelLoc extends Relation {
     }
 
     @Override
+    public <T> T visit(Visitor<? extends T> v) {
+        return v.visitSameAddress(this);
+    }
+
+    @Override
     public TupleSet getMinTupleSet(){
         if(minTupleSet == null){
             AliasAnalysis alias = analysisContext.get(AliasAnalysis.class);

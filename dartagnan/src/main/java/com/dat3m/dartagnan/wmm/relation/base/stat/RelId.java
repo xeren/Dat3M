@@ -15,6 +15,11 @@ public class RelId extends StaticRelation {
     }
 
     @Override
+    public <T> T visit(Visitor<? extends T> v) {
+        return v.visitIdentity(this, FilterBasic.get(Tag.VISIBLE));
+    }
+
+    @Override
     public TupleSet getMaxTupleSet(){
         if(maxTupleSet == null){
             maxTupleSet = new TupleSet();

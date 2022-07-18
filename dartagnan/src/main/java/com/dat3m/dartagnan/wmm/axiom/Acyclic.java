@@ -57,6 +57,11 @@ public class Acyclic extends Axiom {
     }
 
     @Override
+    public <T> T visit(Visitor<? extends T> v) {
+        return v.visitAcyclicity(this);
+    }
+
+    @Override
     public String toString() {
         return (negated ? "~" : "") + "acyclic " + rel.getName();
     }

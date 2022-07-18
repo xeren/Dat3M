@@ -30,6 +30,11 @@ public class RelSetIdentity extends StaticRelation {
     }
 
     @Override
+    public <T> T visit(Visitor<? extends T> v) {
+        return v.visitIdentity(this, filter);
+    }
+
+    @Override
     public TupleSet getMaxTupleSet(){
         if(maxTupleSet == null){
             maxTupleSet = new TupleSet();

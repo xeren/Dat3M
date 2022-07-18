@@ -30,6 +30,11 @@ public class RelCrit extends StaticRelation {
     }
 
     @Override
+    public <T> T visit(Visitor<? extends T> v) {
+        return v.visitCriticalSections(this);
+    }
+
+    @Override
     public TupleSet getMinTupleSet(){
         if(minTupleSet == null){
             computeTupleSets();

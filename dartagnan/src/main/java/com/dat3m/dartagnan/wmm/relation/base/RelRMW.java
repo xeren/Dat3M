@@ -42,6 +42,11 @@ public class RelRMW extends StaticRelation {
     }
 
     @Override
+    public <T> T visit(Visitor<? extends T> v) {
+        return v.visitReadModifyWrites(this);
+    }
+
+    @Override
     public TupleSet getMinTupleSet(){
         if(minTupleSet == null){
             computeTupleSets();

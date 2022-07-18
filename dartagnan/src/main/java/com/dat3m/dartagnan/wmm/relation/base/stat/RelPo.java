@@ -32,6 +32,11 @@ public class RelPo extends StaticRelation {
     }
 
     @Override
+    public <T> T visit(Visitor<? extends T> v) {
+        return v.visitProgramOrder(this);
+    }
+
+    @Override
     public TupleSet getMaxTupleSet(){
         if(maxTupleSet == null){
             maxTupleSet = new TupleSet();

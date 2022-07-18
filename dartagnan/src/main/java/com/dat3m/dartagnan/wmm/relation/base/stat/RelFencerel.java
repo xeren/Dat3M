@@ -37,6 +37,11 @@ public class RelFencerel extends StaticRelation {
     public String getFenceName() { return fenceName; }
 
     @Override
+    public <T> T visit(Visitor<? extends T> v) {
+        return v.visitFences(this, FilterBasic.get(fenceName));
+    }
+
+    @Override
     public TupleSet getMinTupleSet(){
         if(minTupleSet == null){
             ExecutionAnalysis exec = analysisContext.get(ExecutionAnalysis.class);

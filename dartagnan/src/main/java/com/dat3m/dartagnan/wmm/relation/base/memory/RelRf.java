@@ -36,6 +36,10 @@ public class RelRf extends Relation {
         term = RF;
     }
 
+    @Override
+    public <T> T visit(Visitor<? extends T> v) {
+        return v.visitReadFrom(this);
+    }
 
     @Override
     public TupleSet getMinTupleSet(){

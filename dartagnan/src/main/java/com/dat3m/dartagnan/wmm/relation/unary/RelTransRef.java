@@ -28,6 +28,11 @@ public class RelTransRef extends RelTrans {
     }
 
     @Override
+    public <T> T visit(Visitor<? extends T> v) {
+        return v.visitReflexiveTransitiveClosure(this, r1);
+    }
+
+    @Override
     public TupleSet getMinTupleSet(){
         if(minTupleSet == null){
             super.getMinTupleSet();

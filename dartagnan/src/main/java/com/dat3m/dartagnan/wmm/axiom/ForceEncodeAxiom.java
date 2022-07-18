@@ -19,6 +19,11 @@ public class ForceEncodeAxiom extends Axiom {
     }
 
     @Override
+    public <T> T visit(Visitor<? extends T> v) {
+        return v.visitForceEncoding(this);
+    }
+
+    @Override
     public TupleSet getEncodeTupleSet(){
         return rel.getMaxTupleSet();
     }
