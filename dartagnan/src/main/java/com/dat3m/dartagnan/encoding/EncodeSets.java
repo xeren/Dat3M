@@ -48,6 +48,7 @@ public final class EncodeSets {
 
     private final Wmm memoryModel;
     private final ExecutionAnalysis exec;
+    private final RelationAnalysis ra;
     private final Map<Relation, Set<Tuple>> activeSets = new HashMap<>();
 
     // =====================================================================
@@ -55,7 +56,7 @@ public final class EncodeSets {
     private EncodeSets(Wmm m, Context a) {
         memoryModel = m;
         exec = a.requires(ExecutionAnalysis.class);
-        a.requires(RelationAnalysis.class);
+        ra = a.requires(RelationAnalysis.class);
     }
 
     public static EncodeSets fromConfig(Wmm memoryModel, Context analysisContext, Configuration config) throws InvalidConfigurationException {
@@ -102,13 +103,13 @@ public final class EncodeSets {
         @Override
         public Map<Relation, Stream<Tuple>> visitEmptiness(Axiom ax) {
             Relation r = ax.getRelation();
-            return Map.of(r, r.getMaxTupleSet().stream());
+            return Map.of(r, ra.may(r).stream());
         }
 
         @Override
         public Map<Relation, Stream<Tuple>> visitIrreflexivity(Axiom ax) {
             Relation r = ax.getRelation();
-            return Map.of(r, r.getMaxTupleSet().stream().filter(Tuple::isLoop));
+            return Map.of(r, ra.may(r).stream().filter(Tuple::isLoop));
         }
 
         @Override
@@ -117,7 +118,7 @@ public final class EncodeSets {
             logger.info("Computing encodeTupleSet for acyclic {}", rel);
             // ====== Construct [Event -> Successor] mapping ======
             Map<Event, Collection<Event>> succMap = new HashMap<>();
-            TupleSet may = rel.getMaxTupleSet();
+            TupleSet may = ra.may(rel);
             for (Tuple t : may) {
                 succMap.computeIfAbsent(t.getFirst(), key -> new ArrayList<>()).add(t.getSecond());
             }
@@ -136,7 +137,7 @@ public final class EncodeSets {
             }
             logger.info("encodeTupleSet size: {}", result.size());
             if (reduceAcyclicity) {
-                reduceWithMinSets(rel.getMinTupleSet(), result);
+                reduceWithMinSets(ra.must(rel), result);
                 logger.info("reduced encodeTupleSet size: {}", result.size());
             }
             return Map.of(rel, result.stream());
@@ -169,10 +170,10 @@ public final class EncodeSets {
             }
             TupleSet set1 = new TupleSet();
             TupleSet set2 = new TupleSet();
-            TupleSet may1 = r1.getMaxTupleSet();
-            TupleSet may2 = r2.getMaxTupleSet();
-            TupleSet must1 = r1.getMinTupleSet();
-            TupleSet must2 = r2.getMinTupleSet();
+            TupleSet may1 = ra.may(r1);
+            TupleSet may2 = ra.may(r2);
+            TupleSet must1 = ra.must(r1);
+            TupleSet must2 = ra.must(r2);
             for (Tuple t : news) {
                 Event e = t.getSecond();
                 for (Tuple t1 : may1.getByFirst(t.getFirst())) {
@@ -192,13 +193,13 @@ public final class EncodeSets {
 
         @Override
         public Map<Relation, Stream<Tuple>> visitDomainIdentity(Relation rel, Relation r1) {
-            TupleSet may1 = r1.getMaxTupleSet();
+            TupleSet may1 = ra.may(r1);
             return Map.of(r1, news.stream().flatMap(t -> may1.getByFirst(t.getFirst()).stream()));
         }
 
         @Override
         public Map<Relation, Stream<Tuple>> visitRangeIdentity(Relation rel, Relation r1) {
-            TupleSet may1 = r1.getMaxTupleSet();
+            TupleSet may1 = ra.may(r1);
             return Map.of(r1, news.stream().flatMap(t -> may1.getBySecond(t.getSecond()).stream()));
         }
 
@@ -215,8 +216,8 @@ public final class EncodeSets {
         @Override
         public Map<Relation, Stream<Tuple>> visitTransitiveClosure(Relation rel, Relation r1) {
             HashSet<Tuple> factors = new HashSet<>();
-            TupleSet may = rel.getMaxTupleSet();
-            TupleSet must = rel.getMinTupleSet();
+            TupleSet may = ra.may(rel);
+            TupleSet must = ra.must(rel);
             for (Tuple t : news) {
                 Event e = t.getSecond();
                 for (Tuple t1 : may.getByFirst(t.getFirst())) {
@@ -242,7 +243,7 @@ public final class EncodeSets {
         @Override
         public Map<Relation, Stream<Tuple>> visitCriticalSections(Relation rscs) {
             List<Tuple> queue = new ArrayList<>();
-            TupleSet may = rscs.getMaxTupleSet();
+            TupleSet may = ra.may(rscs);
             for (Tuple tuple : news) {
                 Event lock = tuple.getFirst();
                 Event unlock = tuple.getSecond();
@@ -264,11 +265,11 @@ public final class EncodeSets {
     }
 
     private Stream<Tuple> lower(Collection<Tuple> news, Relation relation) {
-        return news.stream().filter(relation.getMaxTupleSet()::contains);
+        return news.stream().filter(ra.may(relation)::contains);
     }
 
     private Stream<Tuple> upper(Collection<Tuple> news, Relation relation) {
-        Collection<Tuple> set = relation.getMinTupleSet();
+        Collection<Tuple> set = ra.must(relation);
         return news.stream().filter(t -> !set.contains(t));
     }
 

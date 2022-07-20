@@ -3,6 +3,7 @@ package com.dat3m.dartagnan.solver.caat4wmm.basePredicates;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.RelationGraph;
 import com.dat3m.dartagnan.verification.model.EventData;
+import com.dat3m.dartagnan.wmm.analysis.RelationAnalysis;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import org.sosy_lab.java_smt.api.Model;
@@ -16,9 +17,11 @@ import java.util.Optional;
 // A default implementation for any encoded relation, e.g. base relations or non-base but cut relations.
 public class DynamicDefaultWMMGraph extends MaterializedWMMGraph {
     private final Relation relation;
+    private final RelationAnalysis ra;
 
-    public DynamicDefaultWMMGraph(Relation rel) {
+    public DynamicDefaultWMMGraph(Relation rel, RelationAnalysis relationAnalysis) {
         this.relation = rel;
+        this.ra = relationAnalysis;
     }
 
     @Override
@@ -33,8 +36,8 @@ public class DynamicDefaultWMMGraph extends MaterializedWMMGraph {
         Model m = model.getModel();
         SolverContext ctx = model.getContext();
 
-        if (relation.getMaxTupleSet().size() < domain.size() * domain.size()) {
-            relation.getMaxTupleSet()
+        if (ra.may(relation).size() < domain.size() * domain.size()) {
+            ra.may(relation)
                     .stream().map(t -> this.getEdgeFromTuple(t, m, ctx)).filter(Objects::nonNull)
                     .forEach(simpleGraph::add);
         } else {

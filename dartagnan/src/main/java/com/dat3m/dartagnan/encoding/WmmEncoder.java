@@ -151,6 +151,7 @@ public class WmmEncoder {
     private final class RelationEncoder implements Constraint.Visitor<BooleanFormula> {
         final ExecutionAnalysis exec = analysisContext.get(ExecutionAnalysis.class);
         final AliasAnalysis alias = analysisContext.get(AliasAnalysis.class);
+        final RelationAnalysis ra = analysisContext.get(RelationAnalysis.class);
         final EncodeSets encodeSets = analysisContext.get(EncodeSets.class);
         final IntegerFormulaManager imgr = ctx.getFormulaManager().getIntegerFormulaManager();
         final BooleanFormulaManager bmgr = ctx.getFormulaManager().getBooleanFormulaManager();
@@ -158,8 +159,8 @@ public class WmmEncoder {
         @Override
         public BooleanFormula visitUnion(Relation rel, Relation r1, Relation r2) {
             BooleanFormula enc = bmgr.makeTrue();
-            Set<Tuple> may1 = r1.getMaxTupleSet();
-            Set<Tuple> may2 = r2.getMaxTupleSet();
+            Set<Tuple> may1 = ra.may(r1);
+            Set<Tuple> may2 = ra.may(r2);
             for (Tuple tuple : encodeSets.get(rel)) {
                 BooleanFormula edge = rel.getSMTVar(tuple, ctx);
                 BooleanFormula opt1 = may1.contains(tuple) ? r1.getSMTVar(tuple, ctx) : bmgr.makeFalse();
@@ -190,8 +191,8 @@ public class WmmEncoder {
         @Override
         public BooleanFormula visitDifference(Relation rel, Relation r1, Relation r2) {
             BooleanFormula enc = bmgr.makeTrue();
-            Set<Tuple> must1 = r1.getMinTupleSet();
-            Set<Tuple> may2 = r2.getMaxTupleSet();
+            Set<Tuple> must1 = ra.must(r1);
+            Set<Tuple> may2 = ra.may(r2);
             for (Tuple tuple : encodeSets.get(rel)) {
                 BooleanFormula edge = rel.getSMTVar(tuple, ctx);
                 BooleanFormula opt1 = must1.contains(tuple) ? execution(tuple.getFirst(), tuple.getSecond(), exec, ctx) : r1.getSMTVar(tuple, ctx);
@@ -250,8 +251,8 @@ public class WmmEncoder {
         @Override
         public BooleanFormula visitDomainIdentity(Relation rel, Relation r1) {
             BooleanFormula enc = bmgr.makeTrue();
-            TupleSet may1 = r1.getMaxTupleSet();
-            Set<Tuple> must1 = r1.getMinTupleSet();
+            TupleSet may1 = ra.may(r1);
+            Set<Tuple> must1 = ra.must(r1);
             for (Tuple tuple : encodeSets.get(rel)) {
                 BooleanFormula edge = rel.getSMTVar(tuple, ctx);
                 Event e = tuple.getFirst();
@@ -267,8 +268,8 @@ public class WmmEncoder {
         @Override
         public BooleanFormula visitRangeIdentity(Relation rel, Relation r1) {
             BooleanFormula enc = bmgr.makeTrue();
-            TupleSet may1 = r1.getMaxTupleSet();
-            Set<Tuple> must1 = r1.getMinTupleSet();
+            TupleSet may1 = ra.may(r1);
+            Set<Tuple> must1 = ra.must(r1);
             for (Tuple tuple : encodeSets.get(rel)) {
                 BooleanFormula edge = rel.getSMTVar(tuple, ctx);
                 Event e = tuple.getFirst();
@@ -402,7 +403,7 @@ public class WmmEncoder {
         @Override
         public BooleanFormula visitCriticalSections(Relation rscs) {
             BooleanFormula enc = bmgr.makeTrue();
-            TupleSet maySet = rscs.getMaxTupleSet();
+            TupleSet maySet = ra.may(rscs);
             for (Tuple tuple : encodeSets.get(rscs)) {
                 Event lock = tuple.getFirst();
                 Event unlock = tuple.getSecond();
@@ -428,7 +429,7 @@ public class WmmEncoder {
         public BooleanFormula visitReadModifyWrites(Relation rmw) {
             BooleanFormula enc = bmgr.makeTrue();
             BooleanFormula unpredictable = bmgr.makeFalse();
-            TupleSet maySet = rmw.getMaxTupleSet();
+            TupleSet maySet = ra.may(rmw);
             for (Event store : program.getCache().getEvents(
                     FilterIntersection.get(FilterBasic.get(Tag.WRITE), FilterBasic.get(Tag.EXCL)))) {
                 checkState(store instanceof MemEvent, "non-memory event participating in '" + rmw.getName() + "'");
@@ -485,7 +486,7 @@ public class WmmEncoder {
         public BooleanFormula visitReadFrom(Relation rf) {
             BooleanFormula enc = bmgr.makeTrue();
             Map<MemEvent, List<BooleanFormula>> edgeMap = new HashMap<>();
-            for (Tuple tuple : rf.getMaxTupleSet()) {
+            for (Tuple tuple : ra.may(rf)) {
                 MemEvent w = (MemEvent) tuple.getFirst();
                 MemEvent r = (MemEvent) tuple.getSecond();
                 BooleanFormula edge = rf.getSMTVar(tuple, ctx);
@@ -559,7 +560,7 @@ public class WmmEncoder {
         private BooleanFormula encodeIDL(Relation co) {
             List<MemEvent> allWrites = new ArrayList<>(Lists.transform(program.getCache().getEvents(FilterBasic.get(WRITE)), MemEvent.class::cast));
             allWrites.sort(Comparator.comparingInt(Event::getCId));
-            TupleSet maxSet = co.getMaxTupleSet();
+            TupleSet maxSet = ra.may(co);
             Set<Tuple> transCo = RelationAnalysis.findTransitivelyImpliedCo(co, exec);
 
             BooleanFormula enc = bmgr.makeTrue();
@@ -606,8 +607,8 @@ public class WmmEncoder {
         private BooleanFormula encodeSAT(Relation co) {
             List<MemEvent> allWrites = new ArrayList<>(Lists.transform(program.getCache().getEvents(FilterBasic.get(WRITE)), MemEvent.class::cast));
             allWrites.sort(Comparator.comparingInt(Event::getCId));
-            TupleSet maxSet = co.getMaxTupleSet();
-            TupleSet minSet = co.getMinTupleSet();
+            TupleSet maxSet = ra.may(co);
+            TupleSet minSet = ra.must(co);
 
             BooleanFormula enc = bmgr.makeTrue();
             // ---- Encode coherences ----

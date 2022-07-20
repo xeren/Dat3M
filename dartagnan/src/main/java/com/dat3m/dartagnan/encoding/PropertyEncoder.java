@@ -16,6 +16,7 @@ import com.dat3m.dartagnan.program.filter.FilterBasic;
 import com.dat3m.dartagnan.program.filter.FilterMinus;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.wmm.Wmm;
+import com.dat3m.dartagnan.wmm.analysis.RelationAnalysis;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.relation.RelationNameRepository;
@@ -59,6 +60,7 @@ public class PropertyEncoder {
     private final Wmm memoryModel;
     private final ExecutionAnalysis exec;
     private final AliasAnalysis alias;
+    private final RelationAnalysis ra;
     private final SolverContext ctx;
     private final AxiomEncoder axiomEncoder;
 
@@ -71,6 +73,7 @@ public class PropertyEncoder {
         this.memoryModel = checkNotNull(wmm);
         this.exec = context.requires(ExecutionAnalysis.class);
         this.alias = context.requires(AliasAnalysis.class);
+        this.ra = context.requires(RelationAnalysis.class);
         config.inject(this);
         this.ctx = solverContext;
         this.axiomEncoder = new AxiomEncoder(context, solverContext);
@@ -197,7 +200,7 @@ public class PropertyEncoder {
                 BooleanFormula allCoMaximalLoad = bmgr.makeTrue();
                 for (Load load : pair.loads) {
                     BooleanFormula coMaximalLoad = bmgr.makeFalse();
-                    for (Tuple rfEdge : rf.getMaxTupleSet().getBySecond(load)) {
+                    for (Tuple rfEdge : ra.may(rf).getBySecond(load)) {
                         coMaximalLoad = bmgr.or(coMaximalLoad, bmgr.and(rf.getSMTVar(rfEdge, ctx), lastCoVar(rfEdge.getFirst())));
                     }
                     allCoMaximalLoad = bmgr.and(allCoMaximalLoad, coMaximalLoad);
@@ -269,8 +272,8 @@ public class PropertyEncoder {
     private BooleanFormula encodeLastCoConstraints() {
         final Relation co = memoryModel.getRelationRepository().getRelation(CO);
         final BooleanFormulaManager bmgr = ctx.getFormulaManager().getBooleanFormulaManager();
-        final TupleSet minSet = co.getMinTupleSet();
-        final TupleSet maxSet = co.getMaxTupleSet();
+        final TupleSet minSet = ra.must(co);
+        final TupleSet maxSet = ra.may(co);
         final List<Init> initEvents = Lists.transform(program.getCache().getEvents(FilterBasic.get(INIT)), Init.class::cast);
         final List<MemEvent> writes = Lists.transform(program.getCache().getEvents(FilterBasic.get(WRITE)), MemEvent.class::cast);
         final boolean doEncodeFinalAddressValues = program.getFormat() == LITMUS;

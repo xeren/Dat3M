@@ -11,6 +11,7 @@ import com.dat3m.dartagnan.program.filter.FilterBasic;
 import com.dat3m.dartagnan.utils.equivalence.EquivalenceClass;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.verification.VerificationTask;
+import com.dat3m.dartagnan.wmm.analysis.RelationAnalysis;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.relation.RelationNameRepository;
@@ -76,8 +77,9 @@ public class CoSymmetryBreaking {
     private static final Logger logger = LogManager.getLogger(CoSymmetryBreaking.class);
 
     private final VerificationTask task;
-    private final ThreadSymmetry symm;
     private final AliasAnalysis alias;
+    private final ThreadSymmetry symm;
+    private final RelationAnalysis ra;
     private final Relation co;
 
     private final Map<EquivalenceClass<Thread>, Info> infoMap;
@@ -91,8 +93,9 @@ public class CoSymmetryBreaking {
 
     public CoSymmetryBreaking(VerificationTask task, Context analysisContext) {
         this.task = Preconditions.checkNotNull(task);
-        this.symm = analysisContext.requires(ThreadSymmetry.class);
         this.alias = analysisContext.requires(AliasAnalysis.class);
+        this.symm = analysisContext.requires(ThreadSymmetry.class);
+        this.ra = analysisContext.requires(RelationAnalysis.class);
         this.co = task.getMemoryModel().getRelationRepository().getRelation(RelationNameRepository.CO);
         infoMap = new HashMap<>();
         for (EquivalenceClass<Thread> symmClass : symm.getNonTrivialClasses()) {
@@ -124,7 +127,7 @@ public class CoSymmetryBreaking {
         for (Store w : writes) {
             int syncDeg = 0;
             for (Axiom ax : axioms) {
-                TupleSet minSet = ax.getRelation().getMinTupleSet();
+                TupleSet minSet = ra.must(ax.getRelation());
                 syncDeg = Math.max(syncDeg, (1 + minSet.getBySecond(w).size()) * (1 + minSet.getByFirst(w).size()));
             }
             syncDegreeMap.put(w, syncDeg);

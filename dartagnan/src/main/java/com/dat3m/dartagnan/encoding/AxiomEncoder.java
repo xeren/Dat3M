@@ -4,6 +4,7 @@ import com.dat3m.dartagnan.program.analysis.ExecutionAnalysis;
 import com.dat3m.dartagnan.program.event.core.Event;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.wmm.Constraint;
+import com.dat3m.dartagnan.wmm.analysis.RelationAnalysis;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
@@ -33,6 +34,7 @@ import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 @Options
 final class AxiomEncoder implements Constraint.Visitor<BooleanFormula> {
     private final ExecutionAnalysis exec;
+    private final RelationAnalysis ra;
     private final EncodeSets encodeSets;
     private final SolverContext ctx;
     private final IntegerFormulaManager imgr;
@@ -46,6 +48,7 @@ final class AxiomEncoder implements Constraint.Visitor<BooleanFormula> {
 
     AxiomEncoder(Context a, SolverContext c) {
         exec = a.requires(ExecutionAnalysis.class);
+        ra = a.requires(RelationAnalysis.class);
         encodeSets = a.requires(EncodeSets.class);
         ctx = c;
         imgr = ctx.getFormulaManager().getIntegerFormulaManager();
@@ -196,7 +199,7 @@ final class AxiomEncoder implements Constraint.Visitor<BooleanFormula> {
             }
         }
         // --- Create encoding ---
-        final Set<Tuple> minSet = rel.getMinTupleSet();
+        final Set<Tuple> minSet = ra.must(rel);
         BooleanFormula enc = bmgr.makeTrue();
         // Basic lifting
         for (Tuple t : edgeSet) {

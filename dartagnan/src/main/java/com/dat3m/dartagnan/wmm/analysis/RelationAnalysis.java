@@ -46,6 +46,24 @@ public class RelationAnalysis {
         return a;
     }
 
+    /**
+     * Fetches results of this analysis.
+     * @param relation Some element in the associated task's memory model.
+     * @return Event pairs that could participate in {@code relation} in some execution.
+     */
+    public TupleSet may(Relation relation) {
+        return relation.getMaxTupleSet();
+    }
+
+    /**
+     * Fetches results of this analysis.
+     * @param relation Some element in the associated task's memory model.
+     * @return Event pairs that cannot be missing in {@code relation} in any execution that executes both events.
+     */
+    public TupleSet must(Relation relation) {
+        return relation.getMinTupleSet();
+    }
+
     /*
         Returns a set of co-edges (w1, w2) (subset of maxTupleSet) whose clock-constraints
         do not need to get encoded explicitly.
