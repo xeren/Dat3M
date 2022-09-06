@@ -19,7 +19,6 @@ import com.dat3m.dartagnan.wmm.analysis.RelationAnalysis;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Flag;
-import com.dat3m.dartagnan.wmm.utils.RelationRepository;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.google.common.collect.Iterables;
@@ -104,7 +103,7 @@ public class WmmEncoder {
 
     private void initializeEncoding() {
         for(String relName : Wmm.BASE_RELATIONS) {
-            memoryModel.getRelationRepository().getRelation(relName);
+            memoryModel.getRelation(relName);
         }
     }
 
@@ -120,10 +119,9 @@ public class WmmEncoder {
     // NOTE: It avoids encoding relations that do NOT affect the axioms, i.e. unused relations
     public BooleanFormula encodeRelations() {
         logger.info("Encoding relations");
-        final RelationRepository repo = memoryModel.getRelationRepository();
         final DependencyGraph<Relation> depGraph = DependencyGraph.from(
                 Iterables.concat(
-                        Iterables.transform(Wmm.BASE_RELATIONS, repo::getRelation), // base relations
+                        Iterables.transform(Wmm.BASE_RELATIONS, memoryModel::getRelation), // base relations
                         Iterables.transform(memoryModel.getAxioms(), Axiom::getRelation) // axiom relations
                 )
         );

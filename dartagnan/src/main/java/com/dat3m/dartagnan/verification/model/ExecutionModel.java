@@ -105,7 +105,7 @@ public class ExecutionModel {
 
     private ExecutionModel(VerificationTask task) {
         this.task = task;
-        co = (RelCo)task.getMemoryModel().getRelationRepository().getRelation(CO);
+        co = (RelCo)task.getMemoryModel().getRelation(CO);
 
         eventList = new ArrayList<>(100);
         threadList = new ArrayList<>(getProgram().getThreads().size());
@@ -476,7 +476,7 @@ public class ExecutionModel {
     // ===================================================
 
     private void extractReadsFrom() {
-        final Relation rf = getMemoryModel().getRelationRepository().getRelation(RF);
+        final Relation rf = getMemoryModel().getRelation(RF);
         readWriteMap.clear();
 
         for (Map.Entry<BigInteger, Set<EventData>> addressedReads : addressReadsMap.entrySet()) {
@@ -500,7 +500,7 @@ public class ExecutionModel {
     }
 
     private void extractCoherences() {
-        final RelCo co = (RelCo) task.getMemoryModel().getRelationRepository().getRelation(CO);
+        final RelCo co = (RelCo) task.getMemoryModel().getRelation(CO);
 
         for (Map.Entry<BigInteger, Set<EventData>> addrWrites : addressWritesMap.entrySet()) {
             final BigInteger addr = addrWrites.getKey();
