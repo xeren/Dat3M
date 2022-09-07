@@ -13,7 +13,6 @@ import com.dat3m.dartagnan.wmm.analysis.WmmAnalysis;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import org.apache.logging.log4j.LogManager;
@@ -36,8 +35,7 @@ import static com.dat3m.dartagnan.program.Program.SourceLanguage.LITMUS;
 import static com.dat3m.dartagnan.program.event.Tag.INIT;
 import static com.dat3m.dartagnan.program.event.Tag.WRITE;
 import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.CO;
-import static com.dat3m.dartagnan.wmm.utils.Utils.intVar;
-import static org.sosy_lab.java_smt.api.FormulaType.BooleanType;
+import static com.dat3m.dartagnan.wmm.utils.Utils.*;
 
 @Options
 public class RelCo extends Relation {
@@ -148,7 +146,7 @@ public class RelCo extends Relation {
         // ---- Encode clock conditions (init = 0, non-init > 0) ----
         IntegerFormula zero = imgr.makeNumber(0);
         for (MemEvent w : allWrites) {
-            IntegerFormula clock = getClockVar(w, ctx);
+            IntegerFormula clock = coClockVar(w, ctx);
             enc = bmgr.and(enc, w.is(INIT) ? imgr.equal(clock, zero) : imgr.greaterThan(clock, zero));
         }
 
@@ -168,9 +166,9 @@ public class RelCo extends Relation {
                         generalEqual(w1.getMemAddressExpr(), w2.getMemAddressExpr(), ctx);
                 BooleanFormula pairingCond = bmgr.and(execPair, sameAddress);
                 BooleanFormula fCond = (w1.is(INIT) || transCo.contains(t)) ? bmgr.makeTrue() :
-                        imgr.lessThan(getClockVar(w1, ctx), getClockVar(w2, ctx));
+                        imgr.lessThan(coClockVar(w1, ctx), coClockVar(w2, ctx));
                 BooleanFormula bCond = (w2.is(INIT) || transCo.contains(t.getInverse())) ? bmgr.makeTrue() :
-                        imgr.lessThan(getClockVar(w2, ctx), getClockVar(w1, ctx));
+                        imgr.lessThan(coClockVar(w2, ctx), coClockVar(w1, ctx));
                 BooleanFormula coF = forwardPossible ? getSMTVar(w1, w2, ctx) : bmgr.makeFalse();
                 BooleanFormula coB = backwardPossible ? getSMTVar(w2, w1, ctx) : bmgr.makeFalse();
 
@@ -265,7 +263,7 @@ public class RelCo extends Relation {
         BooleanFormula enc = bmgr.makeTrue();
         for (MemEvent w1 : writes) {
             if (dominatedWrites.contains(w1)) {
-                enc = bmgr.and(enc, bmgr.equivalence(getLastCoVar(w1, ctx), bmgr.makeFalse()));
+                enc = bmgr.and(enc, bmgr.equivalence(lastCoVar(w1, ctx), bmgr.makeFalse()));
                 continue;
             }
 
@@ -281,7 +279,7 @@ public class RelCo extends Relation {
                 BooleanFormula isAfter = minSet.contains(t) ? bmgr.not(w2.exec()) : bmgr.not(getSMTVar(t, ctx));
                 isLast = bmgr.and(isLast, isAfter);
             }
-            BooleanFormula lastCoExpr = getLastCoVar(w1, ctx);
+            BooleanFormula lastCoExpr = lastCoVar(w1, ctx);
             enc = bmgr.and(enc, bmgr.equivalence(lastCoExpr, isLast));
 
             if (doEncodeFinalAddressValues) {
@@ -342,17 +340,5 @@ public class RelCo extends Relation {
             }
         }
         return transCo;
-    }
-
-    public IntegerFormula getClockVar(Event write, SolverContext ctx) {
-    	Preconditions.checkArgument(write.is(WRITE), "Cannot get a clock-var for non-writes.");
-        if (write.is(INIT)) {
-            return ctx.getFormulaManager().getIntegerFormulaManager().makeNumber(0);
-        }
-        return intVar(term, write, ctx);
-    }
-
-    public BooleanFormula getLastCoVar(Event write, SolverContext ctx) {
-        return ctx.getFormulaManager().makeVariable(BooleanType, "co_last(" + write.repr() + ")");
     }
 }

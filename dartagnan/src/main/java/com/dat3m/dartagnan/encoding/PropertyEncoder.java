@@ -36,6 +36,7 @@ import static com.dat3m.dartagnan.configuration.Property.*;
 import static com.dat3m.dartagnan.expression.utils.Utils.generalEqual;
 import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 import static com.dat3m.dartagnan.wmm.utils.Utils.intVar;
+import static com.dat3m.dartagnan.wmm.utils.Utils.lastCoVar;
 import static com.google.common.base.Preconditions.*;
 
 
@@ -181,7 +182,7 @@ public class PropertyEncoder {
                 for (Load load : pair.loads) {
                     BooleanFormula coMaximalLoad = bmgr.makeFalse();
                     for (Tuple rfEdge : rf.getMaxTupleSet().getBySecond(load)) {
-                        coMaximalLoad = bmgr.or(coMaximalLoad, bmgr.and(rf.getSMTVar(rfEdge, ctx), co.getLastCoVar(rfEdge.getFirst(), ctx)));
+                        coMaximalLoad = bmgr.or(coMaximalLoad, bmgr.and(rf.getSMTVar(rfEdge, ctx), lastCoVar(rfEdge.getFirst(), ctx)));
                     }
                     allCoMaximalLoad = bmgr.and(allCoMaximalLoad, coMaximalLoad);
                 }

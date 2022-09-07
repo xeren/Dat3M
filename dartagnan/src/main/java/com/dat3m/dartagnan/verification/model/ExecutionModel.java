@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 
 import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.CO;
 import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.RF;
+import static com.dat3m.dartagnan.wmm.utils.Utils.coClockVar;
 
 /*
 The ExecutionModel wraps a Model and extracts data from it in a more workable manner.
@@ -503,7 +504,7 @@ public class ExecutionModel {
                 // --- Extracting co from IDL-based encoding using clock variables ---
                 Map<EventData, BigInteger> writeClockMap = new HashMap<>(writes.size() * 4 / 3, 0.75f);
                 for (EventData w : writes) {
-                    writeClockMap.put(w, model.evaluate(co.getClockVar(w.getEvent(), context)));
+                    writeClockMap.put(w, model.evaluate(coClockVar(w.getEvent(), context)));
                 }
                 coSortedWrites = writes.stream().sorted(Comparator.comparing(writeClockMap::get)).collect(Collectors.toList());
             }
