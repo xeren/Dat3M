@@ -135,12 +135,6 @@ public abstract class Relation implements Constraint {
         return getName().equals(((Relation)obj).getName());
     }
 
-    public BooleanFormula encode(SolverContext ctx) {
-        return encodeApprox(ctx);
-    }
-
-    protected abstract BooleanFormula encodeApprox(SolverContext ctx);
-
     public BooleanFormula getSMTVar(Tuple edge, SolverContext ctx) {
         return !getMaxTupleSet().contains(edge) ?
         		ctx.getFormulaManager().getBooleanFormulaManager().makeFalse() :

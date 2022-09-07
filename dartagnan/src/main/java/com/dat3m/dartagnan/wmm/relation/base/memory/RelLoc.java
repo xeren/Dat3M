@@ -1,22 +1,15 @@
 package com.dat3m.dartagnan.wmm.relation.base.memory;
 
-import com.dat3m.dartagnan.expression.utils.Utils;
 import com.dat3m.dartagnan.program.analysis.alias.AliasAnalysis;
-import com.dat3m.dartagnan.program.analysis.ExecutionAnalysis;
 import com.dat3m.dartagnan.program.event.core.Event;
 import com.dat3m.dartagnan.program.event.core.MemEvent;
 import com.dat3m.dartagnan.program.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
-import org.sosy_lab.java_smt.api.BooleanFormula;
-import org.sosy_lab.java_smt.api.BooleanFormulaManager;
-import org.sosy_lab.java_smt.api.FormulaManager;
-import org.sosy_lab.java_smt.api.SolverContext;
 
 import java.util.Collection;
 
-import static com.dat3m.dartagnan.encoding.ProgramEncoder.execution;
 import static com.dat3m.dartagnan.program.event.Tag.MEMORY;
 import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.LOC;
 
@@ -61,24 +54,5 @@ public class RelLoc extends Relation {
             removeMutuallyExclusiveTuples(maxTupleSet);
         }
         return maxTupleSet;
-    }
-
-    @Override
-    protected BooleanFormula encodeApprox(SolverContext ctx) {
-    	FormulaManager fmgr = ctx.getFormulaManager();
-		BooleanFormulaManager bmgr = fmgr.getBooleanFormulaManager();
-
-    	BooleanFormula enc = bmgr.makeTrue();
-        ExecutionAnalysis exec = analysisContext.requires(ExecutionAnalysis.class);
-        for(Tuple tuple : encodeTupleSet) {
-        	BooleanFormula rel = this.getSMTVar(tuple, ctx);
-            enc = bmgr.and(enc, bmgr.equivalence(rel, bmgr.and(
-                execution(tuple.getFirst(), tuple.getSecond(), exec, ctx),
-                    Utils.generalEqual(
-                            ((MemEvent)tuple.getFirst()).getMemAddressExpr(),
-                            ((MemEvent)tuple.getSecond()).getMemAddressExpr(), ctx)
-            )));
-        }
-        return enc;
     }
 }

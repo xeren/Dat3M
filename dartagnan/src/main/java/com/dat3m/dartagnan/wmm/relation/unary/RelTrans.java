@@ -6,14 +6,9 @@ import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.google.common.collect.Sets;
-import org.sosy_lab.java_smt.api.BooleanFormula;
-import org.sosy_lab.java_smt.api.BooleanFormulaManager;
-import org.sosy_lab.java_smt.api.SolverContext;
 
 import java.util.Map;
 import java.util.Set;
-
-import static com.dat3m.dartagnan.encoding.ProgramEncoder.execution;
 
 /**
  *
@@ -86,51 +81,6 @@ public class RelTrans extends UnaryRelation {
             fullActiveSet.removeAll(getMinTupleSet());
             r1.addEncodeTupleSet(fullActiveSet);
         }
-    }
-
-    @Override
-    protected BooleanFormula encodeApprox(SolverContext ctx) {
-    	BooleanFormulaManager bmgr = ctx.getFormulaManager().getBooleanFormulaManager();
-		BooleanFormula enc = bmgr.makeTrue();
-
-        ExecutionAnalysis exec = analysisContext.requires(ExecutionAnalysis.class);
-        TupleSet minSet = getMinTupleSet();
-        TupleSet r1Max = r1.getMaxTupleSet();
-        for(Tuple tuple : encodeTupleSet){
-            if (minSet.contains(tuple)) {
-                if(Relation.PostFixApprox) {
-                    enc = bmgr.and(enc, bmgr.implication(execution(tuple.getFirst(), tuple.getSecond(), exec, ctx), this.getSMTVar(tuple, ctx)));
-                } else {
-                    enc = bmgr.and(enc, bmgr.equivalence(this.getSMTVar(tuple, ctx), execution(tuple.getFirst(), tuple.getSecond(), exec, ctx)));
-                }
-                continue;
-            }
-
-            BooleanFormula orClause = bmgr.makeFalse();
-            Event e1 = tuple.getFirst();
-            Event e2 = tuple.getSecond();
-
-            if(r1Max.contains(tuple)){
-                orClause = bmgr.or(orClause, r1.getSMTVar(tuple, ctx));
-            }
-
-
-            for(Tuple t : r1Max.getByFirst(e1)){
-                Event e3 = t.getSecond();
-                if(e3.getCId() != e1.getCId() && e3.getCId() != e2.getCId() && maxTupleSet.contains(new Tuple(e3, e2))){
-                    BooleanFormula tVar = minSet.contains(t) ? this.getSMTVar(t, ctx) : r1.getSMTVar(t, ctx);
-                    orClause = bmgr.or(orClause, bmgr.and(tVar, this.getSMTVar(e3, e2, ctx)));
-                }
-            }
-
-            if(Relation.PostFixApprox) {
-                enc = bmgr.and(enc, bmgr.implication(orClause, this.getSMTVar(tuple, ctx)));
-            } else {
-                enc = bmgr.and(enc, bmgr.equivalence(this.getSMTVar(tuple, ctx), orClause));
-            }
-        }
-
-        return enc;
     }
 
     private TupleSet getFullEncodeTupleSet(TupleSet tuples){

@@ -92,9 +92,4 @@ abstract class BasicRegRelation extends StaticRelation {
                         dependencyEdgeVariable(t.getFirst(), t.getSecond(), bmgr) :
         				bmgr.makeFalse();
     }
-
-    @Override
-    protected BooleanFormula encodeApprox(SolverContext ctx) {
-        return ctx.getFormulaManager().getBooleanFormulaManager().makeTrue();
-    }
 }

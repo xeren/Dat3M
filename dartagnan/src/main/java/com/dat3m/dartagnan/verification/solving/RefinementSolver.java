@@ -122,7 +122,7 @@ public class RefinementSolver extends ModelChecker {
         ProgramEncoder programEncoder = ProgramEncoder.fromConfig(program, analysisContext, config, ctx);
         PropertyEncoder propertyEncoder = PropertyEncoder.fromConfig(program, baselineModel, analysisContext, config, ctx);
         SymmetryEncoder symmEncoder = SymmetryEncoder.fromConfig(baselineModel, analysisContext, config, ctx);
-        WmmEncoder baselineEncoder = WmmEncoder.fromConfig(baselineModel, baselineContext, config, ctx);
+        WmmEncoder baselineEncoder = WmmEncoder.fromConfig(program, baselineModel, baselineContext, config, ctx);
 
         BooleanFormulaManager bmgr = ctx.getFormulaManager().getBooleanFormulaManager();
         BooleanFormula globalRefinement = bmgr.makeTrue();

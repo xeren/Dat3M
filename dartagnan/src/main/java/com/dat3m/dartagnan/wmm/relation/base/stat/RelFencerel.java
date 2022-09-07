@@ -7,13 +7,8 @@ import com.dat3m.dartagnan.program.event.core.Event;
 import com.dat3m.dartagnan.program.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
-import org.sosy_lab.java_smt.api.BooleanFormula;
-import org.sosy_lab.java_smt.api.BooleanFormulaManager;
-import org.sosy_lab.java_smt.api.SolverContext;
 
 import java.util.List;
-
-import static com.dat3m.dartagnan.encoding.ProgramEncoder.execution;
 
 public class RelFencerel extends StaticRelation {
 
@@ -95,32 +90,5 @@ public class RelFencerel extends StaticRelation {
             removeMutuallyExclusiveTuples(maxTupleSet);
         }
         return maxTupleSet;
-    }
-
-    @Override
-    protected BooleanFormula encodeApprox(SolverContext ctx) {
-    	BooleanFormulaManager bmgr = ctx.getFormulaManager().getBooleanFormulaManager();
-		BooleanFormula enc = bmgr.makeTrue();
-
-        List<Event> fences = task.getProgram().getCache().getEvents(FilterBasic.get(fenceName));
-        ExecutionAnalysis exec = analysisContext.requires(ExecutionAnalysis.class);
-        for(Tuple tuple : encodeTupleSet){
-            Event e1 = tuple.getFirst();
-            Event e2 = tuple.getSecond();
-
-            BooleanFormula orClause;
-            if(minTupleSet.contains(tuple)) {
-                orClause = bmgr.makeTrue();
-            } else {
-                orClause = fences.stream()
-                        .filter(f -> e1.getCId() < f.getCId() && f.getCId() < e2.getCId())
-                        .map(Event::exec).reduce(bmgr.makeFalse(), bmgr::or);
-            }
-
-            BooleanFormula rel = this.getSMTVar(tuple, ctx);
-            enc = bmgr.and(enc, bmgr.equivalence(rel, bmgr.and(execution(tuple.getFirst(), tuple.getSecond(), exec, ctx), orClause)));
-        }
-
-        return enc;
     }
 }

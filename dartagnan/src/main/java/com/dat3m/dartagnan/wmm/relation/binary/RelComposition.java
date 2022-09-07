@@ -6,14 +6,9 @@ import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.google.common.collect.Sets;
-import org.sosy_lab.java_smt.api.BooleanFormula;
-import org.sosy_lab.java_smt.api.BooleanFormulaManager;
-import org.sosy_lab.java_smt.api.SolverContext;
 
 import java.util.HashSet;
 import java.util.Set;
-
-import static com.dat3m.dartagnan.encoding.ProgramEncoder.execution;
 
 /**
  *
@@ -113,32 +108,5 @@ public class RelComposition extends BinaryRelation {
             r1.addEncodeTupleSet(r1Set);
             r2.addEncodeTupleSet(r2Set);
         }
-    }
-
-    @Override
-    protected BooleanFormula encodeApprox(SolverContext ctx) {
-    	BooleanFormulaManager bmgr = ctx.getFormulaManager().getBooleanFormulaManager();
-		BooleanFormula enc = bmgr.makeTrue();
-
-        TupleSet r1Set = r1.getEncodeTupleSet();
-        TupleSet r2Set = r2.getEncodeTupleSet();
-        TupleSet minSet = getMinTupleSet();
-        ExecutionAnalysis exec = analysisContext.requires(ExecutionAnalysis.class);
-        for(Tuple tuple : encodeTupleSet) {
-            BooleanFormula expr = bmgr.makeFalse();
-            if (minSet.contains(tuple)) {
-                expr = execution(tuple.getFirst(), tuple.getSecond(), exec, ctx);
-            } else {
-                for (Tuple t1 : r1Set.getByFirst(tuple.getFirst())) {
-                    Tuple t2 = new Tuple(t1.getSecond(), tuple.getSecond());
-                    if (r2Set.contains(t2)) {
-                        expr = bmgr.or(expr, bmgr.and(r1.getSMTVar(t1, ctx), r2.getSMTVar(t2, ctx)));
-                    }
-                }
-            }
-
-            enc = bmgr.and(enc, bmgr.equivalence(this.getSMTVar(tuple, ctx), expr));
-        }
-        return enc;
     }
 }

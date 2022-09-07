@@ -34,9 +34,4 @@ public class RelEmpty extends StaticRelation {
         }
         return maxTupleSet;
     }
-
-    @Override
-    protected BooleanFormula encodeApprox(SolverContext ctx) {
-        return ctx.getFormulaManager().getBooleanFormulaManager().makeTrue();
-    }
 }
