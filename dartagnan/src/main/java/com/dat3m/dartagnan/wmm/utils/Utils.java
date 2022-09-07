@@ -37,8 +37,4 @@ public class Utils {
 		}
 		return intVar(CO, write, ctx);
 	}
-
-	public static BooleanFormula lastCoVar(Event write, SolverContext ctx) {
-		return ctx.getFormulaManager().makeVariable(BooleanType, "co_last(" + write.repr() + ")");
-	}
 }
