@@ -60,6 +60,7 @@ public class PropertyEncoder {
     private final ExecutionAnalysis exec;
     private final AliasAnalysis alias;
     private final SolverContext ctx;
+    private final AxiomEncoder axiomEncoder;
 
     // =====================================================================
 
@@ -72,6 +73,8 @@ public class PropertyEncoder {
         this.alias = context.requires(AliasAnalysis.class);
         config.inject(this);
         this.ctx = solverContext;
+        this.axiomEncoder = new AxiomEncoder(context, solverContext);
+        config.inject(this.axiomEncoder);
     }
 
     public static PropertyEncoder fromConfig(Program program, Wmm wmm, Context context, Configuration config, SolverContext ctx) throws InvalidConfigurationException {
@@ -121,7 +124,6 @@ public class PropertyEncoder {
 
     public BooleanFormula encodeCATProperties() {
         logger.info("Encoding CAT properties");
-
         BooleanFormulaManager bmgr = ctx.getFormulaManager().getBooleanFormulaManager();
         BooleanFormula cat = bmgr.makeTrue();
         BooleanFormula one = bmgr.makeFalse();
@@ -131,7 +133,7 @@ public class PropertyEncoder {
     			continue;
     		}
             BooleanFormula var = CAT.getSMTVariable(ax, ctx);
-			cat = bmgr.and(cat, bmgr.equivalence(var, ax.consistent(ctx)));
+			cat = bmgr.and(cat, bmgr.equivalence(var, ax.visit(axiomEncoder)));
 			one = bmgr.or(one, var);
     	}
 		// No need to use the SMT variable if the formula is trivially false

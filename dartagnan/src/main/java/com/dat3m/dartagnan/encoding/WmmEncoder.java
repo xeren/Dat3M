@@ -74,6 +74,7 @@ public class WmmEncoder {
     private final Wmm memoryModel;
     private final Context analysisContext;
     private final SolverContext ctx;
+    private final AxiomEncoder axiomEncoder;
 
     // =====================================================================
 
@@ -83,11 +84,13 @@ public class WmmEncoder {
         analysisContext = context;
         context.requires(RelationAnalysis.class);
         ctx = solverContext;
+        axiomEncoder = new AxiomEncoder(context, ctx);
     }
 
     public static WmmEncoder fromConfig(Program program, Wmm memoryModel, Context context, Configuration config, SolverContext ctx) throws InvalidConfigurationException {
         WmmEncoder encoder = new WmmEncoder(program, memoryModel, context, ctx);
         config.inject(encoder);
+        config.inject(encoder.axiomEncoder);
         encoder.initializeEncoding();
         return encoder;
     }
@@ -150,11 +153,13 @@ public class WmmEncoder {
     public BooleanFormula encodeConsistency() {
         logger.info("Encoding consistency");
         final BooleanFormulaManager bmgr = ctx.getFormulaManager().getBooleanFormulaManager();
-
-        return memoryModel.getAxioms().stream()
-                .filter(ax -> !ax.isFlagged())
-                .map(ax -> ax.consistent(ctx))
-                .reduce(bmgr.makeTrue(), bmgr::and);
+        BooleanFormula enc = bmgr.makeTrue();
+        for (Axiom ax : memoryModel.getAxioms()) {
+            if (!ax.isFlagged()) {
+                enc = bmgr.and(enc, ax.visit(axiomEncoder));
+            }
+        }
+        return enc;
     }
 
     private final class RelationEncoder implements Constraint.Visitor<BooleanFormula> {

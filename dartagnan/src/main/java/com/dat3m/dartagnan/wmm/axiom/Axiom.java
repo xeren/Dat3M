@@ -8,7 +8,6 @@ import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.google.common.base.Preconditions;
 import org.sosy_lab.common.configuration.Configuration;
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
-import org.sosy_lab.java_smt.api.BooleanFormula;
 import org.sosy_lab.java_smt.api.SolverContext;
 
 import java.util.Collections;
@@ -34,6 +33,10 @@ public abstract class Axiom implements Constraint {
         this.rel = rel;
         this.negated = negated;
         this.flag = flag;
+    }
+
+    public boolean isNegated() {
+        return negated;
     }
 
     public void configure(Configuration config) throws InvalidConfigurationException { }
@@ -79,8 +82,6 @@ public abstract class Axiom implements Constraint {
     public abstract String toString();
 
     public abstract TupleSet getEncodeTupleSet();
-
-    public abstract BooleanFormula consistent(SolverContext ctx);
 
     @Override
     public int hashCode() {
