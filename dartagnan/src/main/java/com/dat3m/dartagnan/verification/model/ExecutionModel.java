@@ -20,6 +20,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import org.sosy_lab.common.configuration.Configuration;
+import org.sosy_lab.common.configuration.InvalidConfigurationException;
+import org.sosy_lab.common.configuration.Option;
+import org.sosy_lab.common.configuration.Options;
 import org.sosy_lab.java_smt.api.BooleanFormula;
 import org.sosy_lab.java_smt.api.Model;
 import org.sosy_lab.java_smt.api.SolverContext;
@@ -28,6 +32,7 @@ import java.math.BigInteger;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.dat3m.dartagnan.configuration.OptionNames.IDL_TO_SAT;
 import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.CO;
 import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.RF;
 import static com.dat3m.dartagnan.wmm.utils.Utils.coClockVar;
@@ -38,6 +43,7 @@ The ExecutionModel wraps a Model and extracts data from it in a more workable ma
 
 //TODO: Add the capability to remove unnecessary init events from a model
 // i.e. those that init some address which no read nor write accesses.
+@Options
 public class ExecutionModel {
 
     private final VerificationTask task;
@@ -87,9 +93,17 @@ public class ExecutionModel {
 
     private Map<BigInteger, List<EventData>> coherenceMapView;
 
+    // =========================== Configurables ===========================
+
+    @Option(
+            name=IDL_TO_SAT,
+            description = "Use SAT-based encoding for totality and acyclicity.",
+            secure = true)
+    private boolean useSATEncoding = false;
+
     //========================== Construction =========================
 
-    public ExecutionModel(VerificationTask task) {
+    private ExecutionModel(VerificationTask task) {
         this.task = task;
         co = (RelCo)task.getMemoryModel().getRelationRepository().getRelation(CO);
 
@@ -110,6 +124,12 @@ public class ExecutionModel {
         coherenceMap = new HashMap<>();
 
         createViews();
+    }
+
+    public static ExecutionModel fromConfig(VerificationTask task, Configuration config) throws InvalidConfigurationException {
+        ExecutionModel m = new ExecutionModel(task);
+        config.inject(m);
+        return m;
     }
 
     private void createViews() {
@@ -487,7 +507,7 @@ public class ExecutionModel {
             final Set<EventData> writes = addrWrites.getValue();
 
             List<EventData> coSortedWrites;
-            if (co.usesSATEncoding()) {
+            if (useSATEncoding) {
                 // --- Extracting co from SAT-based encoding ---
                 Map<EventData, List<EventData>> coEdges = new HashMap<>();
                 for (EventData w1 : writes) {
