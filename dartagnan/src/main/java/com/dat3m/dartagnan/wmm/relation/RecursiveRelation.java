@@ -26,7 +26,7 @@ public class RecursiveRelation extends Relation {
     }
 
     public RecursiveRelation(String name) {
-        super(name);
+        this.name = name;
         term = name;
     }
 

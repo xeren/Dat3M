@@ -19,11 +19,6 @@ public class RelIntersection extends BinaryRelation {
         term = makeTerm(r1, r2);
     }
 
-    public RelIntersection(Relation r1, Relation r2, String name) {
-        super(r1, r2, name);
-        term = makeTerm(r1, r2);
-    }
-
     @Override
     public <T> T visit(Visitor<? extends T> v) {
         return v.visitIntersection(this, r1, r2);

@@ -16,11 +16,6 @@ public class RelDomainIdentity extends UnaryRelation {
         term = makeTerm(r1);
     }
 
-    public RelDomainIdentity(Relation r1, String name) {
-        super(r1, name);
-        term = makeTerm(r1);
-    }
-
     @Override
     public <T> T visit(Visitor<? extends T> v) {
         return v.visitDomainIdentity(this, r1);

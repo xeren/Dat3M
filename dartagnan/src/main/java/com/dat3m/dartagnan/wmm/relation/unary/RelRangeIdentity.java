@@ -16,11 +16,6 @@ public class RelRangeIdentity extends UnaryRelation {
         term = makeTerm(r1);
     }
 
-    public RelRangeIdentity(Relation r1, String name) {
-        super(r1, name);
-        term = makeTerm(r1);
-    }
-
     @Override
     public <T> T visit(Visitor<? extends T> v) {
         return v.visitRangeIdentity(this, r1);

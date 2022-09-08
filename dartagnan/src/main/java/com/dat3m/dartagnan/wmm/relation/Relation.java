@@ -38,11 +38,6 @@ public abstract class Relation implements Constraint {
 
     public Relation() { }
 
-    public Relation(String name) {
-        this();
-        this.name = name;
-    }
-
     @Override
     public List<Relation> getDependencies() {
         return Collections.emptyList();

@@ -9,11 +9,6 @@ public class RelEmpty extends StaticRelation {
         term = RelationNameRepository.EMPTY;
     }
 
-    public RelEmpty(String name) {
-        super(name);
-        term = name;
-    }
-
     @Override
     public <T> T visit(Visitor<? extends T> v) {
         return v.visitEmpty(this);

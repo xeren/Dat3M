@@ -30,13 +30,6 @@ public class RelCartesian extends StaticRelation {
         this.term = makeTerm(filter1, filter2);
     }
 
-    public RelCartesian(FilterAbstract filter1, FilterAbstract filter2, String name) {
-        super(name);
-        this.filter1 = filter1;
-        this.filter2 = filter2;
-        this.term = makeTerm(filter1, filter2);
-    }
-
     @Override
     public <T> T visit(Visitor<? extends T> v) {
         return v.visitProduct(this, filter1, filter2);
