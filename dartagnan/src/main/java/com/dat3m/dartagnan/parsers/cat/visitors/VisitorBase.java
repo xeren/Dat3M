@@ -9,7 +9,6 @@ import com.dat3m.dartagnan.wmm.axiom.Axiom;
 import com.dat3m.dartagnan.wmm.relation.RecursiveRelation;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.relation.RelationNameRepository;
-import com.dat3m.dartagnan.wmm.utils.RelationRepository;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -18,7 +17,6 @@ import java.util.Set;
 
 public class VisitorBase extends CatBaseVisitor<Object> {
 
-    RelationRepository relationRepository;
     VisitorRelation relationVisitor;
     VisitorFilter filterVisitor;
     Wmm wmm;
@@ -26,9 +24,8 @@ public class VisitorBase extends CatBaseVisitor<Object> {
     boolean recursiveDef;
     private Set<RecursiveRelation> recursiveGroup;
 
-    public VisitorBase(){
+    public VisitorBase() {
         this.wmm = new Wmm();
-        relationRepository = wmm.getRelationRepository();
         filterVisitor = new VisitorFilter(this);
         relationVisitor = new VisitorRelation(this);
     }
@@ -41,18 +38,19 @@ public class VisitorBase extends CatBaseVisitor<Object> {
 
     @Override
     public Object visitAxiomDefinition(CatParser.AxiomDefinitionContext ctx) {
-        try{
+        try {
             Relation r = ctx.e.accept(relationVisitor);
-            if(r == null){
+            if (r == null) {
                 throw new ParsingException(ctx.getText());
             }
             Constructor<?> constructor = ctx.cls.getConstructor(Relation.class, boolean.class, boolean.class);
             Axiom axiom = (Axiom) constructor.newInstance(r, ctx.negate != null, ctx.flag != null);
-            if(ctx.NAME() != null) {
-            	axiom.setName(ctx.NAME().toString());
+            if (ctx.NAME() != null) {
+                axiom.setName(ctx.NAME().toString());
             }
-			wmm.addAxiom(axiom);
-        } catch (NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e){
+            wmm.addAxiom(axiom);
+        } catch (NoSuchMethodException | InstantiationException | IllegalAccessException |
+                 InvocationTargetException e) {
             throw new ParsingException(ctx.getText());
         }
         return null;
@@ -61,13 +59,13 @@ public class VisitorBase extends CatBaseVisitor<Object> {
     @Override
     public Object visitLetDefinition(CatParser.LetDefinitionContext ctx) {
         Relation r = ctx.e.accept(relationVisitor);
-        if(r != null){
-        	if(RelationNameRepository.contains(r.getName()) || r.getIsNamed()) {
-        		relationRepository.addAlias(ctx.n.getText(), r);
-        	} else {
+        if (r != null) {
+            if (RelationNameRepository.contains(r.getName()) || r.getIsNamed()) {
+                wmm.addAlias(ctx.n.getText(), r);
+            } else {
                 r.setName(ctx.n.getText());
-                relationRepository.updateRelation(r);
-        	}
+                wmm.updateRelation(r);
+            }
         } else {
             FilterAbstract f = ctx.e.accept(filterVisitor);
             f.setName(ctx.n.getText());
@@ -81,16 +79,17 @@ public class VisitorBase extends CatBaseVisitor<Object> {
         recursiveGroup = new HashSet<>();
         recursiveDef = true;
 
-        RecursiveRelation rRecursive = (RecursiveRelation)relationRepository.getRelation(RecursiveRelation.class, ctx.n.getText());
+        RecursiveRelation rRecursive = new RecursiveRelation(ctx.n.getText());
+        wmm.addRelation(rRecursive);
         Relation rConcrete = ctx.e.accept(relationVisitor);
-        if(rRecursive == null || rConcrete == null){
+        if (rConcrete == null) {
             throw new ParsingException(ctx.getText());
         }
 
         rRecursive.setConcreteRelation(rConcrete);
         recursiveGroup.add(rRecursive);
 
-        for(CatParser.LetRecAndDefinitionContext c : ctx.letRecAndDefinition()){
+        for (CatParser.LetRecAndDefinitionContext c : ctx.letRecAndDefinition()) {
             c.accept(this);
         }
 
@@ -101,9 +100,10 @@ public class VisitorBase extends CatBaseVisitor<Object> {
 
     @Override
     public Object visitLetRecAndDefinition(CatParser.LetRecAndDefinitionContext ctx) {
-        RecursiveRelation rRecursive = (RecursiveRelation)relationRepository.getRelation(RecursiveRelation.class, ctx.n.getText());
+        RecursiveRelation rRecursive = new RecursiveRelation(ctx.n.getText());
+        wmm.addRelation(rRecursive);
         Relation rConcrete = ctx.e.accept(relationVisitor);
-        if(rRecursive == null || rConcrete == null){
+        if (rConcrete == null) {
             throw new ParsingException(ctx.getText());
         }
         rRecursive.setConcreteRelation(rConcrete);

@@ -270,7 +270,7 @@ public class PropertyEncoder {
     }
 
     private BooleanFormula encodeLastCoConstraints() {
-        final Relation co = memoryModel.getRelationRepository().getRelation(CO);
+        final Relation co = memoryModel.getRelation(CO);
         final BooleanFormulaManager bmgr = ctx.getFormulaManager().getBooleanFormulaManager();
         final TupleSet minSet = ra.must(co);
         final TupleSet maxSet = ra.may(co);

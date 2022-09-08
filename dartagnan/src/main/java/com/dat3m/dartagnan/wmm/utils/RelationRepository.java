@@ -1,9 +1,7 @@
 package com.dat3m.dartagnan.wmm.utils;
 
 import com.dat3m.dartagnan.program.event.Tag;
-import com.dat3m.dartagnan.program.filter.FilterAbstract;
 import com.dat3m.dartagnan.program.filter.FilterBasic;
-import com.dat3m.dartagnan.wmm.relation.RecursiveRelation;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.relation.RelationNameRepository;
 import com.dat3m.dartagnan.wmm.relation.base.RelCrit;
@@ -18,11 +16,8 @@ import com.dat3m.dartagnan.wmm.relation.base.stat.*;
 import com.dat3m.dartagnan.wmm.relation.binary.*;
 import com.dat3m.dartagnan.wmm.relation.unary.RelInverse;
 import com.dat3m.dartagnan.wmm.relation.unary.RelTrans;
-import com.dat3m.dartagnan.wmm.relation.unary.UnaryRelation;
 import com.google.common.base.Preconditions;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -55,26 +50,6 @@ public class RelationRepository {
         return relation;
     }
 
-    public Relation getRelation(Class<?> cls, Object... args){
-        Class<?>[] argClasses = getArgsForClass(cls);
-        try{
-            Method method = cls.getMethod("makeTerm", argClasses);
-            String term = (String)method.invoke(null, args);
-            Relation relation;
-            if(containsRelation(term)) {
-            	relation = relationMap.get(term);
-            } else {
-                Constructor<?> constructor = cls.getConstructor(argClasses);
-                relation = (Relation)constructor.newInstance(args);
-                addRelation(relation);            	
-            }
-            return relation;
-        } catch (Exception e){
-            e.printStackTrace();
-            return null;
-        }
-    }
-
     public void updateRelation(Relation relation){
         if(relation.getIsNamed()){
             String name = relation.getName();
@@ -96,22 +71,6 @@ public class RelationRepository {
 
     public boolean containsRelation(String name) {
         return relationMap.containsKey(name);
-    }
-
-    private Class<?>[] getArgsForClass(Class<?> cls){
-        if(BinaryRelation.class.isAssignableFrom(cls)){
-            return new Class<?>[]{Relation.class, Relation.class};
-        } else if(UnaryRelation.class.isAssignableFrom(cls)){
-            return new Class<?>[]{Relation.class};
-        } else if(RelCartesian.class.isAssignableFrom(cls)){
-            return new Class<?>[]{FilterAbstract.class, FilterAbstract.class};
-        } else if(RelSetIdentity.class.isAssignableFrom(cls)){
-            return new Class<?>[]{FilterAbstract.class};
-        } else if(RelFencerel.class.isAssignableFrom(cls) || RecursiveRelation.class.isAssignableFrom(cls)) {
-            return new Class<?>[]{String.class};
-        }
-
-        throw new UnsupportedOperationException("Method getArgsForClass is not implemented for " + cls.getName());
     }
 
     private Relation getBasicRelation(String name){
@@ -148,62 +107,60 @@ public class RelationRepository {
             case EMPTY:
                 return new RelEmpty();
             case RFINV:
-                return getRelation(RelInverse.class, getRelation(RF));
+                return new RelInverse(getRelation(RF));
             case FR:
-                return getRelation(RelComposition.class, getRelation(RFINV), getRelation(CO)).setName(FR);
+                return new RelComposition(getRelation(RFINV), getRelation(CO)).setName(FR);
             case MM:
-                return getRelation(RelCartesian.class, FilterBasic.get(Tag.MEMORY), FilterBasic.get(Tag.MEMORY));
+                return new RelCartesian(FilterBasic.get(Tag.MEMORY), FilterBasic.get(Tag.MEMORY));
             case MV:
-                return getRelation(RelCartesian.class, FilterBasic.get(Tag.MEMORY), FilterBasic.get(Tag.VISIBLE));
+                return new RelCartesian(FilterBasic.get(Tag.MEMORY), FilterBasic.get(Tag.VISIBLE));
             case IDDTRANS:
-                return getRelation(RelTrans.class, getRelation(IDD));
+                return new RelTrans(getRelation(IDD));
             case DATA:
-                return getRelation(RelIntersection.class, getRelation(IDDTRANS), getRelation(MM)).setName(DATA);
-            case ADDR:
-                return getRelation(RelIntersection.class,
-                        getRelation(
-                                RelUnion.class,
-                                getRelation(ADDRDIRECT),
-                                getRelation(RelComposition.class, getRelation(IDDTRANS), getRelation(ADDRDIRECT))
-                        ),
-                        getRelation(MM)).setName(ADDR);
-            case CTRL:
-                return getRelation(RelIntersection.class,
-                        getRelation(
-                        		RelComposition.class, 
-                        		getRelation(IDDTRANS), 
-                        		getRelation(CTRLDIRECT)),
-                        getRelation(MV)).setName(CTRL);
+                return new RelIntersection(getRelation(IDDTRANS), getRelation(MM)).setName(DATA);
+            case ADDR: {
+                Relation addrdirect = getRelation(ADDRDIRECT);
+                RelComposition comp = new RelComposition(getRelation(IDDTRANS), addrdirect);
+                addRelation(comp);
+                RelUnion union = new RelUnion(addrdirect, comp);
+                addRelation(union);
+                return new RelIntersection(union, getRelation(MM)).setName(ADDR);
+            }
+            case CTRL: {
+                RelComposition comp = new RelComposition(getRelation(IDDTRANS), getRelation(CTRLDIRECT));
+                addRelation(comp);
+                return new RelIntersection(comp, getRelation(MV)).setName(CTRL);
+            }
             case POLOC:
-                return getRelation(RelIntersection.class, getRelation(PO), getRelation(LOC)).setName(POLOC);
+                return new RelIntersection(getRelation(PO), getRelation(LOC)).setName(POLOC);
             case RFE:
-                return getRelation(RelIntersection.class, getRelation(RF), getRelation(EXT)).setName(RFE);
+                return new RelIntersection(getRelation(RF), getRelation(EXT)).setName(RFE);
             case RFI:
-                return getRelation(RelIntersection.class, getRelation(RF), getRelation(INT)).setName(RFI);
+                return new RelIntersection(getRelation(RF), getRelation(INT)).setName(RFI);
             case COE:
-                return getRelation(RelIntersection.class, getRelation(CO), getRelation(EXT)).setName(COE);
+                return new RelIntersection(getRelation(CO), getRelation(EXT)).setName(COE);
             case COI:
-                return getRelation(RelIntersection.class, getRelation(CO), getRelation(INT)).setName(COI);
+                return new RelIntersection(getRelation(CO), getRelation(INT)).setName(COI);
             case FRE:
-                return getRelation(RelIntersection.class, getRelation(FR), getRelation(EXT)).setName(FRE);
+                return new RelIntersection(getRelation(FR), getRelation(EXT)).setName(FRE);
             case FRI:
-                return getRelation(RelIntersection.class, getRelation(FR), getRelation(INT)).setName(FRI);
+                return new RelIntersection(getRelation(FR), getRelation(INT)).setName(FRI);
             case MFENCE:
-                return getRelation(RelFencerel.class, MFENCE);
+                return new RelFencerel(MFENCE);
             case ISH:
-                return getRelation(RelFencerel.class, ISH);
+                return new RelFencerel(ISH);
             case ISB:
-                return getRelation(RelFencerel.class, ISB);
+                return new RelFencerel(ISB);
             case SYNC:
-                return getRelation(RelFencerel.class, SYNC);
+                return new RelFencerel(SYNC);
             case ISYNC:
-                return getRelation(RelFencerel.class, ISYNC);
+                return new RelFencerel(ISYNC);
             case LWSYNC:
-                return getRelation(RelFencerel.class, LWSYNC);
+                return new RelFencerel(LWSYNC);
             case CTRLISYNC:
-                return getRelation(RelIntersection.class, getRelation(CTRL), getRelation(ISYNC)).setName(CTRLISYNC);
+                return new RelIntersection(getRelation(CTRL), getRelation(ISYNC)).setName(CTRLISYNC);
             case CTRLISB:
-                return getRelation(RelIntersection.class, getRelation(CTRL), getRelation(ISB)).setName(CTRLISB);
+                return new RelIntersection(getRelation(CTRL), getRelation(ISB)).setName(CTRLISB);
             default:
                 throw new RuntimeException(name + "is part of RelationNameRepository but it has no associated relation.");
         }

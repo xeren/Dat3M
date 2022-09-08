@@ -22,7 +22,7 @@ public class VisitorRelation extends CatBaseVisitor<Relation> {
 
     private final VisitorBase base;
 
-    VisitorRelation(VisitorBase base){
+    VisitorRelation(VisitorBase base) {
         this.base = base;
     }
 
@@ -33,67 +33,77 @@ public class VisitorRelation extends CatBaseVisitor<Relation> {
 
     @Override
     public Relation visitExprComposition(CatParser.ExprCompositionContext ctx) {
-        return visitBinaryRelation(ctx.e1, ctx.e2, RelComposition.class);
+        Relation r1 = ctx.e1.accept(this);
+        Relation r2 = ctx.e2.accept(this);
+        return r1 == null || r2 == null ? null : added(new RelComposition(r1, r2));
     }
 
     @Override
     public Relation visitExprIntersection(CatParser.ExprIntersectionContext ctx) {
-        return visitBinaryRelation(ctx.e1, ctx.e2, RelIntersection.class);
+        Relation r1 = ctx.e1.accept(this);
+        Relation r2 = ctx.e2.accept(this);
+        return r1 == null || r2 == null ? null : added(new RelIntersection(r1, r2));
     }
 
     @Override
     public Relation visitExprMinus(CatParser.ExprMinusContext ctx) {
-        return visitBinaryRelation(ctx.e1, ctx.e2, RelMinus.class);
+        Relation r1 = ctx.e1.accept(this);
+        Relation r2 = ctx.e2.accept(this);
+        return r1 == null || r2 == null ? null : added(new RelMinus(r1, r2));
     }
 
     @Override
     public Relation visitExprUnion(CatParser.ExprUnionContext ctx) {
-        return visitBinaryRelation(ctx.e1, ctx.e2, RelUnion.class);
+        Relation r1 = ctx.e1.accept(this);
+        Relation r2 = ctx.e2.accept(this);
+        return r1 == null || r2 == null ? null : added(new RelUnion(r1, r2));
     }
 
     @Override
     public Relation visitExprInverse(CatParser.ExprInverseContext ctx) {
-        return visitUnaryRelation(ctx.e, RelInverse.class);
+        Relation r1 = ctx.e.accept(this);
+        return r1 == null ? null : added(new RelInverse(r1));
     }
 
     @Override
     public Relation visitExprTransitive(CatParser.ExprTransitiveContext ctx) {
-        return visitUnaryRelation(ctx.e, RelTrans.class);
+        Relation r1 = ctx.e.accept(this);
+        return r1 == null ? null : added(new RelTrans(r1));
     }
 
     @Override
     public Relation visitExprTransRef(CatParser.ExprTransRefContext ctx) {
-        return visitUnaryRelation(ctx.e, RelTransRef.class);
+        Relation r1 = ctx.e.accept(this);
+        return r1 == null ? null : added(new RelTransRef(r1));
     }
 
     @Override
     public Relation visitExprDomainIdentity(CatParser.ExprDomainIdentityContext ctx) {
-        return visitUnaryRelation(ctx.e, RelDomainIdentity.class);
+        Relation r1 = ctx.e.accept(this);
+        return r1 == null ? null : added(new RelDomainIdentity(r1));
     }
 
     @Override
     public Relation visitExprRangeIdentity(CatParser.ExprRangeIdentityContext ctx) {
-        return visitUnaryRelation(ctx.e, RelRangeIdentity.class);
+        Relation r1 = ctx.e.accept(this);
+        return r1 == null ? null : added(new RelRangeIdentity(r1));
     }
 
     @Override
     public Relation visitExprComplement(CatParser.ExprComplementContext ctx) {
-        Relation r = ctx.e.accept(this);
-        if(r != null){
-        	Relation allPairs = base.relationRepository.getRelation(RelCartesian.class, 
-					FilterBasic.get(Tag.VISIBLE), FilterBasic.get(Tag.VISIBLE));
-            return base.relationRepository.getRelation(RelMinus.class, allPairs, r);
+        Relation r2 = ctx.e.accept(this);
+        if (r2 == null) {
+            return null;
         }
-        return null;
+        FilterBasic f = FilterBasic.get(Tag.VISIBLE);
+        Relation r1 = added(new RelCartesian(f, f));
+        return added(new RelMinus(r1, r2));
     }
 
     @Override
     public Relation visitExprOptional(CatParser.ExprOptionalContext ctx) {
-        Relation r = ctx.e.accept(this);
-        if(r != null){
-            return base.relationRepository.getRelation(RelUnion.class, base.relationRepository.getRelation(ID), r);
-        }
-        return null;
+        Relation r1 = ctx.e.accept(this);
+        return r1 == null ? null : added(new RelUnion(base.wmm.getRelation(ID), r1));
     }
 
     @Override
@@ -101,7 +111,7 @@ public class VisitorRelation extends CatBaseVisitor<Relation> {
         boolean orig = base.recursiveDef;
         base.recursiveDef = false;
         FilterAbstract filter = ctx.e.accept(base.filterVisitor);
-        Relation relation = base.relationRepository.getRelation(RelSetIdentity.class, filter);
+        Relation relation = added(new RelSetIdentity(filter));
         base.recursiveDef = orig;
         return relation;
     }
@@ -112,39 +122,24 @@ public class VisitorRelation extends CatBaseVisitor<Relation> {
         base.recursiveDef = false;
         FilterAbstract filter1 = ctx.e1.accept(base.filterVisitor);
         FilterAbstract filter2 = ctx.e2.accept(base.filterVisitor);
-        Relation relation = base.relationRepository.getRelation(RelCartesian.class, filter1, filter2);
+        Relation relation = added(new RelCartesian(filter1, filter2));
         base.recursiveDef = orig;
         return relation;
     }
 
     @Override
     public Relation visitExprFencerel(CatParser.ExprFencerelContext ctx) {
-        return base.relationRepository.getRelation(RelFencerel.class, ctx.n.getText());
+        return added(new RelFencerel(ctx.n.getText()));
     }
 
     @Override
     public Relation visitExprBasic(CatParser.ExprBasicContext ctx) {
-        Relation relation = base.relationRepository.getRelation(ctx.n.getText());
-        if(relation == null && base.recursiveDef){
-            relation = base.relationRepository.getRelation(RecursiveRelation.class, ctx.n.getText());
-        }
-        return relation;
+        Relation r = base.wmm.getRelation(ctx.n.getText());
+        return r != null || !base.recursiveDef ? r : added(new RecursiveRelation(ctx.n.getText()));
     }
 
-    private Relation visitBinaryRelation(CatParser.ExpressionContext e1, CatParser.ExpressionContext e2, Class<?> c){
-        Relation r1 = e1.accept(this);
-        Relation r2 = e2.accept(this);
-        if(r1 != null && r2 != null){
-            return base.relationRepository.getRelation(c, r1, r2);
-        }
-        return null;
-    }
-
-    private Relation visitUnaryRelation(CatParser.ExpressionContext e, Class<?> c){
-        Relation r = e.accept(this);
-        if(r != null){
-            return base.relationRepository.getRelation(c, r);
-        }
-        return null;
+    private Relation added(Relation r) {
+        base.wmm.addRelation(r);
+        return r;
     }
 }

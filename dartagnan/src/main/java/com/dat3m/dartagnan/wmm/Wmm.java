@@ -45,6 +45,18 @@ public class Wmm {
 
     public Set<Relation> getRelations() { return relationRepository.getRelations(); }
 
+    public void addRelation(Relation r) {
+        relationRepository.addRelation(r);
+    }
+
+    public void addAlias(String n, Relation r) {
+        relationRepository.addAlias(n, r);
+    }
+
+    public void updateRelation(Relation r) {
+        relationRepository.updateRelation(r);
+    }
+
     public List<RecursiveGroup> getRecursiveGroups() { return recursiveGroups; }
 
     public void addFilter(FilterAbstract filter) {
@@ -62,10 +74,6 @@ public class Wmm {
      */
     public Relation getRelation(String name) {
         return relationRepository.getRelation(name);
-    }
-
-    public RelationRepository getRelationRepository(){
-        return relationRepository;
     }
 
     public void addRecursiveGroup(Set<RecursiveRelation> recursiveGroup){
