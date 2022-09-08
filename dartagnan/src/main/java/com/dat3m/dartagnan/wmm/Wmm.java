@@ -8,8 +8,6 @@ import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.RecursiveGroup;
 import com.dat3m.dartagnan.wmm.utils.RelationRepository;
 import com.google.common.collect.ImmutableSet;
-import org.sosy_lab.common.configuration.Configuration;
-import org.sosy_lab.common.configuration.InvalidConfigurationException;
 
 import java.util.*;
 
@@ -98,18 +96,5 @@ public class Wmm {
         }
 
         return sb.toString();
-    }
-
-
-    // ====================== Utility Methods ====================
-
-    public void configureAll(Configuration config) throws InvalidConfigurationException {
-        for (Relation rel : getRelations()) {
-            rel.configure(config);
-        }
-
-        for (Axiom ax : axioms) {
-            ax.configure(config);
-        }
     }
 }

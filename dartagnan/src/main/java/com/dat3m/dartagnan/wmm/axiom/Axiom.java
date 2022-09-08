@@ -4,8 +4,6 @@ import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.wmm.Constraint;
 import com.dat3m.dartagnan.wmm.relation.Relation;
-import org.sosy_lab.common.configuration.Configuration;
-import org.sosy_lab.common.configuration.InvalidConfigurationException;
 
 import java.util.Collections;
 import java.util.List;
@@ -35,8 +33,6 @@ public abstract class Axiom implements Constraint {
     public boolean isNegated() {
         return negated;
     }
-
-    public void configure(Configuration config) throws InvalidConfigurationException { }
 
     public void initializeRelationAnalysis(VerificationTask task, Context context) {
         this.task = task;

@@ -10,8 +10,6 @@ import com.dat3m.dartagnan.wmm.relation.binary.BinaryRelation;
 import com.dat3m.dartagnan.wmm.relation.unary.UnaryRelation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
-import org.sosy_lab.common.configuration.Configuration;
-import org.sosy_lab.common.configuration.InvalidConfigurationException;
 import org.sosy_lab.java_smt.api.BooleanFormula;
 import org.sosy_lab.java_smt.api.SolverContext;
 
@@ -45,8 +43,6 @@ public abstract class Relation implements Constraint {
     // TODO: The following two methods are provided because currently Relations are treated as three things:
     //  data objects, static analysers (relation analysis) and encoders of said data objects.
     //  Once we split these aspects, we might get rid of these methods
-
-    public void configure(Configuration config) throws InvalidConfigurationException { }
 
     // TODO: We misuse <task> as data object and analysis information object.
     // Due to partaking in relation analysis
