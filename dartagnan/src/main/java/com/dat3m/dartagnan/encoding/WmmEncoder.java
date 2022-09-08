@@ -46,6 +46,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static com.dat3m.dartagnan.configuration.OptionNames.IDL_TO_SAT;
+import static com.dat3m.dartagnan.configuration.OptionNames.POST_FIXPOINT;
 import static com.dat3m.dartagnan.encoding.ProgramEncoder.execution;
 import static com.dat3m.dartagnan.expression.utils.Utils.generalEqual;
 import static com.dat3m.dartagnan.program.event.Tag.INIT;
@@ -67,6 +68,12 @@ public class WmmEncoder {
             description = "Use SAT-based encoding for totality and acyclicity.",
             secure = true)
     private boolean useSATEncoding = false;
+
+    @Option(
+            name = POST_FIXPOINT,
+            description = "Allow relationship variables to be assigned true without reason.",
+            secure = true)
+    private boolean postFixApprox = false;
 
     // =====================================================================
 
@@ -179,7 +186,7 @@ public class WmmEncoder {
                 }
                 BooleanFormula opt1 = r1.getSMTVar(tuple, ctx);
                 BooleanFormula opt2 = r2.getSMTVar(tuple, ctx);
-                if (Relation.PostFixApprox) {
+                if (postFixApprox) {
                     enc = bmgr.and(enc, bmgr.implication(bmgr.or(opt1, opt2), rel.getSMTVar(tuple, ctx)));
                 } else {
                     enc = bmgr.and(enc, bmgr.equivalence(rel.getSMTVar(tuple, ctx), bmgr.or(opt1, opt2)));
@@ -215,7 +222,7 @@ public class WmmEncoder {
                 }
                 BooleanFormula opt1 = r1.getSMTVar(tuple, ctx);
                 BooleanFormula opt2 = bmgr.not(r2.getSMTVar(tuple, ctx));
-                if (Relation.PostFixApprox) {
+                if (postFixApprox) {
                     enc = bmgr.and(enc, bmgr.implication(bmgr.and(opt1, opt2), rel.getSMTVar(tuple, ctx)));
                 } else {
                     enc = bmgr.and(enc, bmgr.equivalence(rel.getSMTVar(tuple, ctx), bmgr.and(opt1, opt2)));
@@ -305,7 +312,7 @@ public class WmmEncoder {
                         orClause = bmgr.or(orClause, bmgr.and(tVar, rel.getSMTVar(e3, e2, ctx)));
                     }
                 }
-                if (Relation.PostFixApprox) {
+                if (postFixApprox) {
                     enc = bmgr.and(enc, bmgr.implication(orClause, rel.getSMTVar(tuple, ctx)));
                 } else {
                     enc = bmgr.and(enc, bmgr.equivalence(rel.getSMTVar(tuple, ctx), orClause));
