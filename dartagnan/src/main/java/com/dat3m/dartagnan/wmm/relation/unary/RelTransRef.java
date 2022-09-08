@@ -13,13 +13,8 @@ import com.dat3m.dartagnan.wmm.utils.TupleSet;
  */
 public class RelTransRef extends RelTrans {
 
-    public static String makeTerm(Relation r1){
-        return r1.getName() + "^*";
-    }
-
     public RelTransRef(Relation r1) {
         super(r1);
-        term = makeTerm(r1);
     }
 
     @Override
@@ -47,5 +42,9 @@ public class RelTransRef extends RelTrans {
             }
         }
         return maxTupleSet;
+    }
+
+    public String getTerm() {
+        return r1.getName() + "^*";
     }
 }

@@ -7,13 +7,9 @@ import com.dat3m.dartagnan.wmm.relation.base.stat.StaticRelation;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
-import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.CASDEP;;
+import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.CASDEP;
 
 public class RelCASDep extends StaticRelation {
-
-    public RelCASDep(){
-        term = CASDEP;
-    }
 
     @Override
     public <T> T visit(Visitor<? extends T> v) {
@@ -30,5 +26,10 @@ public class RelCASDep extends StaticRelation {
             }
         }
         return maxTupleSet;
+    }
+
+    @Override
+    public String getTerm() {
+        return CASDEP;
     }
 }

@@ -23,10 +23,8 @@ public class RelPo extends StaticRelation {
 
     public RelPo(boolean includeLocalEvents){
         if(includeLocalEvents){
-            term = POWITHLOCALEVENTS;
             filter = FilterBasic.get(Tag.ANY);
         } else {
-            term = PO;
             filter = FilterBasic.get(Tag.VISIBLE);
         }
     }
@@ -53,5 +51,10 @@ public class RelPo extends StaticRelation {
             removeMutuallyExclusiveTuples(maxTupleSet);
         }
         return maxTupleSet;
+    }
+
+    @Override
+    public String getTerm() {
+        return FilterBasic.get(Tag.ANY).equals(filter) ? POWITHLOCALEVENTS : PO;
     }
 }

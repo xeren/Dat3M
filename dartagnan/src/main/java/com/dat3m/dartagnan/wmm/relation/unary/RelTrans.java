@@ -15,13 +15,8 @@ import java.util.Set;
  */
 public class RelTrans extends UnaryRelation {
 
-    public static String makeTerm(Relation r1){
-        return r1.getName() + "^+";
-    }
-
     public RelTrans(Relation r1) {
         super(r1);
-        term = makeTerm(r1);
     }
 
     @Override
@@ -63,5 +58,9 @@ public class RelTrans extends UnaryRelation {
             removeMutuallyExclusiveTuples(maxTupleSet);
         }
         return maxTupleSet;
+    }
+
+    public String getTerm() {
+        return r1.getName() + "^+";
     }
 }

@@ -28,7 +28,6 @@ import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 public abstract class Relation implements Constraint {
 
     protected String name;
-    protected String term;
 
     protected VerificationTask task;
     protected Context analysisContext;
@@ -71,7 +70,7 @@ public abstract class Relation implements Constraint {
     }
 
     public String getName() {
-        return name != null ? name : term;
+        return name != null ? name : getTerm();
     }
 
     public Relation setName(String name){
@@ -79,9 +78,7 @@ public abstract class Relation implements Constraint {
         return this;
     }
 
-    public String getTerm(){
-        return term;
-    }
+    public abstract String getTerm();
 
     public boolean getIsNamed(){
         return name != null;
@@ -90,9 +87,9 @@ public abstract class Relation implements Constraint {
     @Override
     public String toString(){
         if(name != null){
-            return name + " := " + term;
+            return name + " := " + getTerm();
         }
-        return term;
+        return getTerm();
     }
 
     @Override

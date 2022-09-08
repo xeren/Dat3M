@@ -10,10 +10,6 @@ import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.ID;
 
 public class RelId extends StaticRelation {
 
-    public RelId(){
-        term = ID;
-    }
-
     @Override
     public <T> T visit(Visitor<? extends T> v) {
         return v.visitIdentity(this, FilterBasic.get(Tag.VISIBLE));
@@ -28,5 +24,10 @@ public class RelId extends StaticRelation {
             }
         }
         return maxTupleSet;
+    }
+
+    @Override
+    public String getTerm() {
+        return ID;
     }
 }

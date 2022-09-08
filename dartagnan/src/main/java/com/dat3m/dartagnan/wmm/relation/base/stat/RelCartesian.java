@@ -20,14 +20,9 @@ public class RelCartesian extends StaticRelation {
     	return filter2;
     }
 
-    public static String makeTerm(FilterAbstract filter1, FilterAbstract filter2){
-        return "(" + filter1 + "*" + filter2 + ")";
-    }
-
     public RelCartesian(FilterAbstract filter1, FilterAbstract filter2) {
         this.filter1 = filter1;
         this.filter2 = filter2;
-        this.term = makeTerm(filter1, filter2);
     }
 
     @Override
@@ -51,5 +46,10 @@ public class RelCartesian extends StaticRelation {
             }
         }
         return maxTupleSet;
+    }
+
+    @Override
+    public String getTerm() {
+        return "(" + filter1 + "*" + filter2 + ")";
     }
 }

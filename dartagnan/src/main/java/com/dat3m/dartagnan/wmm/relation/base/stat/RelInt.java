@@ -13,10 +13,6 @@ import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.INT;
 
 public class RelInt extends StaticRelation {
 
-    public RelInt(){
-        term = INT;
-    }
-
     @Override
     public <T> T visit(Visitor<? extends T> v) {
         return v.visitInternal(this);
@@ -37,5 +33,10 @@ public class RelInt extends StaticRelation {
             removeMutuallyExclusiveTuples(maxTupleSet);
         }
         return maxTupleSet;
+    }
+
+    @Override
+    public String getTerm() {
+        return INT;
     }
 }

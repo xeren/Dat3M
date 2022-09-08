@@ -12,10 +12,6 @@ import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.ADDRDIRECT
 
 public class RelAddrDirect extends BasicRegRelation {
 
-    public RelAddrDirect(){
-        term = ADDRDIRECT;
-    }
-
     @Override
     public <T> T visit(Visitor<? extends T> v) {
         return v.visitAddressDependency(this);
@@ -29,5 +25,10 @@ public class RelAddrDirect extends BasicRegRelation {
     @Override
     Collection<Register> getRegisters(Event regReader){
         return ((MemEvent) regReader).getAddress().getRegs();
+    }
+
+    @Override
+    public String getTerm() {
+        return ADDRDIRECT;
     }
 }

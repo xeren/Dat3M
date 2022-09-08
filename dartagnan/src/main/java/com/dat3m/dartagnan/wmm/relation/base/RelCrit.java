@@ -18,10 +18,6 @@ import static java.util.stream.Stream.concat;
 
 public class RelCrit extends StaticRelation {
 
-    public RelCrit(){
-        term = CRIT;
-    }
-
     @Override
     public <T> T visit(Visitor<? extends T> v) {
         return v.visitCriticalSections(this);
@@ -73,5 +69,10 @@ public class RelCrit extends StaticRelation {
                 }
             }
         }
+    }
+
+    @Override
+    public String getTerm() {
+        return CRIT;
     }
 }

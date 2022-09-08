@@ -13,10 +13,6 @@ import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.EXT;
 
 public class RelExt extends StaticRelation {
 
-    public RelExt(){
-        term = EXT;
-    }
-
     @Override
     public <T> T visit(Visitor<? extends T> v) {
         return v.visitExternal(this);
@@ -42,5 +38,10 @@ public class RelExt extends StaticRelation {
             }
         }
         return maxTupleSet;
+    }
+
+    @Override
+    public String getTerm() {
+        return EXT;
     }
 }

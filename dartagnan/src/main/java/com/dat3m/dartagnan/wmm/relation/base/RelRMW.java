@@ -28,10 +28,6 @@ import static java.util.stream.IntStream.iterate;
  */
 public class RelRMW extends StaticRelation {
 
-    public RelRMW(){
-        term = RMW;
-    }
-
     @Override
     public <T> T visit(Visitor<? extends T> v) {
         return v.visitReadModifyWrites(this);
@@ -119,5 +115,10 @@ public class RelRMW extends StaticRelation {
                 }
             }
         }
+    }
+
+    @Override
+    public String getTerm() {
+        return RMW;
     }
 }

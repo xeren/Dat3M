@@ -24,10 +24,6 @@ public class RelCo extends Relation {
 
 	private static final Logger logger = LogManager.getLogger(RelCo.class);
 
-    public RelCo(){
-        term = CO;
-    }
-
     @Override
     public <T> T visit(Visitor<? extends T> v) {
         return v.visitMemoryOrder(this);
@@ -86,5 +82,10 @@ public class RelCo extends Relation {
             logger.info("maxTupleSet size for " + getName() + ": " + maxTupleSet.size());
         }
         return maxTupleSet;
+    }
+
+    @Override
+    public String getTerm() {
+        return CO;
     }
 }

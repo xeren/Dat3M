@@ -12,10 +12,6 @@ import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.IDD;
 
 public class RelIdd extends BasicRegRelation {
 
-    public RelIdd(){
-        term = IDD;
-    }
-
     @Override
     public <T> T visit(Visitor<? extends T> v) {
         return v.visitInternalDataDependency(this);
@@ -29,5 +25,10 @@ public class RelIdd extends BasicRegRelation {
     @Override
     Collection<Register> getRegisters(Event regReader){
         return ((RegReaderData) regReader).getDataRegs();
+    }
+
+    @Override
+    public String getTerm() {
+        return IDD;
     }
 }

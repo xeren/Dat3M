@@ -11,13 +11,8 @@ public class RelInverse extends UnaryRelation {
     //TODO/Note: We can forward getSMTVar calls
     // to avoid encoding this completely!
 
-    public static String makeTerm(Relation r1){
-        return r1.getName() + "^-1";
-    }
-
     public RelInverse(Relation r1){
         super(r1);
-        term = makeTerm(r1);
     }
 
     @Override
@@ -39,5 +34,10 @@ public class RelInverse extends UnaryRelation {
             maxTupleSet = r1.getMaxTupleSet().inverse();
         }
         return maxTupleSet;
+    }
+
+    @Override
+    public String getTerm() {
+        return r1.getName() + "^-1";
     }
 }

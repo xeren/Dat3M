@@ -7,13 +7,8 @@ import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 public class RelRangeIdentity extends UnaryRelation {
 
-    public static String makeTerm(Relation r1){
-        return "[range(" + r1.getName() + ")]";
-    }
-
     public RelRangeIdentity(Relation r1){
         super(r1);
-        term = makeTerm(r1);
     }
 
     @Override
@@ -40,5 +35,10 @@ public class RelRangeIdentity extends UnaryRelation {
             maxTupleSet = r1.getMaxTupleSet().mapped(t -> new Tuple(t.getSecond(), t.getSecond()));
         }
         return maxTupleSet;
+    }
+
+    @Override
+    public String getTerm() {
+        return "[range(" + r1.getName() + ")]";
     }
 }

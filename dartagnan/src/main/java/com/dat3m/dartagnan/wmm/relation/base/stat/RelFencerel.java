@@ -14,13 +14,8 @@ public class RelFencerel extends StaticRelation {
 
     private final String fenceName;
 
-    public static String makeTerm(String fenceName){
-        return "fencerel(" + fenceName + ")";
-    }
-
     public RelFencerel(String fenceName) {
         this.fenceName = fenceName;
-        term = makeTerm(fenceName);
     }
 
     public String getFenceName() { return fenceName; }
@@ -84,5 +79,10 @@ public class RelFencerel extends StaticRelation {
             removeMutuallyExclusiveTuples(maxTupleSet);
         }
         return maxTupleSet;
+    }
+
+    @Override
+    public String getTerm() {
+        return "fencerel(" + fenceName + ")";
     }
 }

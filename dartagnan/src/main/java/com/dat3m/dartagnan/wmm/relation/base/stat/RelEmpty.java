@@ -1,13 +1,10 @@
 package com.dat3m.dartagnan.wmm.relation.base.stat;
 
-import com.dat3m.dartagnan.wmm.relation.RelationNameRepository;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
-public class RelEmpty extends StaticRelation {
+import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.EMPTY;
 
-    public RelEmpty() {
-        term = RelationNameRepository.EMPTY;
-    }
+public class RelEmpty extends StaticRelation {
 
     @Override
     public <T> T visit(Visitor<? extends T> v) {
@@ -28,5 +25,10 @@ public class RelEmpty extends StaticRelation {
             maxTupleSet = new TupleSet();
         }
         return maxTupleSet;
+    }
+
+    @Override
+    public String getTerm() {
+        return EMPTY;
     }
 }

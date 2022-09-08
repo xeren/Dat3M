@@ -7,13 +7,8 @@ import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 public class RelDomainIdentity extends UnaryRelation {
 
-    public static String makeTerm(Relation r1){
-        return "[domain(" + r1.getName() + ")]";
-    }
-
     public RelDomainIdentity(Relation r1){
         super(r1);
-        term = makeTerm(r1);
     }
 
     @Override
@@ -40,5 +35,10 @@ public class RelDomainIdentity extends UnaryRelation {
             maxTupleSet = r1.getMaxTupleSet().mapped(t -> new Tuple(t.getFirst(), t.getFirst()));
         }
         return maxTupleSet;
+    }
+
+    @Override
+    public String getTerm() {
+        return "[domain(" + r1.getName() + ")]";
     }
 }

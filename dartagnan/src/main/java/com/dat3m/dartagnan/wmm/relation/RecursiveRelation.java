@@ -27,11 +27,6 @@ public class RecursiveRelation extends Relation {
 
     public RecursiveRelation(String name) {
         this.name = name;
-        term = name;
-    }
-
-    public static String makeTerm(String name){
-        return name;
     }
 
     @Override
@@ -46,7 +41,6 @@ public class RecursiveRelation extends Relation {
     public void setConcreteRelation(Relation r1){
         r1.setName(name);
         this.r1 = r1;
-        this.term = r1.getTerm();
     }
 
     public void setDoRecurse(){
@@ -92,5 +86,10 @@ public class RecursiveRelation extends Relation {
             return maxTupleSet;
         }
         return getMaxTupleSet();
+    }
+
+    @Override
+    public String getTerm() {
+        return r1 == null ? name : r1.getTerm();
     }
 }

@@ -18,10 +18,6 @@ import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.CTRLDIRECT
 // ctrl := idd^+;ctrlDirect & (R*V)
 public class RelCtrlDirect extends StaticRelation {
 
-    public RelCtrlDirect(){
-        term = CTRLDIRECT;
-    }
-
     @Override
     public <T> T visit(Visitor<? extends T> v) {
         return v.visitControl(this);
@@ -57,5 +53,10 @@ public class RelCtrlDirect extends StaticRelation {
             removeMutuallyExclusiveTuples(maxTupleSet);
         }
         return maxTupleSet;
+    }
+
+    @Override
+    public String getTerm() {
+        return CTRLDIRECT;
     }
 }

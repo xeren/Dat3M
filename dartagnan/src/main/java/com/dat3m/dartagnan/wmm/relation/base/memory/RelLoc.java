@@ -15,10 +15,6 @@ import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.LOC;
 
 public class RelLoc extends Relation {
 
-    public RelLoc(){
-        term = LOC;
-    }
-
     @Override
     public <T> T visit(Visitor<? extends T> v) {
         return v.visitSameAddress(this);
@@ -54,5 +50,10 @@ public class RelLoc extends Relation {
             removeMutuallyExclusiveTuples(maxTupleSet);
         }
         return maxTupleSet;
+    }
+
+    @Override
+    public String getTerm() {
+        return LOC;
     }
 }

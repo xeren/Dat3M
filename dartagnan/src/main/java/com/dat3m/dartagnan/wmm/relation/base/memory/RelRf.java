@@ -27,10 +27,6 @@ public class RelRf extends Relation {
 
 	private static final Logger logger = LogManager.getLogger(RelRf.class);
 
-    public RelRf(){
-        term = RF;
-    }
-
     @Override
     public <T> T visit(Visitor<? extends T> v) {
         return v.visitReadFrom(this);
@@ -163,5 +159,10 @@ public class RelRf extends Relation {
 
         }
         logger.info("Atomic block optimization eliminated "  + (sizeBefore - maxTupleSet.size()) + " reads");
+    }
+
+    @Override
+    public String getTerm() {
+        return RF;
     }
 }
