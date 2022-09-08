@@ -19,7 +19,6 @@ import com.dat3m.dartagnan.wmm.analysis.RelationAnalysis;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.utils.Flag;
-import com.dat3m.dartagnan.wmm.utils.RecursiveGroup;
 import com.dat3m.dartagnan.wmm.utils.RelationRepository;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.dat3m.dartagnan.wmm.utils.TupleSet;
@@ -90,6 +89,7 @@ public class WmmEncoder {
         memoryModel = checkNotNull(m);
         analysisContext = context;
         context.requires(RelationAnalysis.class);
+        context.requires(EncodeSets.class);
         ctx = solverContext;
         axiomEncoder = new AxiomEncoder(context, ctx);
     }
@@ -105,27 +105,6 @@ public class WmmEncoder {
     private void initializeEncoding() {
         for(String relName : Wmm.BASE_RELATIONS) {
             memoryModel.getRelationRepository().getRelation(relName);
-        }
-
-        for(RecursiveGroup recursiveGroup : memoryModel.getRecursiveGroups()){
-            recursiveGroup.setDoRecurse();
-        }
-
-        for(Relation relation : memoryModel.getRelations()){
-            relation.initializeEncoding(ctx);
-        }
-
-        for (Axiom axiom : memoryModel.getAxioms()) {
-            axiom.initializeEncoding(ctx);
-        }
-
-        // ====================== Compute encoding information =================
-        for (Axiom ax : memoryModel.getAxioms()) {
-            ax.getRelation().addEncodeTupleSet(ax.getEncodeTupleSet());
-        }
-
-        for (RecursiveGroup recursiveGroup : Lists.reverse(memoryModel.getRecursiveGroups())) {
-            recursiveGroup.updateEncodeTupleSets();
         }
     }
 
@@ -172,24 +151,23 @@ public class WmmEncoder {
     private final class RelationEncoder implements Constraint.Visitor<BooleanFormula> {
         final ExecutionAnalysis exec = analysisContext.get(ExecutionAnalysis.class);
         final AliasAnalysis alias = analysisContext.get(AliasAnalysis.class);
+        final EncodeSets encodeSets = analysisContext.get(EncodeSets.class);
         final IntegerFormulaManager imgr = ctx.getFormulaManager().getIntegerFormulaManager();
         final BooleanFormulaManager bmgr = ctx.getFormulaManager().getBooleanFormulaManager();
 
         @Override
         public BooleanFormula visitUnion(Relation rel, Relation r1, Relation r2) {
             BooleanFormula enc = bmgr.makeTrue();
-            TupleSet min = rel.getMinTupleSet();
-            for (Tuple tuple : rel.getEncodeTupleSet()) {
-                if (min.contains(tuple)) {
-                    enc = bmgr.and(enc, bmgr.equivalence(rel.getSMTVar(tuple, ctx), execution(tuple.getFirst(), tuple.getSecond(), exec, ctx)));
-                    continue;
-                }
-                BooleanFormula opt1 = r1.getSMTVar(tuple, ctx);
-                BooleanFormula opt2 = r2.getSMTVar(tuple, ctx);
+            Set<Tuple> may1 = r1.getMaxTupleSet();
+            Set<Tuple> may2 = r2.getMaxTupleSet();
+            for (Tuple tuple : encodeSets.get(rel)) {
+                BooleanFormula edge = rel.getSMTVar(tuple, ctx);
+                BooleanFormula opt1 = may1.contains(tuple) ? r1.getSMTVar(tuple, ctx) : bmgr.makeFalse();
+                BooleanFormula opt2 = may2.contains(tuple) ? r2.getSMTVar(tuple, ctx) : bmgr.makeFalse();
                 if (postFixApprox) {
-                    enc = bmgr.and(enc, bmgr.implication(bmgr.or(opt1, opt2), rel.getSMTVar(tuple, ctx)));
+                    enc = bmgr.and(enc, bmgr.implication(bmgr.or(opt1, opt2), edge));
                 } else {
-                    enc = bmgr.and(enc, bmgr.equivalence(rel.getSMTVar(tuple, ctx), bmgr.or(opt1, opt2)));
+                    enc = bmgr.and(enc, bmgr.equivalence(edge, bmgr.or(opt1, opt2)));
                 }
             }
             return enc;
@@ -198,15 +176,13 @@ public class WmmEncoder {
         @Override
         public BooleanFormula visitIntersection(Relation rel, Relation r1, Relation r2) {
             BooleanFormula enc = bmgr.makeTrue();
-            TupleSet min = rel.getMinTupleSet();
-            for (Tuple tuple : rel.getEncodeTupleSet()) {
-                if (min.contains(tuple)) {
-                    enc = bmgr.and(enc, bmgr.equivalence(rel.getSMTVar(tuple, ctx), execution(tuple.getFirst(), tuple.getSecond(), exec, ctx)));
-                    continue;
-                }
-                BooleanFormula opt1 = r1.getSMTVar(tuple, ctx);
-                BooleanFormula opt2 = r2.getSMTVar(tuple, ctx);
-                enc = bmgr.and(enc, bmgr.equivalence(rel.getSMTVar(tuple, ctx), bmgr.and(opt1, opt2)));
+            TupleSet must1 = r1.getMinTupleSet();
+            TupleSet must2 = r2.getMinTupleSet();
+            for (Tuple tuple : encodeSets.get(rel)) {
+                BooleanFormula edge = rel.getSMTVar(tuple, ctx);
+                BooleanFormula opt1 = must1.contains(tuple) ? bmgr.makeTrue() : r1.getSMTVar(tuple, ctx);
+                BooleanFormula opt2 = must2.contains(tuple) ? bmgr.makeTrue() : r2.getSMTVar(tuple, ctx);
+                enc = bmgr.and(enc, bmgr.equivalence(edge, bmgr.and(opt1, opt2)));
             }
             return enc;
         }
@@ -214,18 +190,16 @@ public class WmmEncoder {
         @Override
         public BooleanFormula visitDifference(Relation rel, Relation r1, Relation r2) {
             BooleanFormula enc = bmgr.makeTrue();
-            TupleSet min = rel.getMinTupleSet();
-            for (Tuple tuple : rel.getEncodeTupleSet()) {
-                if (min.contains(tuple)) {
-                    enc = bmgr.and(enc, bmgr.equivalence(rel.getSMTVar(tuple, ctx), execution(tuple.getFirst(), tuple.getSecond(), exec, ctx)));
-                    continue;
-                }
-                BooleanFormula opt1 = r1.getSMTVar(tuple, ctx);
-                BooleanFormula opt2 = bmgr.not(r2.getSMTVar(tuple, ctx));
+            Set<Tuple> must1 = r1.getMinTupleSet();
+            Set<Tuple> may2 = r2.getMaxTupleSet();
+            for (Tuple tuple : encodeSets.get(rel)) {
+                BooleanFormula edge = rel.getSMTVar(tuple, ctx);
+                BooleanFormula opt1 = must1.contains(tuple) ? execution(tuple.getFirst(), tuple.getSecond(), exec, ctx) : r1.getSMTVar(tuple, ctx);
+                BooleanFormula opt2 = may2.contains(tuple) ? bmgr.not(r2.getSMTVar(tuple, ctx)) : bmgr.makeTrue();
                 if (postFixApprox) {
-                    enc = bmgr.and(enc, bmgr.implication(bmgr.and(opt1, opt2), rel.getSMTVar(tuple, ctx)));
+                    enc = bmgr.and(enc, bmgr.implication(bmgr.and(opt1, opt2), edge));
                 } else {
-                    enc = bmgr.and(enc, bmgr.equivalence(rel.getSMTVar(tuple, ctx), bmgr.and(opt1, opt2)));
+                    enc = bmgr.and(enc, bmgr.equivalence(edge, bmgr.and(opt1, opt2)));
                 }
             }
             return enc;
@@ -234,22 +208,41 @@ public class WmmEncoder {
         @Override
         public BooleanFormula visitComposition(Relation rel, Relation r1, Relation r2) {
             BooleanFormula enc = bmgr.makeTrue();
-            TupleSet r1Set = r1.getEncodeTupleSet();
-            TupleSet r2Set = r2.getEncodeTupleSet();
-            TupleSet minSet = rel.getMinTupleSet();
-            for (Tuple tuple : rel.getEncodeTupleSet()) {
+            Set<Tuple> set1 = encodeSets.get(r1);
+            Set<Tuple> set2 = encodeSets.get(r2);
+            TupleSet must1 = r1.getMinTupleSet();
+            TupleSet must2 = r2.getMinTupleSet();
+            for (Tuple tuple : encodeSets.get(rel)) {
+                Event e1 = tuple.getFirst();
+                Event e2 = tuple.getSecond();
+                BooleanFormula edge = rel.getSMTVar(tuple, ctx);
                 BooleanFormula expr = bmgr.makeFalse();
-                if (minSet.contains(tuple)) {
-                    expr = execution(tuple.getFirst(), tuple.getSecond(), exec, ctx);
-                } else {
-                    for (Tuple t1 : r1Set.getByFirst(tuple.getFirst())) {
-                        Tuple t2 = new Tuple(t1.getSecond(), tuple.getSecond());
-                        if (r2Set.contains(t2)) {
-                            expr = bmgr.or(expr, bmgr.and(r1.getSMTVar(t1, ctx), r2.getSMTVar(t2, ctx)));
-                        }
+                for (Tuple t1 : must1.getByFirst(e1)) {
+                    Event e3 = t1.getSecond();
+                    Tuple t2 = new Tuple(e3, e2);
+                    if (must2.contains(t2)) {
+                        expr = bmgr.or(expr, bmgr.and(e1.exec(), e3.exec(), e2.exec()));
+                    } else if (set2.contains(t2)) {
+                        expr = bmgr.or(expr, bmgr.and(
+                                exec.isImplied(e2, e1) || exec.isImplied(e3, e1) ? bmgr.makeTrue() : e1.exec(),
+                                r2.getSMTVar(t2, ctx)));
                     }
                 }
-                enc = bmgr.and(enc, bmgr.equivalence(rel.getSMTVar(tuple, ctx), expr));
+                for (Tuple t1 : set1) {
+                    Event e3 = t1.getSecond();
+                    if (t1.getFirst().getCId() != e1.getCId()) {
+                        continue;
+                    }
+                    Tuple t2 = new Tuple(e3, e2);
+                    if (must2.contains(t2)) {
+                        expr = bmgr.or(expr, bmgr.and(
+                                r1.getSMTVar(t1, ctx),
+                                exec.isImplied(e1, e2) || exec.isImplied(e3, e2) ? bmgr.makeTrue() : e2.exec()));
+                    } else if (set2.contains(t2)) {
+                        expr = bmgr.or(expr, bmgr.and(r1.getSMTVar(t1, ctx), r2.getSMTVar(t2, ctx)));
+                    }
+                }
+                enc = bmgr.and(enc, bmgr.equivalence(edge, expr));
             }
             return enc;
         }
@@ -257,14 +250,16 @@ public class WmmEncoder {
         @Override
         public BooleanFormula visitDomainIdentity(Relation rel, Relation r1) {
             BooleanFormula enc = bmgr.makeTrue();
-            for (Tuple tuple : rel.getEncodeTupleSet()) {
+            TupleSet may1 = r1.getMaxTupleSet();
+            Set<Tuple> must1 = r1.getMinTupleSet();
+            for (Tuple tuple : encodeSets.get(rel)) {
+                BooleanFormula edge = rel.getSMTVar(tuple, ctx);
                 Event e = tuple.getFirst();
                 BooleanFormula opt = bmgr.makeFalse();
-                //TODO: Optimize using minSets (but no CAT uses this anyway)
-                for (Tuple t : r1.getMaxTupleSet().getByFirst(e)) {
-                    opt = bmgr.or(r1.getSMTVar(e, t.getSecond(), ctx));
+                for (Tuple t : may1.getByFirst(e)) {
+                    opt = bmgr.or(opt, must1.contains(t) ? execution(e, t.getSecond(), exec, ctx) : r1.getSMTVar(e, t.getSecond(), ctx));
                 }
-                enc = bmgr.and(enc, bmgr.equivalence(rel.getSMTVar(e, e, ctx), opt));
+                enc = bmgr.and(enc, bmgr.equivalence(edge, opt));
             }
             return enc;
         }
@@ -272,14 +267,16 @@ public class WmmEncoder {
         @Override
         public BooleanFormula visitRangeIdentity(Relation rel, Relation r1) {
             BooleanFormula enc = bmgr.makeTrue();
-            //TODO: Optimize using minSets (but no CAT uses this anyway)
-            for (Tuple tuple : rel.getEncodeTupleSet()) {
+            TupleSet may1 = r1.getMaxTupleSet();
+            Set<Tuple> must1 = r1.getMinTupleSet();
+            for (Tuple tuple : encodeSets.get(rel)) {
+                BooleanFormula edge = rel.getSMTVar(tuple, ctx);
                 Event e = tuple.getFirst();
                 BooleanFormula opt = bmgr.makeFalse();
-                for (Tuple t : r1.getMaxTupleSet().getBySecond(e)) {
-                    opt = bmgr.or(r1.getSMTVar(t.getFirst(), e, ctx));
+                for (Tuple t : may1.getBySecond(e)) {
+                    opt = bmgr.or(opt, must1.contains(t) ? execution(t.getFirst(), e, exec, ctx) : r1.getSMTVar(t.getFirst(), e, ctx));
                 }
-                enc = bmgr.and(enc, bmgr.equivalence(rel.getSMTVar(e, e, ctx), opt));
+                enc = bmgr.and(enc, bmgr.equivalence(edge, opt));
             }
             return enc;
         }
@@ -287,35 +284,49 @@ public class WmmEncoder {
         @Override
         public BooleanFormula visitTransitiveClosure(Relation rel, Relation r1) {
             BooleanFormula enc = bmgr.makeTrue();
-            TupleSet maySet = rel.getMaxTupleSet();
-            TupleSet minSet = rel.getMinTupleSet();
-            TupleSet r1Max = r1.getMaxTupleSet();
-            for (Tuple tuple : rel.getEncodeTupleSet()) {
-                if (minSet.contains(tuple)) {
-                    if (Relation.PostFixApprox) {
-                        enc = bmgr.and(enc, bmgr.implication(execution(tuple.getFirst(), tuple.getSecond(), exec, ctx), rel.getSMTVar(tuple, ctx)));
-                    } else {
-                        enc = bmgr.and(enc, bmgr.equivalence(rel.getSMTVar(tuple, ctx), execution(tuple.getFirst(), tuple.getSecond(), exec, ctx)));
-                    }
-                    continue;
-                }
+            Set<Tuple> set = encodeSets.get(rel);
+            TupleSet must = rel.getMinTupleSet();
+            Set<Tuple> set1 = encodeSets.get(r1);
+            for (Tuple tuple : set) {
+                BooleanFormula edge = rel.getSMTVar(tuple, ctx);
                 BooleanFormula orClause = bmgr.makeFalse();
                 Event e1 = tuple.getFirst();
                 Event e2 = tuple.getSecond();
-                if (r1Max.contains(tuple)) {
+                if (set1.contains(tuple)) {
                     orClause = bmgr.or(orClause, r1.getSMTVar(tuple, ctx));
                 }
-                for (Tuple t : r1Max.getByFirst(e1)) {
-                    Event e3 = t.getSecond();
-                    if (e3.getCId() != e1.getCId() && e3.getCId() != e2.getCId() && maySet.contains(new Tuple(e3, e2))) {
-                        BooleanFormula tVar = minSet.contains(t) ? rel.getSMTVar(t, ctx) : r1.getSMTVar(t, ctx);
-                        orClause = bmgr.or(orClause, bmgr.and(tVar, rel.getSMTVar(e3, e2, ctx)));
+                for (Tuple t1 : must.getByFirst(e1)) {
+                    Event e3 = t1.getSecond();
+                    if (e3.getCId() == e1.getCId() || e3.getCId() == e2.getCId()) {
+                        continue;
+                    }
+                    Tuple t2 = new Tuple(e3, e2);
+                    if (must.contains(t2)) {
+                        orClause = bmgr.or(orClause, bmgr.and(e1.exec(), e2.exec(), e3.exec()));
+                    } else if (set.contains(t2)) {
+                        orClause = bmgr.or(orClause, bmgr.and(
+                                exec.isImplied(e2, e1) || exec.isImplied(e3, e1) ? bmgr.makeTrue() : e1.exec(),
+                                rel.getSMTVar(t2, ctx)));
+                    }
+                }
+                for (Tuple t1 : set) {
+                    Event e3 = t1.getSecond();
+                    if (t1.getFirst().getCId() != e1.getCId() || e3.getCId() == e1.getCId() || e3.getCId() == e2.getCId()) {
+                        continue;
+                    }
+                    Tuple t2 = new Tuple(e3, e2);
+                    if (must.contains(t2)) {
+                        orClause = bmgr.or(orClause, bmgr.and(
+                                r1.getSMTVar(t1, ctx),
+                                exec.isImplied(e1, e2) || exec.isImplied(e3, e2) ? bmgr.makeTrue() : e2.exec()));
+                    } else if (set.contains(t2)) {
+                        orClause = bmgr.or(orClause, bmgr.and(r1.getSMTVar(t1, ctx), rel.getSMTVar(t2, ctx)));
                     }
                 }
                 if (postFixApprox) {
-                    enc = bmgr.and(enc, bmgr.implication(orClause, rel.getSMTVar(tuple, ctx)));
+                    enc = bmgr.and(enc, bmgr.implication(orClause, edge));
                 } else {
-                    enc = bmgr.and(enc, bmgr.equivalence(rel.getSMTVar(tuple, ctx), orClause));
+                    enc = bmgr.and(enc, bmgr.equivalence(edge, orClause));
                 }
             }
             return enc;
@@ -329,70 +340,61 @@ public class WmmEncoder {
         @Override
         public BooleanFormula visitInverse(Relation rel, Relation r1) {
             BooleanFormula enc = bmgr.makeTrue();
-            TupleSet minSet = rel.getMinTupleSet();
-            for (Tuple tuple : rel.getEncodeTupleSet()) {
+            for (Tuple tuple : encodeSets.get(rel)) {
                 enc = bmgr.and(enc, bmgr.equivalence(
                         rel.getSMTVar(tuple, ctx),
-                        minSet.contains(tuple) ?
-                                execution(tuple.getFirst(), tuple.getSecond(), exec, ctx) :
-                                r1.getSMTVar(tuple.getInverse(), ctx)));
+                        r1.getSMTVar(tuple.getInverse(), ctx)));
             }
             return enc;
         }
 
         @Override
         public BooleanFormula visitCompareAndSwapDependency(Relation rel) {
-            return visitStatic(rel);
+            return bmgr.makeTrue();
         }
 
         @Override
         public BooleanFormula visitProduct(Relation rel, FilterAbstract domain, FilterAbstract range) {
-            return visitStatic(rel);
+            return bmgr.makeTrue();
         }
 
         @Override
         public BooleanFormula visitExternal(Relation rel) {
-            return visitStatic(rel);
+            return bmgr.makeTrue();
         }
 
         @Override
         public BooleanFormula visitInternal(Relation rel) {
-            return visitStatic(rel);
+            return bmgr.makeTrue();
         }
 
         @Override
         public BooleanFormula visitIdentity(Relation rel, FilterAbstract set) {
-            return visitStatic(rel);
+            return bmgr.makeTrue();
         }
 
         @Override
         public BooleanFormula visitProgramOrder(Relation po) {
-            return visitStatic(po);
+            return bmgr.makeTrue();
         }
 
         @Override
         public BooleanFormula visitControl(Relation ctrl) {
-            return visitStatic(ctrl);
+            return bmgr.makeTrue();
         }
 
         @Override
         public BooleanFormula visitFences(Relation rel, FilterAbstract fenceSet) {
             BooleanFormula enc = bmgr.makeTrue();
             List<Event> fences = program.getCache().getEvents(fenceSet);
-            for (Tuple tuple : rel.getEncodeTupleSet()) {
+            for (Tuple tuple : encodeSets.get(rel)) {
+                BooleanFormula edge = rel.getSMTVar(tuple, ctx);
                 Event e1 = tuple.getFirst();
                 Event e2 = tuple.getSecond();
-                BooleanFormula orClause;
-                if (rel.getMinTupleSet().contains(tuple)) {
-                    orClause = bmgr.makeTrue();
-                } else {
-                    orClause = fences.stream()
-                            .filter(f -> e1.getCId() < f.getCId() && f.getCId() < e2.getCId())
-                            .map(Event::exec).reduce(bmgr.makeFalse(), bmgr::or);
-                }
-                enc = bmgr.and(enc, bmgr.equivalence(
-                        rel.getSMTVar(tuple, ctx),
-                        bmgr.and(execution(tuple.getFirst(), tuple.getSecond(), exec, ctx), orClause)));
+                BooleanFormula orClause = fences.stream()
+                        .filter(f -> e1.getCId() < f.getCId() && f.getCId() < e2.getCId())
+                        .map(Event::exec).reduce(bmgr.makeFalse(), bmgr::or);
+                enc = bmgr.and(enc, bmgr.equivalence(edge, bmgr.and(execution(e1, e2, exec, ctx), orClause)));
             }
             return enc;
         }
@@ -401,7 +403,7 @@ public class WmmEncoder {
         public BooleanFormula visitCriticalSections(Relation rscs) {
             BooleanFormula enc = bmgr.makeTrue();
             TupleSet maySet = rscs.getMaxTupleSet();
-            for (Tuple tuple : rscs.getEncodeTupleSet()) {
+            for (Tuple tuple : encodeSets.get(rscs)) {
                 Event lock = tuple.getFirst();
                 Event unlock = tuple.getSecond();
                 BooleanFormula relation = execution(lock, unlock, exec, ctx);
@@ -427,7 +429,6 @@ public class WmmEncoder {
             BooleanFormula enc = bmgr.makeTrue();
             BooleanFormula unpredictable = bmgr.makeFalse();
             TupleSet maySet = rmw.getMaxTupleSet();
-            TupleSet mustSet = rmw.getMinTupleSet();
             for (Event store : program.getCache().getEvents(
                     FilterIntersection.get(FilterBasic.get(Tag.WRITE), FilterBasic.get(Tag.EXCL)))) {
                 checkState(store instanceof MemEvent, "non-memory event participating in '" + rmw.getName() + "'");
@@ -452,16 +453,15 @@ public class WmmEncoder {
                 }
                 enc = bmgr.and(enc, bmgr.implication(store.exec(), storeExec));
             }
-            for (Tuple tuple : rmw.getEncodeTupleSet()) {
+            for (Tuple tuple : encodeSets.get(rmw)) {
                 MemEvent load = (MemEvent) tuple.getFirst();
                 MemEvent store = (MemEvent) tuple.getSecond();
                 BooleanFormula sameAddress = (alias.mustAlias(load, store) || store.is(Tag.MATCHADDRESS)) ? bmgr.makeTrue()
                         : generalEqual(load.getMemAddressExpr(), store.getMemAddressExpr(), ctx);
                 enc = bmgr.and(enc, bmgr.equivalence(
                         rmw.getSMTVar(tuple, ctx),
-                        mustSet.contains(tuple) ? execution(load, store, exec, ctx) :
-                                // Relation between exclusive load and store
-                                bmgr.and(store.exec(), exclPair(load, store), sameAddress)));
+                        // Relation between exclusive load and store
+                        bmgr.and(store.exec(), exclPair(load, store), sameAddress)));
             }
             return bmgr.and(enc, bmgr.equivalence(Flag.ARM_UNPREDICTABLE_BEHAVIOUR.repr(ctx), unpredictable));
         }
@@ -469,7 +469,7 @@ public class WmmEncoder {
         @Override
         public BooleanFormula visitSameAddress(Relation loc) {
             BooleanFormula enc = bmgr.makeTrue();
-            for (Tuple tuple : loc.getEncodeTupleSet()) {
+            for (Tuple tuple : encodeSets.get(loc)) {
                 BooleanFormula rel = loc.getSMTVar(tuple, ctx);
                 enc = bmgr.and(enc, bmgr.equivalence(rel, bmgr.and(
                         execution(tuple.getFirst(), tuple.getSecond(), exec, ctx),
@@ -530,14 +530,6 @@ public class WmmEncoder {
 
         private BooleanFormula exclPair(Event load, Event store) {
             return bmgr.makeVariable("excl(" + load.getCId() + "," + store.getCId() + ")");
-        }
-
-        private BooleanFormula visitStatic(Relation rel) {
-            BooleanFormula enc = bmgr.makeTrue();
-            for (Tuple tuple : rel.getEncodeTupleSet()) {
-                enc = bmgr.and(enc, bmgr.equivalence(rel.getSMTVar(tuple, ctx), bmgr.and(execution(tuple.getFirst(), tuple.getSecond(), exec, ctx))));
-            }
-            return enc;
         }
 
         private BooleanFormula encodeEdgeSeq(Event read, List<BooleanFormula> edges) {

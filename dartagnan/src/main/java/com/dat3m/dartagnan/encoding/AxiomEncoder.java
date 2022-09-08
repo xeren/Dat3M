@@ -33,6 +33,7 @@ import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 @Options
 final class AxiomEncoder implements Constraint.Visitor<BooleanFormula> {
     private final ExecutionAnalysis exec;
+    private final EncodeSets encodeSets;
     private final SolverContext ctx;
     private final IntegerFormulaManager imgr;
     private final BooleanFormulaManager bmgr;
@@ -45,6 +46,7 @@ final class AxiomEncoder implements Constraint.Visitor<BooleanFormula> {
 
     AxiomEncoder(Context a, SolverContext c) {
         exec = a.requires(ExecutionAnalysis.class);
+        encodeSets = a.requires(EncodeSets.class);
         ctx = c;
         imgr = ctx.getFormulaManager().getIntegerFormulaManager();
         bmgr = ctx.getFormulaManager().getBooleanFormulaManager();
@@ -54,7 +56,7 @@ final class AxiomEncoder implements Constraint.Visitor<BooleanFormula> {
     public BooleanFormula visitEmptiness(Axiom ax) {
         BooleanFormula enc = bmgr.makeTrue();
         Relation rel = ax.getRelation();
-        for (Tuple tuple : rel.getEncodeTupleSet()) {
+        for (Tuple tuple : encodeSets.get(rel)) {
             enc = bmgr.and(enc, bmgr.not(rel.getSMTVar(tuple, ctx)));
         }
         return ax.isNegated() ? bmgr.not(enc) : enc;
@@ -64,7 +66,7 @@ final class AxiomEncoder implements Constraint.Visitor<BooleanFormula> {
     public BooleanFormula visitIrreflexivity(Axiom ax) {
         BooleanFormula enc = bmgr.makeTrue();
         Relation rel = ax.getRelation();
-        for (Tuple tuple : rel.getEncodeTupleSet()) {
+        for (Tuple tuple : encodeSets.get(rel)) {
             if (tuple.isLoop()) {
                 enc = bmgr.and(enc, bmgr.not(rel.getSMTVar(tuple, ctx)));
             }
@@ -89,7 +91,7 @@ final class AxiomEncoder implements Constraint.Visitor<BooleanFormula> {
     }
 
     private BooleanFormula inconsistentSAT(Relation rel, String name) {
-        final TupleSet encodeSet = rel.getEncodeTupleSet();
+        final TupleSet encodeSet = new TupleSet(encodeSets.get(rel));
         BooleanFormula enc = bmgr.makeTrue();
         BooleanFormula eventsInCycle = bmgr.makeFalse();
         // We use Boolean variables which guess the edges and nodes constituting the cycle.
@@ -100,7 +102,7 @@ final class AxiomEncoder implements Constraint.Visitor<BooleanFormula> {
             // We ensure that for every event in the cycle, there should be at least one incoming
             // edge and at least one outgoing edge that are also in the cycle.
             enc = bmgr.and(enc, bmgr.implication(cycleVar(rel.getName(), e, ctx), bmgr.and(in, out)));
-            for (Tuple tuple : rel.getEncodeTupleSet()) {
+            for (Tuple tuple : encodeSets.get(rel)) {
                 Event e1 = tuple.getFirst();
                 Event e2 = tuple.getSecond();
                 // If an edge is guessed to be in a cycle, the edge must belong to relation,
@@ -115,7 +117,7 @@ final class AxiomEncoder implements Constraint.Visitor<BooleanFormula> {
     }
 
     private BooleanFormula consistentIDL(Relation rel) {
-        final Set<Tuple> edgesToEncode = rel.getEncodeTupleSet();
+        final Set<Tuple> edgesToEncode = encodeSets.get(rel);
         final String clockVarName = rel.getName();
         BooleanFormula enc = bmgr.makeTrue();
         for (Tuple tuple : edgesToEncode) {
@@ -129,7 +131,7 @@ final class AxiomEncoder implements Constraint.Visitor<BooleanFormula> {
 
     private BooleanFormula consistentSAT(Relation rel, String name) {
         // We use a vertex-elimination graph based encoding.
-        final Set<Tuple> edgeSet = rel.getEncodeTupleSet();
+        final Set<Tuple> edgeSet = encodeSets.get(rel);
         // Build original graph G
         Map<Event, Set<Tuple>> inEdges = new HashMap<>();
         Map<Event, Set<Tuple>> outEdges = new HashMap<>();

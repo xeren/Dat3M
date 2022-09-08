@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan.wmm.axiom;
 
 import com.dat3m.dartagnan.wmm.relation.Relation;
-import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 /*
     This is a fake axiom that forces a relation to get encoded!
@@ -18,11 +17,6 @@ public class ForceEncodeAxiom extends Axiom {
     @Override
     public <T> T visit(Visitor<? extends T> v) {
         return v.visitForceEncoding(this);
-    }
-
-    @Override
-    public TupleSet getEncodeTupleSet(){
-        return rel.getMaxTupleSet();
     }
 
     @Override

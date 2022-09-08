@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan.wmm.axiom;
 
 import com.dat3m.dartagnan.wmm.relation.Relation;
-import com.dat3m.dartagnan.wmm.utils.TupleSet;
 
 public class Empty extends Axiom {
 
@@ -16,11 +15,6 @@ public class Empty extends Axiom {
     @Override
     public <T> T visit(Visitor<? extends T> v) {
         return v.visitEmptiness(this);
-    }
-
-    @Override
-    public TupleSet getEncodeTupleSet(){
-        return rel.getMaxTupleSet();
     }
 
     @Override

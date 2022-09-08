@@ -4,11 +4,8 @@ import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.wmm.Constraint;
 import com.dat3m.dartagnan.wmm.relation.Relation;
-import com.dat3m.dartagnan.wmm.utils.TupleSet;
-import com.google.common.base.Preconditions;
 import org.sosy_lab.common.configuration.Configuration;
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
-import org.sosy_lab.java_smt.api.SolverContext;
 
 import java.util.Collections;
 import java.util.List;
@@ -40,11 +37,6 @@ public abstract class Axiom implements Constraint {
     }
 
     public void configure(Configuration config) throws InvalidConfigurationException { }
-
-    public void initializeEncoding(SolverContext ctx) {
-        Preconditions.checkState(this.task != null,
-                "No available relation data to encode. Perform RelationAnalysis before encoding.");
-    }
 
     public void initializeRelationAnalysis(VerificationTask task, Context context) {
         this.task = task;
@@ -80,8 +72,6 @@ public abstract class Axiom implements Constraint {
 
     @Override
     public abstract String toString();
-
-    public abstract TupleSet getEncodeTupleSet();
 
     @Override
     public int hashCode() {
