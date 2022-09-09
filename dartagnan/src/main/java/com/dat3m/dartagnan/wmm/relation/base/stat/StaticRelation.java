@@ -1,7 +1,5 @@
 package com.dat3m.dartagnan.wmm.relation.base.stat;
 
-import com.dat3m.dartagnan.wmm.utils.TupleSet;
-
 import com.dat3m.dartagnan.wmm.relation.Relation;
 
 //TODO(TH): RelCrit, RelRMW and RelFencerel are NOT strongly static like the other static relations
@@ -18,13 +16,5 @@ public abstract class StaticRelation extends Relation {
 
     public StaticRelation() {
         super();
-    }
-
-    @Override
-    public TupleSet getMinTupleSet(){
-        if(minTupleSet == null){
-            minTupleSet = getMaxTupleSet();
-        }
-        return minTupleSet;
     }
 }

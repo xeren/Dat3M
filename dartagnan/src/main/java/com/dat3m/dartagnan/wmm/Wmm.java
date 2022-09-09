@@ -4,7 +4,6 @@ import com.dat3m.dartagnan.program.event.Tag;
 import com.dat3m.dartagnan.program.filter.FilterAbstract;
 import com.dat3m.dartagnan.program.filter.FilterBasic;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
-import com.dat3m.dartagnan.wmm.relation.RecursiveRelation;
 import com.dat3m.dartagnan.wmm.relation.Relation;
 import com.dat3m.dartagnan.wmm.relation.RelationNameRepository;
 import com.dat3m.dartagnan.wmm.relation.base.RelCrit;
@@ -28,7 +27,6 @@ import com.dat3m.dartagnan.wmm.relation.binary.RelIntersection;
 import com.dat3m.dartagnan.wmm.relation.binary.RelUnion;
 import com.dat3m.dartagnan.wmm.relation.unary.RelInverse;
 import com.dat3m.dartagnan.wmm.relation.unary.RelTrans;
-import com.dat3m.dartagnan.wmm.utils.RecursiveGroup;
 import com.google.common.collect.ImmutableSet;
 
 import java.util.*;
@@ -48,7 +46,6 @@ public class Wmm {
     private final List<Axiom> axioms = new ArrayList<>();
     private final Map<String, FilterAbstract> filters = new HashMap<>();
     private final Map<String, Relation> relationMap = new HashMap<>();
-    private final List<RecursiveGroup> recursiveGroups = new ArrayList<>();
 
     public Wmm() {
         BASE_RELATIONS.forEach(this::getRelation);
@@ -108,10 +105,6 @@ public class Wmm {
         }
     }
 
-    public List<RecursiveGroup> getRecursiveGroups() {
-        return recursiveGroups;
-    }
-
     public void addFilter(FilterAbstract filter) {
         filters.put(filter.getName(), filter);
     }
@@ -119,11 +112,6 @@ public class Wmm {
     public FilterAbstract getFilter(String name) {
         return filters.computeIfAbsent(name, FilterBasic::get);
     }
-
-    public void addRecursiveGroup(Set<RecursiveRelation> recursiveGroup) {
-        recursiveGroups.add(new RecursiveGroup(recursiveGroup));
-    }
-
 
     public String toString() {
         StringBuilder sb = new StringBuilder();

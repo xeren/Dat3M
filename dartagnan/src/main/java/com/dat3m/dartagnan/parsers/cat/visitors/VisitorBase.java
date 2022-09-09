@@ -12,7 +12,6 @@ import com.dat3m.dartagnan.wmm.relation.RelationNameRepository;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.HashSet;
 import java.util.Set;
 
 public class VisitorBase extends CatBaseVisitor<Object> {
@@ -76,7 +75,6 @@ public class VisitorBase extends CatBaseVisitor<Object> {
 
     @Override
     public Object visitLetRecDefinition(CatParser.LetRecDefinitionContext ctx) {
-        recursiveGroup = new HashSet<>();
         recursiveDef = true;
 
         RecursiveRelation rRecursive = new RecursiveRelation(ctx.n.getText());
@@ -87,13 +85,11 @@ public class VisitorBase extends CatBaseVisitor<Object> {
         }
 
         rRecursive.setConcreteRelation(rConcrete);
-        recursiveGroup.add(rRecursive);
 
         for (CatParser.LetRecAndDefinitionContext c : ctx.letRecAndDefinition()) {
             c.accept(this);
         }
 
-        wmm.addRecursiveGroup(recursiveGroup);
         recursiveDef = false;
         return null;
     }
