@@ -134,9 +134,9 @@ public class RelationAnalysis {
               not involve encoding a clock constraint (due to this optimization).
         There is also a symmetric case where co(w3, w1) is impossible and co(w3, w2) is a must-edge.
      */
-    public static Set<Tuple> findTransitivelyImpliedCo(Relation co, ExecutionAnalysis exec) {
-        final TupleSet min = co.getMinTupleSet();
-        final TupleSet max = co.getMaxTupleSet();
+    public Set<Tuple> findTransitivelyImpliedCo(Relation co) {
+        final TupleSet min = must(co);
+        final TupleSet max = may(co);
         Set<Tuple> transCo = new HashSet<>();
         for (final Tuple t : max) {
             final MemEvent x = (MemEvent) t.getFirst();

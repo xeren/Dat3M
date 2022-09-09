@@ -175,8 +175,8 @@ public class WmmEncoder {
         @Override
         public BooleanFormula visitIntersection(Relation rel, Relation r1, Relation r2) {
             BooleanFormula enc = bmgr.makeTrue();
-            TupleSet must1 = r1.getMinTupleSet();
-            TupleSet must2 = r2.getMinTupleSet();
+            TupleSet must1 = ra.must(r1);
+            TupleSet must2 = ra.must(r2);
             for (Tuple tuple : encodeSets.get(rel)) {
                 BooleanFormula edge = rel.getSMTVar(tuple, ctx);
                 BooleanFormula opt1 = must1.contains(tuple) ? bmgr.makeTrue() : r1.getSMTVar(tuple, ctx);
@@ -209,8 +209,8 @@ public class WmmEncoder {
             BooleanFormula enc = bmgr.makeTrue();
             Set<Tuple> set1 = encodeSets.get(r1);
             Set<Tuple> set2 = encodeSets.get(r2);
-            TupleSet must1 = r1.getMinTupleSet();
-            TupleSet must2 = r2.getMinTupleSet();
+            TupleSet must1 = ra.must(r1);
+            TupleSet must2 = ra.must(r2);
             for (Tuple tuple : encodeSets.get(rel)) {
                 Event e1 = tuple.getFirst();
                 Event e2 = tuple.getSecond();
@@ -284,7 +284,7 @@ public class WmmEncoder {
         public BooleanFormula visitTransitiveClosure(Relation rel, Relation r1) {
             BooleanFormula enc = bmgr.makeTrue();
             Set<Tuple> set = encodeSets.get(rel);
-            TupleSet must = rel.getMinTupleSet();
+            TupleSet must = ra.must(rel);
             Set<Tuple> set1 = encodeSets.get(r1);
             for (Tuple tuple : set) {
                 BooleanFormula edge = rel.getSMTVar(tuple, ctx);
@@ -559,7 +559,7 @@ public class WmmEncoder {
             List<MemEvent> allWrites = new ArrayList<>(Lists.transform(program.getCache().getEvents(FilterBasic.get(WRITE)), MemEvent.class::cast));
             allWrites.sort(Comparator.comparingInt(Event::getCId));
             TupleSet maxSet = ra.may(co);
-            Set<Tuple> transCo = RelationAnalysis.findTransitivelyImpliedCo(co, exec);
+            Set<Tuple> transCo = ra.findTransitivelyImpliedCo(co);
 
             BooleanFormula enc = bmgr.makeTrue();
             // ---- Encode clock conditions (init = 0, non-init > 0) ----

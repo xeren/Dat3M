@@ -44,7 +44,6 @@ import static com.dat3m.dartagnan.expression.utils.Utils.generalEqual;
 import static com.dat3m.dartagnan.program.Program.SourceLanguage.LITMUS;
 import static com.dat3m.dartagnan.program.event.Tag.INIT;
 import static com.dat3m.dartagnan.program.event.Tag.WRITE;
-import static com.dat3m.dartagnan.wmm.analysis.RelationAnalysis.findTransitivelyImpliedCo;
 import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.CO;
 import static com.dat3m.dartagnan.wmm.utils.Utils.edge;
 import static com.dat3m.dartagnan.wmm.utils.Utils.intVar;
@@ -278,7 +277,7 @@ public class PropertyEncoder {
         final List<MemEvent> writes = Lists.transform(program.getCache().getEvents(FilterBasic.get(WRITE)), MemEvent.class::cast);
         final boolean doEncodeFinalAddressValues = program.getFormat() == LITMUS;
         // Find transitively implied coherences. We can use these to reduce the encoding.
-        final Set<Tuple> transCo = findTransitivelyImpliedCo(co, exec);
+        final Set<Tuple> transCo = ra.findTransitivelyImpliedCo(co);
         // Find all writes that are never last, i.e., those that will always have a co-successor.
         final Set<Event> dominatedWrites = minSet.stream()
                 .filter(t -> exec.isImplied(t.getFirst(), t.getSecond()))
