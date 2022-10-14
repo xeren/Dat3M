@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.encoding;
 
+import com.dat3m.dartagnan.configuration.Property;
 import com.dat3m.dartagnan.program.analysis.BranchEquivalence;
 import com.dat3m.dartagnan.program.analysis.ExecutionAnalysis;
 import com.dat3m.dartagnan.program.analysis.alias.AliasAnalysis;
@@ -12,6 +13,7 @@ import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.wmm.Relation;
 import com.dat3m.dartagnan.wmm.analysis.RelationAnalysis;
+import com.dat3m.dartagnan.wmm.axiom.Axiom;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -112,7 +114,7 @@ public final class EncodingContext {
     }
 
     public BooleanFormula jumpCondition(CondJump event) {
-        return event.getGuard().toBoolFormula(event, solverContext);
+        return event.getGuard().toBoolFormula(event, formulaManager);
     }
 
     public BooleanFormula execution(Event event) {
@@ -199,6 +201,14 @@ public final class EncodingContext {
         return formulaManager.getIntegerFormulaManager().makeVariable("co " + write.getCId());
     }
 
+    public BooleanFormula variable(Property p) {
+        return booleanFormulaManager.makeVariable(p.toString());
+    }
+
+    public BooleanFormula variable(Axiom axiom) {
+        return booleanFormulaManager.makeVariable("Flag " + (axiom.getName() != null ? axiom.getName() : axiom.getRelation().getName()));
+    }
+
     public BooleanFormula edgeVariable(String name, Event first, Event second) {
         return booleanFormulaManager.makeVariable(formulaManager.escape(name) + " " + first.getCId() + " " + second.getCId());
     }
@@ -251,10 +261,10 @@ public final class EncodingContext {
             if (!e.cfImpliesExec()) {
                 executionVariables.put(e, booleanFormulaManager.makeVariable("exec " + e.getCId()));
             }
-            Formula r = e instanceof RegWriter ? ((RegWriter) e).getResultRegister().toIntFormulaResult(e, solverContext) : null;
+            Formula r = e instanceof RegWriter ? ((RegWriter) e).getResultRegister().toIntFormulaResult(e, formulaManager) : null;
             if (e instanceof MemEvent) {
-                addresses.put(e, ((MemEvent) e).getAddress().toIntFormula(e, solverContext));
-                values.put(e, e instanceof Load ? r : ((MemEvent) e).getMemValue().toIntFormula(e, solverContext));
+                addresses.put(e, ((MemEvent) e).getAddress().toIntFormula(e, formulaManager));
+                values.put(e, e instanceof Load ? r : ((MemEvent) e).getMemValue().toIntFormula(e, formulaManager));
             }
             if (r != null) {
                 results.put(e, r);

@@ -178,15 +178,15 @@ public class Dartagnan extends BaseOptions {
             	if((result == FAIL && !p.getAss().getInvert()) || 
             			(result == PASS && p.getAss().getInvert())) {
 					printWarningIfThreadStartFailed(p, modelChecker.getEncodingContext(), prover);
-            		if(TRUE.equals(prover.getModel().evaluate(REACHABILITY.getSMTVariable(ctx)))) {
+            		if(TRUE.equals(prover.getModel().evaluate(modelChecker.getEncodingContext().variable(REACHABILITY)))) {
             			safetyViolationFound = true;
             			System.out.println("Safety violation found");
             		}
-            		if(TRUE.equals(prover.getModel().evaluate(LIVENESS.getSMTVariable(ctx)))) {
+            		if(TRUE.equals(prover.getModel().evaluate(modelChecker.getEncodingContext().variable(LIVENESS)))) {
             			System.out.println("Liveness violation found");
             		}
             		for(Axiom ax : task.getMemoryModel().getAxioms()) {
-                		if(ax.isFlagged() && TRUE.equals(prover.getModel().evaluate(CAT.getSMTVariable(ax, ctx)))) {
+                		if(ax.isFlagged() && TRUE.equals(prover.getModel().evaluate(modelChecker.getEncodingContext().variable(ax)))) {
                 			System.out.println("Flag " + (ax.getName() != null ? ax.getName() : ax.getRelation().getNameOrTerm()));
                 		}                			
             		}

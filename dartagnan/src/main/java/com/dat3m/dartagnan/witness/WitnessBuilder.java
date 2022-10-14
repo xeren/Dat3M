@@ -16,10 +16,7 @@ import com.dat3m.dartagnan.utils.Result;
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
 import org.sosy_lab.common.configuration.Option;
 import org.sosy_lab.common.configuration.Options;
-import org.sosy_lab.java_smt.api.Model;
-import org.sosy_lab.java_smt.api.ProverEnvironment;
-import org.sosy_lab.java_smt.api.SolverContext;
-import org.sosy_lab.java_smt.api.SolverException;
+import org.sosy_lab.java_smt.api.*;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -116,7 +113,7 @@ public class WitnessBuilder {
 			return graph;
 		}
 
-		SolverContext ctx = context.getSolverContext();
+		FormulaManager fmgr = context.getFormulaManager();
 		try (Model model = prover.getModel()) {
 			List<Event> execution = reOrderBasedOnAtomicity(context.getTask().getProgram(), getSCExecutionOrder(model));
 
@@ -143,13 +140,13 @@ public class WitnessBuilder {
 				if(e instanceof Load) {
 					RegWriter l = (RegWriter)e;
 					edge.addAttribute(EVENTID.toString(), valueOf(e.getUId()));
-					edge.addAttribute(LOADEDVALUE.toString(), String.valueOf(model.evaluate(l.getResultRegister().toIntFormulaResult(e, ctx))));
+					edge.addAttribute(LOADEDVALUE.toString(), String.valueOf(model.evaluate(l.getResultRegister().toIntFormulaResult(e, fmgr))));
 				}
 
 				if(e instanceof Store) {
 					Store s = (Store)e;
 					edge.addAttribute(EVENTID.toString(), valueOf(e.getUId()));
-					edge.addAttribute(STOREDVALUE.toString(), s.getMemValue().getIntValue(s, model, ctx).toString());
+					edge.addAttribute(STOREDVALUE.toString(), s.getMemValue().getIntValue(s, model, fmgr).toString());
 				}
 
 				graph.addEdge(edge);

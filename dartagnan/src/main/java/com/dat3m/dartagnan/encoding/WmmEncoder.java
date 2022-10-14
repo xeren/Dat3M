@@ -26,7 +26,6 @@ import org.sosy_lab.java_smt.api.BooleanFormula;
 import org.sosy_lab.java_smt.api.BooleanFormulaManager;
 import org.sosy_lab.java_smt.api.IntegerFormulaManager;
 import org.sosy_lab.java_smt.api.NumeralFormula;
-import org.sosy_lab.java_smt.api.SolverContext;
 
 import java.util.*;
 import java.util.stream.Stream;
@@ -57,10 +56,6 @@ public class WmmEncoder implements Encoder {
         context.getTask().getConfig().inject(encoder);
         encoder.initializeEncodeSets();
         return encoder;
-    }
-
-    @Override
-    public void initializeEncoding(SolverContext ctx) {
     }
 
     public BooleanFormula encodeFullMemoryModel() {

@@ -23,11 +23,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
 import org.sosy_lab.common.configuration.Options;
-import org.sosy_lab.java_smt.api.BooleanFormula;
-import org.sosy_lab.java_smt.api.BooleanFormulaManager;
-import org.sosy_lab.java_smt.api.Formula;
-import org.sosy_lab.java_smt.api.IntegerFormulaManager;
-import org.sosy_lab.java_smt.api.SolverContext;
+import org.sosy_lab.java_smt.api.*;
 
 import java.math.BigInteger;
 import java.util.*;
@@ -72,9 +68,6 @@ public class PropertyEncoder implements Encoder {
         return encoder;
     }
 
-    @Override
-    public void initializeEncoding(SolverContext context) { }
-
     public BooleanFormula encodeSpecification() {
         EnumSet<Property> property = context.getTask().getProperty();
     	BooleanFormulaManager bmgr = context.getBooleanFormulaManager();
@@ -107,19 +100,18 @@ public class PropertyEncoder implements Encoder {
 
     public BooleanFormula encodeAssertions() {
         logger.info("Encoding assertions");
-        SolverContext ctx = context.getSolverContext();
-        BooleanFormulaManager bmgr = ctx.getFormulaManager().getBooleanFormulaManager();
+        BooleanFormulaManager bmgr = context.getBooleanFormulaManager();
         BooleanFormula assertionEncoding = program.getAss().encode(context);
         // We use the SMT variable to extract from the model if the property was violated
-		BooleanFormula enc = bmgr.equivalence(REACHABILITY.getSMTVariable(ctx), assertionEncoding);
+        BooleanFormula v = context.variable(REACHABILITY);
+		BooleanFormula enc = bmgr.equivalence(v, assertionEncoding);
 		// No need to use the SMT variable if the formula is trivially false 
-        return bmgr.isFalse(assertionEncoding) ? assertionEncoding : bmgr.and(REACHABILITY.getSMTVariable(ctx), enc);
+        return bmgr.isFalse(assertionEncoding) ? assertionEncoding : bmgr.and(v, enc);
     }
 
     public BooleanFormula encodeCATProperties() {
         logger.info("Encoding CAT properties");
-        SolverContext ctx = context.getSolverContext();
-        BooleanFormulaManager bmgr = ctx.getFormulaManager().getBooleanFormulaManager();
+        BooleanFormulaManager bmgr = context.getBooleanFormulaManager();
         BooleanFormula cat = bmgr.makeTrue();
         BooleanFormula one = bmgr.makeFalse();
     	for(Axiom ax : memoryModel.getAxioms()) {
@@ -127,7 +119,7 @@ public class PropertyEncoder implements Encoder {
     		if(!ax.isFlagged()) {
     			continue;
     		}
-            BooleanFormula v = CAT.getSMTVariable(ax, ctx);
+            BooleanFormula v = context.variable(ax);
 			cat = bmgr.and(cat, bmgr.equivalence(v, ax.consistent(context)));
 			one = bmgr.or(one, v);
     	}
@@ -176,7 +168,6 @@ public class PropertyEncoder implements Encoder {
             }
         }
 
-        SolverContext ctx = context.getSolverContext();
         BooleanFormulaManager bmgr = context.getBooleanFormulaManager();
         Relation rf = memoryModel.getRelation(RelationNameRepository.RF);
         final EncodingContext.EdgeEncoder edge = context.edge(rf);
@@ -218,9 +209,10 @@ public class PropertyEncoder implements Encoder {
 
         BooleanFormula livenessViolation = bmgr.and(allStuckOrDone, atLeastOneStuck);
         // We use the SMT variable to extract from the model if the property was violated
-		BooleanFormula enc = bmgr.equivalence(LIVENESS.getSMTVariable(ctx), livenessViolation);
-		// No need to use the SMT variable if the formula is trivially false 
-        return bmgr.isFalse(enc) ? enc : bmgr.and(LIVENESS.getSMTVariable(ctx), enc);
+        BooleanFormula v = context.variable(LIVENESS);
+		BooleanFormula enc = bmgr.equivalence(v, livenessViolation);
+		// No need to use the SMT variable if the formula is trivially false
+        return bmgr.isFalse(enc) ? enc : bmgr.and(v, enc);
     }
 
     public BooleanFormula encodeDataRaces() {
@@ -230,9 +222,8 @@ public class PropertyEncoder implements Encoder {
                         ax.isAcyclicity() && ax.getRelation().equals(hbRelation)),
                 "The provided WMM needs an 'acyclic(hb)' axiom to encode data races.");
         logger.info("Encoding data-races");
-        SolverContext ctx = context.getSolverContext();
-        BooleanFormulaManager bmgr = ctx.getFormulaManager().getBooleanFormulaManager();
-        IntegerFormulaManager imgr = ctx.getFormulaManager().getIntegerFormulaManager();
+        BooleanFormulaManager bmgr = context.getBooleanFormulaManager();
+        IntegerFormulaManager imgr = context.getFormulaManager().getIntegerFormulaManager();
 
         BooleanFormula enc = bmgr.makeFalse();
         for(Thread t1 : program.getThreads()) {
@@ -259,14 +250,15 @@ public class PropertyEncoder implements Encoder {
             }
         }
         // We use the SMT variable to extract from the model if the property was violated
-		enc = bmgr.equivalence(RACES.getSMTVariable(ctx), enc);
-		// No need to use the SMT variable if the formula is trivially false 
-        return bmgr.isFalse(enc) ? enc : bmgr.and(RACES.getSMTVariable(ctx), enc);
+        BooleanFormula v = context.variable(RACES);
+		enc = bmgr.equivalence(v, enc);
+		// No need to use the SMT variable if the formula is trivially false
+        return bmgr.isFalse(enc) ? enc : bmgr.and(v, enc);
     }
 
     private BooleanFormula encodeLastCoConstraints() {
         final Relation co = memoryModel.getRelation(CO);
-        SolverContext ctx = context.getSolverContext();
+        final FormulaManager formulaManager = context.getFormulaManager();
         final BooleanFormulaManager bmgr = context.getBooleanFormulaManager();
         final EncodingContext.EdgeEncoder edge = context.edge(co);
         final RelationAnalysis.Knowledge knowledge = ra.getKnowledge(co);
@@ -309,7 +301,7 @@ public class PropertyEncoder implements Encoder {
                         continue;
                     }
                     BooleanFormula sameAddress = context.sameAddress(init, w1);
-                    Formula v2 = init.getBase().getLastMemValueExpr(ctx, init.getOffset());
+                    Formula v2 = init.getBase().getLastMemValueExpr(init.getOffset(), formulaManager);
                     BooleanFormula sameValue = context.equal(context.value(w1), v2);
                     enc = bmgr.and(enc, bmgr.implication(bmgr.and(lastCoExpr, sameAddress), sameValue));
                 }

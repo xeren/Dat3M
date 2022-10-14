@@ -20,12 +20,12 @@ public enum IOpUn {
     	return this.equals(MINUS) ? "-" : "";
     }
 
-    public Formula encode(Formula e, SolverContext ctx) {
+    public Formula encode(Formula e, FormulaManager formulaManager) {
 		IntegerFormulaManager imgr;
 		BitvectorFormulaManager bvmgr;
 		
 		if(e instanceof IntegerFormula) {
-			imgr = ctx.getFormulaManager().getIntegerFormulaManager();
+			imgr = formulaManager.getIntegerFormulaManager();
 			IntegerFormula i = (IntegerFormula)e;
 			switch(this) {
     		case MINUS:
@@ -35,19 +35,19 @@ public enum IOpUn {
     			return e; 
     		// ============ INT2BV ============
     		case INT2BV1:
-    			bvmgr = ctx.getFormulaManager().getBitvectorFormulaManager();
+    			bvmgr = formulaManager.getBitvectorFormulaManager();
     			return bvmgr.makeBitvector(1, i);
     		case INT2BV8:
-    			bvmgr = ctx.getFormulaManager().getBitvectorFormulaManager();
+    			bvmgr = formulaManager.getBitvectorFormulaManager();
     			return bvmgr.makeBitvector(8, i);
     		case INT2BV16:
-    			bvmgr = ctx.getFormulaManager().getBitvectorFormulaManager();
+    			bvmgr = formulaManager.getBitvectorFormulaManager();
     			return bvmgr.makeBitvector(16, i);
     		case INT2BV32:
-    			bvmgr = ctx.getFormulaManager().getBitvectorFormulaManager();
+    			bvmgr = formulaManager.getBitvectorFormulaManager();
     			return bvmgr.makeBitvector(32, i);
     		case INT2BV64:
-    			bvmgr = ctx.getFormulaManager().getBitvectorFormulaManager();
+    			bvmgr = formulaManager.getBitvectorFormulaManager();
    				return bvmgr.makeBitvector(64, i);
         	// ============ TRUNC ============    		
     		case TRUNC6432:
@@ -86,7 +86,7 @@ public enum IOpUn {
 			}
 			throw new UnsupportedOperationException("Encoding of IOpUn operation " + this + " not supported on integer formulas.");
 		} else {
-			bvmgr = ctx.getFormulaManager().getBitvectorFormulaManager();
+			bvmgr = formulaManager.getBitvectorFormulaManager();
 			BitvectorFormula bv = (BitvectorFormula)e;
 	    	switch(this) {
     		case MINUS:

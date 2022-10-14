@@ -9,9 +9,6 @@ import org.sosy_lab.java_smt.api.*;
 
 import java.math.BigInteger;
 
-import static org.sosy_lab.java_smt.api.FormulaType.IntegerType;
-import static org.sosy_lab.java_smt.api.FormulaType.getBitvectorTypeWithSize;
-
 public class Register extends IExpr implements LastValueInterface {
 
 	public static final int NO_THREAD = -1;
@@ -67,18 +64,14 @@ public class Register extends IExpr implements LastValueInterface {
     }
 
 	@Override
-	public Formula toIntFormula(Event e, SolverContext ctx) {
+	public Formula toIntFormula(Event e, FormulaManager m) {
 		String name = getName() + "(" + e.repr() + ")";
-		FormulaManager fmgr = ctx.getFormulaManager();
-		FormulaType<?> type = precision > 0 ? getBitvectorTypeWithSize(precision) : IntegerType;
-		return fmgr.makeVariable(type, name);
+		return makeVariable(name, m);
 	}
 
-	public Formula toIntFormulaResult(Event e, SolverContext ctx) {
-		String name = getName() + "(" + e.repr() + "_result)";
-		FormulaManager fmgr = ctx.getFormulaManager();
-		FormulaType<?> type = precision > 0 ? getBitvectorTypeWithSize(precision) : IntegerType;
-		return fmgr.makeVariable(type, name);
+	public Formula toIntFormulaResult(Event event, FormulaManager formulaManager) {
+		String name = getName() + "(" + event.repr() + "_result)";
+		return makeVariable(name, formulaManager);
 	}
 
 	@Override
@@ -87,16 +80,14 @@ public class Register extends IExpr implements LastValueInterface {
 	}
 
 	@Override
-	public Formula getLastValueExpr(SolverContext ctx){
+	public Formula getLastValueExpr(FormulaManager m) {
 		String name = getName() + "_" + threadId + "_final";
-		FormulaManager fmgr = ctx.getFormulaManager();
-		FormulaType<?> type = precision > 0 ? getBitvectorTypeWithSize(precision) : IntegerType;
-		return fmgr.makeVariable(type, name);
+		return makeVariable(name, m);
 	}
 
 	@Override
-	public BigInteger getIntValue(Event e, Model model, SolverContext ctx){
-		return new BigInteger(model.evaluate(toIntFormula(e, ctx)).toString());
+	public BigInteger getIntValue(Event e, Model model, FormulaManager m) {
+		return new BigInteger(model.evaluate(toIntFormula(e, m)).toString());
 	}
 
 	@Override
@@ -113,4 +104,9 @@ public class Register extends IExpr implements LastValueInterface {
 	public IExpr getBase() {
     	return this;
     }
+
+	private Formula makeVariable(String name, FormulaManager m) {
+		FormulaType<?> type = precision > 0 ? FormulaType.getBitvectorTypeWithSize(precision) : FormulaType.IntegerType;
+		return m.makeVariable(type, name);
+	}
 }

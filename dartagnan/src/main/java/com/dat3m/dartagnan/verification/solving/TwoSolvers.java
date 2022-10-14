@@ -56,11 +56,6 @@ public class TwoSolvers extends ModelChecker {
         WmmEncoder wmmEncoder = WmmEncoder.withContext(context);
         SymmetryEncoder symmetryEncoder = SymmetryEncoder.withContext(context, memoryModel, analysisContext);
 
-        programEncoder.initializeEncoding(ctx);
-        propertyEncoder.initializeEncoding(ctx);
-        wmmEncoder.initializeEncoding(ctx);
-        symmetryEncoder.initializeEncoding(ctx);
-
         BooleanFormula propertyEncoding = propertyEncoder.encodeSpecification();
         if(ctx.getFormulaManager().getBooleanFormulaManager().isFalse(propertyEncoding)) {
             logger.info("Verification finished: property trivially holds");
