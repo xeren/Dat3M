@@ -42,15 +42,6 @@ import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.*;
 
 public class ExecutionGraph {
 
-    // These graphs are only relevant for data, ctrl and addr, all of which have a special event graph (see below)
-    //TODO: We need a better way to handle the composed relations (in case we rename them as well?)
-    private static final Set<String> EXCLUDED_RELS = ImmutableSet.of(
-            IDD, IDDTRANS, CTRLDIRECT, ADDRDIRECT, String.format("(%s;%s)", IDDTRANS, ADDRDIRECT),
-            String.format("(%s+(%s;%s))", ADDRDIRECT, IDDTRANS, ADDRDIRECT),
-            String.format("(%s;%s)", IDDTRANS, CTRLDIRECT)
-    );
-
-
     // These relations have special event graphs associated with them
     private static final Set<String> SPECIAL_RELS = ImmutableSet.of(ADDR, DATA, CTRL, CRIT);
 
@@ -75,14 +66,14 @@ public class ExecutionGraph {
 
     // ============= Construction & Init ===============
 
-    public ExecutionGraph(VerificationTask verificationTask, Context analysisContext, Set<Relation> cutRelations, boolean createOnlyAxiomRelevantGraphs) {
+    public ExecutionGraph(VerificationTask verificationTask, Context analysisContext, Set<Relation> cutRelations) {
         this.verificationTask = verificationTask;
         ra = analysisContext.requires(RelationAnalysis.class);
         relationGraphMap = HashBiMap.create();
         filterSetMap = HashBiMap.create();
         constraintMap = HashBiMap.create();
         this.cutRelations = cutRelations;
-        constructMappings(createOnlyAxiomRelevantGraphs);
+        constructMappings();
     }
 
     public void initializeFromModel(ExecutionModel executionModel) {
@@ -92,7 +83,7 @@ public class ExecutionGraph {
 
     // --------------------------------------------------
 
-    private void constructMappings(boolean createOnlyAxiomRelevantGraphs) {
+    private void constructMappings() {
         final Wmm memoryModel = verificationTask.getMemoryModel();
 
         Set<RelationGraph> graphs = new HashSet<>();
@@ -127,15 +118,6 @@ public class ExecutionGraph {
             }
             Constraint constraint = getOrCreateConstraintFromAxiom(axiom);
             constraints.add(constraint);
-        }
-
-        if (!createOnlyAxiomRelevantGraphs) {
-            for (Relation rel : DependencyGraph.from(memoryModel.getRelations()).getNodeContents()) {
-                if (!EXCLUDED_RELS.contains(rel.getNameOrTerm())) {
-                    RelationGraph graph = getOrCreateGraphFromRelation(rel);
-                    graphs.add(graph);
-                }
-            }
         }
 
         caatModel = CAATModel.from(graphs, constraints);
