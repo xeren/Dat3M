@@ -71,10 +71,14 @@ public class WmmEncoder implements Encoder {
     public BooleanFormula encodeRelations() {
         logger.info("Encoding relations");
         Wmm memoryModel = context.getTask().getMemoryModel();
+        final List<Relation> constrainedRelations = memoryModel.getAxioms().stream()
+                .filter(a -> !a.isInactive())
+                .map(Axiom::getRelation)
+                .collect(toList());
         final DependencyGraph<Relation> depGraph = DependencyGraph.from(
                 Iterables.concat(
                         Iterables.transform(Wmm.BASE_RELATIONS, memoryModel::getRelation), // base relations
-                        Iterables.transform(memoryModel.getAxioms(), Axiom::getRelation) // axiom relations
+                        constrainedRelations // axiom relations
                 )
         );
         RelationEncoder v = new RelationEncoder();
@@ -91,7 +95,7 @@ public class WmmEncoder implements Encoder {
         Wmm memoryModel = context.getTask().getMemoryModel();
         final BooleanFormulaManager bmgr = context.getBooleanFormulaManager();
         return memoryModel.getAxioms().stream()
-                .filter(ax -> !ax.isFlagged())
+                .filter(ax -> !ax.isInactive() && !ax.isFlagged())
                 .map(ax -> ax.consistent(context))
                 .reduce(bmgr.makeTrue(), bmgr::and);
     }

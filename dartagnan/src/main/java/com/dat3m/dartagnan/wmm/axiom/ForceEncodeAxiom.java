@@ -3,7 +3,6 @@ package com.dat3m.dartagnan.wmm.axiom;
 import com.dat3m.dartagnan.encoding.EncodingContext;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.wmm.Relation;
-import com.dat3m.dartagnan.wmm.analysis.RelationAnalysis;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
 import org.sosy_lab.java_smt.api.BooleanFormula;
 import org.sosy_lab.java_smt.api.BooleanFormulaManager;
@@ -24,7 +23,8 @@ public class ForceEncodeAxiom extends Axiom {
 
     @Override
     protected Set<Tuple> getEncodeTupleSet(Context analysisContext) {
-        return analysisContext.requires(RelationAnalysis.class).getKnowledge(rel).getMaySet();
+        // does not enlarge the encoding by itself
+        return Set.of();
     }
 
     @Override

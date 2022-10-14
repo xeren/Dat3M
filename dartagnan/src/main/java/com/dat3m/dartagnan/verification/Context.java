@@ -15,12 +15,6 @@ public class Context {
         return new Context();
     }
 
-    public static Context createCopyFrom(Context context) {
-        Context ctx = new Context();
-        ctx.metaDataMap.putAll(context.metaDataMap);
-        return ctx;
-    }
-
     // =============================================
 
     public <T> boolean has(Class<T> c) {
@@ -29,10 +23,6 @@ public class Context {
 
     public <T> T get(Class<T> c) {
         return metaDataMap.getInstance(c);
-    }
-
-    public <T> boolean invalidate(Class<T> c) {
-        return metaDataMap.remove(c) == null;
     }
 
     public <T> boolean register(Class<T> c, T instance) {

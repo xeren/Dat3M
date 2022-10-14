@@ -11,14 +11,12 @@ import com.dat3m.dartagnan.utils.logic.DNF;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.verification.model.ExecutionModel;
-import com.dat3m.dartagnan.wmm.Relation;
 import com.dat3m.dartagnan.wmm.analysis.RelationAnalysis;
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
 import org.sosy_lab.java_smt.api.Model;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 /*
     This is our domain-specific bridging component that specializes the CAATSolver to the WMM setting.
@@ -30,16 +28,16 @@ public class WMMSolver {
     private final CAATSolver solver;
     private final CoreReasoner reasoner;
 
-    private WMMSolver(VerificationTask task, Context analysisContext, Set<Relation> cutRelations, ExecutionModel m) {
+    private WMMSolver(VerificationTask task, Context analysisContext, ExecutionModel m) {
         analysisContext.requires(RelationAnalysis.class);
-        this.executionGraph = new ExecutionGraph(task, analysisContext, cutRelations);
+        this.executionGraph = new ExecutionGraph(task, analysisContext);
         this.executionModel = m;
         this.reasoner = new CoreReasoner(task, analysisContext, executionGraph);
         this.solver = CAATSolver.create();
     }
 
-    public static WMMSolver withContext(EncodingContext context, Set<Relation> cutRelations, VerificationTask task, Context analysisContext) throws InvalidConfigurationException {
-        return new WMMSolver(task, analysisContext, cutRelations, ExecutionModel.withContext(context));
+    public static WMMSolver withContext(EncodingContext context) throws InvalidConfigurationException {
+        return new WMMSolver(context.getTask(), context.getAnalysisContext(), ExecutionModel.withContext(context));
     }
 
     public ExecutionModel getExecution() {

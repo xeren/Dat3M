@@ -53,7 +53,7 @@ public class IncrementalSolver extends ModelChecker {
         ProgramEncoder programEncoder = ProgramEncoder.withContext(context);
         PropertyEncoder propertyEncoder = PropertyEncoder.withContext(context);
         WmmEncoder wmmEncoder = WmmEncoder.withContext(context);
-        SymmetryEncoder symmetryEncoder = SymmetryEncoder.withContext(context, memoryModel, analysisContext);
+        SymmetryEncoder symmetryEncoder = SymmetryEncoder.withContext(context);
 
         BooleanFormula propertyEncoding = propertyEncoder.encodeSpecification();
         if(ctx.getFormulaManager().getBooleanFormulaManager().isFalse(propertyEncoding)) {

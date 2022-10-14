@@ -117,7 +117,7 @@ public class ReachabilityResult {
         StringBuilder sb = new StringBuilder();
         Model model = (result == FAIL && !p.getAss().getInvert()) || (result == PASS && p.getAss().getInvert()) ? prover.getModel() : null;
     	for(Axiom ax : wmm.getAxioms()) {
-        	if(ax.isFlagged() && model != null && TRUE.equals(model.evaluate(c.variable(ax)))) {
+        	if(!ax.isInactive() && ax.isFlagged() && model != null && TRUE.equals(model.evaluate(c.variable(ax)))) {
         		sb.append("Flag ")
                         .append(ax.getName() != null ? ax.getName() : ax.getRelation().getNameOrTerm())
                         .append("\n");

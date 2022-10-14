@@ -24,6 +24,7 @@ public abstract class Axiom implements Constraint {
     protected final boolean negated;
     // Marks if the axiom should be use to report properties rather than filter consistency
     protected final boolean flag;
+    private boolean inactive;
     protected String name;
 
     Axiom(Relation rel, boolean negated, boolean flag) {
@@ -51,6 +52,23 @@ public abstract class Axiom implements Constraint {
      */
     public boolean isFlagged() {
         return flag;
+    }
+
+    /**
+     * Inactive axioms are not encoded in SMT, but checked in another fashion,
+     * i.e. by {@link com.dat3m.dartagnan.solver.caat4wmm.WMMSolver WMMSolver}.
+     * <b>Implementation detail:</b> Flagged axioms should never be inactive.
+     */
+    public boolean isInactive() {
+        return inactive;
+    }
+
+    /**
+     * Marks this axiom as <q>inactive</q>.
+     * @see #isInactive()
+     */
+    public void setInactive() {
+        inactive = true;
     }
 
     public String getName() {

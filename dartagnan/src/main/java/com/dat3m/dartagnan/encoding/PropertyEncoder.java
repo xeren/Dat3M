@@ -116,7 +116,7 @@ public class PropertyEncoder implements Encoder {
         BooleanFormula one = bmgr.makeFalse();
     	for(Axiom ax : memoryModel.getAxioms()) {
     		// Only flagged axioms are encoded as properties
-    		if(!ax.isFlagged()) {
+    		if(ax.isInactive() || !ax.isFlagged()) {
     			continue;
     		}
             BooleanFormula v = context.variable(ax);
@@ -219,7 +219,7 @@ public class PropertyEncoder implements Encoder {
         final Relation hbRelation = memoryModel.getRelation("hb");
         final EncodingContext.EdgeEncoder hb = context.edge(hbRelation);
         checkState(memoryModel.getAxioms().stream().anyMatch(ax ->
-                        ax.isAcyclicity() && ax.getRelation().equals(hbRelation)),
+                        !ax.isInactive() && ax.isAcyclicity() && ax.getRelation().equals(hbRelation)),
                 "The provided WMM needs an 'acyclic(hb)' axiom to encode data races.");
         logger.info("Encoding data-races");
         BooleanFormulaManager bmgr = context.getBooleanFormulaManager();

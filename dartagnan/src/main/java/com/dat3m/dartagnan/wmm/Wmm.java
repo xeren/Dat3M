@@ -14,6 +14,7 @@ import org.sosy_lab.common.configuration.InvalidConfigurationException;
 
 import java.util.*;
 import java.util.function.BiFunction;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -27,6 +28,7 @@ public class Wmm {
     public final static ImmutableSet<String> BASE_RELATIONS = ImmutableSet.of(CO, RF, RMW);
 
     private final List<Axiom> axioms = new ArrayList<>();
+    private final List<Axiom> activeAxioms = new ArrayList<>();
     private final Map<String, FilterAbstract> filters = new HashMap<>();
     private final Set<Relation> relations = new HashSet<>();
 
@@ -41,6 +43,10 @@ public class Wmm {
 
     public List<Axiom> getAxioms() {
         return axioms;
+    }
+
+    public void removeActiveAxiomsIf(Predicate<Axiom> filter) {
+        activeAxioms.removeIf(filter);
     }
 
     public Set<Relation> getRelations() {

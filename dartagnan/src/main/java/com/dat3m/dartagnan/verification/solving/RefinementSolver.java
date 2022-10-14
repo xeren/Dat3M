@@ -3,22 +3,22 @@ package com.dat3m.dartagnan.verification.solving;
 import com.dat3m.dartagnan.configuration.Baseline;
 import com.dat3m.dartagnan.encoding.*;
 import com.dat3m.dartagnan.program.Program;
-import com.dat3m.dartagnan.program.filter.FilterAbstract;
 import com.dat3m.dartagnan.solver.caat.CAATSolver;
 import com.dat3m.dartagnan.solver.caat4wmm.Refiner;
 import com.dat3m.dartagnan.solver.caat4wmm.WMMSolver;
 import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.CoreLiteral;
 import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.RelLiteral;
+import com.dat3m.dartagnan.utils.dependable.DependencyGraph;
 import com.dat3m.dartagnan.utils.logic.Conjunction;
 import com.dat3m.dartagnan.utils.logic.DNF;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.verification.model.EventData;
 import com.dat3m.dartagnan.verification.model.ExecutionModel;
-import com.dat3m.dartagnan.wmm.Definition;
 import com.dat3m.dartagnan.wmm.Relation;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.axiom.Acyclic;
+import com.dat3m.dartagnan.wmm.axiom.Axiom;
 import com.dat3m.dartagnan.wmm.axiom.Empty;
 import com.dat3m.dartagnan.wmm.axiom.ForceEncodeAxiom;
 import com.dat3m.dartagnan.wmm.definition.*;
@@ -40,6 +40,7 @@ import static com.dat3m.dartagnan.solver.caat.CAATSolver.Status.INCONSISTENT;
 import static com.dat3m.dartagnan.utils.Result.*;
 import static com.dat3m.dartagnan.utils.visualization.ExecutionGraphVisualizer.generateGraphvizFile;
 import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.*;
+import static java.util.stream.Collectors.toList;
 
 /*
     Refinement is a custom solving procedure that starts from a weak memory model (possibly the empty model)
@@ -92,37 +93,36 @@ public class RefinementSolver extends ModelChecker {
 
         Program program = task.getProgram();
         Wmm memoryModel = task.getMemoryModel();
-        Wmm baselineModel = createDefaultWmm();
+        // remove all assumed consistency constraints from the encoding
+        for (Axiom a : memoryModel.getAxioms()) {
+            if (!a.isFlagged()) {
+                a.setInactive();
+            }
+        }
+        createDefaultWmm(memoryModel);
         Context analysisContext = Context.create();
         Configuration config = task.getConfig();
-        VerificationTask baselineTask = VerificationTask.builder()
-                .withConfig(task.getConfig()).build(program, baselineModel, task.getProperty());
 
         preprocessProgram(task, config);
         preprocessMemoryModel(task);
         // We cut the rhs of differences to get a semi-positive model, if possible.
         // This call modifies the baseline model!
-        Set<Relation> cutRelations = cutRelationDifferences(memoryModel, baselineModel);
+        cutRelationDifferences();
         memoryModel.configureAll(config);
-        baselineModel.configureAll(config); // Configure after cutting!
 
         performStaticProgramAnalyses(task, analysisContext, config);
-        Context baselineContext = Context.createCopyFrom(analysisContext);
         performStaticWmmAnalyses(task, analysisContext, config);
-        performStaticWmmAnalyses(baselineTask, baselineContext, config);
 
-        context = EncodingContext.of(baselineTask, baselineContext, ctx);
+        context = EncodingContext.of(task, analysisContext, ctx);
         ProgramEncoder programEncoder = ProgramEncoder.withContext(context);
         PropertyEncoder propertyEncoder = PropertyEncoder.withContext(context);
-        // We use the original memory model for symmetry breaking because we need axioms
-        // to compute the breaking order.
-        SymmetryEncoder symmEncoder = SymmetryEncoder.withContext(context, memoryModel, analysisContext);
+        SymmetryEncoder symmEncoder = SymmetryEncoder.withContext(context);
         WmmEncoder baselineEncoder = WmmEncoder.withContext(context);
 
         BooleanFormulaManager bmgr = ctx.getFormulaManager().getBooleanFormulaManager();
         BooleanFormula globalRefinement = bmgr.makeTrue();
 
-        WMMSolver solver = WMMSolver.withContext(context, cutRelations, task, analysisContext);
+        WMMSolver solver = WMMSolver.withContext(context);
         Refiner refiner = new Refiner(analysisContext);
         CAATSolver.Status status = INCONSISTENT;
 
@@ -278,12 +278,12 @@ public class RefinementSolver extends ModelChecker {
     // This method cuts off negated relations that are dependencies of some consistency axiom
     // It ignores dependencies of flagged axioms, as those get eagarly encoded and can be completely
     // ignored for Refinement.
-    private static Set<Relation> cutRelationDifferences(Wmm targetWmm, Wmm baselineWmm) {
-        // TODO: Add support to move flagged axioms to the baselineWmm
-        Set<Relation> cutRelations = new HashSet<>();
-        Set<Relation> cutCandidates = new HashSet<>();
-        targetWmm.getAxioms().stream().filter(ax -> !ax.isFlagged())
-                .forEach(ax -> collectDependencies(ax.getRelation(), cutCandidates));
+    private void cutRelationDifferences() {
+        Wmm memoryModel = task.getMemoryModel();
+        List<Relation> cutCandidates = DependencyGraph.from(memoryModel.getAxioms().stream()
+                .filter(Axiom::isInactive)
+                .map(Axiom::getRelation)
+                .collect(toList())).getNodeContents();
         for (Relation rel : cutCandidates) {
             if (rel.getDefinition() instanceof Difference) {
                 Relation sec = ((Difference) rel.getDefinition()).complement;
@@ -291,55 +291,9 @@ public class RefinementSolver extends ModelChecker {
                     // NOTE: The check for RelSetIdentity/RelCartesian is needed because they appear non-derived
                     // in our Wmm but for CAAT they are derived from unary predicates!
                     logger.info("Found difference {}. Cutting rhs relation {}", rel, sec);
-                    cutRelations.add(sec);
-                    baselineWmm.addAxiom(new ForceEncodeAxiom(getCopyOfRelation(sec, baselineWmm)));
+                    memoryModel.addAxiom(new ForceEncodeAxiom(sec));
                 }
             }
-        }
-        return cutRelations;
-    }
-
-    private static void collectDependencies(Relation root, Set<Relation> collected) {
-        if (collected.add(root)) {
-            root.getDependencies().forEach(dep -> collectDependencies(dep, collected));
-        }
-    }
-
-    private static Relation getCopyOfRelation(Relation rel, Wmm m) {
-        String name = rel.getName();
-        Relation namedCopy = name == null ? null : m.getRelation(name);
-        if (namedCopy != null) {
-            return namedCopy;
-        }
-        Relation copy = name == null ? m.newRelation() : m.newRelation(name);
-        return m.addDefinition(rel.accept(new RelationCopier(m, copy)));
-    }
-
-    private static final class RelationCopier implements Definition.Visitor<Definition> {
-        final Wmm targetModel;
-        final Relation relation;
-        RelationCopier(Wmm m, Relation r) {
-            targetModel = m;
-            relation = r;
-        }
-        @Override public Definition visitUnion(Relation r, Relation... o) { return new Union(relation, copy(o)); }
-        @Override public Definition visitIntersection(Relation r, Relation... o) { return new Intersection(relation, copy(o)); }
-        @Override public Definition visitDifference(Relation r, Relation r1, Relation r2) { return new Difference(relation, copy(r1), copy(r2)); }
-        @Override public Definition visitComposition(Relation r, Relation r1, Relation r2) { return new Composition(relation, copy(r1), copy(r2)); }
-        @Override public Definition visitInverse(Relation r, Relation r1) { return new Inverse(relation, copy(r1)); }
-        @Override public Definition visitDomainIdentity(Relation r, Relation r1) { return new DomainIdentity(relation, copy(r1)); }
-        @Override public Definition visitRangeIdentity(Relation r, Relation r1) { return new RangeIdentity(relation, copy(r1)); }
-        @Override public Definition visitTransitiveClosure(Relation r, Relation r1) { return new TransitiveClosure(relation, copy(r1)); }
-        @Override public Definition visitIdentity(Relation r, FilterAbstract filter) { return new Identity(relation, filter); }
-        @Override public Definition visitProduct(Relation r, FilterAbstract f1, FilterAbstract f2) { return new CartesianProduct(relation, f1, f2); }
-        @Override public Definition visitFences(Relation r, FilterAbstract type) { return new Fences(relation, type); }
-        private Relation copy(Relation r) { return getCopyOfRelation(r, targetModel); }
-        private Relation[] copy(Relation[] r) {
-            Relation[] a = new Relation[r.length];
-            for (int i = 0; i < r.length; i++) {
-                a[i] = copy(r[i]);
-            }
-            return a;
         }
     }
 
@@ -424,8 +378,7 @@ public class RefinementSolver extends ModelChecker {
         generateGraphvizFile(model, iterationCount, (x,y) -> true, directoryName, fileNameBase + "-full");
     }
 
-    private Wmm createDefaultWmm() {
-        Wmm baseline = new Wmm();
+    private void createDefaultWmm(Wmm baseline) {
         Relation rf = baseline.getRelation(RF);
         if(baselines.contains(Baseline.UNIPROC)) {
             // ---- acyclic(po-loc | rf) ----
@@ -456,6 +409,5 @@ public class RefinementSolver extends ModelChecker {
             Relation rmwANDfrecoe = baseline.addDefinition(new Intersection(baseline.newRelation(), rmw, frecoe));
             baseline.addAxiom(new Empty(rmwANDfrecoe));
         }
-        return baseline;
     }
 }

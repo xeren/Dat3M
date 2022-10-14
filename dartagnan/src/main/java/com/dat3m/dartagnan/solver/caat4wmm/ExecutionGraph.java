@@ -37,6 +37,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.*;
 
@@ -66,13 +67,16 @@ public class ExecutionGraph {
 
     // ============= Construction & Init ===============
 
-    public ExecutionGraph(VerificationTask verificationTask, Context analysisContext, Set<Relation> cutRelations) {
+    public ExecutionGraph(VerificationTask verificationTask, Context analysisContext) {
         this.verificationTask = verificationTask;
         ra = analysisContext.requires(RelationAnalysis.class);
         relationGraphMap = HashBiMap.create();
         filterSetMap = HashBiMap.create();
         constraintMap = HashBiMap.create();
-        this.cutRelations = cutRelations;
+        cutRelations = verificationTask.getMemoryModel().getAxioms().stream()
+                .filter(ForceEncodeAxiom.class::isInstance)
+                .map(Axiom::getRelation)
+                .collect(Collectors.toSet());
         constructMappings();
     }
 
@@ -111,9 +115,8 @@ public class ExecutionGraph {
                 }
             }
         }
-
         for (Axiom axiom : memoryModel.getAxioms()) {
-            if (axiom instanceof ForceEncodeAxiom || axiom.isFlagged()) {
+            if (!axiom.isInactive()) {
                 continue;
             }
             Constraint constraint = getOrCreateConstraintFromAxiom(axiom);

@@ -6,9 +6,7 @@ import com.dat3m.dartagnan.program.analysis.ThreadSymmetry;
 import com.dat3m.dartagnan.program.event.Tag;
 import com.dat3m.dartagnan.program.event.core.Event;
 import com.dat3m.dartagnan.utils.equivalence.EquivalenceClass;
-import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.wmm.Relation;
-import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.analysis.RelationAnalysis;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
@@ -56,18 +54,18 @@ public class SymmetryEncoder implements Encoder {
 
     // =====================================================================
 
-    private SymmetryEncoder(EncodingContext c, Wmm m, Context a, Configuration config) throws InvalidConfigurationException {
+    private SymmetryEncoder(EncodingContext c, Configuration config) throws InvalidConfigurationException {
         context = c;
-        axioms = List.copyOf(m.getAxioms());
+        axioms = List.copyOf(c.getTask().getMemoryModel().getAxioms());
         symm = c.getAnalysisContext().requires(ThreadSymmetry.class);
-        ra = a.requires(RelationAnalysis.class);
+        ra = c.getAnalysisContext().requires(RelationAnalysis.class);
         config.inject(this);
 
         if (symmBreakTarget.isEmpty()) {
             logger.info("Symmetry breaking disabled.");
         } else if (symmBreakTarget.equals("_cf")) {
             logger.info("Breaking symmetry on control flow.");
-            a.requires(BranchEquivalence.class);
+            c.getAnalysisContext().requires(BranchEquivalence.class);
             this.breakBySyncDegree = false; // We cannot break by sync degree here
         } else {
             logger.info("Breaking symmetry on relation: " + symmBreakTarget);
@@ -75,8 +73,8 @@ public class SymmetryEncoder implements Encoder {
         }
     }
 
-    public static SymmetryEncoder withContext(EncodingContext context, Wmm memoryModel, Context analysisContext) throws InvalidConfigurationException {
-        return new SymmetryEncoder(context, memoryModel, analysisContext, context.getTask().getConfig());
+    public static SymmetryEncoder withContext(EncodingContext context) throws InvalidConfigurationException {
+        return new SymmetryEncoder(context, context.getTask().getConfig());
     }
 
     public BooleanFormula encodeFullSymmetryBreaking() {
