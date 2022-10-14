@@ -79,14 +79,14 @@ public class WitnessGraph extends ElemWithAttributes {
 		BooleanFormulaManager bmgr = context.getBooleanFormulaManager();
 		IntegerFormulaManager imgr = context.getFormulaManager().getIntegerFormulaManager();
 		
-		BooleanFormula enc = bmgr.makeTrue();
+		final List<BooleanFormula> enc = new ArrayList<>();
 		List<Event> previous = new ArrayList<>();
 		for(Edge edge : edges.stream().filter(Edge::hasCline).collect(Collectors.toList())) {
 			List<Event> events = program.getCache().getEvents(FilterBasic.get(MEMORY)).stream()
 					.filter(e -> e.getCLine() == edge.getCline())
 					.collect(Collectors.toList());
 			if(!previous.isEmpty() && !events.isEmpty()) {
-				enc = bmgr.and(enc, bmgr.or(Lists.cartesianProduct(previous, events).stream()
+				enc.add(bmgr.or(Lists.cartesianProduct(previous, events).stream()
 						.map(p -> context.edgeVariable("hb", p.get(0), p.get(1)))
 						.toArray(BooleanFormula[]::new)));
 			}
@@ -98,7 +98,7 @@ public class WitnessGraph extends ElemWithAttributes {
 				if(program.getCache().getEvents(FilterBasic.get(READ)).stream().anyMatch(e -> e.getUId() == id)) {
 					Load load = (Load)program.getCache().getEvents(FilterBasic.get(READ)).stream().filter(e -> e.getUId() == id).findFirst().get();
 					BigInteger value = new BigInteger(edge.getAttributed(LOADEDVALUE.toString()));
-					enc = bmgr.and(enc, context.equal(context.result(load), imgr.makeNumber(value)));
+					enc.add(context.equal(context.result(load), imgr.makeNumber(value)));
 				}
 			}
 			if(edge.hasAttributed(EVENTID.toString()) && edge.hasAttributed(STOREDVALUE.toString())) {
@@ -106,11 +106,11 @@ public class WitnessGraph extends ElemWithAttributes {
 				if(program.getCache().getEvents(FilterBasic.get(WRITE)).stream().anyMatch(e -> e.getUId() == id)) {
 					Store store = (Store)program.getCache().getEvents(FilterBasic.get(WRITE)).stream().filter(e -> e.getUId() == id).findFirst().get();
 					BigInteger value = new BigInteger(edge.getAttributed(STOREDVALUE.toString()));
-					enc = bmgr.and(enc, context.equal(context.value(store), imgr.makeNumber(value)));
+					enc.add(context.equal(context.value(store), imgr.makeNumber(value)));
 				}
 			}
 		}
-		return enc;
+		return bmgr.and(enc);
 	}
 	
 	public void write() {

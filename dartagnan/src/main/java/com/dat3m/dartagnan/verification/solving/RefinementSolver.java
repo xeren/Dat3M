@@ -120,7 +120,7 @@ public class RefinementSolver extends ModelChecker {
         WmmEncoder baselineEncoder = WmmEncoder.withContext(context);
 
         BooleanFormulaManager bmgr = ctx.getFormulaManager().getBooleanFormulaManager();
-        BooleanFormula globalRefinement = bmgr.makeTrue();
+        final List<BooleanFormula> globalRefinement = new ArrayList<>();
 
         WMMSolver solver = WMMSolver.withContext(context);
         Refiner refiner = new Refiner(analysisContext);
@@ -187,7 +187,7 @@ public class RefinementSolver extends ModelChecker {
                 DNF<CoreLiteral> reasons = solverResult.getCoreReasons();
                 BooleanFormula refinement = refiner.refine(reasons, context);
                 prover.addConstraint(refinement);
-                globalRefinement = bmgr.and(globalRefinement, refinement); // Track overall refinement progress
+                globalRefinement.add(refinement); // Track overall refinement progress
                 totalRefiningTime += (System.currentTimeMillis() - refineTime);
 
                 if (REFINEMENT_GENERATE_GRAPHVIZ_DEBUG_FILES) {
@@ -250,7 +250,7 @@ public class RefinementSolver extends ModelChecker {
             // Add back the constraints found during Refinement
             // TODO: We actually need to perform a second refinement to check for bound reachability
             //  This is needed for the seqlock.c benchmarks!
-            prover.addConstraint(globalRefinement);
+            prover.addConstraint(bmgr.and(globalRefinement));
             res = !prover.isUnsat() ? UNKNOWN : PASS;
             boundCheckTime = System.currentTimeMillis() - lastTime;
         } else {

@@ -8,6 +8,8 @@ import com.dat3m.dartagnan.wmm.utils.Tuple;
 import org.sosy_lab.java_smt.api.BooleanFormula;
 import org.sosy_lab.java_smt.api.BooleanFormulaManager;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 public class Empty extends Axiom {
@@ -29,13 +31,13 @@ public class Empty extends Axiom {
     @Override
     public BooleanFormula consistent(EncodingContext ctx) {
     	BooleanFormulaManager bmgr = ctx.getBooleanFormulaManager();
-		BooleanFormula enc = bmgr.makeTrue();
+		final List<BooleanFormula> any = new ArrayList<>();
         final RelationAnalysis ra = ctx.getAnalysisContext().get(RelationAnalysis.class);
         final EncodingContext.EdgeEncoder edge = ctx.edge(rel);
         for (Tuple tuple : ra.getKnowledge(rel).getMaySet()) {
-            enc = bmgr.and(enc, bmgr.not(edge.encode(tuple)));
+            any.add(edge.encode(tuple));
         }
-        return negated ? bmgr.not(enc) : enc;
+        return negated ? bmgr.or(any) : bmgr.not(bmgr.or(any));
     }
 
     @Override

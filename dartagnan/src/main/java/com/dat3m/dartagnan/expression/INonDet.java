@@ -119,19 +119,20 @@ public class INonDet extends IExpr {
 	
 	public BooleanFormula encodeBounds(boolean bp, FormulaManager fmgr) {
 		BooleanFormulaManager bmgr = fmgr.getBooleanFormulaManager();
-		BooleanFormula enc = bmgr.makeTrue();
+		BooleanFormula lower, upper;
 		long min = getMin();
 		long max = getMax();
+		Formula f = toIntFormula(null, fmgr);
 		if(bp) {
 			boolean signed = !(type.equals(UINT) || type.equals(ULONG) || type.equals(USHORT) || type.equals(UCHAR));
 			BitvectorFormulaManager bvmgr = fmgr.getBitvectorFormulaManager();
-			enc = bmgr.and(enc, bvmgr.greaterOrEquals((BitvectorFormula) toIntFormula(null, fmgr), bvmgr.makeBitvector(precision, min), signed));
-	        enc = bmgr.and(enc, bvmgr.lessOrEquals((BitvectorFormula) toIntFormula(null, fmgr), bvmgr.makeBitvector(precision, max), signed));
+			lower = bvmgr.greaterOrEquals((BitvectorFormula) f, bvmgr.makeBitvector(precision, min), signed);
+	        upper = bvmgr.lessOrEquals((BitvectorFormula) f, bvmgr.makeBitvector(precision, max), signed);
 		} else {
 			IntegerFormulaManager imgr = fmgr.getIntegerFormulaManager();
-			enc = bmgr.and(enc, imgr.greaterOrEquals((IntegerFormula) toIntFormula(null, fmgr), imgr.makeNumber(min)));
-			enc = bmgr.and(enc, imgr.lessOrEquals((IntegerFormula) toIntFormula(null, fmgr), imgr.makeNumber(max)));
+			lower = imgr.greaterOrEquals((IntegerFormula) f, imgr.makeNumber(min));
+			upper = imgr.lessOrEquals((IntegerFormula) f, imgr.makeNumber(max));
 		}
-		return enc;
+		return bmgr.and(lower, upper);
 	}
 }

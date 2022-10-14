@@ -144,8 +144,8 @@ public class Acyclic extends Axiom {
         final FormulaManager fmgr = context.getFormulaManager();
         final BooleanFormulaManager bmgr = fmgr.getBooleanFormulaManager();
         final Relation rel = this.rel;
-        BooleanFormula enc = bmgr.makeTrue();
-        BooleanFormula eventsInCycle = bmgr.makeFalse();
+        final List<BooleanFormula> enc = new ArrayList<>();
+        final List<BooleanFormula> eventsInCycle = new ArrayList<>();
         Map<Event, BooleanFormula> inMap = new HashMap<>();
         Map<Event, BooleanFormula> outMap = new HashMap<>();
         for(Tuple t : toBeEncoded) {
@@ -156,22 +156,22 @@ public class Acyclic extends Axiom {
         // We use Boolean variables which guess the edges and nodes constituting the cycle.
         final EncodingContext.EdgeEncoder edge = context.edge(rel);
         for (Event e : toBeEncoded.stream().map(Tuple::getFirst).collect(Collectors.toSet())) {
-            eventsInCycle = bmgr.or(eventsInCycle, cycleVar(e, fmgr));
+            eventsInCycle.add(cycleVar(e, fmgr));
             // We ensure that for every event in the cycle, there should be at least one incoming
             // edge and at least one outgoing edge that are also in the cycle.
-            enc = bmgr.and(enc, bmgr.implication(cycleVar(e, fmgr), bmgr.and(inMap.get(e), outMap.get(e))));
+            enc.add(bmgr.implication(cycleVar(e, fmgr), bmgr.and(inMap.get(e), outMap.get(e))));
             for (Tuple tuple : toBeEncoded) {
                 Event e1 = tuple.getFirst();
                 Event e2 = tuple.getSecond();
                 // If an edge is guessed to be in a cycle, the edge must belong to relation,
                 // and both events must also be guessed to be on the cycle.
-                enc = bmgr.and(enc, bmgr.implication(getSMTCycleVar(tuple, fmgr),
+                enc.add(bmgr.implication(getSMTCycleVar(tuple, fmgr),
                         bmgr.and(edge.encode(tuple), cycleVar(e1, fmgr), cycleVar(e2, fmgr))));
             }
         }
         // A cycle exists if there is an event in the cycle.
-        enc = bmgr.and(enc, eventsInCycle);
-        return enc;
+        enc.add(bmgr.or(eventsInCycle));
+        return bmgr.and(enc);
     }
 
     private BooleanFormula consistentIDL(Set<Tuple> toBeEncoded, EncodingContext context) {
