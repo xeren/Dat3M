@@ -1,6 +1,5 @@
 package com.dat3m.dartagnan.encoding;
 
-import com.dat3m.dartagnan.GlobalSettings;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.event.Tag;
 import com.dat3m.dartagnan.program.event.core.Event;
@@ -21,6 +20,7 @@ import com.google.common.collect.Iterables;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
+import org.sosy_lab.common.configuration.Option;
 import org.sosy_lab.common.configuration.Options;
 import org.sosy_lab.java_smt.api.BooleanFormula;
 import org.sosy_lab.java_smt.api.BooleanFormulaManager;
@@ -30,6 +30,7 @@ import org.sosy_lab.java_smt.api.NumeralFormula;
 import java.util.*;
 import java.util.stream.Stream;
 
+import static com.dat3m.dartagnan.configuration.OptionNames.UNIQUE_READ;
 import static com.dat3m.dartagnan.program.event.Tag.INIT;
 import static com.dat3m.dartagnan.program.event.Tag.WRITE;
 import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.RF;
@@ -38,6 +39,13 @@ import static java.util.stream.Collectors.toList;
 
 @Options
 public class WmmEncoder implements Encoder {
+
+    @Option(name = UNIQUE_READ,
+            description = "Explicitly encodes the constraint that each load event reads from exactly one store." +
+                    " Defaults to true." +
+                    " Disabling it could enable spurious violations, i.e. if the memory model contains a flagged constraint. ",
+            secure = true)
+    private boolean uniqueReads = true;
 
     private static final Logger logger = LogManager.getLogger(WmmEncoder.class);
 
@@ -60,6 +68,7 @@ public class WmmEncoder implements Encoder {
 
     public BooleanFormula encodeFullMemoryModel() {
         return context.getBooleanFormulaManager().and(
+                encodeReadFrom(),
                 encodeRelations(),
                 encodeConsistency()
         );
@@ -98,6 +107,44 @@ public class WmmEncoder implements Encoder {
                 .filter(ax -> !ax.isInactive() && !ax.isFlagged())
                 .map(ax -> ax.consistent(context))
                 .reduce(bmgr.makeTrue(), bmgr::and);
+    }
+
+    public BooleanFormula encodeReadFrom() {
+        logger.info("Encoding read-from");
+        final BooleanFormulaManager bmgr = context.getBooleanFormulaManager();
+        final List<BooleanFormula> enc = new ArrayList<>();
+        final Map<MemEvent, List<BooleanFormula>> edgeMap = new HashMap<>();
+        final RelationAnalysis ra = context.getAnalysisContext().get(RelationAnalysis.class);
+        final Relation rf = context.getTask().getMemoryModel().getRelation(RF);
+        for (final Tuple tuple : ra.getKnowledge(rf).getMaySet()) {
+            final MemEvent w = (MemEvent) tuple.getFirst();
+            final MemEvent r = (MemEvent) tuple.getSecond();
+            final BooleanFormula edge = context.edge(rf, tuple);
+            final BooleanFormula sameAddress = context.sameAddress(w, r);
+            final BooleanFormula sameValue = context.equal(context.value(w), context.value(r));
+            edgeMap.computeIfAbsent(r, key -> new ArrayList<>()).add(edge);
+            enc.add(bmgr.implication(edge, bmgr.and(context.execution(w, r), sameAddress, sameValue)));
+        }
+        for (final Map.Entry<MemEvent, List<BooleanFormula>> e : edgeMap.entrySet()) {
+            final MemEvent r = e.getKey();
+            final List<BooleanFormula> edges = e.getValue();
+            if (!uniqueReads) {
+                enc.add(bmgr.implication(context.execution(r), bmgr.or(edges)));
+                continue;
+            }
+            final int num = edges.size();
+            final String prefix = "s(rf,E" + r.getCId() + ",";
+            BooleanFormula lastSeqVar = edges.get(0);
+            for (int i = 1; i < num; i++) {
+                final BooleanFormula edge = edges.get(i);
+                final BooleanFormula newSeqVar = bmgr.makeVariable(prefix + i + ")");
+                enc.add(bmgr.equivalence(newSeqVar, bmgr.or(lastSeqVar, edge)));
+                enc.add(bmgr.not(bmgr.and(edge, lastSeqVar)));
+                lastSeqVar = newSeqVar;
+            }
+            enc.add(bmgr.implication(context.execution(r), lastSeqVar));
+        }
+        return bmgr.and(enc);
     }
 
     private final class RelationEncoder implements Definition.Visitor<BooleanFormula> {
@@ -304,24 +351,6 @@ public class WmmEncoder implements Encoder {
             return enc;
         }
         @Override
-        public BooleanFormula visitReadFrom(Relation rf) {
-            BooleanFormula enc = bmgr.makeTrue();
-            Map<MemEvent, List<BooleanFormula>> edgeMap = new HashMap<>();
-            for (Tuple tuple : ra.getKnowledge(rf).getMaySet()) {
-                MemEvent w = (MemEvent) tuple.getFirst();
-                MemEvent r = (MemEvent) tuple.getSecond();
-                BooleanFormula edge = edge(rf, tuple);
-                BooleanFormula sameAddress = context.sameAddress(w, r);
-                BooleanFormula sameValue = context.equal(context.value(w), context.value(r));
-                edgeMap.computeIfAbsent(r, key -> new ArrayList<>()).add(edge);
-                enc = bmgr.and(enc, bmgr.implication(edge, bmgr.and(execution(tuple), sameAddress, sameValue)));
-            }
-            for (MemEvent r : edgeMap.keySet()) {
-                enc = bmgr.and(enc, encodeEdgeSeq(r, edgeMap.get(r)));
-            }
-            return enc;
-        }
-        @Override
         public BooleanFormula visitMemoryOrder(Relation co) {
             return context.useSATEncoding ? encodeSAT(co) : encodeIDL(co);
         }
@@ -343,29 +372,6 @@ public class WmmEncoder implements Encoder {
         }
         private BooleanFormula exclPair(Event load, Event store) {
             return bmgr.makeVariable("excl(" + load.getCId() + "," + store.getCId() + ")");
-        }
-
-        private BooleanFormula encodeEdgeSeq(Event read, List<BooleanFormula> edges) {
-            if (GlobalSettings.ALLOW_MULTIREADS) {
-                return bmgr.implication(context.execution(read), bmgr.or(edges));
-            }
-            int num = edges.size();
-            int readId = read.getCId();
-            BooleanFormula lastSeqVar = mkSeqVar(readId, 0);
-            BooleanFormula newSeqVar = lastSeqVar;
-            BooleanFormula atMostOne = bmgr.equivalence(lastSeqVar, edges.get(0));
-            for (int i = 1; i < num; i++) {
-                newSeqVar = mkSeqVar(readId, i);
-                atMostOne = bmgr.and(atMostOne, bmgr.equivalence(newSeqVar, bmgr.or(lastSeqVar, edges.get(i))));
-                atMostOne = bmgr.and(atMostOne, bmgr.not(bmgr.and(edges.get(i), lastSeqVar)));
-                lastSeqVar = newSeqVar;
-            }
-            BooleanFormula atLeastOne = bmgr.or(newSeqVar, edges.get(edges.size() - 1));
-            atLeastOne = bmgr.implication(context.execution(read), atLeastOne);
-            return bmgr.and(atMostOne, atLeastOne);
-        }
-        private BooleanFormula mkSeqVar(int readId, int i) {
-            return bmgr.makeVariable("s(" + RF + ",E" + readId + "," + i + ")");
         }
         private BooleanFormula encodeIDL(Relation co) {
             IntegerFormulaManager imgr = context.getFormulaManager().getIntegerFormulaManager();
