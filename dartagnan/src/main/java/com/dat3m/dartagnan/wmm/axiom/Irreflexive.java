@@ -31,7 +31,8 @@ public class Irreflexive extends Axiom {
     @Override
     protected Set<Tuple> getEncodeTupleSet(Context analysisContext) {
         final RelationAnalysis ra = analysisContext.get(RelationAnalysis.class);
-        return ra.getKnowledge(rel).getMaySet().stream().filter(Tuple::isLoop).collect(toSet());
+        final RelationAnalysis.Knowledge k = ra.getKnowledge(rel);
+        return k.getMaySet().stream().filter(t -> t.isLoop() && !k.getMustSet().contains(t)).collect(toSet());
     }
 
     @Override

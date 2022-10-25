@@ -12,6 +12,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import static com.google.common.collect.Sets.difference;
+
 public class Empty extends Axiom {
 
     public Empty(Relation rel, boolean negated, boolean flag) {
@@ -25,7 +27,8 @@ public class Empty extends Axiom {
     @Override
     protected Set<Tuple> getEncodeTupleSet(Context analysisContext) {
         final RelationAnalysis ra = analysisContext.get(RelationAnalysis.class);
-        return ra.getKnowledge(rel).getMaySet();
+        final RelationAnalysis.Knowledge k = ra.getKnowledge(rel);
+        return difference(k.getMaySet(), k.getMustSet());
     }
 
     @Override

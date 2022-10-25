@@ -54,22 +54,21 @@ public class Acyclic extends Axiom {
             for (DependencyGraph<Event>.Node node1 : scc) {
                 for (DependencyGraph<Event>.Node node2 : scc) {
                     Tuple t = new Tuple(node1.getContent(), node2.getContent());
-                    if (k.getMaySet().contains(t)) {
+                    if (k.getMaySet().contains(t) && !k.getMustSet().contains(t)) {
                         result.add(t);
                     }
                 }
             }
         }
-
         logger.info("encodeTupleSet size " + result.size());
         if (GlobalSettings.REDUCE_ACYCLICITY_ENCODE_SETS) {
-            reduceWithMinSets(result, exec, ra);
+            reduceWithMinSets(result, exec, k);
             logger.info("reduced encodeTupleSet size " + result.size());
         }
         return result;
     }
 
-    private void reduceWithMinSets(TupleSet encodeSet, ExecutionAnalysis exec, RelationAnalysis ra) {
+    private void reduceWithMinSets(TupleSet encodeSet, ExecutionAnalysis exec, RelationAnalysis.Knowledge k) {
         /*
             ASSUMPTION: MinSet is acyclic!
             IDEA:
@@ -88,7 +87,7 @@ public class Acyclic extends Axiom {
                       and b is implied by either a or c.
                     - It is possible to reduce must(rel) but that may give a less precise result.
          */
-        final TupleSet minSet = ra.getKnowledge(rel).getMustSet();
+        final TupleSet minSet = k.getMustSet();
 
         // (1) Approximate transitive closure of minSet (only gets computed when crossEdges are available)
         List<Tuple> crossEdges = minSet.stream()
