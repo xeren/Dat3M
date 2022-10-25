@@ -209,16 +209,6 @@ public class WmmEncoder implements Encoder {
             return enc;
         }
         @Override
-        public BooleanFormula visitInverse(Relation rel, Relation r1) {
-            BooleanFormula enc = bmgr.makeTrue();
-            for (Tuple tuple : encodeSets.get(rel)) {
-                enc = bmgr.and(enc, bmgr.equivalence(
-                        edge(rel, tuple),
-                        edge(r1, tuple.getInverse())));
-            }
-            return enc;
-        }
-        @Override
         public BooleanFormula visitFences(Relation rel, FilterAbstract fenceSet) {
             BooleanFormula enc = bmgr.makeTrue();
             List<Event> fences = program.getCache().getEvents(fenceSet);
