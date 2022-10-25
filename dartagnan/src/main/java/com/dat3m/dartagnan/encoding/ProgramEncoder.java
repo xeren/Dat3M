@@ -6,12 +6,20 @@ import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.analysis.BranchEquivalence;
 import com.dat3m.dartagnan.program.analysis.Dependency;
 import com.dat3m.dartagnan.program.analysis.ExecutionAnalysis;
+import com.dat3m.dartagnan.program.event.Tag;
 import com.dat3m.dartagnan.program.event.core.CondJump;
 import com.dat3m.dartagnan.program.event.core.Event;
 import com.dat3m.dartagnan.program.event.core.Label;
+import com.dat3m.dartagnan.program.event.core.MemEvent;
 import com.dat3m.dartagnan.program.event.core.utils.RegWriter;
+import com.dat3m.dartagnan.program.filter.FilterBasic;
+import com.dat3m.dartagnan.program.filter.FilterIntersection;
 import com.dat3m.dartagnan.program.memory.Memory;
 import com.dat3m.dartagnan.program.memory.MemoryObject;
+import com.dat3m.dartagnan.wmm.Relation;
+import com.dat3m.dartagnan.wmm.analysis.RelationAnalysis;
+import com.dat3m.dartagnan.wmm.utils.Flag;
+import com.dat3m.dartagnan.wmm.utils.Tuple;
 import com.google.common.base.Preconditions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -25,6 +33,8 @@ import java.util.*;
 
 import static com.dat3m.dartagnan.GlobalSettings.ARCH_PRECISION;
 import static com.dat3m.dartagnan.configuration.OptionNames.*;
+import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.RMW;
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Lists.reverse;
 
 @Options
@@ -68,7 +78,8 @@ public class ProgramEncoder implements Encoder {
                 encodeControlFlow(),
                 encodeFinalRegisterValues(),
                 encodeFilter(),
-                encodeDependencies());
+                encodeDependencies(),
+                encodeExclusivePairs());
     }
 
     public BooleanFormula encodeControlFlow() {
@@ -234,6 +245,57 @@ public class ProgramEncoder implements Encoder {
                 enc.add(bmgr.or(clause));
             }
         }
+        return bmgr.and(enc);
+    }
+
+    public BooleanFormula encodeExclusivePairs() {
+        final List<BooleanFormula> enc = new ArrayList<>();
+        final List<BooleanFormula> unpredictable = new ArrayList<>();
+        final BooleanFormulaManager bmgr = context.getBooleanFormulaManager();
+        final RelationAnalysis ra = context.getAnalysisContext().get(RelationAnalysis.class);
+        final Relation rmw = context.getTask().getMemoryModel().getRelation(RMW);
+        final RelationAnalysis.Knowledge k = ra.getKnowledge(rmw);
+        for (final Event store : context.getTask().getProgram().getCache().getEvents(
+                FilterIntersection.get(FilterBasic.get(Tag.WRITE), FilterBasic.get(Tag.EXCL)))) {
+            final boolean requiresSameAddress = store.is(Tag.MATCHADDRESS);
+            checkState(store instanceof MemEvent, "non-memory event participating in '" + RMW + "'");
+            final List<BooleanFormula> storeExec = new ArrayList<>();
+            for (final Tuple tuple : k.getMaySet().getBySecond(store)) {
+                final MemEvent load = (MemEvent) tuple.getFirst();
+                final BooleanFormula sameAddress = context.sameAddress(load, (MemEvent) store);
+                // Encode if load and store form an exclusive pair
+                final BooleanFormula isPair = context.exclusivePairVariable(load, (MemEvent) store);
+                final List<BooleanFormula> alternatives = new ArrayList<>();
+                for (final Tuple t : k.getMaySet().getBySecond(store)) {
+                    final Event otherLoad = t.getFirst();
+                    if (otherLoad.getCId() > load.getCId()) {
+                        alternatives.add(context.execution(otherLoad));
+                    }
+                }
+                for (final Tuple t : k.getMaySet().getByFirst(load)) {
+                    final Event otherStore = t.getSecond();
+                    if (otherStore.getCId() < store.getCId()) {
+                        alternatives.add(context.controlFlow(otherStore));
+                    }
+                }
+                // For ARMv8, the store can be executed if addresses mismatch, but behaviour is "constrained unpredictable"
+                // The implementation does not include all possible unpredictable cases: in case of address
+                // mismatch, addresses of read and write are unknown, i.e. read and write can use any address.
+                // For RISCV and Power, addresses should match.
+                if (!requiresSameAddress) {
+                    unpredictable.add(bmgr.and(context.execution(store), isPair, bmgr.not(sameAddress)));
+                }
+                enc.add(bmgr.equivalence(isPair, bmgr.and(
+                        context.execution(load),
+                        context.controlFlow(store),
+                        requiresSameAddress ? sameAddress : bmgr.makeTrue(),
+                        bmgr.not(bmgr.or(alternatives)))));
+                storeExec.add(isPair);
+            }
+            enc.add(bmgr.implication(context.execution(store), bmgr.or(storeExec)));
+        }
+        final BooleanFormula unpredictableBehaviorFlag = Flag.ARM_UNPREDICTABLE_BEHAVIOUR.repr(context.getFormulaManager());
+        enc.add(bmgr.equivalence(unpredictableBehaviorFlag, bmgr.or(unpredictable)));
         return bmgr.and(enc);
     }
 }

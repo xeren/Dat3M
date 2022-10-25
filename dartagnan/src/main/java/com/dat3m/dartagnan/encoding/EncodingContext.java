@@ -177,6 +177,10 @@ public final class EncodingContext {
         return aliasAnalysis.mustAlias(first, second) ? booleanFormulaManager.makeTrue() : equal(address(first), address(second));
     }
 
+    public BooleanFormula exclusivePairVariable(MemEvent load, MemEvent store) {
+        return booleanFormulaManager.makeVariable("excl(" + load.getCId() + "," + store.getCId() + ")");
+    }
+
     public Formula address(MemEvent event) {
         return addresses.get(event);
     }

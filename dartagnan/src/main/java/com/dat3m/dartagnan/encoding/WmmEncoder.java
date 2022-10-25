@@ -6,16 +6,13 @@ import com.dat3m.dartagnan.program.event.core.Event;
 import com.dat3m.dartagnan.program.event.core.MemEvent;
 import com.dat3m.dartagnan.program.filter.FilterAbstract;
 import com.dat3m.dartagnan.program.filter.FilterBasic;
-import com.dat3m.dartagnan.program.filter.FilterIntersection;
 import com.dat3m.dartagnan.utils.dependable.DependencyGraph;
 import com.dat3m.dartagnan.wmm.Definition;
 import com.dat3m.dartagnan.wmm.Relation;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.analysis.RelationAnalysis;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
-import com.dat3m.dartagnan.wmm.utils.Flag;
 import com.dat3m.dartagnan.wmm.utils.Tuple;
-import com.dat3m.dartagnan.wmm.utils.TupleSet;
 import com.google.common.collect.Iterables;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -35,7 +32,6 @@ import static com.dat3m.dartagnan.program.event.Tag.INIT;
 import static com.dat3m.dartagnan.program.event.Tag.WRITE;
 import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.CO;
 import static com.dat3m.dartagnan.wmm.relation.RelationNameRepository.RF;
-import static com.google.common.base.Preconditions.checkState;
 import static java.util.stream.Collectors.toList;
 
 @Options
@@ -374,43 +370,17 @@ public class WmmEncoder implements Encoder {
         }
         @Override
         public BooleanFormula visitReadModifyWrites(Relation rmw) {
-            BooleanFormula enc = bmgr.makeTrue();
-            BooleanFormula unpredictable = bmgr.makeFalse();
-            final RelationAnalysis.Knowledge k = ra.getKnowledge(rmw);
-            for (Event store : program.getCache().getEvents(
-                    FilterIntersection.get(FilterBasic.get(Tag.WRITE), FilterBasic.get(Tag.EXCL)))) {
-                checkState(store instanceof MemEvent, "non-memory event participating in '" + rmw.getNameOrTerm() + "'");
-                BooleanFormula storeExec = bmgr.makeFalse();
-                for (Tuple t : k.getMaySet().getBySecond(store)) {
-                    MemEvent load = (MemEvent) t.getFirst();
-                    BooleanFormula sameAddress = context.sameAddress(load, (MemEvent) store);
-                    // Encode if load and store form an exclusive pair
-                    BooleanFormula isPair = exclPair(load, store);
-                    BooleanFormula pairingCond = pairingCond(load, store, k.getMaySet());
-                    // For ARMv8, the store can be executed if addresses mismatch, but behaviour is "constrained unpredictable"
-                    // The implementation does not include all possible unpredictable cases: in case of address
-                    // mismatch, addresses of read and write are unknown, i.e. read and write can use any address.
-                    // For RISCV and Power, addresses should match.
-                    if (store.is(Tag.MATCHADDRESS)) {
-                        pairingCond = bmgr.and(pairingCond, sameAddress);
-                    } else {
-                        unpredictable = bmgr.or(unpredictable, bmgr.and(context.execution(store), isPair, bmgr.not(sameAddress)));
-                    }
-                    enc = bmgr.and(enc, bmgr.equivalence(isPair, pairingCond));
-                    storeExec = bmgr.or(storeExec, isPair);
-                }
-                enc = bmgr.and(enc, bmgr.implication(context.execution(store), storeExec));
-            }
+            final List<BooleanFormula> enc = new ArrayList<>();
             for (Tuple tuple : encodeSets.get(rmw)) {
                 MemEvent load = (MemEvent) tuple.getFirst();
                 MemEvent store = (MemEvent) tuple.getSecond();
                 BooleanFormula sameAddress = store.is(Tag.MATCHADDRESS) ? bmgr.makeTrue() : context.sameAddress(load, store);
-                enc = bmgr.and(enc, bmgr.equivalence(
-                        edge(rmw, tuple),
-                        // Relation between exclusive load and store
-                        bmgr.and(context.execution(store), exclPair(load, store), sameAddress)));
+                enc.add(bmgr.equivalence(edge(rmw, tuple), bmgr.and(
+                        context.execution(store),
+                        context.exclusivePairVariable(load, store),
+                        sameAddress)));
             }
-            return bmgr.and(enc, bmgr.equivalence(Flag.ARM_UNPREDICTABLE_BEHAVIOUR.repr(context.getFormulaManager()), unpredictable));
+            return bmgr.and(enc);
         }
         @Override
         public BooleanFormula visitSameAddress(Relation loc) {
@@ -423,25 +393,6 @@ public class WmmEncoder implements Encoder {
                 )));
             }
             return enc;
-        }
-        private BooleanFormula pairingCond(Event load, Event store, TupleSet maySet) {
-            BooleanFormula pairingCond = bmgr.and(context.execution(load), context.controlFlow(store));
-            for (Tuple t : maySet.getBySecond(store)) {
-                Event otherLoad = t.getFirst();
-                if (otherLoad.getCId() > load.getCId()) {
-                    pairingCond = bmgr.and(pairingCond, bmgr.not(context.execution(otherLoad)));
-                }
-            }
-            for (Tuple t : maySet.getByFirst(load)) {
-                Event otherStore = t.getSecond();
-                if (otherStore.getCId() < store.getCId()) {
-                    pairingCond = bmgr.and(pairingCond, bmgr.not(context.controlFlow(otherStore)));
-                }
-            }
-            return pairingCond;
-        }
-        private BooleanFormula exclPair(Event load, Event store) {
-            return bmgr.makeVariable("excl(" + load.getCId() + "," + store.getCId() + ")");
         }
         private BooleanFormula edge(Relation relation, Tuple tuple) {
             return context.edge(relation, tuple);
