@@ -22,6 +22,7 @@ import com.dat3m.dartagnan.wmm.axiom.Axiom;
 import com.dat3m.dartagnan.wmm.axiom.Empty;
 import com.dat3m.dartagnan.wmm.axiom.ForceEncodeAxiom;
 import com.dat3m.dartagnan.wmm.definition.*;
+import com.dat3m.dartagnan.wmm.utils.Tuple;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sosy_lab.common.configuration.Configuration;
@@ -117,7 +118,7 @@ public class RefinementSolver extends ModelChecker {
         ProgramEncoder programEncoder = ProgramEncoder.withContext(context);
         PropertyEncoder propertyEncoder = PropertyEncoder.withContext(context);
         SymmetryEncoder symmEncoder = SymmetryEncoder.withContext(context);
-        WmmEncoder baselineEncoder = WmmEncoder.withContext(context);
+        WmmEncoder wmmEncoder = WmmEncoder.withContext(context);
 
         BooleanFormulaManager bmgr = ctx.getFormulaManager().getBooleanFormulaManager();
         final List<BooleanFormula> globalRefinement = new ArrayList<>();
@@ -134,8 +135,9 @@ public class RefinementSolver extends ModelChecker {
         }
 
         logger.info("Starting encoding using " + ctx.getVersion());
+        final Map<Relation, Set<Tuple>> encodeSets = wmmEncoder.initialEncodeSets();
         prover.addConstraint(programEncoder.encodeFullProgram());
-        prover.addConstraint(baselineEncoder.encodeFullMemoryModel());
+        prover.addConstraint(wmmEncoder.encodeMemoryModel(encodeSets));
         prover.addConstraint(symmEncoder.encodeFullSymmetryBreaking());
 
         prover.push();
@@ -187,6 +189,9 @@ public class RefinementSolver extends ModelChecker {
                 DNF<CoreLiteral> reasons = solverResult.getCoreReasons();
                 BooleanFormula refinement = refiner.refine(reasons, context);
                 prover.addConstraint(refinement);
+                Map<Relation, Set<Tuple>> reasonTuples = refiner.getTuples(reasons, context);
+                BooleanFormula wmm = wmmEncoder.encodeRelations(wmmEncoder.addEncodeSets(reasonTuples, encodeSets));
+                prover.addConstraint(wmm);
                 globalRefinement.add(refinement); // Track overall refinement progress
                 totalRefiningTime += (System.currentTimeMillis() - refineTime);
 

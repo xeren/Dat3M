@@ -45,7 +45,6 @@ public class WmmEncoder implements Encoder {
     private static final Logger logger = LogManager.getLogger(WmmEncoder.class);
 
     private final EncodingContext context;
-    final Map<Relation, Set<Tuple>> encodeSets = new HashMap<>();
 
     // =====================================================================
 
@@ -57,15 +56,83 @@ public class WmmEncoder implements Encoder {
     public static WmmEncoder withContext(EncodingContext context) throws InvalidConfigurationException {
         WmmEncoder encoder = new WmmEncoder(context);
         context.getTask().getConfig().inject(encoder);
-        encoder.initializeEncodeSets();
         return encoder;
     }
 
+    /**
+     * Consults all active axioms of the memory model to mark tuples that need to be encoded to properly encode them.
+     *
+     * @return Dependency-closed set of tuples, including at least the relevant ones.
+     */
+    public Map<Relation, Set<Tuple>> initialEncodeSets() {
+        final Map<Relation, Set<Tuple>> encodeSets = new HashMap<>();
+        for (final Relation r : context.getTask().getMemoryModel().getRelations()) {
+            encodeSets.put(r, new HashSet<>());
+        }
+        final Map<Relation, List<Stream<Tuple>>> queue = new HashMap<>();
+        for (final Axiom a : context.getTask().getMemoryModel().getAxioms()) {
+            if (a.isInactive()) {
+                continue;
+            }
+            final Map<Relation, Set<Tuple>> s = a.getEncodeTupleSets(context.getTask(), context.getAnalysisContext());
+            for (final Map.Entry<Relation, Set<Tuple>> e : s.entrySet()) {
+                queue.computeIfAbsent(e.getKey(), k -> new ArrayList<>()).add(e.getValue().stream());
+            }
+        }
+        closeEncodeSets(queue, encodeSets, encodeSets);
+        return encodeSets;
+    }
+
+    /**
+     * Extends the encode-set to also include certain tuples and all their dependencies.
+     *
+     * @param target Set of relationships to include.
+     * @param encodeSets Contains already encoded tuples,
+     *                   receives tuples that need to be encoded to properly describe {@code target}.
+     * @return Tuples added to {@code encodeSets} by this operation.
+     */
+    public Map<Relation, Set<Tuple>> addEncodeSets(
+            Map<Relation, Set<Tuple>> target,
+            Map<Relation, Set<Tuple>> encodeSets) {
+        Map<Relation, Set<Tuple>> result = new HashMap<>();
+        Map<Relation, List<Stream<Tuple>>> queue = new HashMap<>();
+        for (Map.Entry<Relation, Set<Tuple>> entry : target.entrySet()) {
+            List<Stream<Tuple>> l = new ArrayList<>();
+            l.add(entry.getValue().stream());
+            queue.put(entry.getKey(), l);
+        }
+        closeEncodeSets(queue, encodeSets, result);
+        return result;
+    }
+
+    /**
+     * Encodes all elements of the memory model.
+     *
+     * @return Proposition that all properties of a consistent execution hold.
+     * @see #encodeMemoryModel(Map)
+     */
     public BooleanFormula encodeFullMemoryModel() {
+        return encodeMemoryModel(initialEncodeSets());
+    }
+
+    /**
+     * Encodes all elements of the memory model, including
+     * <ul>
+     *     <li>all possible read-from relationships,
+     *     <li>all possible memory order pairs,
+     *     <li>all relationships in {@code encodeSets} and
+     *     <li>all active constraints to consistent executions.
+     * </ul>
+     *
+     * @param encodeSets Relationships of the model which are to be encoded.
+     *                   Usually the result of {@link #initialEncodeSets()}.
+     * @return Proposition that
+     */
+    public BooleanFormula encodeMemoryModel(Map<Relation, Set<Tuple>> encodeSets) {
         return context.getBooleanFormulaManager().and(
                 encodeReadFrom(),
                 encodeMemoryOrder(),
-                encodeRelations(),
+                encodeRelations(encodeSets),
                 encodeConsistency()
         );
     }
@@ -73,7 +140,7 @@ public class WmmEncoder implements Encoder {
     // Initializes everything just like encodeAnarchicSemantics but also encodes all
     // relations that are needed for the axioms (but does NOT encode the axioms themselves yet)
     // NOTE: It avoids encoding relations that do NOT affect the axioms, i.e. unused relations
-    public BooleanFormula encodeRelations() {
+    public BooleanFormula encodeRelations(Map<Relation, Set<Tuple>> encodeSets) {
         logger.info("Encoding relations");
         final RelationEncoder v = new RelationEncoder();
         final List<BooleanFormula> enc = new ArrayList<>();
@@ -374,17 +441,11 @@ public class WmmEncoder implements Encoder {
         }
     }
 
-    private void initializeEncodeSets() {
-        for (Relation r : context.getTask().getMemoryModel().getRelations()) {
-            encodeSets.put(r, new HashSet<>());
-        }
+    private void closeEncodeSets(
+            Map<Relation, List<Stream<Tuple>>> queue,
+            Map<Relation, Set<Tuple>> encodeSets,
+            Map<Relation, Set<Tuple>> changes) {
         EncodeSets v = new EncodeSets(context.getAnalysisContext());
-        Map<Relation, List<Stream<Tuple>>> queue = new HashMap<>();
-        for (Axiom a : context.getTask().getMemoryModel().getAxioms()) {
-            for (Map.Entry<Relation, Set<Tuple>> e : a.getEncodeTupleSets(context.getTask(), context.getAnalysisContext()).entrySet()) {
-                queue.computeIfAbsent(e.getKey(), k -> new ArrayList<>()).add(e.getValue().stream());
-            }
-        }
         while (!queue.isEmpty()) {
             Relation r = queue.keySet().iterator().next();
             Set<Tuple> s = encodeSets.get(r);
@@ -393,6 +454,13 @@ public class WmmEncoder implements Encoder {
                 news.filter(s::add).forEach(c::add);
             }
             if (!c.isEmpty()) {
+                changes.compute(r, (k, y) -> {
+                    if (y == null) {
+                        return new HashSet<>(c);
+                    }
+                    y.addAll(c);
+                    return y;
+                });
                 v.news = c;
                 for (Map.Entry<Relation, Stream<Tuple>> e : r.accept(v).entrySet()) {
                     queue.computeIfAbsent(e.getKey(), k -> new ArrayList<>()).add(e.getValue());

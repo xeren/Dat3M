@@ -22,8 +22,9 @@ public class Tuple implements Comparable<Tuple> {
         return second;
     }
 
+    @Override
     public String toString() {
-        return "(" + first + ", " + second + ")";
+        return first.getCId() + " -> " + second.getCId();
     }
 
     @Override

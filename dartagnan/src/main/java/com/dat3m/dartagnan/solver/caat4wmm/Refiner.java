@@ -14,6 +14,7 @@ import com.dat3m.dartagnan.utils.logic.Conjunction;
 import com.dat3m.dartagnan.utils.logic.DNF;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.wmm.Relation;
+import com.dat3m.dartagnan.wmm.utils.Tuple;
 import org.sosy_lab.java_smt.api.BooleanFormula;
 import org.sosy_lab.java_smt.api.BooleanFormulaManager;
 
@@ -69,6 +70,24 @@ public class Refiner {
             }
         }
         return bmgr.and(refinement);
+    }
+
+    public Map<Relation, Set<Tuple>> getTuples(DNF<CoreLiteral> coreReasons, EncodingContext context) {
+        Map<Relation, Set<Tuple>> result = new HashMap<>();
+        // For each symmetry permutation, we will create refinement clauses
+        for (Function<Event, Event> perm : symmPermutations) {
+            for (Conjunction<CoreLiteral> reason : coreReasons.getCubes()) {
+                for (CoreLiteral lit : reason.getLiterals()) {
+                    if (lit instanceof RelLiteral) {
+                        Relation r = context.getTask().getMemoryModel().getRelation(lit.getName());
+                        Tuple t = ((RelLiteral) lit).getData();
+                        Tuple p = new Tuple(perm.apply(t.getFirst()), perm.apply(t.getSecond()));
+                        result.computeIfAbsent(r, k -> new HashSet<>()).add(p);
+                    }
+                }
+            }
+        }
+        return result;
     }
 
     // Computes a list of permutations allowed by the program.
