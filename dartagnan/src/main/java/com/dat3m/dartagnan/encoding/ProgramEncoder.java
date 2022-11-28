@@ -24,6 +24,7 @@ import java.util.*;
 
 import static com.dat3m.dartagnan.GlobalSettings.ARCH_PRECISION;
 import static com.dat3m.dartagnan.configuration.OptionNames.INITIALIZE_REGISTERS;
+import static com.dat3m.dartagnan.program.event.Tag.ASSUME_EXECUTED;
 import static com.google.common.collect.Lists.reverse;
 
 @Options
@@ -107,6 +108,9 @@ public class ProgramEncoder implements Encoder {
             }
             enc.add(bmgr.equivalence(context.controlFlow(e), cfCond));
             enc.addAll(e.encodeExec(context));
+            if (e.is(ASSUME_EXECUTED)) {
+                enc.add(context.execution(e));
+            }
             pred = e;
         }
         return bmgr.and(enc);

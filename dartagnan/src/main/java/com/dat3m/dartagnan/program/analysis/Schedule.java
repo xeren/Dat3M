@@ -1,0 +1,56 @@
+package com.dat3m.dartagnan.program.analysis;
+
+import com.dat3m.dartagnan.program.Program;
+import com.dat3m.dartagnan.program.event.core.Event;
+import com.dat3m.dartagnan.program.event.core.ScheduleAnnotation;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+import static com.dat3m.dartagnan.program.event.Tag.VISIBLE;
+import static com.google.common.base.Preconditions.checkArgument;
+
+/**
+ * Scheduling fixes a certain order of events in an acyclic program in relation to the memory model.
+ * <p>
+ * Example: {@code acyclic po-loc | com | schedule}
+ * where {@code schedule} is a customized relation
+ * with the externalization {@code [E131->E44, E44->E89, E89->E132]}
+ */
+public final class Schedule {
+
+    private final List<Event> events = new ArrayList<>();
+
+    private Schedule() {}
+
+    public static Schedule fromConfig(Program p) {
+        Schedule s = new Schedule();
+        s.run(p);
+        return s;
+    }
+
+    public List<Event> getSchedule() {
+        return List.copyOf(events);//TODO view
+    }
+
+    private void run(Program p) {
+        List<Event> annotations = p.getEvents().stream()
+                .filter(ScheduleAnnotation.class::isInstance).map(ScheduleAnnotation.class::cast)
+                .sorted(Comparator.comparingInt(ScheduleAnnotation::getRank))
+                .collect(Collectors.toList());
+        //TODO checkArgument(annotations unique by rank);
+        annotations.stream().map(Schedule::nextVisible).forEach(events::add);
+        checkArgument(events.stream().noneMatch(Objects::isNull), "missing scheduled event");
+    }
+
+    private static Event nextVisible(Event e) {
+        while (e != null && !e.is(VISIBLE)) {
+            e = e.getSuccessor();
+        }
+        return e;
+    }
+}

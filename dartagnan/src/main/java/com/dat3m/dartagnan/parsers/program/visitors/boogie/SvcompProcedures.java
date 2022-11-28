@@ -28,6 +28,7 @@ public class SvcompProcedures {
 			"__VERIFIER_loop_begin",
 			"__VERIFIER_spin_start",
 			"__VERIFIER_spin_end",
+			"__VERIFIER_schedule",
 			"__VERIFIER_atomic_begin",
 			"__VERIFIER_atomic_end",
 			"__VERIFIER_nondet_bool",
@@ -56,6 +57,14 @@ public class SvcompProcedures {
 				break;
 			case "__VERIFIER_spin_end":
 				visitor.programBuilder.addChild(visitor.threadCount, EventFactory.Svcomp.newSpinEnd());
+				break;
+			case "__VERIFIER_schedule":
+				try {
+					int rank = Integer.parseInt(ctx.call_params().exprs().expr(0).getText());
+					visitor.programBuilder.addChild(visitor.threadCount, EventFactory.Svcomp.newScheduleAnnotation(rank));
+				} catch (NumberFormatException | IndexOutOfBoundsException x) {
+					throw new ParsingException("expected integer constant for __VERIFIER_schedule(" + ctx.call_params().exprs().getText() + ")");
+				}
 				break;
 			case "__VERIFIER_assert":
 				visitor.addAssertion((IExpr)ctx.call_params().exprs().accept(visitor));

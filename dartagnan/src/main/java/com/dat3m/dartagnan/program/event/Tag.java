@@ -34,6 +34,8 @@ public final class Tag {
     public static final String NOOPT   			= "NOOPT";
     public static final String ANNOTATION   	= "ANNOTATION";
     public static final String STARTLOAD   	    = "STARTLOAD";
+    public static final String ASSUME_EXECUTED = "ASSUMEEXECUTED";
+    public static final String SCHEDULE = "SCHEDULE";
 
     // =============================================================================================
     // =========================================== ARMv8 ===========================================

@@ -336,6 +336,10 @@ public class EventFactory {
         public static LoopBound newLoopBound(int bound) {
         	return new LoopBound(bound);
         }
+
+        public static ScheduleAnnotation newScheduleAnnotation(int rank) {
+            return new ScheduleAnnotation(rank);
+        }
     }
 
     // =============================================================================================

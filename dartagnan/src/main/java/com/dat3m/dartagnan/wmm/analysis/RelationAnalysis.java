@@ -5,6 +5,7 @@ import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.analysis.Dependency;
 import com.dat3m.dartagnan.program.analysis.ExecutionAnalysis;
+import com.dat3m.dartagnan.program.analysis.Schedule;
 import com.dat3m.dartagnan.program.analysis.alias.AliasAnalysis;
 import com.dat3m.dartagnan.program.event.core.Event;
 import com.dat3m.dartagnan.program.event.core.ExecutionStatus;
@@ -861,6 +862,20 @@ public class RelationAnalysis {
             }
             return new Knowledge(may, enableMustSets ? must : Set.of());
         }
+
+        @Override
+        public Knowledge visitSchedule(Relation r) {
+            Set<Tuple> tuples = new HashSet<>();
+            Schedule s = analysisContext.requires(Schedule.class);
+            List<Event> events = s.getSchedule();
+            int size = events.size() - 1;
+            for (int i = 0; i < size; i++) {
+                tuples.add(new Tuple(events.get(i), events.get(i + 1)));
+            }
+            //assume tuples do not contain mutually exclusive pairs
+            return new Knowledge(tuples, enableMustSets ? new HashSet<>(tuples) : Set.of());
+        }
+
         private Knowledge visitDependency(String tag, Function<Event, Set<Register>> registers) {
             Set<Tuple> may = new HashSet<>();
             Set<Tuple> must = new HashSet<>();
