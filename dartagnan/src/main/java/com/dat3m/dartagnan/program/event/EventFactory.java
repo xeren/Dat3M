@@ -337,8 +337,12 @@ public class EventFactory {
         	return new LoopBound(bound);
         }
 
-        public static ScheduleAnnotation newScheduleAnnotation(int rank) {
-            return new ScheduleAnnotation(rank);
+        public static ForceExecution newForceExecution(BExpr condition) {
+            return new ForceExecution(condition);
+        }
+
+        public static SchedulePoint newSchedulePoint(BExpr condition, IExpr rank) {
+            return new SchedulePoint(condition, rank);
         }
     }
 

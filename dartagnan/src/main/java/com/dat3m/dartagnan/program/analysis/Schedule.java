@@ -2,14 +2,13 @@ package com.dat3m.dartagnan.program.analysis;
 
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.event.core.Event;
-import com.dat3m.dartagnan.program.event.core.ScheduleAnnotation;
+import com.dat3m.dartagnan.program.event.core.SchedulePoint;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static com.dat3m.dartagnan.program.event.Tag.VISIBLE;
 import static com.google.common.base.Preconditions.checkArgument;
@@ -39,8 +38,8 @@ public final class Schedule {
 
     private void run(Program p) {
         List<Event> annotations = p.getEvents().stream()
-                .filter(ScheduleAnnotation.class::isInstance).map(ScheduleAnnotation.class::cast)
-                .sorted(Comparator.comparingInt(ScheduleAnnotation::getRank))
+                .filter(SchedulePoint.class::isInstance).map(SchedulePoint.class::cast)
+                .sorted(Comparator.comparingInt(SchedulePoint::getRank))
                 .collect(Collectors.toList());
         //TODO checkArgument(annotations unique by rank);
         annotations.stream().map(Schedule::nextVisible).forEach(events::add);

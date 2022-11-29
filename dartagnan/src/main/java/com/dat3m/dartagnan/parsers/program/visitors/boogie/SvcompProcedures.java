@@ -58,13 +58,11 @@ public class SvcompProcedures {
 			case "__VERIFIER_spin_end":
 				visitor.programBuilder.addChild(visitor.threadCount, EventFactory.Svcomp.newSpinEnd());
 				break;
+			case "__VERIFIER_force_execution":
+				__VERIFIER_force_execution(visitor, ctx);
+				break;
 			case "__VERIFIER_schedule":
-				try {
-					int rank = Integer.parseInt(ctx.call_params().exprs().expr(0).getText());
-					visitor.programBuilder.addChild(visitor.threadCount, EventFactory.Svcomp.newScheduleAnnotation(rank));
-				} catch (NumberFormatException | IndexOutOfBoundsException x) {
-					throw new ParsingException("expected integer constant for __VERIFIER_schedule(" + ctx.call_params().exprs().getText() + ")");
-				}
+				__VERIFIER_schedule(visitor, ctx);
 				break;
 			case "__VERIFIER_assert":
 				visitor.addAssertion((IExpr)ctx.call_params().exprs().accept(visitor));
@@ -109,6 +107,17 @@ public class SvcompProcedures {
 	private static void __VERIFIER_assume(VisitorBoogie visitor, Call_cmdContext ctx) {
     	ExprInterface expr = (ExprInterface)ctx.call_params().exprs().accept(visitor);
        	visitor.programBuilder.addChild(visitor.threadCount, EventFactory.newAssume(expr));
+	}
+
+	private static void __VERIFIER_force_execution(VisitorBoogie visitor, Call_cmdContext ctx) {
+		BExpr condition = (BExpr) ctx.call_params().exprs().expr(0).accept(visitor);
+		visitor.programBuilder.addChild(visitor.threadCount, EventFactory.Svcomp.newForceExecution(condition));
+	}
+
+	private static void __VERIFIER_schedule(VisitorBoogie visitor, Call_cmdContext ctx) {
+		BExpr condition = (BExpr) ctx.call_params().exprs().expr(0).accept(visitor);
+		IExpr rank = (IExpr) ctx.call_params().exprs().expr(1).accept(visitor);
+		visitor.programBuilder.addChild(visitor.threadCount, EventFactory.Svcomp.newSchedulePoint(condition, rank));
 	}
 
 	public static void __VERIFIER_atomic(VisitorBoogie visitor, boolean begin) {

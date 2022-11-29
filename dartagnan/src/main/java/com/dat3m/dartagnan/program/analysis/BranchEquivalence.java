@@ -5,6 +5,7 @@ import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.core.CondJump;
 import com.dat3m.dartagnan.program.event.core.Event;
 import com.dat3m.dartagnan.program.event.core.Label;
+import com.dat3m.dartagnan.program.event.core.ForceExecution;
 import com.dat3m.dartagnan.utils.collections.SetUtil;
 import com.dat3m.dartagnan.utils.dependable.DependencyGraph;
 import com.dat3m.dartagnan.utils.equivalence.AbstractEquivalence;
@@ -22,7 +23,6 @@ import java.util.*;
 
 import static com.dat3m.dartagnan.configuration.OptionNames.ALWAYS_SPLIT_ON_JUMPS;
 import static com.dat3m.dartagnan.configuration.OptionNames.MERGE_BRANCHES;
-import static com.dat3m.dartagnan.program.event.Tag.ASSUME_EXECUTED;
 
 /* Procedure:
    (1) Find all simple branches using
@@ -291,7 +291,7 @@ public class BranchEquivalence extends AbstractEquivalence<Event> {
     private void computeAssumedClasses() {
         //TODO observe consequences
         for (Event e : program.getEvents()) {
-            if (!e.is(ASSUME_EXECUTED)) {
+            if (!(e instanceof ForceExecution)) {
                 continue;
             }
             BranchClass b = (BranchClass) getEquivalenceClass(e);
