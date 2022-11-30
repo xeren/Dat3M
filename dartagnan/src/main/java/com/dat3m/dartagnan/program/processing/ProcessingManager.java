@@ -92,6 +92,7 @@ public class ProcessingManager implements ProgramProcessor {
                 RemoveDeadCondJumps.fromConfig(config),
                 Compilation.fromConfig(config),
                 printAfterCompilation ? DebugPrint.withHeader("After compilation") : null,
+                ForcePartialExecution.fromConfig(config),
                 dynamicPureLoopCutting ? DynamicPureLoopCutting.fromConfig(config) : null,
                 reduceSymmetry ? SymmetryReduction.fromConfig(config) : null,
                 EventIdReassignment.newInstance(), // Normalize used Ids (remove any gaps)

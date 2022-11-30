@@ -5,7 +5,6 @@ import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.core.CondJump;
 import com.dat3m.dartagnan.program.event.core.Event;
 import com.dat3m.dartagnan.program.event.core.Label;
-import com.dat3m.dartagnan.program.event.core.ForceExecution;
 import com.dat3m.dartagnan.utils.collections.SetUtil;
 import com.dat3m.dartagnan.utils.dependable.DependencyGraph;
 import com.dat3m.dartagnan.utils.equivalence.AbstractEquivalence;
@@ -167,8 +166,6 @@ public class BranchEquivalence extends AbstractEquivalence<Event> {
         computeUnreachableClass();
         //Bonus
         computeExclusiveClasses(threadBranches);
-        //Bonus: Assumed branches
-        computeAssumedClasses();
     }
 
     public void removeUnreachableClass() {
@@ -287,24 +284,6 @@ public class BranchEquivalence extends AbstractEquivalence<Event> {
     }
 
     //========================== Equivalence class computations =========================
-
-    private void computeAssumedClasses() {
-        //TODO observe consequences
-        for (Event e : program.getEvents()) {
-            if (!(e instanceof ForceExecution)) {
-                continue;
-            }
-            BranchClass b = (BranchClass) getEquivalenceClass(e);
-            initialClass.impliedClasses.add(b);
-            for (AbstractEquivalence<Event>.EqClass cls : this.classes) {
-                BranchClass c = (BranchClass) cls;
-                c.impliedClasses.add(b);
-                if (c.exclusiveClasses.contains(b)) {
-                    c.impliedClasses.add(unreachableClass);
-                }
-            }
-        }
-    }
 
     private void computeExclusiveClasses(Map<Thread, Map<Event, Branch>> threadBranches) {
         for (Thread t : program.getThreads()) {
