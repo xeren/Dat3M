@@ -37,19 +37,11 @@ public final class Schedule {
     }
 
     private void run(Program p) {
-        List<Event> annotations = p.getEvents().stream()
+        p.getEvents().stream()
                 .filter(SchedulePoint.class::isInstance).map(SchedulePoint.class::cast)
                 .sorted(Comparator.comparingInt(SchedulePoint::getRank))
-                .collect(Collectors.toList());
+                .forEach(events::add);
         //TODO checkArgument(annotations unique by rank);
-        annotations.stream().map(Schedule::nextVisible).forEach(events::add);
         checkArgument(events.stream().noneMatch(Objects::isNull), "missing scheduled event");
-    }
-
-    private static Event nextVisible(Event e) {
-        while (e != null && !e.is(VISIBLE)) {
-            e = e.getSuccessor();
-        }
-        return e;
     }
 }

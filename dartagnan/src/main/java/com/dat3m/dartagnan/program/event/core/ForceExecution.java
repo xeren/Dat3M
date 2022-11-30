@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import static com.dat3m.dartagnan.program.event.Tag.ANY;
 import static com.google.common.base.Preconditions.checkState;
 
 /**
@@ -19,6 +20,7 @@ public class ForceExecution extends Event {
 
     public ForceExecution(BExpr c) {
         condition = c;
+        addFilters(ANY);
     }
 
     /**

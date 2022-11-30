@@ -44,6 +44,7 @@ public class RelationNameRepository {
 	public static final String CTRLISYNC = "ctrlisync";
 	public static final String CTRLISB = "ctrlisb";
 	public static final String CASDEP = "casdep";
+	public static final String SCHEDULE = "schedule";
 	// Any new string must be also added to method contains() below
 
 	public static final ImmutableSet<String> RELATION_NAMES;
