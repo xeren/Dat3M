@@ -106,4 +106,6 @@ public interface EventVisitor<T> {
 	// SVCOMP Events
 	default T visitBeginAtomic(BeginAtomic e) { return visitEvent(e); }
 	default T visitEndAtomic(EndAtomic e) { return visitEvent(e); }
+	default T visitForceExecution(ForceExecution e) { return visitEvent(e); }
+	default T visitSchedulePoint(SchedulePoint e) { return visitEvent(e); }
 }
