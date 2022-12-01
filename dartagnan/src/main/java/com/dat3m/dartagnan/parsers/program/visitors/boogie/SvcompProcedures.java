@@ -115,7 +115,7 @@ public class SvcompProcedures {
 	}
 
 	private static void __VERIFIER_schedule(VisitorBoogie visitor, Call_cmdContext ctx) {
-		BExpr condition = (BExpr) ctx.call_params().exprs().expr(0).accept(visitor);
+		ExprInterface condition = (ExprInterface) ctx.call_params().exprs().expr(0).accept(visitor);
 		IExpr rank = (IExpr) ctx.call_params().exprs().expr(1).accept(visitor);
 		visitor.programBuilder.addChild(visitor.threadCount, EventFactory.Svcomp.newSchedulePoint(condition, rank));
 	}

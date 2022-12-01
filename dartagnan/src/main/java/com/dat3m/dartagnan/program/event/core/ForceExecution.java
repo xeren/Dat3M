@@ -1,7 +1,9 @@
 package com.dat3m.dartagnan.program.event.core;
 
 import com.dat3m.dartagnan.encoding.EncodingContext;
-import com.dat3m.dartagnan.expression.BExpr;
+import com.dat3m.dartagnan.expression.ExprInterface;
+import com.dat3m.dartagnan.program.event.visitors.EventVisitor;
+import com.dat3m.dartagnan.expression.IValue;
 import org.sosy_lab.java_smt.api.BooleanFormula;
 
 import java.util.ArrayList;
@@ -16,11 +18,16 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class ForceExecution extends Event {
 
-    final BExpr condition;
+    final ExprInterface condition;
 
-    public ForceExecution(BExpr c) {
+    public ForceExecution(ExprInterface c) {
         condition = c;
         addFilters(ANY);
+    }
+
+    protected ForceExecution(ForceExecution other) {
+		super(other);
+		this.condition = other.condition;
     }
 
     /**
@@ -29,9 +36,9 @@ public class ForceExecution extends Event {
      * @throws IllegalStateException The condition is variable.
      */
     public boolean isEnabled() {
-        if (condition.isTrue())
+        if (condition.equals(IValue.ONE))
             return true;
-        checkState(condition.isFalse(), "Non-constant expression %s at program line %s", condition, cLine);
+        checkState(condition.equals(IValue.ZERO), "Non-constant expression %s at program line %s", condition, cLine);
         return false;
     }
 
@@ -46,4 +53,20 @@ public class ForceExecution extends Event {
         x.add(ctx.execution(this));
         return x;
     }
+
+    // Unrolling
+    // -----------------------------------------------------------------------------------------------------------------
+
+    @Override
+    public ForceExecution getCopy(){
+    	return new ForceExecution(this);
+    }
+
+	// Visitor
+	// -----------------------------------------------------------------------------------------------------------------
+
+	// @Override
+	// public <T> T accept(EventVisitor<T> visitor) {
+	// 	return visitor.visitForceExecution(this);
+	// }
 }

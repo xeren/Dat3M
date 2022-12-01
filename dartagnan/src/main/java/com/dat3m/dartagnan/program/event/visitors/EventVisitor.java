@@ -38,6 +38,8 @@ public interface EventVisitor<T> {
 	default T visitMemEvent(MemEvent e) { return visitEvent(e); }
 	default T visitSkip(Skip e) { return visitEvent(e); }
 	default T visitStore(Store e) { return visitMemEvent(e); }
+	// default T visitForceExecution(ForceExecution e) { return visitEVent(e); }
+	// default T visitSchedulePoint(SchedulePoint e) { return visitForceExecution(e); }
 
 	// Annotations
 	default T visitCodeAnnotation(CodeAnnotation e) { return visitEvent(e); }
