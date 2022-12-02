@@ -32,8 +32,8 @@ public class ProcessingManager implements ProgramProcessor {
         secure=true)
         private boolean constantPropagation = false;
 
-	@Option(name= DEAD_ASSIGNMENT_ELIMINATION,
-			description="Performs dead code elimination.",
+    @Option(name= DEAD_ASSIGNMENT_ELIMINATION,
+            description="Performs dead code elimination.",
 			secure=true)
 		private boolean dce = false;
 
@@ -69,7 +69,6 @@ public class ProcessingManager implements ProgramProcessor {
             secure = true)
     private boolean printAfterProcessing = false;
 
-
 // ======================================================================
 
     private ProcessingManager(Configuration config) throws InvalidConfigurationException {
@@ -90,6 +89,7 @@ public class ProcessingManager implements ProgramProcessor {
                 constantPropagation ? ConstantPropagation.fromConfig(config) : null,
                 dce ? DeadAssignmentElimination.fromConfig(config) : null,
                 RemoveDeadCondJumps.fromConfig(config),
+                ForcePartialExecution.fromConfig(config),
                 Compilation.fromConfig(config),
                 printAfterCompilation ? DebugPrint.withHeader("After compilation") : null,
                 ForcePartialExecution.fromConfig(config),
@@ -110,6 +110,5 @@ public class ProcessingManager implements ProgramProcessor {
     public void run(Program program) {
         programProcessors.forEach(p -> p.run(program));
     }
-
 
 }

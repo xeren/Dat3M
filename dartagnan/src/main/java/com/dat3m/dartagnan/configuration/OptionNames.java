@@ -33,9 +33,11 @@ public class OptionNames {
 	public static final String DETERMINISTIC_REORDERING = "program.processing.detReordering";
 	public static final String REDUCE_SYMMETRY = "program.processing.reduceSymmetry";
 	public static final String CONSTANT_PROPAGATION = "program.processing.constantPropagation";
+	public static final String ENABLE_FORCE_EXECUTION = "program.processing.forceExecution";
+	public static final String ENABLE_FINAL_DEAD_CODE_ELIMINATION = "program.processing.finalDeadCodeElimination";
 	public static final String DEAD_ASSIGNMENT_ELIMINATION = "program.processing.dce";
 	public static final String DYNAMIC_PURE_LOOP_CUTTING = "program.processing.dplc";
-	
+
 	// Program Property Options
 	public static final String ALIAS_METHOD = "program.analysis.alias";
 	public static final String ALWAYS_SPLIT_ON_JUMPS = "program.analysis.cf.alwaysSplitOnJump";

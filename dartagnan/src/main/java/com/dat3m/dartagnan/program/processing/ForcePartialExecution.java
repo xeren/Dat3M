@@ -12,6 +12,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sosy_lab.common.configuration.Configuration;
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
+import org.sosy_lab.common.configuration.Option;
+import org.sosy_lab.common.configuration.Options;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -19,6 +21,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.Set;
 
+import static com.dat3m.dartagnan.configuration.OptionNames.ENABLE_FORCE_EXECUTION;
 import static com.dat3m.dartagnan.expression.op.BOpUn.NOT;
 import static com.dat3m.dartagnan.program.event.EventFactory.newAssume;
 
@@ -28,18 +31,29 @@ import static com.dat3m.dartagnan.program.event.EventFactory.newAssume;
  * Requires a sufficient ConstantPropagation.
  * @see ForceExecution
  */
+@Options
 public final class ForcePartialExecution implements ProgramProcessor {
 
     private static final Logger logger = LogManager.getLogger(ForcePartialExecution.class);
 
+    @Option(name = ENABLE_FORCE_EXECUTION,
+            description = "Marks branches that avoid some mandatory element of the program as dead code.  Default: true.",
+            secure = true)
+    private boolean enable = true;
+
     private ForcePartialExecution() {}
 
     public static ForcePartialExecution fromConfig(Configuration config) throws InvalidConfigurationException {
-        return new ForcePartialExecution();
+        ForcePartialExecution p = new ForcePartialExecution();
+        config.inject(p);
+        return p;
     }
 
     @Override
     public void run(Program program) {
+        if (!enable) {
+            return;
+        }
         logger.trace("start");
         List<Event> list = new ArrayList<>();
         for (Event e : program.getEvents()) {
@@ -68,20 +82,21 @@ public final class ForcePartialExecution implements ProgramProcessor {
             boolean end;
             if (p instanceof CondJump) {
                 falseSet.add((CondJump) p);
-                end = ((CondJump) p).isGoto();
+                end = ((CondJump) p).isGoto() || !q.remove(p);
             } else {
                 end = p == null;
             }
             e = end ? q.poll() : p;
         }
         for (CondJump j : falseSet) {
-            if (!trueSet.contains(j)) {
+            if (!trueSet.contains(j) && !j.isDead()) {
+                // If j.isGoto(), j should be dead code when run returns
                 assumeBefore(new BExprUn(NOT, j.getGuard()), j);
                 j.setGuard(BConst.FALSE);
             }
         }
         for (CondJump j : trueSet) {
-            if (!falseSet.contains(j)) {
+            if (!falseSet.contains(j) && !j.isGoto()) {
                 assumeBefore(j.getGuard(), j);
                 j.setGuard(BConst.TRUE);
             }
