@@ -68,8 +68,8 @@ void *thread3(void *arg)
 
     int elem;
     // Unrolling of the original C++ Code
-    while (1) {
-        elem = pop(idx);
+    for (int i = 0; ; i++) {
+        elem = pop(idx == 1 && i == 0 ? idx : -1);
         if (elem >= 0) {
             break;
         }
@@ -80,9 +80,9 @@ void *thread3(void *arg)
     push(idx, elem);
 
     while (1) {
-        elem = pop(idx);
+        elem = pop(-1);
         if (elem >= 0)
-             break;
+            break;
     }
     array[elem].value = idx;
     assert (array[elem].value == idx);
@@ -95,8 +95,8 @@ void *thread1(void *arg)
 
     int elem;
     // Unrolling of the original C++ Code
-    while (1) {
-        elem = pop(idx);
+    for (int i = 0; ; i++) {
+        elem = pop(idx == 2 && i == 0 ? idx : -1);
         if (elem >= 0) {
             break;
         }
