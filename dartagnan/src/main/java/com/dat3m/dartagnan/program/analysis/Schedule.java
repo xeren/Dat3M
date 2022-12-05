@@ -39,6 +39,7 @@ public final class Schedule {
     private void run(Program p) {
         p.getEvents().stream()
                 .filter(SchedulePoint.class::isInstance).map(SchedulePoint.class::cast)
+                .filter(SchedulePoint::isEnabled)
                 .sorted(Comparator.comparingInt(SchedulePoint::getRank))
                 .forEach(events::add);
         //TODO checkArgument(annotations unique by rank);
