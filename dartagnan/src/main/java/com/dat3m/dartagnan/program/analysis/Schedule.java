@@ -11,9 +11,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-import static com.dat3m.dartagnan.program.event.Tag.VISIBLE;
 import static com.google.common.base.Preconditions.checkArgument;
 
 /**
@@ -50,7 +49,8 @@ public final class Schedule {
                 .filter(SchedulePoint::isEnabled)
                 .sorted(Comparator.comparingInt(SchedulePoint::getRank))
                 .forEach(events::add);
-        //TODO checkArgument(annotations unique by rank);
+        checkArgument(IntStream.range(0, events.size()).noneMatch(i -> events.subList(0, i).contains(events.get(i))),
+                "Multiple schedules with equal rank are not supported.");
         checkArgument(events.stream().noneMatch(Objects::isNull), "missing scheduled event");
     }
 }
