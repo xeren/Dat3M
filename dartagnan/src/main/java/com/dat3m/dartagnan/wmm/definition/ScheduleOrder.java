@@ -3,9 +3,9 @@ package com.dat3m.dartagnan.wmm.definition;
 import com.dat3m.dartagnan.wmm.Definition;
 import com.dat3m.dartagnan.wmm.Relation;
 
-public class Schedule extends Definition {
+public class ScheduleOrder extends Definition {
 
-    public Schedule(Relation r0) {
+    public ScheduleOrder(Relation r0) {
         super(r0, "schedule");
     }
 

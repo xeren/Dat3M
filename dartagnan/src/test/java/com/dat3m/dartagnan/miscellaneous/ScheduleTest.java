@@ -21,7 +21,7 @@ import com.dat3m.dartagnan.utils.rules.RequestShutdownOnError;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.wmm.Wmm;
-import com.dat3m.dartagnan.wmm.definition.Schedule;
+import com.dat3m.dartagnan.wmm.definition.ScheduleOrder;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -61,7 +61,7 @@ public final class ScheduleTest {
 
     private void test(int... ids) throws Exception {
         VerificationTask task = taskProvider.get();
-        assertTrue(task.getMemoryModel().getRelations().stream().anyMatch(r -> r.getDefinition() instanceof Schedule));
+        assertTrue(task.getMemoryModel().getRelations().stream().anyMatch(r -> r.getDefinition() instanceof ScheduleOrder));
         Context analysisContext = Context.create();
         preprocessProgram(task, task.getConfig());
         preprocessMemoryModel(task);
