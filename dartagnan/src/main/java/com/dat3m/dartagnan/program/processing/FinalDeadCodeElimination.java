@@ -5,6 +5,8 @@ import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Tag;
 import com.dat3m.dartagnan.program.event.core.CondJump;
 import com.dat3m.dartagnan.program.event.core.Event;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.sosy_lab.common.configuration.Configuration;
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
 import org.sosy_lab.common.configuration.Option;
@@ -27,6 +29,8 @@ import static com.google.common.base.Preconditions.checkState;
  */
 @Options
 public final class FinalDeadCodeElimination implements ProgramProcessor {
+
+    private static final Logger logger = LogManager.getLogger(FinalDeadCodeElimination.class);
 
     @Option(name = ENABLE_FINAL_DEAD_CODE_ELIMINATION,
             description = "Removes dead code introduced during preprocessing, unrolling and compiling." +
@@ -83,12 +87,13 @@ public final class FinalDeadCodeElimination implements ProgramProcessor {
         checkState(reachableLabels.isEmpty(),
                 "Dangling or looping labels in thread %s \"%s\": %s",
                 thread.getId(), thread.getName(), reachableLabels);
+        if (removable.isEmpty()) {
+            return;
+        }
+        logger.debug("Found {} unreachable events in thread {} \"{}\"", removable.size(), thread.getId(), thread.getName());
         for (Event e : removable) {
             if (!e.is(Tag.NOOPT) || e.is(Tag.BOUND)) {
                 e.delete();
-                if (e instanceof CondJump) {
-                    ((CondJump) e).getLabel().getJumpSet().remove(e);
-                }
             }
         }
     }

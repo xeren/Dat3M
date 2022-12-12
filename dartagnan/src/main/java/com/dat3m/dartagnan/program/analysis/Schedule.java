@@ -3,8 +3,11 @@ package com.dat3m.dartagnan.program.analysis;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.event.core.Event;
 import com.dat3m.dartagnan.program.event.core.SchedulePoint;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -22,6 +25,8 @@ import static com.google.common.base.Preconditions.checkArgument;
  */
 public final class Schedule {
 
+    private static final Logger logger = LogManager.getLogger(Schedule.class);
+
     private final List<Event> events = new ArrayList<>();
 
     private Schedule() {}
@@ -29,11 +34,14 @@ public final class Schedule {
     public static Schedule fromConfig(Program p) {
         Schedule s = new Schedule();
         s.run(p);
+        if (!s.events.isEmpty()) {
+            logger.info("Scheduled {} events", s.events.size());
+        }
         return s;
     }
 
     public List<Event> getSchedule() {
-        return List.copyOf(events);//TODO view
+        return Collections.unmodifiableList(events);
     }
 
     private void run(Program p) {
