@@ -115,9 +115,8 @@ public class SvcompProcedures {
 	}
 
 	private static void __VERIFIER_schedule(VisitorBoogie visitor, Call_cmdContext ctx) {
-		ExprInterface condition = (ExprInterface) ctx.call_params().exprs().expr(0).accept(visitor);
-		IExpr rank = (IExpr) ctx.call_params().exprs().expr(1).accept(visitor);
-		visitor.programBuilder.addChild(visitor.threadCount, EventFactory.Svcomp.newSchedulePoint(condition, rank));
+		IExpr rank = (IExpr) ctx.call_params().exprs().expr(0).accept(visitor);
+		visitor.programBuilder.addChild(visitor.threadCount, EventFactory.Svcomp.newSchedulePoint(rank));
 	}
 
 	public static void __VERIFIER_atomic(VisitorBoogie visitor, boolean begin) {

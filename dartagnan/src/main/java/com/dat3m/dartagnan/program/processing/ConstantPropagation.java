@@ -262,12 +262,6 @@ public class ConstantPropagation implements ProgramProcessor {
 
 		@Override
 		public Event visitSchedulePoint(SchedulePoint e) {
-			ExprInterface oldCondition = e.getConditionExpression();
-			ExprInterface newCondition = simplify(oldCondition, map);
-			verifyNotNull(newCondition, oldCondition);
-			if (newCondition != oldCondition) {
-				e.setConditionExpression(newCondition);
-			}
 			IExpr oldRank = e.getRankExpression();
 			IExpr newRank = (IExpr) simplify(oldRank, map);
 			verifyNotNull(newRank, oldRank);

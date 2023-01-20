@@ -8,7 +8,6 @@ import com.dat3m.dartagnan.encoding.ProgramEncoder;
 import com.dat3m.dartagnan.encoding.PropertyEncoder;
 import com.dat3m.dartagnan.encoding.SymmetryEncoder;
 import com.dat3m.dartagnan.encoding.WmmEncoder;
-import com.dat3m.dartagnan.expression.BConst;
 import com.dat3m.dartagnan.expression.IValue;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.event.EventFactory;
@@ -69,7 +68,7 @@ public final class ScheduleTest {
                 .mapToObj(i -> task.getProgram().getEvents().stream().filter(e -> e.getCId() == i).findFirst().orElseThrow())
                 .toArray(Event[]::new);
         SchedulePoint[] schedule = IntStream.range(0, 2 * (ids.length - 1))
-                .mapToObj(i -> EventFactory.Svcomp.newSchedulePoint(BConst.TRUE, new IValue(BigInteger.valueOf(i), 0)))
+                .mapToObj(i -> EventFactory.Svcomp.newSchedulePoint(new IValue(BigInteger.valueOf(i), 0)))
                 .toArray(SchedulePoint[]::new);
         int cId = task.getProgram().getEvents().stream().mapToInt(Event::getCId).max().orElseThrow();
         for (int i = 0; i < ids.length - 1; i++) {

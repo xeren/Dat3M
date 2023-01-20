@@ -341,8 +341,8 @@ public class EventFactory {
             return new ForceExecution(condition);
         }
 
-        public static SchedulePoint newSchedulePoint(ExprInterface condition, IExpr rank) {
-            return new SchedulePoint(condition, rank);
+        public static SchedulePoint newSchedulePoint(IExpr rank) {
+            return new SchedulePoint(rank);
         }
     }
 

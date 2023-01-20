@@ -2,7 +2,7 @@ extern int __VERIFIER_nondet_int(void);
 extern void __VERIFIER_assume(int cond);
 extern void __VERIFIER_loop_bound(int);
 
-extern void __VERIFIER_schedule(int condition, int rank);
+extern void __VERIFIER_schedule(int rank);
 extern void __VERIFIER_force_execution(int condition);
 
 // Used for spinloops

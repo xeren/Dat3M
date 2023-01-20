@@ -46,7 +46,6 @@ public final class Schedule {
     private void run(Program p) {
         p.getEvents().stream()
                 .filter(SchedulePoint.class::isInstance).map(SchedulePoint.class::cast)
-                .filter(SchedulePoint::isEnabled)
                 .sorted(Comparator.comparingInt(SchedulePoint::getRank))
                 .forEach(events::add);
         checkArgument(IntStream.range(0, events.size()).noneMatch(i -> events.subList(0, i).contains(events.get(i))),

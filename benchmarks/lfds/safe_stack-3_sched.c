@@ -31,7 +31,8 @@ int pop(intptr_t idx)
     int i = 0;
     while (atomic_load_explicit(&count, memory_order_acquire) > 1) {
         int head1 = atomic_load_explicit(&head, memory_order_acquire);
-        __VERIFIER_schedule((idx == 1 || idx == 2) && i == 0, 2 * idx - 1);
+        if ((idx == 1 || idx == 2) && i == 0)
+            __VERIFIER_schedule(2 * idx - 1);
         int next1 = atomic_exchange_explicit(&array[head1].next, -1, memory_order_seq_cst);
 
         if (next1 >= 0) {
@@ -42,7 +43,8 @@ int pop(intptr_t idx)
             } else {
                 // Why Xchg instead of a simple store?
                 atomic_exchange_explicit(&array[head1].next, next1, memory_order_seq_cst);
-                __VERIFIER_schedule(idx == 1 && i == 0, 2);
+                if (idx == 1 && i == 0)
+                    __VERIFIER_schedule(2);
             }
         }
         i++;
@@ -56,7 +58,8 @@ void push(intptr_t idx, int index)
     int i = 0;
     do {
         atomic_store_explicit(&array[index].next, head1, memory_order_release);
-        __VERIFIER_schedule(idx == 0 && i == 0, 0);
+        if (idx == 0 && i == 0)
+            __VERIFIER_schedule(0);
         i++;
     } while (atomic_compare_exchange_strong_explicit(&head, &head1, index, memory_order_seq_cst, memory_order_seq_cst) == 0);
     atomic_fetch_add_explicit(&count, 1, memory_order_seq_cst);
