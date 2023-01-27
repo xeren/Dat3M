@@ -1,5 +1,5 @@
 #include <pthread.h>
-#include <safe_stack.h>
+#include "safe_stack.h"
 #include <assert.h>
 
 void *thread3(void *arg)
