@@ -107,6 +107,23 @@
             </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.2.0</version>
+                <configuration>
+                    <mainClass>com.dat3m.dartagnan.Dartagnan</mainClass>
+                    <arguments>
+                        <argument>../cat/tso.cat</argument>
+                        <argument>--target=tso</argument>
+                        <argument>../litmus/X86/SB.litmus</argument>
+                        <argument>--property=program_spec</argument>
+                        <argument>--bound=3</argument>
+                        <argument>--modeling.threadCreateAlwaysSucceeds=true</argument>
+                        <argument>--solver=z3</argument>
+                    </arguments>
+                </configuration>
+             </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
                 <version>${build-helper-maven-plugin.version}</version>
                 <executions>

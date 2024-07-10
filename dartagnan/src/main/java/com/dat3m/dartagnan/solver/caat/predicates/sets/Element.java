@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.solver.caat.predicates.sets;
 
+import com.google.common.base.Preconditions;
 import com.dat3m.dartagnan.solver.caat.predicates.AbstractDerivable;
 
 public class Element extends AbstractDerivable implements Comparable<Element> {
@@ -10,6 +11,7 @@ public class Element extends AbstractDerivable implements Comparable<Element> {
 
     public Element(int id, int time, int derivLength) {
         super(time, derivLength);
+        Preconditions.checkArgument(id >= 0);
         this.dId = id;
     }
 

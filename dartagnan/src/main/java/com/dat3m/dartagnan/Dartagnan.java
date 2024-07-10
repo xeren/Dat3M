@@ -31,6 +31,7 @@ import com.dat3m.dartagnan.verification.VerificationTask.VerificationTaskBuilder
 import com.dat3m.dartagnan.verification.model.ExecutionModelManager;
 import com.dat3m.dartagnan.verification.model.ExecutionModelNext;
 import com.dat3m.dartagnan.verification.solving.AssumeSolver;
+import com.dat3m.dartagnan.verification.solving.GenMCSolver;
 import com.dat3m.dartagnan.verification.solving.ModelChecker;
 import com.dat3m.dartagnan.verification.solving.RefinementSolver;
 import com.dat3m.dartagnan.witness.WitnessType;
@@ -235,6 +236,7 @@ public class Dartagnan extends BaseOptions {
                         modelChecker = switch (o.getMethod()) {
                             case EAGER -> AssumeSolver.run(ctx, prover, task);
                             case LAZY -> RefinementSolver.run(ctx, prover, task);
+                            case GENMC -> GenMCSolver.run(ctx, prover, task);
                         };
                     }
 

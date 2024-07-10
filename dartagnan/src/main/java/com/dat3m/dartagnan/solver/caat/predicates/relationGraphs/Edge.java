@@ -1,6 +1,6 @@
 package com.dat3m.dartagnan.solver.caat.predicates.relationGraphs;
 
-
+import com.google.common.base.Preconditions;
 import com.dat3m.dartagnan.solver.caat.predicates.AbstractDerivable;
 
 public class Edge extends AbstractDerivable implements Comparable<Edge> {
@@ -12,6 +12,7 @@ public class Edge extends AbstractDerivable implements Comparable<Edge> {
 
     public Edge(int id1, int id2, int time, int derivLength) {
         super(time, derivLength);
+        Preconditions.checkArgument(id1 >= 0 && id2 >= 0);
         this.dId1 = id1;
         this.dId2 = id2;
     }
