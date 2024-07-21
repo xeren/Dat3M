@@ -1,6 +1,10 @@
 package com.dat3m.dartagnan.verification.solving;
 
 import com.dat3m.dartagnan.configuration.Property;
+import com.dat3m.dartagnan.encoding.EncodingContext;
+import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
+import com.dat3m.dartagnan.encoding.PropertyEncoder;
+import com.dat3m.dartagnan.encoding.WmmEncoder;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCWMMSolver;
 import com.dat3m.dartagnan.utils.Result;
@@ -48,11 +52,11 @@ public class GenMCSolver extends ModelChecker {
             throws InterruptedException, SolverException, InvalidConfigurationException {
         GenMCSolver solver = new GenMCSolver();
         task.getConfig().inject(solver);
-        solver.runInternal(ctx, task);
+        solver.runInternal(ctx, prover, task);
         return solver;
     }
 
-    private void runInternal(SolverContext ctx, VerificationTask task)
+    private void runInternal(SolverContext ctx, ProverEnvironment prover, VerificationTask task)
             throws InterruptedException, SolverException, InvalidConfigurationException {
         final Wmm memoryModel = task.getMemoryModel();
         final Context analysisContext = Context.create();
@@ -73,7 +77,19 @@ public class GenMCSolver extends ModelChecker {
         performStaticProgramAnalyses(task, analysisContext, config);
         performStaticWmmAnalyses(task, analysisContext, config);
 
+        // ------------------------ Encoding ------------------------
+
+        context = EncodingContext.of(task, analysisContext, ctx.getFormulaManager());
+        final GenMCTraceEncoder traceEncoder = GenMCTraceEncoder.withContext(context);
+        final PropertyEncoder propertyEncoder = PropertyEncoder.withContext(context);
+        final WmmEncoder baselineEncoder = WmmEncoder.withContext(context);
+
+        logger.info("Starting encoding using " + ctx.getVersion());
+        prover.addConstraint(baselineEncoder.encodeFullMemoryModel());
+        prover.addConstraint(propertyEncoder.encodeProperties(task.getProperty()));
+
         // ------------------------ Solving ------------------------
+        prover.push();
 
         logger.info("GenMC algorithm started.");
         boolean result = genmc(GenMCExecutionModel.withTask(task), GenMCWMMSolver.withContext(memoryModel, analysisContext));
