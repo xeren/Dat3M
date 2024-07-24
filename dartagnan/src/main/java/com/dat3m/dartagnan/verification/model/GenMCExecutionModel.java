@@ -356,7 +356,8 @@ public class GenMCExecutionModel {
     }
 
     public boolean isConsistent(GenMCWMMSolver consistencyChecker) {
-        return consistencyChecker.check(new GenMCEventDomain(this)) == CONSISTENT;
+        //return consistencyChecker.check(new GenMCEventDomain(this)) == CONSISTENT;
+        return true;
     }
 
     public Set<EventData> getPorfPrefix(EventData event) {

@@ -6,14 +6,13 @@ import com.dat3m.dartagnan.solver.caat.constraints.AcyclicityConstraint;
 import com.dat3m.dartagnan.solver.caat.constraints.Constraint;
 import com.dat3m.dartagnan.solver.caat.constraints.EmptinessConstraint;
 import com.dat3m.dartagnan.solver.caat.constraints.IrreflexivityConstraint;
-import com.dat3m.dartagnan.solver.caat.domain.Domain;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.RelationGraph;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.base.EmptyGraph;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.derived.*;
 import com.dat3m.dartagnan.solver.caat.predicates.sets.SetPredicate;
 import com.dat3m.dartagnan.solver.caat4wmm.basePredicates.*;
 import com.dat3m.dartagnan.utils.dependable.DependencyGraph;
-import com.dat3m.dartagnan.verification.model.EventData;
+import com.dat3m.dartagnan.verification.model.ExecutionModel;
 import com.dat3m.dartagnan.wmm.Relation;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.analysis.RelationAnalysis;
@@ -60,7 +59,8 @@ public class GenMCExecutionGraph {
         constructMappings();
     }
 
-    public void initializeFromDomain(Domain<EventData> domain) {
+    public void initializeFromModel(ExecutionModel executionModel) {
+        domain = new EventDomain(executionModel);
         caatModel.initializeToDomain(domain);
     }
 
@@ -193,13 +193,13 @@ public class GenMCExecutionGraph {
         final List<Relation> dependencies = rel.getDependencies();
 
         if (relClass == ReadFrom.class) {
-            graph = new GenMCReadFromGraph();
+            graph = new ReadFromGraph();
         } else if (relClass == SameLocation.class) {
-            graph = new GenMCLocationGraph();
+            graph = new LocationGraph();
         } else if (relClass == ProgramOrder.class) {
-            graph = new GenMCProgramOrderGraph();
+            graph = new ProgramOrderGraph();
         } else if (relClass == Coherence.class) {
-            graph = new GenMCCoherenceGraph();
+            graph = new CoherenceGraph();
         } else if (relClass == Inverse.class || relClass == TransitiveClosure.class || relClass == RangeIdentity.class) {
             RelationGraph g = getOrCreateGraphFromRelation(dependencies.get(0));
             graph = relClass == Inverse.class ? new InverseGraph(g) :
@@ -223,11 +223,11 @@ public class GenMCExecutionGraph {
             SetPredicate rhs = getOrCreateSetFromFilter(cartRel.getSecondFilter());
             graph = new CartesianGraph(lhs, rhs);
         } else if (relClass == ReadModifyWrites.class) {
-            graph = new GenMCRMWGraph();
+            graph = new RMWGraph();
         } else if (relClass == External.class) {
-            graph = new GenMCExternalGraph();
+            graph = new ExternalGraph();
         } else if (relClass == Internal.class) {
-            graph = new GenMCInternalGraph();
+            graph = new InternalGraph();
         } else if (relClass == Fences.class) {
             throw new UnsupportedOperationException("fencerel is not supported in CAAT.");
         } else if (relClass == SetIdentity.class) {
@@ -237,7 +237,7 @@ public class GenMCExecutionGraph {
             graph = new EmptyGraph();
         } else {
             // This is a fallback for all unimplemented static graphs
-            graph = new StaticDefaultGenMCWMMGraph(rel, ra);
+            graph = new StaticDefaultWMMGraph(rel, ra);
         }
 
         graph.setName(rel.getNameOrTerm());
@@ -249,7 +249,7 @@ public class GenMCExecutionGraph {
             return filterSetMap.get(filter);
         }
 
-        SetPredicate set = new StaticGenMCWMMSet(filter);
+        SetPredicate set = new StaticWMMSet(filter);
         set.setName(filter.toString());
         filterSetMap.put(filter, set);
         return set;

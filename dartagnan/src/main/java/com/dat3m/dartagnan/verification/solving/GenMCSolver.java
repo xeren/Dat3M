@@ -5,12 +5,19 @@ import com.dat3m.dartagnan.encoding.EncodingContext;
 import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
 import com.dat3m.dartagnan.encoding.PropertyEncoder;
 import com.dat3m.dartagnan.encoding.WmmEncoder;
+import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.program.event.Tag;
+import com.dat3m.dartagnan.program.event.core.Init;
+import com.dat3m.dartagnan.program.filter.Filter;
+import com.dat3m.dartagnan.solver.caat.domain.Domain;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCWMMSolver;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.verification.model.EventData;
+import com.dat3m.dartagnan.verification.model.EventMap;
+import com.dat3m.dartagnan.verification.model.ExecutionModel;
 import com.dat3m.dartagnan.verification.model.GenMCExecutionModel;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
@@ -37,10 +44,12 @@ import java.util.*;
 @Options
 public class GenMCSolver extends ModelChecker {
 
-    private static final Logger logger = LogManager.getLogger(RefinementSolver.class);
+    private static final Logger logger = LogManager.getLogger(GenMCSolver.class);
 
     // ================================================================================================================
     // GenMC solver
+
+    private GenMCTraceEncoder traceEncoder;
 
     private GenMCSolver() {
     }
@@ -80,9 +89,11 @@ public class GenMCSolver extends ModelChecker {
         // ------------------------ Encoding ------------------------
 
         context = EncodingContext.of(task, analysisContext, ctx.getFormulaManager());
-        final GenMCTraceEncoder traceEncoder = GenMCTraceEncoder.withContext(context);
+        traceEncoder = GenMCTraceEncoder.withContext(context);
         final PropertyEncoder propertyEncoder = PropertyEncoder.withContext(context);
         final WmmEncoder baselineEncoder = WmmEncoder.withContext(context);
+
+        final GenMCWMMSolver solver = GenMCWMMSolver.withContext(memoryModel, context, analysisContext);
 
         logger.info("Starting encoding using " + ctx.getVersion());
         prover.addConstraint(baselineEncoder.encodeFullMemoryModel());
@@ -92,10 +103,10 @@ public class GenMCSolver extends ModelChecker {
         prover.push();
 
         logger.info("GenMC algorithm started.");
-        boolean result = genmc(GenMCExecutionModel.withTask(task), GenMCWMMSolver.withContext(memoryModel, analysisContext));
+        boolean result = genmc(GenMCExecutionModel.withTask(task), solver);
 
         if (logger.isInfoEnabled()) {
-            final String message = result ? "Specification violation found." : "Bounded specification proven.";
+            final String message = !result ? "Specification violation found." : "Bounded specification proven.";
             logger.info(message);
         }
 
@@ -114,12 +125,12 @@ public class GenMCSolver extends ModelChecker {
         }
     }
 
-    private boolean genmc(GenMCExecutionModel model, GenMCWMMSolver consistencyChecker) throws InvalidConfigurationException {
+    private boolean genmc(GenMCExecutionModel model, GenMCWMMSolver solver) throws InvalidConfigurationException {
         model.initialize();
         Set<Event> revisitableReads = new HashSet<>();
         Checklist backwardsRevisits = new Checklist();
         Worklist revisitsToDo = new Worklist();
-        if (!visit(model, revisitableReads, backwardsRevisits, revisitsToDo, consistencyChecker, false)) {
+        if (!visit(model, revisitableReads, backwardsRevisits, revisitsToDo, solver, false)) {
             return false;
         }
         Revisit revisit;
@@ -134,11 +145,15 @@ public class GenMCSolver extends ModelChecker {
             if (newRead.isWrite()) {
                 calcBackwardRevisits(revisitModel, revisitableReads, backwardsRevisits, revisitsToDo, newRead);
             }
-            if (!visit(revisitModel, revisitableReads, backwardsRevisits, revisitsToDo, consistencyChecker, true)) {
+            if (!visit(revisitModel, revisitableReads, backwardsRevisits, revisitsToDo, solver, true)) {
                 return false;
             }
         }
         return true;
+    }
+
+    private Domain<EventData> initialTrace(Program program) {
+        return new InitialDomain(program);
     }
 
     private boolean visit(GenMCExecutionModel model, Set<Event> revisitableReads, Checklist backwardsRevisits, Worklist revisitsToDo, GenMCWMMSolver consistencyChecker,
@@ -281,6 +296,42 @@ public class GenMCSolver extends ModelChecker {
             }
             model.initialize(eventsToKeep, read, write);
             return model;
+        }
+    }
+
+    private static class InitialDomain implements Domain<EventData> {
+
+        private List<EventData> initialEvents;
+
+        private InitialDomain(Program program) {
+            List<Init> inits = program.getThreadEvents(Init.class);
+            EventMap map = new EventMap();
+            initialEvents = new ArrayList<>(3 * inits.size());
+            for (Init init : inits) {
+                for (Event initThreadEvent : init.getThread().getEvents()) {
+                    initialEvents.add(map.getOrCreate(initThreadEvent));
+                }
+            }
+        }
+
+        public int size() {
+            return initialEvents.size();
+        }
+
+        public Collection<EventData> getElements() {
+            return initialEvents;
+        }
+
+        public int getId(Object obj) {
+            return initialEvents.indexOf(obj);
+        }
+
+        public EventData getObjectById(int id) {
+            try {
+                return initialEvents.get(id);
+            } catch (IndexOutOfBoundsException e) {
+                return null;
+            }
         }
     }
 }

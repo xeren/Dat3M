@@ -125,7 +125,9 @@ public class GenMCTraceEncoder implements Encoder {
         Event pred = startEvent;
         int currentId = trace.getId(threadStart) + 1;
         Event e = trace.getObjectById(currentId).getEvent();
-        while (startEvent.getThread().equals(e.getThread())) {
+        while (startEvent.getThread().equals(e.getThread()) && currentId < trace.size()) {
+            e = trace.getObjectById(currentId).getEvent();
+            
             // Immediate control flow
             BooleanFormula cfCond = context.controlFlow(pred);
             if (pred instanceof CondJump jump) {
@@ -142,7 +144,6 @@ public class GenMCTraceEncoder implements Encoder {
             enc.add(e.encodeExec(context));
             pred = e;
             ++currentId;
-            e = trace.getObjectById(currentId).getEvent();
         }
         return bmgr.and(enc);
     }
