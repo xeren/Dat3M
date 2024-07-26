@@ -10,8 +10,6 @@ import com.dat3m.dartagnan.program.event.core.*;
 import com.dat3m.dartagnan.program.filter.Filter;
 import com.dat3m.dartagnan.solver.caat.CAATSolver;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCWMMSolver;
-import com.dat3m.dartagnan.verification.VerificationTask;
-import com.dat3m.dartagnan.wmm.Wmm;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
@@ -35,6 +33,7 @@ public class GenMCExecutionModel {
     // ============= Model specific  =============
     private SimpleEventDomain trace;
 
+    private final EncodingContext encodingContext;
     private final GenMCTraceEncoder traceEncoder;
     private final ProverEnvironment prover;
     private final GenMCWMMSolver solver;
@@ -44,7 +43,8 @@ public class GenMCExecutionModel {
     // The following are a read-only views which get passed to the outside
     private Map<MemoryCoreEvent, Set<EventData>> mayAliasMapView;
 
-    private GenMCExecutionModel(GenMCTraceEncoder traceEncoder, ProverEnvironment prover, GenMCWMMSolver solver) {
+    private GenMCExecutionModel(EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, ProverEnvironment prover, GenMCWMMSolver solver) {
+        this.encodingContext = encodingContext;
         this.traceEncoder = traceEncoder;
         this.prover = prover;
         this.solver = solver;
@@ -54,12 +54,13 @@ public class GenMCExecutionModel {
         createViews();
     }
 
-    public static GenMCExecutionModel withSolver(GenMCTraceEncoder traceEncoder, ProverEnvironment prover, GenMCWMMSolver solver) throws InvalidConfigurationException {
-        return new GenMCExecutionModel(traceEncoder, prover, solver);
+    public static GenMCExecutionModel withContext(EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, ProverEnvironment prover) throws InvalidConfigurationException {
+        return new GenMCExecutionModel(encodingContext, traceEncoder, prover,
+                GenMCWMMSolver.withContext(encodingContext.getTask().getMemoryModel(), encodingContext, encodingContext.getAnalysisContext()));
     }
 
     public GenMCExecutionModel newInstance() throws InvalidConfigurationException {
-        return new GenMCExecutionModel(traceEncoder, prover, GenMCWMMSolver.withContext(getMemoryModel(), getContext(), getContext().getAnalysisContext()));
+        return GenMCExecutionModel.withContext(encodingContext, traceEncoder, prover);
     }
 
     private void createViews() {
@@ -69,14 +70,6 @@ public class GenMCExecutionModel {
     //======================== Public data ===========================‚
 
     // General data
-    public VerificationTask getTask() {
-        return getExecution().getTask();
-    }
-    
-    public Wmm getMemoryModel() {
-        return getExecution().getMemoryModel();
-    }
-
     public Program getProgram() {
         return getExecution().getProgram();
     }
@@ -87,12 +80,6 @@ public class GenMCExecutionModel {
     }
     public Model getModel() {
         return getExecution().getModel();
-    }
-    public EncodingContext getContext() {
-        return getExecution().getContext();
-    }
-    public AliasAnalysis getAliasAnalysis() {
-        return getContext().getAnalysisContext().requires(AliasAnalysis.class);
     }
     public Filter getEventFilter() {
         return Filter.difference(getExecution().getEventFilter(), trace.eventFilter());
@@ -105,18 +92,8 @@ public class GenMCExecutionModel {
         return getExecution().getEventList();
     }
 
-    public List<Thread> getThreads() {
-        return getExecution().getThreads();
-    }
-
     public Map<MemoryCoreEvent, Set<EventData>> getMayAliasMap() {
         return mayAliasMapView;
-    }
-
-
-
-    public boolean eventExists(Event e) {
-        return trace.getElements().stream().anyMatch(data -> data.getEvent() == e);
     }
 
     public Optional<EventData> getData(Event e) {
@@ -165,7 +142,7 @@ public class GenMCExecutionModel {
         for (Thread thread : threadList) {
             Event e = thread.getEntry();
             do {
-                if (!isTrue(getContext().execution(e))) {
+                if (!isTrue(encodingContext.execution(e))) {
                     e = e.getSuccessor();
                     continue;
                 }
@@ -173,7 +150,7 @@ public class GenMCExecutionModel {
                     return addEvent(e);
                 }
 
-                if (e instanceof CondJump jump && isTrue(getContext().jumpCondition(jump))) {
+                if (e instanceof CondJump jump && isTrue(encodingContext.jumpCondition(jump))) {
                     e = jump.getLabel();
                 } else {
                     e = e.getSuccessor();
@@ -205,7 +182,7 @@ public class GenMCExecutionModel {
             // ===== Jumps =====
             // We override the meaning of execution here. A jump is executed IFF its condition was true.
             check();
-            data.setWasExecuted(isTrue(getContext().jumpCondition((CondJump) e)));
+            data.setWasExecuted(isTrue(encodingContext.jumpCondition((CondJump) e)));
         } else {
             //TODO: Maybe add some other events (e.g. assertions)
             // But for now all non-visible events are simply registered without
@@ -216,7 +193,7 @@ public class GenMCExecutionModel {
 
     private Set<EventData> mayAliasSet(MemoryCoreEvent targetEvent) {
         Set<EventData> mayAliasSet = new HashSet<>();
-        AliasAnalysis aliasAnalysis = getAliasAnalysis();
+        AliasAnalysis aliasAnalysis = encodingContext.getAnalysisContext().requires(AliasAnalysis.class);
         for (EventData event : trace.getElements()) {
             if (event.getEvent() instanceof MemoryCoreEvent memEvent && aliasAnalysis.mayAlias(targetEvent, memEvent)) {
                 mayAliasSet.add(event);
@@ -226,7 +203,9 @@ public class GenMCExecutionModel {
     }
 
     private void check() throws InterruptedException, SolverException {
+        prover.pop();
         prover.addConstraint(traceEncoder.encodeFullTrace(trace));
+        prover.push();
         prover.isUnsat();
         Model model = prover.getModel();
         Filter eventFilter = Filter.intersection(Filter.byTag(Tag.VISIBLE), trace.eventFilter());
