@@ -11,11 +11,11 @@ public class SimpleEventDomain implements Domain<EventData> {
 
     private List<EventData> events;
 
-    SimpleEventDomain() {
+    protected SimpleEventDomain() {
         this.events = new ArrayList<>();
     }
 
-    SimpleEventDomain(Collection<EventData> events) {
+    protected SimpleEventDomain(Collection<EventData> events) {
         this.events = new ArrayList<>(events);
     }
 
@@ -23,18 +23,22 @@ public class SimpleEventDomain implements Domain<EventData> {
         events.add(event);
     }
 
+    @Override
     public int size() {
         return events.size();
     }
 
-    public Collection<EventData> getElements() {
+    @Override
+    public List<EventData> getElements() {
         return events;
     }
 
+    @Override
     public int getId(Object obj) {
         return events.indexOf(obj);
     }
 
+    @Override
     public EventData getObjectById(int id) {
         try {
             return events.get(id);

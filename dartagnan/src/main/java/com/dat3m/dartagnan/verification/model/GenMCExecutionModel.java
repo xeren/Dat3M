@@ -58,6 +58,10 @@ public class GenMCExecutionModel {
         return new GenMCExecutionModel(traceEncoder, prover, solver);
     }
 
+    public GenMCExecutionModel newInstance() throws InvalidConfigurationException {
+        return new GenMCExecutionModel(traceEncoder, prover, GenMCWMMSolver.withContext(getMemoryModel(), getContext(), getContext().getAnalysisContext()));
+    }
+
     private void createViews() {
         mayAliasMapView = Collections.unmodifiableMap(mayAliasMap);
     }
@@ -92,6 +96,9 @@ public class GenMCExecutionModel {
     }
     public Filter getEventFilter() {
         return Filter.difference(getExecution().getEventFilter(), trace.eventFilter());
+    }
+    public SimpleEventDomain getTrace() {
+        return trace;
     }
 
     public List<EventData> getEventList() {
@@ -129,37 +136,41 @@ public class GenMCExecutionModel {
         trace = new SimpleEventDomain(initialEvents);
     }
 
-    public void initialize(SimpleEventDomain startTrace) throws InterruptedException, SolverException {
-        initialize(startTrace, true);
-    }
-
-    public void initialize(SimpleEventDomain startTrace, boolean checkConsistency) throws InterruptedException, SolverException {
-        trace = startTrace;
-        if (checkConsistency) {
-            check();
-        }
-    }
-
-    public void initialize(SimpleEventDomain startTrace, EventData revisitRead, EventData write) throws InterruptedException, SolverException {
+    public void initialize(List<EventData> startTraceEvents, EventData revisitRead, EventData write) throws InterruptedException, SolverException {
+        trace = new SimpleEventDomain(startTraceEvents);
         revisitRead.setReadFrom(write);
-        initialize(startTrace);
+        check();
+    }
+
+    public List<EventData> copyTraceEvents() {
+        List<EventData> events = trace.getElements();
+        EventMap eventMap = new EventMap();
+        List<EventData> copiedEvents = new ArrayList<>(events.size());
+        for (EventData event : events) {
+            EventData copiedEvent = eventMap.getOrCreate(event.getEvent());
+            copiedEvent.setReadFrom(event.getReadFrom());
+            copiedEvent.setWasExecuted(event.wasExecuted());
+            copiedEvents.add(copiedEvent);
+        }
+        for (EventData event : copiedEvents) {
+            event.setReadFrom(eventMap.get(event.getReadFrom().getEvent()));
+        }
+        return copiedEvents;
     }
 
     public EventData nextEvent() throws InterruptedException, SolverException {
         //TODO(TH): We might also want to extract events such as inline assertions
         // and whether they were violated or not.
-        int id = 0;
         List<Thread> threadList = new ArrayList<>(getProgram().getThreads());
         for (Thread thread : threadList) {
             Event e = thread.getEntry();
-            int localId = 0;
             do {
                 if (!isTrue(getContext().execution(e))) {
                     e = e.getSuccessor();
                     continue;
                 }
                 if (getEventFilter().apply(e)) {
-                    return addEvent(e, id++, localId++);
+                    return addEvent(e);
                 }
 
                 if (e instanceof CondJump jump && isTrue(getContext().jumpCondition(jump))) {
@@ -175,16 +186,14 @@ public class GenMCExecutionModel {
 
     //========================== Internal methods  =========================
 
-    private EventData addEvent(Event e, int globalId, int localId) throws InterruptedException, SolverException {
+    private EventData addEvent(Event e) throws InterruptedException, SolverException {
         EventData data = new EventData(e);
-        data.setId(globalId);
-        data.setLocalId(localId);
         trace.addEvent(data);
 
         data.setWasExecuted(true);
         if (data.isMemoryEvent()) {
             // ===== Memory Events =====
-            if (data.isRead() && data.getEvent() instanceof MemoryCoreEvent memEvent) {
+            if (data.getEvent() instanceof MemoryCoreEvent memEvent) {
                 Set<EventData> mayAliasSet = mayAliasMap.computeIfAbsent(memEvent, this::mayAliasSet);
                 data.setReadFrom(mayAliasSet.iterator().next());
             } else if (!data.isRead() && !data.isWrite()) {
