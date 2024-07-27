@@ -175,15 +175,14 @@ public class GenMCExecutionModel {
         if (data.isMemoryEvent()) {
             // ===== Memory Events =====
             Set<EventData> mayAliasSet = mayAliasMap.computeIfAbsent(data, this::mayAliasSet);
-            try {
-                if (data.isRead()) {
+            if (data.isRead()) {
+                try {
                     data.setReadFrom(mayAliasSet.iterator().next());
+                } catch (NoSuchElementException ex) {
+                    logger.error("Read has nowhere to read from");
+                    throw ex;
                 }
-            } catch (NoSuchElementException ex) {
-                logger.error("Read has nowhere to read from");
-                throw ex;
-            }
-            if (!data.isRead() && !data.isWrite()) {
+            } else if (!data.isWrite()) {
                 //FIXME: Handle other kinds of memory events such as SRCU_SYNC.
                 throw new UnsupportedOperationException("Unexpected memory event " + data.getEvent());
             }

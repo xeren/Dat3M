@@ -120,7 +120,7 @@ public class GenMCSolver extends ModelChecker {
 
     private boolean genmc(GenMCExecutionModel model) throws InvalidConfigurationException, SolverException, InterruptedException {
         model.initialize();
-        Set<Event> revisitableReads = new HashSet<>();
+        Set<EventData> revisitableReads = new HashSet<>();
         Checklist backwardsRevisits = new Checklist();
         Worklist revisitsToDo = new Worklist();
         if (!visit(model, revisitableReads, backwardsRevisits, revisitsToDo)) {
@@ -134,10 +134,9 @@ public class GenMCSolver extends ModelChecker {
 
             Domain<EventData> trace = model.getTrace();
             int revisitedReadId = trace.getId(model.getData(revisitedRead).get());
-            Set<Event> nonRevisitableEvents = trace.getElements()
+            Set<EventData> nonRevisitableEvents = trace.getElements()
                     .stream()
                     .filter(evt -> trace.getId(evt) > revisitedReadId)
-                    .map(EventData::getEvent)
                     .collect(Collectors.toSet());
             revisitableReads.removeAll(nonRevisitableEvents);
             backwardsRevisits.remove(nonRevisitableEvents);
@@ -151,12 +150,12 @@ public class GenMCSolver extends ModelChecker {
         return true;
     }
 
-    private boolean visit(GenMCExecutionModel model, Set<Event> revisitableReads, Checklist backwardsRevisits, Worklist revisitsToDo) throws InterruptedException, SolverException {
+    private boolean visit(GenMCExecutionModel model, Set<EventData> revisitableReads, Checklist backwardsRevisits, Worklist revisitsToDo) throws InterruptedException, SolverException {
         EventData event;
         while ((event = model.nextEvent()) != null) {
             if (event.isRead()) {
                 Set<EventData> writesData = model.getMayAliasMap().get(event);
-                revisitableReads.add(event.getEvent());
+                revisitableReads.add(event);
                 for (EventData writeData : writesData) {
                     if (writeData != event.getReadFrom()) {
                         revisitsToDo.add(new ForwardRevisit(event, writeData));
@@ -170,18 +169,27 @@ public class GenMCSolver extends ModelChecker {
         return true;
     }
 
-    private void calcBackwardRevisits(GenMCExecutionModel model, Set<Event> revisitableReads, Checklist backwardsRevisits, Worklist revisitsToDo, 
+    private void calcBackwardRevisits(GenMCExecutionModel model, Set<EventData> revisitableReads, Checklist backwardsRevisits, Worklist revisitsToDo, 
             EventData write) {
         Set<EventData> writePrefix = model.getPorfPrefix(write);
         Set<EventData> readsForAddress = model.getMayAliasMap().get(write);
-        Set<EventData> relevantReads = new HashSet<>(readsForAddress);
-        relevantReads.removeAll(writePrefix);
+        Set<EventData> relevantReads = getRelevantReads(revisitableReads, readsForAddress, writePrefix);
         for (EventData readData : relevantReads) {
             BackwardRevisit newRevisit = new BackwardRevisit(model, readData, writePrefix);
             if (backwardsRevisits.add(readData, newRevisit)) {
                 revisitsToDo.add(newRevisit);
             }
         }
+    }
+
+    private static <T> Set<T> getRelevantReads(Set<T> firstSet, Set<T> secondSet, Set<T> differenceSet) {
+        Set<T> resultSet = new HashSet<>();
+        for (T t : firstSet) {
+            if (secondSet.contains(t) && !differenceSet.contains(t)) {
+                resultSet.add(t);
+            }
+        }
+        return resultSet;
     }
 
     private static class Worklist {
@@ -228,9 +236,9 @@ public class GenMCSolver extends ModelChecker {
             return true;
         }
 
-        private void remove(Set<Event> events) {
-            for (Event event : events) {
-                backwardsRevisits.remove(event);
+        private void remove(Set<EventData> events) {
+            for (EventData event : events) {
+                backwardsRevisits.remove(event.getEvent());
             }
         }
     }
