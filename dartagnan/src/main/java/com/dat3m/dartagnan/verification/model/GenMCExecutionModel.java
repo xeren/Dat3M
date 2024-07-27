@@ -38,10 +38,10 @@ public class GenMCExecutionModel {
     private final ProverEnvironment prover;
     private final GenMCWMMSolver solver;
 
-    private final Map<MemoryCoreEvent, Set<EventData>> mayAliasMap;
+    private final Map<EventData, Set<EventData>> mayAliasMap;
 
     // The following are a read-only views which get passed to the outside
-    private Map<MemoryCoreEvent, Set<EventData>> mayAliasMapView;
+    private Map<EventData, Set<EventData>> mayAliasMapView;
 
     private GenMCExecutionModel(EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, ProverEnvironment prover, GenMCWMMSolver solver) {
         this.encodingContext = encodingContext;
@@ -88,14 +88,11 @@ public class GenMCExecutionModel {
         return trace;
     }
 
-    public List<EventData> getEventList() {
-        return getExecution().getEventList();
-    }
-
-    public Map<MemoryCoreEvent, Set<EventData>> getMayAliasMap() {
+    public Map<EventData, Set<EventData>> getMayAliasMap() {
         return mayAliasMapView;
     }
 
+    // Only use for checked models
     public Optional<EventData> getData(Event e) {
         return getExecution().getData(e);
     }
@@ -135,6 +132,13 @@ public class GenMCExecutionModel {
         return copiedEvents;
     }
 
+    public Set<EventData> getPorfPrefix(EventData event) {
+        Set<EventData> porfPrefix = getPorfPrefixPreviousPo(event);
+        porfPrefix.addAll(getPorfPrefixPreviousRf(event));
+        porfPrefix.add(event);
+        return porfPrefix;
+    }
+
     public EventData nextEvent() throws InterruptedException, SolverException {
         //TODO(TH): We might also want to extract events such as inline assertions
         // and whether they were violated or not.
@@ -170,10 +174,16 @@ public class GenMCExecutionModel {
         data.setWasExecuted(true);
         if (data.isMemoryEvent()) {
             // ===== Memory Events =====
-            if (data.getEvent() instanceof MemoryCoreEvent memEvent) {
-                Set<EventData> mayAliasSet = mayAliasMap.computeIfAbsent(memEvent, this::mayAliasSet);
-                data.setReadFrom(mayAliasSet.iterator().next());
-            } else if (!data.isRead() && !data.isWrite()) {
+            Set<EventData> mayAliasSet = mayAliasMap.computeIfAbsent(data, this::mayAliasSet);
+            try {
+                if (data.isRead()) {
+                    data.setReadFrom(mayAliasSet.iterator().next());
+                }
+            } catch (NoSuchElementException ex) {
+                logger.error("Read has nowhere to read from");
+                throw ex;
+            }
+            if (!data.isRead() && !data.isWrite()) {
                 //FIXME: Handle other kinds of memory events such as SRCU_SYNC.
                 throw new UnsupportedOperationException("Unexpected memory event " + data.getEvent());
             }
@@ -191,16 +201,49 @@ public class GenMCExecutionModel {
         return data;
     }
 
-    private Set<EventData> mayAliasSet(MemoryCoreEvent targetEvent) {
+    private Set<EventData> mayAliasSet(EventData targetEvent) {
+        if (!(targetEvent.getEvent() instanceof MemoryCoreEvent targetMemEvent)) {
+            return Collections.emptySet();
+        }
         Set<EventData> mayAliasSet = new HashSet<>();
         AliasAnalysis aliasAnalysis = encodingContext.getAnalysisContext().requires(AliasAnalysis.class);
         for (EventData event : trace.getElements()) {
-            if (event.getEvent() instanceof MemoryCoreEvent memEvent && aliasAnalysis.mayAlias(targetEvent, memEvent)) {
+            if (event.getEvent() instanceof MemoryCoreEvent memEvent && aliasAnalysis.mayAlias(targetMemEvent, memEvent)) {
                 mayAliasSet.add(event);
             }
         }
         return mayAliasSet;
     }
+
+    private Set<EventData> getPorfPrefixPreviousPo(EventData event) {
+        Optional<EventData> previousEvent = findPoPredecessor(event);
+        if (previousEvent.isPresent()) {
+            return getPorfPrefix(previousEvent.get());
+        }
+        return Collections.emptySet();
+    }
+
+    private Optional<EventData> findPoPredecessor(EventData event) {
+        EventData predecessor = null;
+        Event currentPredecessor = event.getEvent();
+        while (predecessor == null && (currentPredecessor = currentPredecessor.getPredecessor()) != null) {
+            Event lambdaPredecessor = currentPredecessor;
+            predecessor = trace.getElements()
+                    .stream()
+                    .filter(evt -> evt.getEvent() == lambdaPredecessor)
+                    .findAny()
+                    .orElse(null);
+        }
+        return Optional.ofNullable(predecessor);
+    }
+
+    private Set<EventData> getPorfPrefixPreviousRf(EventData event) {
+        if (event.isRead()) {
+            return getPorfPrefix(event.getReadFrom());
+        }
+        return Collections.emptySet();
+    }
+
 
     private void check() throws InterruptedException, SolverException {
         prover.pop();

@@ -5,20 +5,14 @@ import com.dat3m.dartagnan.encoding.EncodingContext;
 import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
 import com.dat3m.dartagnan.encoding.PropertyEncoder;
 import com.dat3m.dartagnan.encoding.WmmEncoder;
-import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.Tag;
-import com.dat3m.dartagnan.program.event.core.Init;
-import com.dat3m.dartagnan.program.filter.Filter;
 import com.dat3m.dartagnan.solver.caat.domain.Domain;
-import com.dat3m.dartagnan.solver.caat4wmm.GenMCWMMSolver;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.verification.model.EventData;
-import com.dat3m.dartagnan.verification.model.EventMap;
-import com.dat3m.dartagnan.verification.model.ExecutionModel;
 import com.dat3m.dartagnan.verification.model.GenMCExecutionModel;
+import com.dat3m.dartagnan.verification.model.SimpleEventDomain;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
 import org.apache.logging.log4j.LogManager;
@@ -29,6 +23,7 @@ import org.sosy_lab.common.configuration.Options;
 import org.sosy_lab.java_smt.api.*;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 /*
@@ -48,8 +43,6 @@ public class GenMCSolver extends ModelChecker {
 
     // ================================================================================================================
     // GenMC solver
-
-    private GenMCTraceEncoder traceEncoder;
 
     private GenMCSolver() {
     }
@@ -89,11 +82,11 @@ public class GenMCSolver extends ModelChecker {
         // ------------------------ Encoding ------------------------
 
         context = EncodingContext.of(task, analysisContext, ctx.getFormulaManager());
-        traceEncoder = GenMCTraceEncoder.withContext(context);
+        final GenMCTraceEncoder traceEncoder = GenMCTraceEncoder.withContext(context);
         final PropertyEncoder propertyEncoder = PropertyEncoder.withContext(context);
         final WmmEncoder baselineEncoder = WmmEncoder.withContext(context);
 
-        final GenMCWMMSolver solver = GenMCWMMSolver.withContext(memoryModel, context, analysisContext);
+        final GenMCExecutionModel model = GenMCExecutionModel.withContext(context, traceEncoder, prover);
 
         logger.info("Starting encoding using " + ctx.getVersion());
         prover.addConstraint(baselineEncoder.encodeFullMemoryModel());
@@ -103,7 +96,7 @@ public class GenMCSolver extends ModelChecker {
         prover.push();
 
         logger.info("GenMC algorithm started.");
-        boolean result = genmc(GenMCExecutionModel.withTask(task), solver);
+        boolean result = genmc(model);
 
         if (logger.isInfoEnabled()) {
             final String message = !result ? "Specification violation found." : "Bounded specification proven.";
@@ -112,7 +105,7 @@ public class GenMCSolver extends ModelChecker {
 
         // For Safety specs, we have SAT=FAIL, but for reachability specs, we have
         // SAT=PASS
-        res = result ? Result.UNKNOWN : Result.FAIL;
+        res = result ? Result.PASS : Result.FAIL;
         logger.info("Verification finished with result " + res);
     }
 
@@ -125,12 +118,12 @@ public class GenMCSolver extends ModelChecker {
         }
     }
 
-    private boolean genmc(GenMCExecutionModel model, GenMCWMMSolver solver) throws InvalidConfigurationException {
+    private boolean genmc(GenMCExecutionModel model) throws InvalidConfigurationException, SolverException, InterruptedException {
         model.initialize();
         Set<Event> revisitableReads = new HashSet<>();
         Checklist backwardsRevisits = new Checklist();
         Worklist revisitsToDo = new Worklist();
-        if (!visit(model, revisitableReads, backwardsRevisits, revisitsToDo, solver, false)) {
+        if (!visit(model, revisitableReads, backwardsRevisits, revisitsToDo)) {
             return false;
         }
         Revisit revisit;
@@ -139,56 +132,52 @@ public class GenMCSolver extends ModelChecker {
             GenMCExecutionModel revisitModel = revisit.getModel(model);
             EventData newRead = revisitModel.getData(revisitedRead).get();
 
-            Set<Event> nonRevisitableEvents = model.getEventsAfter(revisitedRead);
+            Domain<EventData> trace = model.getTrace();
+            int revisitedReadId = trace.getId(model.getData(revisitedRead).get());
+            Set<Event> nonRevisitableEvents = trace.getElements()
+                    .stream()
+                    .filter(evt -> trace.getId(evt) > revisitedReadId)
+                    .map(EventData::getEvent)
+                    .collect(Collectors.toSet());
             revisitableReads.removeAll(nonRevisitableEvents);
             backwardsRevisits.remove(nonRevisitableEvents);
             if (newRead.isWrite()) {
                 calcBackwardRevisits(revisitModel, revisitableReads, backwardsRevisits, revisitsToDo, newRead);
             }
-            if (!visit(revisitModel, revisitableReads, backwardsRevisits, revisitsToDo, solver, true)) {
+            if (!visit(revisitModel, revisitableReads, backwardsRevisits, revisitsToDo)) {
                 return false;
             }
         }
         return true;
     }
 
-    private Domain<EventData> initialTrace(Program program) {
-        return new InitialDomain(program);
-    }
-
-    private boolean visit(GenMCExecutionModel model, Set<Event> revisitableReads, Checklist backwardsRevisits, Worklist revisitsToDo, GenMCWMMSolver consistencyChecker,
-            boolean consistencyCheck) {
-        Event newEvent;
-        while ((!consistencyCheck || model.isConsistent(consistencyChecker)) && (newEvent = model.nextEvent()) != null) {
-            consistencyCheck = true;
-            EventData data = model.addEvent(newEvent);
-            if (data == null) {
-                return false;
-            }
-            if (data.isRead()) {
-                Set<EventData> writesData = model.getAddressWritesMap().get(data.getAccessedAddress());
-                revisitableReads.add(newEvent);
+    private boolean visit(GenMCExecutionModel model, Set<Event> revisitableReads, Checklist backwardsRevisits, Worklist revisitsToDo) throws InterruptedException, SolverException {
+        EventData event;
+        while ((event = model.nextEvent()) != null) {
+            if (event.isRead()) {
+                Set<EventData> writesData = model.getMayAliasMap().get(event);
+                revisitableReads.add(event.getEvent());
                 for (EventData writeData : writesData) {
-                    if (writeData != data.getReadFrom()) {
-                        revisitsToDo.add(new Revisit(model, data, writeData, Collections.emptySet()));
+                    if (writeData != event.getReadFrom()) {
+                        revisitsToDo.add(new ForwardRevisit(event, writeData));
                     }
                 }
             }
-            if (data.isWrite()) {
-                calcBackwardRevisits(model, revisitableReads, backwardsRevisits, revisitsToDo, data);
+            if (event.isWrite()) {
+                calcBackwardRevisits(model, revisitableReads, backwardsRevisits, revisitsToDo, event);
             }
         }
         return true;
     }
 
     private void calcBackwardRevisits(GenMCExecutionModel model, Set<Event> revisitableReads, Checklist backwardsRevisits, Worklist revisitsToDo, 
-            EventData writeData) {
-        Set<EventData> writePrefix = model.getPorfPrefix(writeData);
-        Set<EventData> readsForAddress = model.getAddressReadsMap().get(writeData.getAccessedAddress());
+            EventData write) {
+        Set<EventData> writePrefix = model.getPorfPrefix(write);
+        Set<EventData> readsForAddress = model.getMayAliasMap().get(write);
         Set<EventData> relevantReads = new HashSet<>(readsForAddress);
         relevantReads.removeAll(writePrefix);
         for (EventData readData : relevantReads) {
-            Revisit newRevisit = new Revisit(model, readData, writeData, writePrefix);
+            BackwardRevisit newRevisit = new BackwardRevisit(model, readData, writePrefix);
             if (backwardsRevisits.add(readData, newRevisit)) {
                 revisitsToDo.add(newRevisit);
             }
@@ -227,7 +216,7 @@ public class GenMCSolver extends ModelChecker {
     private static class Checklist {
         private Map<Event, Set<Map<Event, Event>>> backwardsRevisits = new HashMap<>();
 
-        private boolean add(EventData read, Revisit revisit) {
+        private boolean add(EventData read, BackwardRevisit revisit) {
             Set<Map<Event, Event>> savedRevisits = backwardsRevisits.computeIfAbsent(read.getEvent(), event -> new HashSet<>());
             Map<Event, Event> parsedRevisit = revisit.getRelevantReadsFromRelation();
             for (var savedRevisit : savedRevisits) {
@@ -246,29 +235,73 @@ public class GenMCSolver extends ModelChecker {
         }
     }
 
-    private static class Revisit {
+    private static abstract class Revisit {
         private final Event read;
-        private final Event write;
-        private final List<EventData> eventsToKeep;
         private GenMCExecutionModel model = null;
 
-        private Revisit(GenMCExecutionModel oldModel, EventData read, EventData write, Set<EventData> writePrefix) {
-            this.read = read.getEvent();
+        protected Revisit(Event read) {
+            this.read = read;
+        }
+
+        protected Event getRead() {
+            return read;
+        }
+
+        protected GenMCExecutionModel getModel(GenMCExecutionModel oldModel) throws InvalidConfigurationException, InterruptedException, SolverException {
+            return model == null ? calculateModel(oldModel) : model;
+        }
+
+        protected abstract GenMCExecutionModel calculateModel(GenMCExecutionModel oldModel) throws InvalidConfigurationException, InterruptedException, SolverException;
+
+        protected static GenMCExecutionModel newModel(GenMCExecutionModel oldModel, List<EventData> traceEvents, EventData read, EventData write)
+                throws InvalidConfigurationException, InterruptedException, SolverException {
+            GenMCExecutionModel newModel = oldModel.newInstance();
+            newModel.initialize(traceEvents, read, write);
+            return newModel;
+        }
+    }
+
+    private static class ForwardRevisit extends Revisit {
+        private final Event write;
+
+        private ForwardRevisit(EventData read, EventData write) {
+            super(read.getEvent());
             this.write = write.getEvent();
-            List<EventData> events = oldModel.getEventList();
-            int readIndex = events.indexOf(read);
+        }
+
+        @Override
+        protected GenMCExecutionModel calculateModel(GenMCExecutionModel oldModel) throws InvalidConfigurationException, InterruptedException, SolverException {
+            List<EventData> traceEvents = oldModel.copyTraceEvents();
+            EventData readData = null;
+            EventData writeData = null;
+            for (EventData event : traceEvents) {
+                if (event.getEvent() == getRead()) {
+                    readData = event;
+                }
+                if (event.getEvent() == write) {
+                    writeData = event;
+                }
+            }
+            return newModel(oldModel, traceEvents, readData, writeData);
+        }
+    }
+
+    private static class BackwardRevisit extends Revisit {
+        private final List<EventData> eventsToKeep;
+
+        private BackwardRevisit(GenMCExecutionModel oldModel, EventData read, Set<EventData> writePrefix) {
+            super(read.getEvent());
+            SimpleEventDomain oldTrace = oldModel.getTrace();
+            int readIndex = oldTrace.getId(read);
+            List<EventData> copiedEvents = oldModel.copyTraceEvents();
             eventsToKeep = new ArrayList<>();
-            eventsToKeep.add(read);
-            for (int i = readIndex + 1; i < events.size(); ++i) {
-                EventData event = events.get(i);
+            eventsToKeep.add(copiedEvents.get(readIndex));
+            for (int i = readIndex + 1; i < copiedEvents.size(); ++i) {
+                EventData event = copiedEvents.get(i);
                 if (writePrefix.contains(event)) {
                     eventsToKeep.add(event);
                 }
             }
-        }
-
-        private Event getRead() {
-            return read;
         }
 
         private Map<Event, Event> getRelevantReadsFromRelation() {
@@ -282,56 +315,16 @@ public class GenMCSolver extends ModelChecker {
             return readsFromRelation;
         }
 
-        private GenMCExecutionModel getModel(GenMCExecutionModel oldModel) throws InvalidConfigurationException {
-            return model == null ? calculateModel(oldModel) : model;
-        }
-
-        private GenMCExecutionModel calculateModel(GenMCExecutionModel oldModel) throws InvalidConfigurationException {
-            model = GenMCExecutionModel.withTask(oldModel.getTask());
-            List<EventData> oldEvents = oldModel.getEventList();
-            int readIndex = oldEvents.indexOf(oldModel.getData(read).get());
+        @Override
+        protected GenMCExecutionModel calculateModel(GenMCExecutionModel oldModel) throws InvalidConfigurationException, InterruptedException, SolverException {
+            EventData readData = eventsToKeep.getFirst();
+            int readIndex = oldModel.getTrace().getId(oldModel.getData(getRead()));
+            List<EventData> copiedEvents = oldModel.copyTraceEvents();
             for (int i = readIndex - 1; i >= 0; --i) {
-                EventData event = oldEvents.get(i);
+                EventData event = copiedEvents.get(i);
                 eventsToKeep.addFirst(event);
             }
-            model.initialize(eventsToKeep, read, write);
-            return model;
-        }
-    }
-
-    private static class InitialDomain implements Domain<EventData> {
-
-        private List<EventData> initialEvents;
-
-        private InitialDomain(Program program) {
-            List<Init> inits = program.getThreadEvents(Init.class);
-            EventMap map = new EventMap();
-            initialEvents = new ArrayList<>(3 * inits.size());
-            for (Init init : inits) {
-                for (Event initThreadEvent : init.getThread().getEvents()) {
-                    initialEvents.add(map.getOrCreate(initThreadEvent));
-                }
-            }
-        }
-
-        public int size() {
-            return initialEvents.size();
-        }
-
-        public Collection<EventData> getElements() {
-            return initialEvents;
-        }
-
-        public int getId(Object obj) {
-            return initialEvents.indexOf(obj);
-        }
-
-        public EventData getObjectById(int id) {
-            try {
-                return initialEvents.get(id);
-            } catch (IndexOutOfBoundsException e) {
-                return null;
-            }
+            return newModel(oldModel, eventsToKeep, readData, eventsToKeep.getLast());
         }
     }
 }
