@@ -86,11 +86,11 @@ public class GenMCSolver extends ModelChecker {
         final PropertyEncoder propertyEncoder = PropertyEncoder.withContext(context);
         final WmmEncoder baselineEncoder = WmmEncoder.withContext(context);
 
-        final GenMCExecutionModel model = GenMCExecutionModel.withContext(context, traceEncoder, prover);
+        final BooleanFormula properties = propertyEncoder.encodeProperties(task.getProperty());
+        final GenMCExecutionModel model = GenMCExecutionModel.withContext(context, traceEncoder, prover, properties);
 
         logger.info("Starting encoding using " + ctx.getVersion());
         prover.addConstraint(baselineEncoder.encodeFullMemoryModel());
-        prover.addConstraint(propertyEncoder.encodeProperties(task.getProperty()));
 
         // ------------------------ Solving ------------------------
         prover.push();
@@ -167,7 +167,7 @@ public class GenMCSolver extends ModelChecker {
                 calcBackwardRevisits(model, revisitableReads, backwardsRevisits, revisitsToDo, event);
             }
         }
-        return model.check(false);
+        return model.checkProperties();
     }
 
     private void calcBackwardRevisits(GenMCExecutionModel model, Set<EventData> revisitableReads, Checklist backwardsRevisits, Worklist revisitsToDo, 

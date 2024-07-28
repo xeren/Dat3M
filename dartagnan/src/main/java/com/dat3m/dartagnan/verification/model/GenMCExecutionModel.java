@@ -8,6 +8,7 @@ import com.dat3m.dartagnan.program.analysis.alias.AliasAnalysis;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.event.core.*;
 import com.dat3m.dartagnan.program.filter.Filter;
+import com.dat3m.dartagnan.program.specification.AssertInline;
 import com.dat3m.dartagnan.solver.caat.CAATSolver;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCWMMSolver;
 import org.apache.logging.log4j.LogManager;
@@ -40,30 +41,33 @@ public class GenMCExecutionModel {
     private final GenMCTraceEncoder traceEncoder;
     private final ProverEnvironment prover;
     private final GenMCWMMSolver solver;
+    private final BooleanFormula properties;
 
     private final Map<EventData, Set<EventData>> mayAliasMap;
 
     // The following are a read-only views which get passed to the outside
     private Map<EventData, Set<EventData>> mayAliasMapView;
 
-    private GenMCExecutionModel(EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, ProverEnvironment prover, GenMCWMMSolver solver) {
+    private GenMCExecutionModel(EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, ProverEnvironment prover, GenMCWMMSolver solver, BooleanFormula properties) {
         this.encodingContext = encodingContext;
         this.traceEncoder = traceEncoder;
         this.prover = prover;
         this.solver = solver;
+        this.properties = properties;
 
         mayAliasMap = new HashMap<>();
 
         createViews();
     }
 
-    public static GenMCExecutionModel withContext(EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, ProverEnvironment prover) throws InvalidConfigurationException {
+    public static GenMCExecutionModel withContext(EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, ProverEnvironment prover, BooleanFormula properties)
+            throws InvalidConfigurationException {
         return new GenMCExecutionModel(encodingContext, traceEncoder, prover,
-                GenMCWMMSolver.withContext(encodingContext.getTask().getMemoryModel(), encodingContext, encodingContext.getAnalysisContext()));
+                GenMCWMMSolver.withContext(encodingContext.getTask().getMemoryModel(), encodingContext, encodingContext.getAnalysisContext()), properties);
     }
 
     public GenMCExecutionModel newInstance() throws InvalidConfigurationException {
-        return GenMCExecutionModel.withContext(encodingContext, traceEncoder, prover);
+        return GenMCExecutionModel.withContext(encodingContext, traceEncoder, prover, properties);
     }
 
     private void createViews() {
@@ -120,20 +124,20 @@ public class GenMCExecutionModel {
         check();
     }
 
-    public void check() throws InterruptedException, SolverException {
-        check(true);
+    public boolean checkProperties() throws InterruptedException, SolverException {
+        return checkProperties(properties);
     }
 
-    public boolean check(boolean backtrack) throws InterruptedException, SolverException {
+    private boolean checkProperties(BooleanFormula properties) throws InterruptedException, SolverException {
         Model model = calculateModel();
+        if (model == null) {
+            return true;
+        }
         Filter eventFilter = Filter.intersection(baseFilter, trace.eventFilter());
         GenMCWMMSolver.Result result = solver.check(model, eventFilter);
         if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
             trace = new SimpleEventDomain(getExecution().getEventList());
-            return backtrack;
-        } else if (backtrack) {
-            // TODO: Backtrack to consistent execution
-            throw new UnsupportedOperationException("Backtracking of inconsistent executions not yet implemented");
+            return false;
         } else {
             return true;
         }
@@ -218,11 +222,12 @@ public class GenMCExecutionModel {
             check();
             data.setWasExecuted(isTrue(encodingContext.jumpCondition((CondJump) e)));
             trace.addEvent(data);
-        } else if (data.getEvent().getClass() == Assert.class) {
+        } else if (data.getEvent() instanceof Assert assertionEvent) {
             // ===== Assertions =====
             check();
             trace.addEvent(data);
-            hasError = check(false);
+            AssertInline assertion = new AssertInline(assertionEvent);
+            hasError = checkProperties(assertion.encode(encodingContext));
         }
         return data;
     }
@@ -270,12 +275,32 @@ public class GenMCExecutionModel {
         return Collections.emptySet();
     }
 
+    private void check() throws InterruptedException, SolverException {
+        Model model = calculateModel();
+        if (model == null) {
+            backtrack();
+        }
+        Filter eventFilter = Filter.intersection(baseFilter, trace.eventFilter());
+        GenMCWMMSolver.Result result = solver.check(model, eventFilter);
+        if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
+            trace = new SimpleEventDomain(getExecution().getEventList());
+        } else {
+            backtrack();
+        }
+    }
+
     private Model calculateModel() throws InterruptedException, SolverException {
-        prover.pop();
         prover.addConstraint(traceEncoder.encodeFullTrace(trace));
         prover.push();
         prover.isUnsat();
-        return prover.getModel();
+        Model model = prover.getModel();
+        prover.pop();
+        return model;
+    }
+
+    private void backtrack() {
+        // TODO: Backtrack to consistent execution
+        throw new UnsupportedOperationException("Backtracking of inconsistent executions not yet implemented");
     }
 
     // ===================================================
