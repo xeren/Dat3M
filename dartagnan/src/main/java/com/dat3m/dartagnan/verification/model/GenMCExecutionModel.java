@@ -35,6 +35,8 @@ public class GenMCExecutionModel {
 
     // ============= Model specific  =============
     private SimpleEventDomain trace;
+    private Event lastAdded = null;
+    private int lastCheckedTraceSize = 0;
     private boolean hasError = false;
 
     private final EncodingContext encodingContext;
@@ -42,6 +44,8 @@ public class GenMCExecutionModel {
     private final ProverEnvironment prover;
     private final GenMCWMMSolver solver;
     private final BooleanFormula properties;
+    
+    private final List<Thread> relevantThreads;
 
     private final Map<EventData, Set<EventData>> mayAliasMap;
 
@@ -54,6 +58,8 @@ public class GenMCExecutionModel {
         this.prover = prover;
         this.solver = solver;
         this.properties = properties;
+
+        relevantThreads = new ArrayList<>(getProgram().getThreads());
 
         mayAliasMap = new HashMap<>();
 
@@ -78,15 +84,12 @@ public class GenMCExecutionModel {
 
     // General data
     public Program getProgram() {
-        return getExecution().getProgram();
+        return encodingContext.getTask().getProgram();
     }
 
     // Model specific data
     public ExecutionModel getExecution() {
         return solver.getExecution();
-    }
-    public Model getModel() {
-        return getExecution().getModel();
     }
     public SimpleEventDomain getTrace() {
         return trace;
@@ -99,9 +102,8 @@ public class GenMCExecutionModel {
         return mayAliasMapView;
     }
 
-    // Only use for checked models
     public Optional<EventData> getData(Event e) {
-        return getExecution().getData(e);
+        return trace.size() == lastCheckedTraceSize ? getDataFast(e) : getDataSlowly(e);
     }
 
     //========================== Initialization =========================
@@ -110,38 +112,48 @@ public class GenMCExecutionModel {
         List<Init> inits = getProgram().getThreadEvents(Init.class);
         List<EventData> initialEvents = new ArrayList<>(inits.size() * 3);
         for (Init init : inits) {
-            for (Event initThreadEvent : init.getThread().getEvents()) {
+            Thread initThread = init.getThread();
+            relevantThreads.remove(initThread);
+            for (Event initThreadEvent : initThread.getEvents()) {
                 initialEvents.add(new EventData(initThreadEvent));
             }
         }
         trace = new SimpleEventDomain(initialEvents);
-        check();
+        lastAdded = null;
+        lastCheckedTraceSize = trace.size();
     }
 
     public void initialize(List<EventData> startTraceEvents, EventData revisitRead, EventData write) throws InterruptedException, SolverException {
         trace = new SimpleEventDomain(startTraceEvents);
         revisitRead.setReadFrom(write);
-        check();
+        Thread firstThread = trace.getElements()
+                .stream()
+                .map(EventData::getThread)
+                .min(Comparator.comparingInt(relevantThreads::indexOf))
+                .get();
+        lastAdded = getLastAddedThreadEvent(firstThread);
+        lastCheckedTraceSize = 0;
     }
 
-    public boolean checkProperties() throws InterruptedException, SolverException {
-        return checkProperties(properties);
-    }
-
-    private boolean checkProperties(BooleanFormula properties) throws InterruptedException, SolverException {
-        prover.addConstraint(properties);
+    public boolean check() throws InterruptedException, SolverException {
         Model model = calculateModel();
         if (model == null) {
-            return true;
+            backtrack();
+            return false;
         }
         Filter eventFilter = Filter.intersection(baseFilter, trace.eventFilter());
         GenMCWMMSolver.Result result = solver.check(model, eventFilter);
         if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
-            trace = new SimpleEventDomain(getExecution().getEventList());
-            return false;
-        } else {
+            lastCheckedTraceSize = trace.size();
             return true;
+        } else {
+            backtrack();
+            return false;
         }
+    }
+
+    public boolean checkProperties() throws InterruptedException, SolverException {
+        return checkProperties(properties);
     }
 
     public List<EventData> copyTraceEvents() {
@@ -170,18 +182,22 @@ public class GenMCExecutionModel {
     }
 
     public EventData nextEvent() throws InterruptedException, SolverException {
-        //TODO(TH): We might also want to extract events such as inline assertions
-        // and whether they were violated or not.
-        List<Thread> threadList = new ArrayList<>(getProgram().getThreads());
-        Filter eventFilter = Filter.union(Filter.difference(baseFilter, trace.eventFilter()), Filter.byEvents(getProgram().getThreadEvents(Assert.class)));
-        for (Thread thread : threadList) {
-            Event e = thread.getEntry();
-            do {
-                if (!isTrue(encodingContext.execution(e))) {
-                    e = e.getSuccessor();
-                    continue;
-                }
+        Filter eventFilter = Filter.difference(Filter.union(baseFilter, Filter.byEvents(getProgram().getThreadEvents(Assert.class))), trace.eventFilter());
+        Event startEvent = trace.getObjectById(0).getEvent();
+        int threadIndex = 0;
+        boolean initialize = true;
+        if (lastAdded != null) {
+            startEvent = lastAdded;
+            threadIndex = relevantThreads.indexOf(startEvent.getThread());
+            initialize = false;
+        }
+        while (threadIndex < relevantThreads.size()) {
+            Thread thread = relevantThreads.get(threadIndex);
+            Event e = (initialize ? getLastAddedThreadEvent(thread) : startEvent).getSuccessor();
+            initialize = true;
+            while (e != null) {
                 if (eventFilter.apply(e)) {
+                    lastAdded = e;
                     return addEvent(e);
                 }
 
@@ -191,7 +207,8 @@ public class GenMCExecutionModel {
                     e = e.getSuccessor();
                 }
 
-            } while (e != null);
+            }
+            ++threadIndex;
         }
         return null;
     }
@@ -247,6 +264,15 @@ public class GenMCExecutionModel {
         return mayAliasSet;
     }
 
+    // Only use for checked models
+    private Optional<EventData> getDataFast(Event e) {
+        return getExecution().getData(e);
+    }
+    // Can be used for unchecked models
+    private Optional<EventData> getDataSlowly(Event e) {
+        return trace.getElements().stream().filter(event -> event.getEvent() == e).findAny();
+    }
+
     private Set<EventData> getPorfPrefixPreviousPo(EventData event) {
         Optional<EventData> previousEvent = findPoPredecessor(event);
         if (previousEvent.isPresent()) {
@@ -276,17 +302,27 @@ public class GenMCExecutionModel {
         return Collections.emptySet();
     }
 
-    private void check() throws InterruptedException, SolverException {
+    private Event getLastAddedThreadEvent(Thread thread) {
+        return trace.getElements()
+                .stream()
+                .filter(evt -> evt.getThread() == thread)
+                .max(Comparator.comparingInt(trace::getId))
+                .map(EventData::getEvent)
+                .orElse(thread.getEntry());
+    }
+
+    private boolean checkProperties(BooleanFormula properties) throws InterruptedException, SolverException {
+        prover.addConstraint(properties);
         Model model = calculateModel();
         if (model == null) {
-            backtrack();
+            return true;
         }
         Filter eventFilter = Filter.intersection(baseFilter, trace.eventFilter());
         GenMCWMMSolver.Result result = solver.check(model, eventFilter);
         if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
-            trace = new SimpleEventDomain(getExecution().getEventList());
+            return false;
         } else {
-            backtrack();
+            return true;
         }
     }
 
@@ -309,6 +345,6 @@ public class GenMCExecutionModel {
     // ===================================================
 
     private boolean isTrue(BooleanFormula formula) {
-        return Boolean.TRUE.equals(getModel().evaluate(formula));
+        return Boolean.TRUE.equals(getExecution().getModel().evaluate(formula));
     }
 }

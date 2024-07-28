@@ -101,11 +101,9 @@ public class GenMCSolver extends ModelChecker {
         if (logger.isInfoEnabled()) {
             final String message = result ? (propertyType == Property.Type.SAFETY ? "Specification violation found."
                         : "Specification witness found.") :
-                        (propertyType == Property.Type.SAFETY ? "Bounded specification proven."
-                        : "Bounded specification falsified.");
+                        (propertyType == Property.Type.SAFETY ? "Specification proven." : "Specification falsified.");
             logger.info(message);
         }
-
         res = result ? Result.PASS : Result.FAIL;
 
         // For Safety specs, we have SAT=FAIL, but for reachability specs, we have
@@ -157,14 +155,19 @@ public class GenMCSolver extends ModelChecker {
 
     private boolean visit(GenMCExecutionModel model, Set<EventData> revisitableReads, Checklist backwardsRevisits, Worklist revisitsToDo)
             throws InterruptedException, SolverException {
+        logger.info("Exploring new execution");
         EventData event;
         while ((event = model.nextEvent()) != null) {
             if (model.hasError()) return false;
             if (event.isRead()) {
                 Set<EventData> writesData = model.getMayAliasMap().get(event);
+                if (writesData.size() > 1) {
+                    model.check();
+                }
                 revisitableReads.add(event);
                 for (EventData writeData : writesData) {
                     if (writeData != event.getReadFrom()) {
+                        logger.info("Adding new forward revisit");
                         revisitsToDo.add(new ForwardRevisit(event, writeData));
                     }
                 }
@@ -176,12 +179,16 @@ public class GenMCSolver extends ModelChecker {
         return model.checkProperties();
     }
 
-    private void calcBackwardRevisits(GenMCExecutionModel model, Set<EventData> revisitableReads, Checklist backwardsRevisits, Worklist revisitsToDo, 
-            EventData write) {
+    private void calcBackwardRevisits(GenMCExecutionModel model, Set<EventData> revisitableReads, Checklist backwardsRevisits, Worklist revisitsToDo, EventData write)
+            throws InterruptedException, SolverException {
         Set<EventData> writePrefix = model.getPorfPrefix(write);
         Set<EventData> readsForAddress = model.getMayAliasMap().get(write);
         Set<EventData> relevantReads = getRelevantReads(revisitableReads, readsForAddress, writePrefix);
+        if (!relevantReads.isEmpty()) {
+            model.check();
+        }
         for (EventData readData : relevantReads) {
+            logger.info("Adding new backward revisit");
             BackwardRevisit newRevisit = new BackwardRevisit(model, readData, writePrefix);
             if (backwardsRevisits.add(readData, newRevisit)) {
                 revisitsToDo.add(newRevisit);
