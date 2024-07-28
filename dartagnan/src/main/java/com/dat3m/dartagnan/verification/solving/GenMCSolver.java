@@ -166,6 +166,7 @@ public class GenMCSolver extends ModelChecker {
                 calcBackwardRevisits(model, revisitableReads, backwardsRevisits, revisitsToDo, event);
             }
         }
+        model.check();
         return true;
     }
 

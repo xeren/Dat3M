@@ -29,6 +29,8 @@ The ExecutionModel wraps a Model and extracts data from it in a more workable ma
 public class GenMCExecutionModel {
 
     private static final Logger logger = LogManager.getLogger(GenMCExecutionModel.class);
+    
+    private static final Filter baseFilter = Filter.byTag(Tag.VISIBLE);
 
     // ============= Model specific  =============
     private SimpleEventDomain trace;
@@ -81,9 +83,6 @@ public class GenMCExecutionModel {
     public Model getModel() {
         return getExecution().getModel();
     }
-    public Filter getEventFilter() {
-        return Filter.difference(getExecution().getEventFilter(), trace.eventFilter());
-    }
     public SimpleEventDomain getTrace() {
         return trace;
     }
@@ -99,7 +98,7 @@ public class GenMCExecutionModel {
 
     //========================== Initialization =========================
 
-    public void initialize() {
+    public void initialize() throws InterruptedException, SolverException {
         List<Init> inits = getProgram().getThreadEvents(Init.class);
         List<EventData> initialEvents = new ArrayList<>(inits.size() * 3);
         for (Init init : inits) {
@@ -108,12 +107,25 @@ public class GenMCExecutionModel {
             }
         }
         trace = new SimpleEventDomain(initialEvents);
+        check();
     }
 
     public void initialize(List<EventData> startTraceEvents, EventData revisitRead, EventData write) throws InterruptedException, SolverException {
         trace = new SimpleEventDomain(startTraceEvents);
         revisitRead.setReadFrom(write);
         check();
+    }
+
+    public void check() throws InterruptedException, SolverException {
+        Model model = calculateModel();
+        Filter eventFilter = Filter.intersection(baseFilter, trace.eventFilter());
+        GenMCWMMSolver.Result result = solver.check(model, eventFilter);
+        if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
+            trace = new SimpleEventDomain(getExecution().getEventList());
+        } else {
+            // TODO: Backtrack to consistent execution
+            throw new UnsupportedOperationException("Backtracking of inconsistent executions not yet implemented");
+        }
     }
 
     public List<EventData> copyTraceEvents() {
@@ -127,7 +139,9 @@ public class GenMCExecutionModel {
             copiedEvents.add(copiedEvent);
         }
         for (EventData event : copiedEvents) {
-            event.setReadFrom(eventMap.get(event.getReadFrom().getEvent()));
+            if (event.getReadFrom() != null) {
+                event.setReadFrom(eventMap.get(event.getReadFrom().getEvent()));
+            }
         }
         return copiedEvents;
     }
@@ -143,6 +157,7 @@ public class GenMCExecutionModel {
         //TODO(TH): We might also want to extract events such as inline assertions
         // and whether they were violated or not.
         List<Thread> threadList = new ArrayList<>(getProgram().getThreads());
+        Filter eventFilter = Filter.difference(baseFilter, trace.eventFilter());
         for (Thread thread : threadList) {
             Event e = thread.getEntry();
             do {
@@ -150,7 +165,7 @@ public class GenMCExecutionModel {
                     e = e.getSuccessor();
                     continue;
                 }
-                if (getEventFilter().apply(e)) {
+                if (eventFilter.apply(e)) {
                     return addEvent(e);
                 }
 
@@ -219,7 +234,7 @@ public class GenMCExecutionModel {
         if (previousEvent.isPresent()) {
             return getPorfPrefix(previousEvent.get());
         }
-        return Collections.emptySet();
+        return new HashSet<>();
     }
 
     private Optional<EventData> findPoPredecessor(EventData event) {
@@ -243,18 +258,12 @@ public class GenMCExecutionModel {
         return Collections.emptySet();
     }
 
-
-    private void check() throws InterruptedException, SolverException {
+    private Model calculateModel() throws InterruptedException, SolverException {
         prover.pop();
         prover.addConstraint(traceEncoder.encodeFullTrace(trace));
         prover.push();
         prover.isUnsat();
-        Model model = prover.getModel();
-        Filter eventFilter = Filter.intersection(Filter.byTag(Tag.VISIBLE), trace.eventFilter());
-        GenMCWMMSolver.Result result = solver.check(model, eventFilter);
-        if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
-            trace = new SimpleEventDomain(getExecution().getEventList());
-        }
+        return prover.getModel();
     }
 
     // ===================================================

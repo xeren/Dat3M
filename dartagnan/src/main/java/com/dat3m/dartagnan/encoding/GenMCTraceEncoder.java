@@ -27,7 +27,6 @@ import org.sosy_lab.java_smt.api.NumeralFormula.IntegerFormula;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -217,24 +216,16 @@ public class GenMCTraceEncoder implements Encoder {
         final BooleanFormulaManager bmgr = context.getBooleanFormulaManager();
         List<BooleanFormula> enc = new ArrayList<>();
 
-        Collection<Map.Entry<Event,Map<Register, Dependency.State>>> deps = dep.getAll();
-        Map<Event, Map<Register, Dependency.State>> depMap = new HashMap<>(deps.size());
-        for (Map.Entry<Event,Map<Register, Dependency.State>> e : deps) {
-            depMap.put(e.getKey(), e.getValue());
-        }
         for (EventData eventData : trace.getElements()) {
             EventData readFromData = eventData.getReadFrom();
             if (readFromData != null) {
                 Event readFrom = readFromData.getEvent();
                 Event event = eventData.getEvent();
-                Register register = null;
-                for (Map.Entry<Register, Dependency.State> r : depMap.get(event).entrySet()) {
-                    if (r.getValue().may.contains(readFrom)) {
-                        register = r.getKey();
-                    }
-                }
+                assert event instanceof RegWriter;
+                RegWriter resultEvent = (RegWriter) event;
+                Register register = resultEvent.getResultRegister();
                 if (register != null) {
-                    enc.add(context.equal(context.encodeExpressionAt(register, event), context.result((RegWriter) readFrom)));
+                    enc.add(context.equal(context.encodeExpressionAt(register, readFrom), context.result(resultEvent)));
                 }
             }
         }
