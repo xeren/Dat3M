@@ -51,12 +51,22 @@ public class GenMCTraceEncoder implements Encoder {
     private final ExecutionAnalysis exec;
     private final Dependency dep;
 
+    private final BooleanFormula constants;
+    private final BooleanFormula memory;
+    private final BooleanFormula finalRegisterValues;
+    private final BooleanFormula filter;
+
     private GenMCTraceEncoder(EncodingContext c) {
         Preconditions.checkArgument(c.getTask().getProgram().isCompiled(), "The program must be compiled before encoding.");
         context = c;
         c.getAnalysisContext().requires(BranchEquivalence.class);
         this.exec = c.getAnalysisContext().requires(ExecutionAnalysis.class);
         this.dep = c.getAnalysisContext().requires(Dependency.class);
+
+        constants = encodeConstants();
+        memory = encodeMemory();
+        finalRegisterValues = encodeFinalRegisterValues();
+        filter = encodeFilter();
     }
 
     public static GenMCTraceEncoder withContext(EncodingContext context) throws InvalidConfigurationException {
@@ -70,11 +80,11 @@ public class GenMCTraceEncoder implements Encoder {
 
     public BooleanFormula encodeFullTrace(Domain<EventData> trace) {
         return context.getBooleanFormulaManager().and(
-                encodeConstants(),
-                encodeMemory(),
+                constants,
+                memory,
                 encodeControlFlow(trace),
-                encodeFinalRegisterValues(),
-                encodeFilter(),
+                finalRegisterValues,
+                filter,
                 encodeDependencies(trace));
     }
 
