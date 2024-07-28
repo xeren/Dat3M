@@ -38,7 +38,7 @@ public abstract class Filter {
         return (TagFilter) canonicalizer.computeIfAbsent(new TagFilter(tag), key -> key);
     }
 
-    public static EventFilter byEvents(Collection<Event> events) {
+    public static EventFilter byEvents(Collection<? extends Event> events) {
         return (EventFilter) canonicalizer.computeIfAbsent(new EventFilter(events), key -> key);
     }
 

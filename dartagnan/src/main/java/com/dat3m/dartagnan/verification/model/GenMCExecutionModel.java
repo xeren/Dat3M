@@ -34,6 +34,7 @@ public class GenMCExecutionModel {
 
     // ============= Model specific  =============
     private SimpleEventDomain trace;
+    private boolean hasError = false;
 
     private final EncodingContext encodingContext;
     private final GenMCTraceEncoder traceEncoder;
@@ -86,6 +87,9 @@ public class GenMCExecutionModel {
     public SimpleEventDomain getTrace() {
         return trace;
     }
+    public boolean hasError() {
+        return hasError;
+    }
 
     public Map<EventData, Set<EventData>> getMayAliasMap() {
         return mayAliasMapView;
@@ -117,14 +121,21 @@ public class GenMCExecutionModel {
     }
 
     public void check() throws InterruptedException, SolverException {
+        check(true);
+    }
+
+    public boolean check(boolean backtrack) throws InterruptedException, SolverException {
         Model model = calculateModel();
         Filter eventFilter = Filter.intersection(baseFilter, trace.eventFilter());
         GenMCWMMSolver.Result result = solver.check(model, eventFilter);
         if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
             trace = new SimpleEventDomain(getExecution().getEventList());
-        } else {
+            return backtrack;
+        } else if (backtrack) {
             // TODO: Backtrack to consistent execution
             throw new UnsupportedOperationException("Backtracking of inconsistent executions not yet implemented");
+        } else {
+            return true;
         }
     }
 
@@ -157,7 +168,7 @@ public class GenMCExecutionModel {
         //TODO(TH): We might also want to extract events such as inline assertions
         // and whether they were violated or not.
         List<Thread> threadList = new ArrayList<>(getProgram().getThreads());
-        Filter eventFilter = Filter.difference(baseFilter, trace.eventFilter());
+        Filter eventFilter = Filter.intersection(Filter.difference(baseFilter, trace.eventFilter()), Filter.byEvents(getProgram().getThreadEvents(Assert.class)));
         for (Thread thread : threadList) {
             Event e = thread.getEntry();
             do {
@@ -184,7 +195,6 @@ public class GenMCExecutionModel {
 
     private EventData addEvent(Event e) throws InterruptedException, SolverException {
         EventData data = new EventData(e);
-        trace.addEvent(data);
 
         data.setWasExecuted(true);
         if (data.isMemoryEvent()) {
@@ -201,16 +211,18 @@ public class GenMCExecutionModel {
                 //FIXME: Handle other kinds of memory events such as SRCU_SYNC.
                 throw new UnsupportedOperationException("Unexpected memory event " + data.getEvent());
             }
-
+            trace.addEvent(data);
         } else if (data.isJump()) {
             // ===== Jumps =====
             // We override the meaning of execution here. A jump is executed IFF its condition was true.
             check();
             data.setWasExecuted(isTrue(encodingContext.jumpCondition((CondJump) e)));
-        } else {
-            //TODO: Maybe add some other events (e.g. assertions)
-            // But for now all non-visible events are simply registered without
-            // having any data extracted
+            trace.addEvent(data);
+        } else if (data.getEvent().getClass() == Assert.class) {
+            // ===== Assertions =====
+            check();
+            trace.addEvent(data);
+            hasError = check(false);
         }
         return data;
     }

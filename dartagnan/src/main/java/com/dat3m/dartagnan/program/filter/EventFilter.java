@@ -6,13 +6,13 @@ import com.dat3m.dartagnan.program.event.Event;
 
 public class EventFilter extends Filter {
 
-    private final Collection<Event> events;
+    private final Collection<? extends Event> events;
 
-    EventFilter(Collection<Event> events){
+    EventFilter(Collection<? extends Event> events){
         this.events = events;
     }
 
-    public Collection<Event> getEvents() {
+    public Collection<? extends Event> getEvents() {
         return events;
     }
 

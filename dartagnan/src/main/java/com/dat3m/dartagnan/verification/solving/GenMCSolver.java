@@ -153,6 +153,7 @@ public class GenMCSolver extends ModelChecker {
     private boolean visit(GenMCExecutionModel model, Set<EventData> revisitableReads, Checklist backwardsRevisits, Worklist revisitsToDo) throws InterruptedException, SolverException {
         EventData event;
         while ((event = model.nextEvent()) != null) {
+            if (model.hasError()) return false;
             if (event.isRead()) {
                 Set<EventData> writesData = model.getMayAliasMap().get(event);
                 revisitableReads.add(event);
@@ -166,8 +167,7 @@ public class GenMCSolver extends ModelChecker {
                 calcBackwardRevisits(model, revisitableReads, backwardsRevisits, revisitsToDo, event);
             }
         }
-        model.check();
-        return true;
+        return model.check(false);
     }
 
     private void calcBackwardRevisits(GenMCExecutionModel model, Set<EventData> revisitableReads, Checklist backwardsRevisits, Worklist revisitsToDo, 
