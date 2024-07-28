@@ -74,7 +74,6 @@ public class GenMCSolver extends ModelChecker {
         memoryModel.configureAll(config);
         preprocessProgram(task, config);
         preprocessMemoryModel(task, config);
-        //instrumentPolaritySeparation(memoryModel);
 
         performStaticProgramAnalyses(task, analysisContext, config);
         performStaticWmmAnalyses(task, analysisContext, config);
@@ -88,6 +87,7 @@ public class GenMCSolver extends ModelChecker {
 
         final BooleanFormula properties = propertyEncoder.encodeProperties(task.getProperty());
         final GenMCExecutionModel model = GenMCExecutionModel.withContext(context, traceEncoder, prover, properties);
+        final Property.Type propertyType = Property.getCombinedType(task.getProperty(), task);
 
         logger.info("Starting encoding using " + ctx.getVersion());
         prover.addConstraint(baselineEncoder.encodeFullMemoryModel());
@@ -99,13 +99,18 @@ public class GenMCSolver extends ModelChecker {
         boolean result = genmc(model);
 
         if (logger.isInfoEnabled()) {
-            final String message = !result ? "Specification violation found." : "Bounded specification proven.";
+            final String message = result ? (propertyType == Property.Type.SAFETY ? "Specification violation found."
+                        : "Specification witness found.") :
+                        (propertyType == Property.Type.SAFETY ? "Bounded specification proven."
+                        : "Bounded specification falsified.");
             logger.info(message);
         }
 
+        res = result ? Result.PASS : Result.FAIL;
+
         // For Safety specs, we have SAT=FAIL, but for reachability specs, we have
         // SAT=PASS
-        res = result ? Result.PASS : Result.FAIL;
+        res = propertyType == Property.Type.SAFETY ? res : res.invert();
         logger.info("Verification finished with result " + res);
     }
 
@@ -150,7 +155,8 @@ public class GenMCSolver extends ModelChecker {
         return true;
     }
 
-    private boolean visit(GenMCExecutionModel model, Set<EventData> revisitableReads, Checklist backwardsRevisits, Worklist revisitsToDo) throws InterruptedException, SolverException {
+    private boolean visit(GenMCExecutionModel model, Set<EventData> revisitableReads, Checklist backwardsRevisits, Worklist revisitsToDo)
+            throws InterruptedException, SolverException {
         EventData event;
         while ((event = model.nextEvent()) != null) {
             if (model.hasError()) return false;

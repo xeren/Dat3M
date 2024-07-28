@@ -26,7 +26,7 @@ public enum Method implements OptionInterface {
     }
 
     public static Method getDefault() {
-        return GENMC;
+        return LAZY;
     }
 
     // Used to decide the order shown by the selector in the UI

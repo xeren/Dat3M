@@ -129,6 +129,7 @@ public class GenMCExecutionModel {
     }
 
     private boolean checkProperties(BooleanFormula properties) throws InterruptedException, SolverException {
+        prover.addConstraint(properties);
         Model model = calculateModel();
         if (model == null) {
             return true;
@@ -172,7 +173,7 @@ public class GenMCExecutionModel {
         //TODO(TH): We might also want to extract events such as inline assertions
         // and whether they were violated or not.
         List<Thread> threadList = new ArrayList<>(getProgram().getThreads());
-        Filter eventFilter = Filter.intersection(Filter.difference(baseFilter, trace.eventFilter()), Filter.byEvents(getProgram().getThreadEvents(Assert.class)));
+        Filter eventFilter = Filter.union(Filter.difference(baseFilter, trace.eventFilter()), Filter.byEvents(getProgram().getThreadEvents(Assert.class)));
         for (Thread thread : threadList) {
             Event e = thread.getEntry();
             do {
@@ -292,8 +293,10 @@ public class GenMCExecutionModel {
     private Model calculateModel() throws InterruptedException, SolverException {
         prover.addConstraint(traceEncoder.encodeFullTrace(trace));
         prover.push();
-        prover.isUnsat();
-        Model model = prover.getModel();
+        Model model = null;
+        if (!prover.isUnsat()) {
+            model = prover.getModel();
+        }
         prover.pop();
         return model;
     }
