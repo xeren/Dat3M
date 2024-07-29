@@ -114,7 +114,7 @@
                     <arguments>
                         <argument>../cat/tso.cat</argument>
                         <argument>--target=tso</argument>
-                        <argument>../litmus/X86/SB.litmus</argument>
+                        <argument>../litmus/X86/SB+po-rfis.litmus</argument>
                         <argument>--property=program_spec</argument>
                         <argument>--bound=3</argument>
                         <argument>--modeling.threadCreateAlwaysSucceeds=true</argument>
