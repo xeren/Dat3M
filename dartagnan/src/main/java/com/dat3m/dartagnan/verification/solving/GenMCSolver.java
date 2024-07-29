@@ -168,7 +168,7 @@ public class GenMCSolver extends ModelChecker {
                         .filter(EventData::isWrite)
                         .collect(Collectors.toSet());
                 if (writesData.size() > 1) {
-                    CheckResult checkResult = model.check();
+                    CheckResult checkResult = model.check(true);
                     if (checkResult == CheckResult.BACKTRACKABLE) {
                         Set<EventData> readsToRemove = new HashSet<>();
                         List<EventData> updatedTraceElements = model.getTrace().getElements();
@@ -205,7 +205,7 @@ public class GenMCSolver extends ModelChecker {
         Set<EventData> readsForAddress = model.getMayAliasMap().get(write);
         Set<EventData> relevantReads = getRelevantReads(revisitableReads, readsForAddress, writePrefix);
         if (!relevantReads.isEmpty()) {
-            model.check();
+            model.check(false);
         }
         for (EventData readData : relevantReads) {
             logger.info("Adding new backward revisit with write " + write.getEvent());

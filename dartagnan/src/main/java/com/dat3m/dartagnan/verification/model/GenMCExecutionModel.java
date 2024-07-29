@@ -16,6 +16,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
 import org.sosy_lab.java_smt.api.BooleanFormula;
+import org.sosy_lab.java_smt.api.BooleanFormulaManager;
 import org.sosy_lab.java_smt.api.Model;
 import org.sosy_lab.java_smt.api.ProverEnvironment;
 import org.sosy_lab.java_smt.api.SolverException;
@@ -150,7 +151,11 @@ public class GenMCExecutionModel {
         lastCheckedTraceSize = 0;
     }
 
-    public CheckResult check() throws InterruptedException, SolverException {
+    public CheckResult check(boolean ignoreLast) throws InterruptedException, SolverException {
+        EventData event = null;
+        if (ignoreLast) {
+            event = trace.getElements().removeLast();
+        }
         Model model = calculateModel();
         if (model == null) {
             return backtrack() ? CheckResult.BACKTRACKABLE : CheckResult.INCONSISTENT;
@@ -159,6 +164,9 @@ public class GenMCExecutionModel {
         GenMCWMMSolver.Result result = solver.check(model, eventFilter);
         if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
             lastCheckedTraceSize = trace.size();
+            if (ignoreLast) {
+                trace.addEvent(event);
+            }
             return CheckResult.CONSISTENT;
         } else {
             return backtrack() ? CheckResult.BACKTRACKABLE : CheckResult.INCONSISTENT;
@@ -166,7 +174,8 @@ public class GenMCExecutionModel {
     }
 
     public boolean checkProperties() throws InterruptedException, SolverException {
-        return checkProperties(properties);
+        BooleanFormulaManager bmgr = encodingContext.getBooleanFormulaManager();
+        return checkProperties(bmgr.and(properties, traceEncoder.getFinalRegisterValuesEncoding()));
     }
 
     public List<EventData> copyTraceEvents() {
@@ -251,12 +260,12 @@ public class GenMCExecutionModel {
         } else if (data.isJump()) {
             // ===== Jumps =====
             // We override the meaning of execution here. A jump is executed IFF its condition was true.
-            check();
+            check(false);
             data.setWasExecuted(isTrue(encodingContext.jumpCondition((CondJump) e)));
             trace.addEvent(data);
         } else if (data.getEvent() instanceof Assert assertionEvent) {
             // ===== Assertions =====
-            check();
+            check(false);
             trace.addEvent(data);
             AssertInline assertion = new AssertInline(assertionEvent);
             hasError = checkProperties(assertion.encode(encodingContext));
@@ -316,7 +325,7 @@ public class GenMCExecutionModel {
                 .orElse(thread.getEntry());
     }
 
-    public boolean check(List<EventData> events) throws InterruptedException, SolverException {
+    private boolean check(List<EventData> events) throws InterruptedException, SolverException {
         Model model = calculateModel(events);
         if (model == null) {
             return false;
@@ -356,17 +365,19 @@ public class GenMCExecutionModel {
 
     private Model calculateModel(Domain<EventData> trace) throws InterruptedException, SolverException {
         prover.addConstraint(traceEncoder.encodeFullTrace(trace));
-        prover.push();
         Model model = null;
         if (!prover.isUnsat()) {
             model = prover.getModel();
         }
         prover.pop();
+        prover.push();
         return model;
     }
 
     private boolean backtrack() throws InterruptedException, SolverException {
+        logger.info("Backtracking from\n" + trace);
         if (lastCheckedTraceSize == 0 && !check(trace.getElements().subList(0, startTraceSize))) {
+            logger.info("Backtracking was not successful");
             return false;
         }
         if (trace.size() == lastCheckedTraceSize) {
@@ -376,8 +387,9 @@ public class GenMCExecutionModel {
             do {
                 trace = new SimpleEventDomain(inconsistentTrace.getElements()
                         .subList(lastCheckedTraceSize, lastCheckedTraceSize + (inconsistentTrace.size() - lastCheckedTraceSize) / 2));
-            } while (check() == CheckResult.CONSISTENT);
+            } while (check(false) == CheckResult.CONSISTENT);
         }
+        logger.info("Successfully backtracked to\n" + trace);
         return true;
     }
 

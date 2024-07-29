@@ -84,7 +84,6 @@ public class GenMCTraceEncoder implements Encoder {
                 constants,
                 memory,
                 encodeControlFlow(trace),
-                finalRegisterValues,
                 filter,
                 encodeDependencies(trace));
     }
@@ -287,5 +286,9 @@ public class GenMCTraceEncoder implements Encoder {
             }
         }
         return bmgr.and(enc);
+    }
+
+    public BooleanFormula getFinalRegisterValuesEncoding() {
+        return finalRegisterValues;
     }
 }
