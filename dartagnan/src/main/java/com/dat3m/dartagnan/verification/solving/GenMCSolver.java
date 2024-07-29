@@ -13,6 +13,7 @@ import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.verification.model.EventData;
 import com.dat3m.dartagnan.verification.model.GenMCExecutionModel;
 import com.dat3m.dartagnan.verification.model.SimpleEventDomain;
+import com.dat3m.dartagnan.verification.model.GenMCExecutionModel.CheckResult;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
 import org.apache.logging.log4j.LogManager;
@@ -167,7 +168,21 @@ public class GenMCSolver extends ModelChecker {
                         .filter(EventData::isWrite)
                         .collect(Collectors.toSet());
                 if (writesData.size() > 1) {
-                    model.check();
+                    CheckResult checkResult = model.check();
+                    if (checkResult == CheckResult.BACKTRACKABLE) {
+                        Set<EventData> readsToRemove = new HashSet<>();
+                        List<EventData> updatedTraceElements = model.getTrace().getElements();
+                        for (EventData data : revisitableReads) {
+                            if (!updatedTraceElements.contains(data)) {
+                                readsToRemove.add(data);
+                            }
+                        }
+                        revisitableReads.removeIf(readsToRemove::contains);
+                        revisitsToDo.pop(readsToRemove);
+                        continue;
+                    } else if (checkResult == CheckResult.INCONSISTENT) {
+                        return true;
+                    }
                 }
                 revisitableReads.add(event);
                 for (EventData writeData : writesData) {
@@ -237,6 +252,13 @@ public class GenMCSolver extends ModelChecker {
                 readsToRevisit.pop();
             }
             return revisitGraph;
+        }
+
+        private void pop(Set<EventData> readsToRemove) {
+            Set<Event> readsToPop = readsToRemove.stream().map(EventData::getEvent).collect(Collectors.toSet());
+            while (readsToPop.contains(readsToRevisit.peek())) {
+                revisitsToDo.remove(readsToRevisit.pop());
+            }
         }
     }
 
