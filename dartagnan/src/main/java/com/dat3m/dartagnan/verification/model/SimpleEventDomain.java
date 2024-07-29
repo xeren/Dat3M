@@ -53,4 +53,18 @@ public class SimpleEventDomain implements Domain<EventData> {
                 .map(EventData::getEvent)
                 .toList());
     }
+
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder();
+        getElements().forEach(evt -> {
+            builder.append(evt.getEvent());
+            if (evt.getReadFrom() != null) {
+                builder.append(" reads from ")
+                        .append(evt.getReadFrom().getEvent());
+            }
+            builder.append('\n');
+        });
+        return builder.toString();
+    }
 }

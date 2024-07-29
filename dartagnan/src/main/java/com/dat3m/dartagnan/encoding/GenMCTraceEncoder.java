@@ -2,6 +2,7 @@ package com.dat3m.dartagnan.encoding;
 
 import com.dat3m.dartagnan.expression.type.IntegerType;
 import com.dat3m.dartagnan.program.Program;
+import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.analysis.BranchEquivalence;
 import com.dat3m.dartagnan.program.analysis.Dependency;
@@ -110,15 +111,15 @@ public class GenMCTraceEncoder implements Encoder {
         BooleanFormulaManager bmgr = context.getBooleanFormulaManager();
         List<BooleanFormula> enc = new ArrayList<>();
         trace.getElements().stream()
-                .filter(evt -> evt.getEvent() instanceof ThreadStart)
-                .forEach(evt -> enc.add(encodeThreadCF(evt, trace)));
+                .map(EventData::getThread)
+                .distinct()
+                .forEach(thread -> enc.add(encodeThreadCF(thread, trace)));
         return bmgr.and(enc);
     }
 
-    private BooleanFormula encodeThreadCF(EventData threadStart, Domain<EventData> trace) {
+    private BooleanFormula encodeThreadCF(Thread thread, Domain<EventData> trace) {
         final BooleanFormulaManager bmgr = context.getBooleanFormulaManager();
-        assert threadStart.getEvent() instanceof ThreadStart;
-        final ThreadStart startEvent = (ThreadStart) threadStart.getEvent();
+        final ThreadStart startEvent = thread.getEntry();
         final List<BooleanFormula> enc = new ArrayList<>();
 
         final BooleanFormula cfStart = context.controlFlow(startEvent);
@@ -132,11 +133,14 @@ public class GenMCTraceEncoder implements Encoder {
         enc.add(startEvent.encodeExec(context));
 
         Event pred = startEvent;
-        int currentId = trace.getId(threadStart) + 1;
-        Event e = trace.getObjectById(currentId).getEvent();
-        while (startEvent.getThread().equals(e.getThread()) && currentId < trace.size()) {
-            e = trace.getObjectById(currentId).getEvent();
-            
+        List<Event> traceEvents = trace.getElements()
+                .stream()
+                .map(EventData::getEvent)
+                .distinct()
+                .toList();
+        List<Event> relevantEvents = startEvent.getSuccessor().getSuccessors();
+        relevantEvents.removeIf(evt -> !traceEvents.contains(evt));
+        for(Event e : relevantEvents) {
             // Immediate control flow
             BooleanFormula cfCond = context.controlFlow(pred);
             if (pred instanceof CondJump jump) {
@@ -152,7 +156,6 @@ public class GenMCTraceEncoder implements Encoder {
             enc.add(bmgr.equivalence(context.controlFlow(e), cfCond));
             enc.add(e.encodeExec(context));
             pred = e;
-            ++currentId;
         }
         return bmgr.and(enc);
     }

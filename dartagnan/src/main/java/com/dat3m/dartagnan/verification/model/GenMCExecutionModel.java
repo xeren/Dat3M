@@ -47,6 +47,7 @@ public class GenMCExecutionModel {
     
     private final List<Thread> relevantThreads;
 
+    private final List<EventData> initEvents;
     private final Map<EventData, Set<EventData>> mayAliasMap;
 
     // The following are a read-only views which get passed to the outside
@@ -61,6 +62,7 @@ public class GenMCExecutionModel {
 
         relevantThreads = new ArrayList<>(getProgram().getThreads());
 
+        initEvents = new ArrayList<>(getProgram().getThreadEvents(Init.class).size() * 3);
         mayAliasMap = new HashMap<>();
 
         createViews();
@@ -103,22 +105,27 @@ public class GenMCExecutionModel {
     }
 
     public Optional<EventData> getData(Event e) {
-        return trace.size() == lastCheckedTraceSize ? getDataFast(e) : getDataSlowly(e);
+        return trace.getElements()
+                .stream()
+                .filter(event -> event.getEvent() == e)
+                .findAny();
     }
 
     //========================== Initialization =========================
 
     public void initialize() throws InterruptedException, SolverException {
         List<Init> inits = getProgram().getThreadEvents(Init.class);
-        List<EventData> initialEvents = new ArrayList<>(inits.size() * 3);
+        initEvents.clear();
         for (Init init : inits) {
             Thread initThread = init.getThread();
             relevantThreads.remove(initThread);
             for (Event initThreadEvent : initThread.getEvents()) {
-                initialEvents.add(new EventData(initThreadEvent));
+                if (baseFilter.apply(initThreadEvent)) {
+                    initEvents.add(new EventData(initThreadEvent));
+                }
             }
         }
-        trace = new SimpleEventDomain(initialEvents);
+        trace = new SimpleEventDomain(initEvents);
         lastAdded = null;
         lastCheckedTraceSize = trace.size();
     }
@@ -175,7 +182,8 @@ public class GenMCExecutionModel {
     }
 
     public Set<EventData> getPorfPrefix(EventData event) {
-        Set<EventData> porfPrefix = getPorfPrefixPreviousPo(event);
+        Set<EventData> porfPrefix = new HashSet<>(initEvents);
+        porfPrefix.addAll(getPorfPrefixPreviousPo(event));
         porfPrefix.addAll(getPorfPrefixPreviousRf(event));
         porfPrefix.add(event);
         return porfPrefix;
@@ -262,15 +270,6 @@ public class GenMCExecutionModel {
             }
         }
         return mayAliasSet;
-    }
-
-    // Only use for checked models
-    private Optional<EventData> getDataFast(Event e) {
-        return getExecution().getData(e);
-    }
-    // Can be used for unchecked models
-    private Optional<EventData> getDataSlowly(Event e) {
-        return trace.getElements().stream().filter(event -> event.getEvent() == e).findAny();
     }
 
     private Set<EventData> getPorfPrefixPreviousPo(EventData event) {

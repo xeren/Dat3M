@@ -132,6 +132,7 @@ public class GenMCSolver extends ModelChecker {
         Revisit revisit;
         while ((revisit = revisitsToDo.removeMax()) != null) {
             Event revisitedRead = revisit.getRead();
+            logger.info((revisit instanceof ForwardRevisit ? "Forward" : "Backward") + " revisiting execution for read " + revisitedRead);
             GenMCExecutionModel revisitModel = revisit.getModel(model);
             EventData newRead = revisitModel.getData(revisitedRead).get();
 
@@ -160,7 +161,11 @@ public class GenMCSolver extends ModelChecker {
         while ((event = model.nextEvent()) != null) {
             if (model.hasError()) return false;
             if (event.isRead()) {
-                Set<EventData> writesData = model.getMayAliasMap().get(event);
+                Set<EventData> writesData = model.getMayAliasMap()
+                        .get(event)
+                        .stream()
+                        .filter(EventData::isWrite)
+                        .collect(Collectors.toSet());
                 if (writesData.size() > 1) {
                     model.check();
                 }
@@ -188,7 +193,7 @@ public class GenMCSolver extends ModelChecker {
             model.check();
         }
         for (EventData readData : relevantReads) {
-            logger.info("Adding new backward revisit");
+            logger.info("Adding new backward revisit with write " + write.getEvent());
             BackwardRevisit newRevisit = new BackwardRevisit(model, readData, writePrefix);
             if (backwardsRevisits.add(readData, newRevisit)) {
                 revisitsToDo.add(newRevisit);
@@ -319,9 +324,8 @@ public class GenMCSolver extends ModelChecker {
             eventsToKeep = new ArrayList<>();
             eventsToKeep.add(copiedEvents.get(readIndex));
             for (int i = readIndex + 1; i < copiedEvents.size(); ++i) {
-                EventData event = copiedEvents.get(i);
-                if (writePrefix.contains(event)) {
-                    eventsToKeep.add(event);
+                if (writePrefix.contains(oldTrace.getObjectById(i))) {
+                    eventsToKeep.add(copiedEvents.get(i));
                 }
             }
         }
@@ -340,7 +344,7 @@ public class GenMCSolver extends ModelChecker {
         @Override
         protected GenMCExecutionModel calculateModel(GenMCExecutionModel oldModel) throws InvalidConfigurationException, InterruptedException, SolverException {
             EventData readData = eventsToKeep.getFirst();
-            int readIndex = oldModel.getTrace().getId(oldModel.getData(getRead()));
+            int readIndex = oldModel.getTrace().getId(oldModel.getData(getRead()).get());
             List<EventData> copiedEvents = oldModel.copyTraceEvents();
             for (int i = readIndex - 1; i >= 0; --i) {
                 EventData event = copiedEvents.get(i);
