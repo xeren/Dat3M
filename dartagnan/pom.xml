@@ -118,7 +118,7 @@
                         <argument>--property=program_spec</argument>
                         <argument>--bound=3</argument>
                         <argument>--modeling.threadCreateAlwaysSucceeds=true</argument>
-                        <argument>--solver=z3</argument>
+                        <argument>--solver=yices2</argument>
                         <argument>--method=genmc</argument>
                     </arguments>
                 </configuration>

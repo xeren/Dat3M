@@ -6,7 +6,6 @@ import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
 import com.dat3m.dartagnan.encoding.PropertyEncoder;
 import com.dat3m.dartagnan.encoding.WmmEncoder;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.solver.caat.domain.Domain;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.verification.VerificationTask;
@@ -133,16 +132,12 @@ public class GenMCSolver extends ModelChecker {
         Revisit revisit;
         while ((revisit = revisitsToDo.removeMax()) != null) {
             Event revisitedRead = revisit.getRead();
-            logger.info((revisit instanceof ForwardRevisit ? "Forward" : "Backward") + " revisiting execution for read " + revisitedRead);
             GenMCExecutionModel revisitModel = revisit.getModel(model);
             EventData newRead = revisitModel.getData(revisitedRead).get();
+            logger.info((revisit instanceof ForwardRevisit ? "Forward" : "Backward") + " revisiting execution for read " + revisitedRead + " and write "
+                    + newRead.getReadFrom().getEvent());
 
-            Domain<EventData> trace = model.getTrace();
-            int revisitedReadId = trace.getId(model.getData(revisitedRead).get());
-            Set<EventData> nonRevisitableEvents = trace.getElements()
-                    .stream()
-                    .filter(evt -> trace.getId(evt) > revisitedReadId)
-                    .collect(Collectors.toSet());
+            Set<EventData> nonRevisitableEvents = model.getEventsAfter(model.getData(revisitedRead).get());
             revisitableReads.removeAll(nonRevisitableEvents);
             backwardsRevisits.remove(nonRevisitableEvents);
             if (newRead.isWrite()) {
@@ -170,15 +165,7 @@ public class GenMCSolver extends ModelChecker {
                 if (writesData.size() > 1) {
                     CheckResult checkResult = model.check(true);
                     if (checkResult == CheckResult.BACKTRACKABLE) {
-                        Set<EventData> readsToRemove = new HashSet<>();
-                        List<EventData> updatedTraceElements = model.getTrace().getElements();
-                        for (EventData data : revisitableReads) {
-                            if (!updatedTraceElements.contains(data)) {
-                                readsToRemove.add(data);
-                            }
-                        }
-                        revisitableReads.removeIf(readsToRemove::contains);
-                        revisitsToDo.pop(readsToRemove);
+                        backtrack(model, revisitableReads);
                         continue;
                     } else if (checkResult == CheckResult.INCONSISTENT) {
                         return true;
@@ -187,33 +174,42 @@ public class GenMCSolver extends ModelChecker {
                 revisitableReads.add(event);
                 for (EventData writeData : writesData) {
                     if (writeData != event.getReadFrom()) {
-                        logger.info("Adding new forward revisit");
+                        logger.info("Adding new forward revisit for " + event.getEvent());
                         revisitsToDo.add(new ForwardRevisit(event, writeData));
                     }
                 }
             }
             if (event.isWrite()) {
-                calcBackwardRevisits(model, revisitableReads, backwardsRevisits, revisitsToDo, event);
+                if (!calcBackwardRevisits(model, revisitableReads, backwardsRevisits, revisitsToDo, event)) {
+                    return true;
+                }
             }
         }
         return model.checkProperties();
     }
 
-    private void calcBackwardRevisits(GenMCExecutionModel model, Set<EventData> revisitableReads, Checklist backwardsRevisits, Worklist revisitsToDo, EventData write)
+    private boolean calcBackwardRevisits(GenMCExecutionModel model, Set<EventData> revisitableReads, Checklist backwardsRevisits, Worklist revisitsToDo, EventData write)
             throws InterruptedException, SolverException {
         Set<EventData> writePrefix = model.getPorfPrefix(write);
         Set<EventData> readsForAddress = model.getMayAliasMap().get(write);
         Set<EventData> relevantReads = getRelevantReads(revisitableReads, readsForAddress, writePrefix);
         if (!relevantReads.isEmpty()) {
-            model.check(false);
+            CheckResult checkResult = model.check(false);
+            if (checkResult == CheckResult.BACKTRACKABLE) {
+                backtrack(model, revisitableReads);
+                return true;
+            } else if (checkResult == CheckResult.INCONSISTENT) {
+                return false;
+            }
         }
         for (EventData readData : relevantReads) {
-            logger.info("Adding new backward revisit with write " + write.getEvent());
+            logger.info("Adding new backward revisit with " + write.getEvent());
             BackwardRevisit newRevisit = new BackwardRevisit(model, readData, writePrefix);
             if (backwardsRevisits.add(readData, newRevisit)) {
                 revisitsToDo.add(newRevisit);
             }
         }
+        return true;
     }
 
     private static <T> Set<T> getRelevantReads(Set<T> firstSet, Set<T> secondSet, Set<T> differenceSet) {
@@ -224,6 +220,10 @@ public class GenMCSolver extends ModelChecker {
             }
         }
         return resultSet;
+    }
+
+    private static void backtrack(GenMCExecutionModel model, Set<EventData> revisitableReads) {
+        revisitableReads.removeIf(read -> !model.getTrace().getElements().contains(read));
     }
 
     private static class Worklist {
@@ -252,13 +252,6 @@ public class GenMCSolver extends ModelChecker {
                 readsToRevisit.pop();
             }
             return revisitGraph;
-        }
-
-        private void pop(Set<EventData> readsToRemove) {
-            Set<Event> readsToPop = readsToRemove.stream().map(EventData::getEvent).collect(Collectors.toSet());
-            while (readsToPop.contains(readsToRevisit.peek())) {
-                revisitsToDo.remove(readsToRevisit.pop());
-            }
         }
     }
 

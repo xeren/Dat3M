@@ -22,6 +22,7 @@ import org.sosy_lab.java_smt.api.ProverEnvironment;
 import org.sosy_lab.java_smt.api.SolverException;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /*
 The ExecutionModel wraps a Model and extracts data from it in a more workable manner.
@@ -151,6 +152,8 @@ public class GenMCExecutionModel {
         lastCheckedTraceSize = 0;
     }
 
+    //========================== Public methods =========================
+
     public CheckResult check(boolean ignoreLast) throws InterruptedException, SolverException {
         EventData event = null;
         if (ignoreLast) {
@@ -202,6 +205,13 @@ public class GenMCExecutionModel {
         porfPrefix.addAll(getPorfPrefixPreviousRf(event));
         porfPrefix.add(event);
         return porfPrefix;
+    }
+
+    public Set<EventData> getEventsAfter(EventData event) {
+        return trace.getElements()
+                .stream()
+                .filter(evt -> trace.getId(evt) > trace.getId(event))
+                .collect(Collectors.toSet());
     }
 
     public EventData nextEvent() throws InterruptedException, SolverException {
@@ -260,12 +270,12 @@ public class GenMCExecutionModel {
         } else if (data.isJump()) {
             // ===== Jumps =====
             // We override the meaning of execution here. A jump is executed IFF its condition was true.
-            check(false);
+            check();
             data.setWasExecuted(isTrue(encodingContext.jumpCondition((CondJump) e)));
             trace.addEvent(data);
         } else if (data.getEvent() instanceof Assert assertionEvent) {
             // ===== Assertions =====
-            check(false);
+            check();
             trace.addEvent(data);
             AssertInline assertion = new AssertInline(assertionEvent);
             hasError = checkProperties(assertion.encode(encodingContext));
@@ -323,6 +333,10 @@ public class GenMCExecutionModel {
                 .max(Comparator.comparingInt(trace::getId))
                 .map(EventData::getEvent)
                 .orElse(thread.getEntry());
+    }
+
+    private CheckResult check() throws InterruptedException, SolverException {
+        return check(false);
     }
 
     private boolean check(List<EventData> events) throws InterruptedException, SolverException {
@@ -387,7 +401,7 @@ public class GenMCExecutionModel {
             do {
                 trace = new SimpleEventDomain(inconsistentTrace.getElements()
                         .subList(lastCheckedTraceSize, lastCheckedTraceSize + (inconsistentTrace.size() - lastCheckedTraceSize) / 2));
-            } while (check(false) == CheckResult.CONSISTENT);
+            } while (check() == CheckResult.CONSISTENT);
         }
         logger.info("Successfully backtracked to\n" + trace);
         return true;
