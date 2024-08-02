@@ -11,6 +11,7 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.RegWriter;
 import com.dat3m.dartagnan.program.event.core.CondJump;
 import com.dat3m.dartagnan.program.event.core.Label;
+import com.dat3m.dartagnan.program.event.core.MemoryCoreEvent;
 import com.dat3m.dartagnan.program.event.core.threading.ThreadStart;
 import com.dat3m.dartagnan.program.memory.Memory;
 import com.dat3m.dartagnan.program.memory.MemoryObject;
@@ -33,6 +34,8 @@ import java.util.List;
 import java.util.Map;
 
 import static com.dat3m.dartagnan.configuration.OptionNames.INITIALIZE_REGISTERS;
+import static com.dat3m.dartagnan.wmm.RelationNameRepository.RF;
+import static com.google.common.collect.Lists.reverse;
 
 @Options
 public class GenMCTraceEncoder implements Encoder {
@@ -84,7 +87,6 @@ public class GenMCTraceEncoder implements Encoder {
                 constants,
                 memory,
                 encodeControlFlow(trace),
-                filter,
                 encodeDependencies(trace));
     }
 
@@ -228,16 +230,54 @@ public class GenMCTraceEncoder implements Encoder {
         final BooleanFormulaManager bmgr = context.getBooleanFormulaManager();
         List<BooleanFormula> enc = new ArrayList<>();
 
+        EncodingContext.EdgeEncoder rf = context.edge(context.getTask().getMemoryModel().getRelation(RF));
         for (EventData eventData : trace.getElements()) {
             EventData readFromData = eventData.getReadFrom();
             if (readFromData != null) {
-                Event readFrom = readFromData.getEvent();
-                Event event = eventData.getEvent();
-                assert event instanceof RegWriter;
-                RegWriter resultEvent = (RegWriter) event;
-                Register register = resultEvent.getResultRegister();
-                if (register != null) {
-                    enc.add(context.equal(context.encodeExpressionAt(register, readFrom), context.result(resultEvent)));
+                MemoryCoreEvent readFrom = (MemoryCoreEvent) readFromData.getEvent();
+                MemoryCoreEvent event = (MemoryCoreEvent) eventData.getEvent();
+
+                // Execution model
+                enc.add(rf.encode(readFrom, event));
+
+                // Data flow
+                enc.add(context.equal(context.address(event), context.address(readFrom)));
+                enc.add(context.equal(context.value(event), context.value(readFrom)));
+            }
+        }
+        for (Map.Entry<Event, Map<Register, Dependency.State>> e : dep.getAll()) {
+            final Event reader = e.getKey();
+            if (trace.getElements().stream().anyMatch(evt -> evt.getEvent() == reader)) {
+                for (Map.Entry<Register, Dependency.State> r : e.getValue().entrySet()) {
+                    final Formula value = context.encodeExpressionAt(r.getKey(), reader);
+                    final Dependency.State state = r.getValue();
+                    List<BooleanFormula> overwrite = new ArrayList<>();
+                    for (Event writer : reverse(state.may)) {
+                        assert writer instanceof RegWriter;
+                        BooleanFormula edge;
+                        if (state.must.contains(writer)) {
+                            if (exec.isImplied(reader, writer) && reader.cfImpliesExec()) {
+                                // This special case is important. Usually, we encode "dep => regValue = regWriterResult"
+                                // By getting rid of the guard "dep" in this special case, we end up with an unconditional
+                                // "regValue = regWriterResult", which allows the solver to eliminate one of the variables
+                                // in preprocessing.
+                                assert state.may.size() == 1;
+                                edge = bmgr.makeTrue();
+                            } else {
+                                edge = bmgr.and(context.execution(writer), context.controlFlow(reader));
+                            }
+                        } else {
+                            edge = context.dependency(writer, reader);
+                            enc.add(bmgr.equivalence(edge, bmgr.and(context.execution(writer), context.controlFlow(reader), bmgr.not(bmgr.or(overwrite)))));
+                        }
+                        enc.add(bmgr.implication(edge, context.equal(value, context.result((RegWriter) writer))));
+                        overwrite.add(context.execution(writer));
+                    }
+                    if (initializeRegisters && !state.initialized) {
+                        overwrite.add(bmgr.not(context.controlFlow(reader)));
+                        overwrite.add(context.equalZero(value));
+                        enc.add(bmgr.or(overwrite));
+                    }
                 }
             }
         }
@@ -288,7 +328,7 @@ public class GenMCTraceEncoder implements Encoder {
         return bmgr.and(enc);
     }
 
-    public BooleanFormula getFinalRegisterValuesEncoding() {
-        return finalRegisterValues;
+    public BooleanFormula getPropertyRelevantEncoding() {
+        return context.getBooleanFormulaManager().and(finalRegisterValues, filter);
     }
 }

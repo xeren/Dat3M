@@ -12,7 +12,6 @@ import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.verification.model.EventData;
 import com.dat3m.dartagnan.verification.model.GenMCExecutionModel;
 import com.dat3m.dartagnan.verification.model.SimpleEventDomain;
-import com.dat3m.dartagnan.verification.model.GenMCExecutionModel.CheckResult;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
 import org.apache.logging.log4j.LogManager;
@@ -99,8 +98,7 @@ public class GenMCSolver extends ModelChecker {
         boolean result = genmc(model);
 
         if (logger.isInfoEnabled()) {
-            final String message = result ? (propertyType == Property.Type.SAFETY ? "Specification violation found."
-                        : "Specification witness found.") :
+            final String message = !result ? (propertyType == Property.Type.SAFETY ? "Specification violation found." : "Specification witness found.") :
                         (propertyType == Property.Type.SAFETY ? "Specification proven." : "Specification falsified.");
             logger.info(message);
         }
@@ -129,6 +127,7 @@ public class GenMCSolver extends ModelChecker {
         if (!visit(model, revisitableReads, backwardsRevisits, revisitsToDo)) {
             return false;
         }
+        revisitsToDo.setReadOrder(model);
         Revisit revisit;
         while ((revisit = revisitsToDo.removeMax()) != null) {
             Event revisitedRead = revisit.getRead();
@@ -140,12 +139,11 @@ public class GenMCSolver extends ModelChecker {
             Set<EventData> nonRevisitableEvents = model.getEventsAfter(model.getData(revisitedRead).get());
             revisitableReads.removeAll(nonRevisitableEvents);
             backwardsRevisits.remove(nonRevisitableEvents);
-            if (newRead.isWrite()) {
-                calcBackwardRevisits(revisitModel, revisitableReads, backwardsRevisits, revisitsToDo, newRead);
-            }
             if (!visit(revisitModel, revisitableReads, backwardsRevisits, revisitsToDo)) {
                 return false;
             }
+            model = revisitModel;
+            revisitsToDo.setReadOrder(model);
         }
         return true;
     }
@@ -162,14 +160,8 @@ public class GenMCSolver extends ModelChecker {
                         .stream()
                         .filter(EventData::isWrite)
                         .collect(Collectors.toSet());
-                if (writesData.size() > 1) {
-                    CheckResult checkResult = model.check(true);
-                    if (checkResult == CheckResult.BACKTRACKABLE) {
-                        backtrack(model, revisitableReads);
-                        continue;
-                    } else if (checkResult == CheckResult.INCONSISTENT) {
-                        return true;
-                    }
+                if (writesData.size() > 1 && !model.check(true)) {
+                    return true;
                 }
                 revisitableReads.add(event);
                 for (EventData writeData : writesData) {
@@ -193,14 +185,8 @@ public class GenMCSolver extends ModelChecker {
         Set<EventData> writePrefix = model.getPorfPrefix(write);
         Set<EventData> readsForAddress = model.getMayAliasMap().get(write);
         Set<EventData> relevantReads = getRelevantReads(revisitableReads, readsForAddress, writePrefix);
-        if (!relevantReads.isEmpty()) {
-            CheckResult checkResult = model.check(false);
-            if (checkResult == CheckResult.BACKTRACKABLE) {
-                backtrack(model, revisitableReads);
-                return true;
-            } else if (checkResult == CheckResult.INCONSISTENT) {
-                return false;
-            }
+        if (!relevantReads.isEmpty() && !model.check(false)) {
+            return false;
         }
         for (EventData readData : relevantReads) {
             logger.info("Adding new backward revisit with " + write.getEvent());
@@ -222,44 +208,53 @@ public class GenMCSolver extends ModelChecker {
         return resultSet;
     }
 
-    private static void backtrack(GenMCExecutionModel model, Set<EventData> revisitableReads) {
-        revisitableReads.removeIf(read -> !model.getTrace().getElements().contains(read));
-    }
-
     private static class Worklist {
-        private Map<Event, Set<Revisit>> revisitsToDo = new HashMap<>();
-        private Stack<Event> readsToRevisit = new Stack<>();
+        private final Map<Event, Set<Revisit>> revisitsToDo = new HashMap<>();
+        private Comparator<Event> readsComparator;
+
+        private void setReadOrder(GenMCExecutionModel model) {
+            List<EventData> trace = model.getTrace().getElements();
+            readsComparator = Comparator.comparingInt(event -> trace.indexOf(trace.stream()
+                    .filter(data -> data.getEvent() == event)
+                    .findAny()
+                    .get()));
+        }
 
         private void add(Revisit revisitGraph) {
             Event read = revisitGraph.getRead();
             if (!revisitsToDo.containsKey(read)) {
-                readsToRevisit.push(read);
                 revisitsToDo.put(read, new HashSet<>());
             }
             revisitsToDo.get(read).add(revisitGraph);
         }
 
         private Revisit removeMax() {
-            if (readsToRevisit.isEmpty()) {
+            Optional<Event> maximalRead = getMaximalRead();
+            if (maximalRead.isEmpty()) {
                 return null;
             }
-            Set<Revisit> revisitsForRead = revisitsToDo.get(readsToRevisit.peek());
+            Set<Revisit> revisitsForRead = revisitsToDo.get(maximalRead.get());
             Revisit revisitGraph = revisitsForRead.stream()
                     .findAny()
                     .get();
             revisitsForRead.remove(revisitGraph);
-            if (revisitsForRead.isEmpty()) {
-                readsToRevisit.pop();
-            }
             return revisitGraph;
+        }
+
+        private Optional<Event> getMaximalRead() {
+            return revisitsToDo.keySet()
+                    .stream()
+                    .filter(revisitsToDo::containsKey)
+                    .filter(read -> !revisitsToDo.get(read).isEmpty())
+                    .max(readsComparator);
         }
     }
 
     private static class Checklist {
-        private Map<Event, Set<Map<Event, Event>>> backwardsRevisits = new HashMap<>();
+        private Map<Event, List<Map<Event, Event>>> backwardsRevisits = new HashMap<>();
 
         private boolean add(EventData read, BackwardRevisit revisit) {
-            Set<Map<Event, Event>> savedRevisits = backwardsRevisits.computeIfAbsent(read.getEvent(), event -> new HashSet<>());
+            List<Map<Event, Event>> savedRevisits = backwardsRevisits.computeIfAbsent(read.getEvent(), event -> new ArrayList<>());
             Map<Event, Event> parsedRevisit = revisit.getRelevantReadsFromRelation();
             for (var savedRevisit : savedRevisits) {
                 if (savedRevisit.equals(parsedRevisit)) {
@@ -317,13 +312,16 @@ public class GenMCSolver extends ModelChecker {
             EventData readData = null;
             EventData writeData = null;
             for (EventData event : traceEvents) {
-                if (event.getEvent() == getRead()) {
-                    readData = event;
-                }
                 if (event.getEvent() == write) {
                     writeData = event;
                 }
+                if (event.getEvent() == getRead()) {
+                    readData = event;
+                }
             }
+            assert readData != null && writeData != null;
+            EventData readDataRef = readData;
+            traceEvents.removeIf(data -> traceEvents.indexOf(data) > traceEvents.indexOf(readDataRef));
             return newModel(oldModel, traceEvents, readData, writeData);
         }
     }

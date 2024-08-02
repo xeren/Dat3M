@@ -10,8 +10,9 @@ import com.dat3m.dartagnan.program.event.core.*;
 import com.dat3m.dartagnan.program.filter.Filter;
 import com.dat3m.dartagnan.program.specification.AssertInline;
 import com.dat3m.dartagnan.solver.caat.CAATSolver;
-import com.dat3m.dartagnan.solver.caat.domain.Domain;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCWMMSolver;
+import com.dat3m.dartagnan.verification.VerificationTask;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
@@ -33,15 +34,12 @@ The ExecutionModel wraps a Model and extracts data from it in a more workable ma
 public class GenMCExecutionModel {
 
     private static final Logger logger = LogManager.getLogger(GenMCExecutionModel.class);
-    
-    private static final Filter baseFilter = Filter.byTag(Tag.VISIBLE);
 
     // ============= Model specific  =============
     private SimpleEventDomain trace;
     private Event lastAdded = null;
-    private int startTraceSize = 0;
-    private int lastCheckedTraceSize = 0;
     private boolean hasError = false;
+    private boolean isExplored = false;
 
     private final EncodingContext encodingContext;
     private final GenMCTraceEncoder traceEncoder;
@@ -89,6 +87,10 @@ public class GenMCExecutionModel {
     //======================== Public data ===========================‚
 
     // General data
+    public VerificationTask getTask() {
+        return encodingContext.getTask();
+    }
+
     public Program getProgram() {
         return encodingContext.getTask().getProgram();
     }
@@ -115,8 +117,8 @@ public class GenMCExecutionModel {
                 .findAny();
     }
 
-    public enum CheckResult {
-        CONSISTENT, BACKTRACKABLE, INCONSISTENT
+    public boolean isExplored() {
+        return isExplored;
     }
 
     //========================== Initialization =========================
@@ -128,15 +130,12 @@ public class GenMCExecutionModel {
             Thread initThread = init.getThread();
             relevantThreads.remove(initThread);
             for (Event initThreadEvent : initThread.getEvents()) {
-                if (baseFilter.apply(initThreadEvent)) {
-                    initEvents.add(new EventData(initThreadEvent));
-                }
+                initEvents.add(new EventData(initThreadEvent));
             }
         }
         trace = new SimpleEventDomain(initEvents);
         lastAdded = null;
-        startTraceSize = trace.size();
-        lastCheckedTraceSize = trace.size();
+        isExplored = false;
     }
 
     public void initialize(List<EventData> startTraceEvents, EventData revisitRead, EventData write) throws InterruptedException, SolverException {
@@ -148,37 +147,34 @@ public class GenMCExecutionModel {
                 .min(Comparator.comparingInt(relevantThreads::indexOf))
                 .get();
         lastAdded = getLastAddedThreadEvent(firstThread);
-        startTraceSize = trace.size();
-        lastCheckedTraceSize = 0;
+        isExplored = false;
     }
 
     //========================== Public methods =========================
 
-    public CheckResult check(boolean ignoreLast) throws InterruptedException, SolverException {
+    public boolean check(boolean ignoreLast) throws InterruptedException, SolverException {
         EventData event = null;
         if (ignoreLast) {
             event = trace.getElements().removeLast();
         }
         Model model = calculateModel();
         if (model == null) {
-            return backtrack() ? CheckResult.BACKTRACKABLE : CheckResult.INCONSISTENT;
+            return false;
         }
-        Filter eventFilter = Filter.intersection(baseFilter, trace.eventFilter());
+        Filter eventFilter = Filter.intersection(Filter.byTag(Tag.VISIBLE), trace.eventFilter());
         GenMCWMMSolver.Result result = solver.check(model, eventFilter);
         if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
-            lastCheckedTraceSize = trace.size();
             if (ignoreLast) {
                 trace.addEvent(event);
             }
-            return CheckResult.CONSISTENT;
-        } else {
-            return backtrack() ? CheckResult.BACKTRACKABLE : CheckResult.INCONSISTENT;
+            return true;
         }
+        return false;
     }
 
     public boolean checkProperties() throws InterruptedException, SolverException {
         BooleanFormulaManager bmgr = encodingContext.getBooleanFormulaManager();
-        return checkProperties(bmgr.and(properties, traceEncoder.getFinalRegisterValuesEncoding()));
+        return checkProperties(bmgr.and(properties, traceEncoder.getPropertyRelevantEncoding()));
     }
 
     public List<EventData> copyTraceEvents() {
@@ -215,7 +211,7 @@ public class GenMCExecutionModel {
     }
 
     public EventData nextEvent() throws InterruptedException, SolverException {
-        Filter eventFilter = Filter.difference(Filter.union(baseFilter, Filter.byEvents(getProgram().getThreadEvents(Assert.class))), trace.eventFilter());
+        Filter eventFilter = Filter.difference(Filter.byEvents(getProgram().getThreadEvents()), trace.eventFilter());
         Event startEvent = trace.getObjectById(0).getEvent();
         int threadIndex = 0;
         boolean initialize = true;
@@ -226,7 +222,7 @@ public class GenMCExecutionModel {
         }
         while (threadIndex < relevantThreads.size()) {
             Thread thread = relevantThreads.get(threadIndex);
-            Event e = (initialize ? getLastAddedThreadEvent(thread) : startEvent).getSuccessor();
+            Event e = initialize ? getLastAddedThreadEvent(thread) : startEvent.getSuccessor();
             initialize = true;
             while (e != null) {
                 if (eventFilter.apply(e)) {
@@ -259,7 +255,7 @@ public class GenMCExecutionModel {
                 try {
                     data.setReadFrom(mayAliasSet.iterator().next());
                 } catch (NoSuchElementException ex) {
-                    logger.error("Read has nowhere to read from");
+                    logger.error("Read " + e + " has nowhere to read from in trace " + trace);
                     throw ex;
                 }
             } else if (!data.isWrite()) {
@@ -279,6 +275,9 @@ public class GenMCExecutionModel {
             trace.addEvent(data);
             AssertInline assertion = new AssertInline(assertionEvent);
             hasError = checkProperties(assertion.encode(encodingContext));
+        }
+        if (!trace.getElements().contains(data)) {
+            trace.addEvent(data);
         }
         return data;
     }
@@ -332,79 +331,42 @@ public class GenMCExecutionModel {
                 .filter(evt -> evt.getThread() == thread)
                 .max(Comparator.comparingInt(trace::getId))
                 .map(EventData::getEvent)
+                .map(Event::getSuccessor)
                 .orElse(thread.getEntry());
     }
 
-    private CheckResult check() throws InterruptedException, SolverException {
+    private boolean check() throws InterruptedException, SolverException {
         return check(false);
     }
 
-    private boolean check(List<EventData> events) throws InterruptedException, SolverException {
-        Model model = calculateModel(events);
-        if (model == null) {
-            return false;
-        }
-        Filter eventFilter = Filter.intersection(baseFilter, trace.eventFilter());
-        GenMCWMMSolver.Result result = solver.check(model, eventFilter);
-        if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
-            lastCheckedTraceSize = trace.size();
-            return true;
-        } else {
-            return false;
-        }
-    }
-
     private boolean checkProperties(BooleanFormula properties) throws InterruptedException, SolverException {
-        prover.addConstraint(properties);
-        Model model = calculateModel();
+        List<BooleanFormula> propertiesList = new ArrayList<>(2);
+        propertiesList.add(properties);
+        Model model = calculateModel(propertiesList);
         if (model == null) {
+            isExplored = true;
             return true;
         }
-        Filter eventFilter = Filter.intersection(baseFilter, trace.eventFilter());
+        Filter eventFilter = Filter.intersection(Filter.byTag(Tag.VISIBLE), trace.eventFilter());
         GenMCWMMSolver.Result result = solver.check(model, eventFilter);
         if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
             return false;
-        } else {
-            return true;
         }
+        isExplored = true;
+        return true;
     }
 
     private Model calculateModel() throws InterruptedException, SolverException {
-        return calculateModel(trace);
+        return calculateModel(new ArrayList<>());
     }
 
-    private Model calculateModel(List<EventData> events) throws InterruptedException, SolverException {
-        return calculateModel(new SimpleEventDomain(events));
-    }
-
-    private Model calculateModel(Domain<EventData> trace) throws InterruptedException, SolverException {
-        prover.addConstraint(traceEncoder.encodeFullTrace(trace));
+    private Model calculateModel(Collection<BooleanFormula> assumptions) throws InterruptedException, SolverException {
+        assumptions.add(traceEncoder.encodeFullTrace(trace));
         Model model = null;
-        if (!prover.isUnsat()) {
+        if (!prover.isUnsatWithAssumptions(assumptions)) {
             model = prover.getModel();
         }
-        prover.pop();
-        prover.push();
         return model;
-    }
-
-    private boolean backtrack() throws InterruptedException, SolverException {
-        logger.info("Backtracking from\n" + trace);
-        if (lastCheckedTraceSize == 0 && !check(trace.getElements().subList(0, startTraceSize))) {
-            logger.info("Backtracking was not successful");
-            return false;
-        }
-        if (trace.size() == lastCheckedTraceSize) {
-            return true;
-        } else {
-            SimpleEventDomain inconsistentTrace = trace;
-            do {
-                trace = new SimpleEventDomain(inconsistentTrace.getElements()
-                        .subList(lastCheckedTraceSize, lastCheckedTraceSize + (inconsistentTrace.size() - lastCheckedTraceSize) / 2));
-            } while (check() == CheckResult.CONSISTENT);
-        }
-        logger.info("Successfully backtracked to\n" + trace);
-        return true;
     }
 
     // ===================================================

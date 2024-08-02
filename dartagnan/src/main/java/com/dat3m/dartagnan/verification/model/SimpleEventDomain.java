@@ -56,8 +56,12 @@ public class SimpleEventDomain implements Domain<EventData> {
 
     @Override
     public String toString() {
+        return toString(getElements());
+    }
+
+    public static String toString(Collection<EventData> events) {
         StringBuilder builder = new StringBuilder();
-        getElements().forEach(evt -> {
+        events.forEach(evt -> {
             builder.append(evt.getEvent());
             if (evt.getReadFrom() != null) {
                 builder.append(" reads from ")
