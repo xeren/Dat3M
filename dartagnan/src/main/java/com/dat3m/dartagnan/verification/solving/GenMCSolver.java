@@ -153,6 +153,10 @@ public class GenMCSolver extends ModelChecker {
         logger.info("Exploring new execution");
         EventData event;
         while ((event = model.nextEvent()) != null) {
+            if (!model.isConsistent()) {
+                logger.info("Aborting exploration: Inconsistent execution");
+                return true;
+            }
             if (model.hasError()) return false;
             if (event.isRead()) {
                 Set<EventData> writesData = model.getMayAliasMap()
@@ -161,6 +165,7 @@ public class GenMCSolver extends ModelChecker {
                         .filter(EventData::isWrite)
                         .collect(Collectors.toSet());
                 if (writesData.size() > 1 && !model.check(true)) {
+                    logger.info("Aborting exploration: Inconsistent execution");
                     return true;
                 }
                 revisitableReads.add(event);
@@ -173,6 +178,7 @@ public class GenMCSolver extends ModelChecker {
             }
             if (event.isWrite()) {
                 if (!calcBackwardRevisits(model, revisitableReads, backwardsRevisits, revisitsToDo, event)) {
+                    logger.info("Aborting exploration: Inconsistent execution");
                     return true;
                 }
             }

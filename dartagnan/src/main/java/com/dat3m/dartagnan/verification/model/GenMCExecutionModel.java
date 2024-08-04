@@ -40,6 +40,7 @@ public class GenMCExecutionModel {
     private Event lastAdded = null;
     private boolean hasError = false;
     private boolean isExplored = false;
+    private boolean isConsistent = true;
 
     private final EncodingContext encodingContext;
     private final GenMCTraceEncoder traceEncoder;
@@ -105,6 +106,9 @@ public class GenMCExecutionModel {
     public boolean hasError() {
         return hasError;
     }
+    public boolean isConsistent() {
+        return isConsistent;
+    }
 
     public Map<EventData, Set<EventData>> getMayAliasMap() {
         return mayAliasMapView;
@@ -136,6 +140,7 @@ public class GenMCExecutionModel {
         trace = new SimpleEventDomain(initEvents);
         lastAdded = null;
         isExplored = false;
+        isConsistent = true;
     }
 
     public void initialize(List<EventData> startTraceEvents, EventData revisitRead, EventData write) throws InterruptedException, SolverException {
@@ -148,6 +153,7 @@ public class GenMCExecutionModel {
                 .get();
         lastAdded = getLastAddedThreadEvent(firstThread);
         isExplored = false;
+        isConsistent = true;
     }
 
     //========================== Public methods =========================
@@ -169,6 +175,7 @@ public class GenMCExecutionModel {
             }
             return true;
         }
+        isConsistent = false;
         return false;
     }
 
@@ -230,7 +237,8 @@ public class GenMCExecutionModel {
                     return addEvent(e);
                 }
 
-                if (e instanceof CondJump jump && isTrue(encodingContext.jumpCondition(jump))) {
+                Optional<EventData> data = getData(e);
+                if (e instanceof CondJump jump && data.isPresent() && data.get().wasExecuted()) {
                     e = jump.getLabel();
                 } else {
                     e = e.getSuccessor();
@@ -266,12 +274,16 @@ public class GenMCExecutionModel {
         } else if (data.isJump()) {
             // ===== Jumps =====
             // We override the meaning of execution here. A jump is executed IFF its condition was true.
-            check();
+            if (!check()) {
+                return data;
+            }
             data.setWasExecuted(isTrue(encodingContext.jumpCondition((CondJump) e)));
             trace.addEvent(data);
         } else if (data.getEvent() instanceof Assert assertionEvent) {
             // ===== Assertions =====
-            check();
+            if (!check()) {
+                return data;
+            }
             trace.addEvent(data);
             AssertInline assertion = new AssertInline(assertionEvent);
             hasError = checkProperties(assertion.encode(encodingContext));

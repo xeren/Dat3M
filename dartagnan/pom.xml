@@ -65,7 +65,6 @@
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>${junit.version}</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
@@ -112,9 +111,9 @@
                 <configuration>
                     <mainClass>com.dat3m.dartagnan.Dartagnan</mainClass>
                     <arguments>
-                        <argument>../cat/tso.cat</argument>
-                        <argument>--target=tso</argument>
-                        <argument>../litmus/X86/SB+po-rfis.litmus</argument>
+                        <argument>../cat/rc11.cat</argument>
+                        <argument>--target=c11</argument>
+                        <argument>../litmus/C11/auto/b_reorder.litmus</argument>
                         <argument>--property=program_spec</argument>
                         <argument>--bound=3</argument>
                         <argument>--modeling.threadCreateAlwaysSucceeds=true</argument>
