@@ -210,16 +210,22 @@ public class GenMCExecutionModel {
         return porfPrefix;
     }
 
-    public Set<EventData> getEventsAfter(EventData event) {
+    public Set<Event> getEventsAfter(EventData event) {
         return trace.getElements()
                 .stream()
                 .filter(evt -> trace.getId(evt) > trace.getId(event))
+                .map(EventData::getEvent)
                 .collect(Collectors.toSet());
     }
 
     public EventData nextEvent() throws InterruptedException, SolverException {
         Filter eventFilter = Filter.difference(Filter.byEvents(getProgram().getThreadEvents()), trace.eventFilter());
-        Event startEvent = trace.getObjectById(0).getEvent();
+        Event startEvent;
+        try {
+            startEvent = trace.getObjectById(0).getEvent();
+        } catch (NullPointerException e) {
+            startEvent = getProgram().getThreads().getFirst().getEntry();
+        }
         int threadIndex = 0;
         boolean initialize = true;
         if (lastAdded != null) {

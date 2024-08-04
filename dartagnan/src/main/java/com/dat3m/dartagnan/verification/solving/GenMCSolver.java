@@ -121,7 +121,7 @@ public class GenMCSolver extends ModelChecker {
 
     private boolean genmc(GenMCExecutionModel model) throws InvalidConfigurationException, SolverException, InterruptedException {
         model.initialize();
-        Set<EventData> revisitableReads = new HashSet<>();
+        Set<Event> revisitableReads = new HashSet<>();
         Checklist backwardsRevisits = new Checklist();
         Worklist revisitsToDo = new Worklist();
         if (!visit(model, revisitableReads, backwardsRevisits, revisitsToDo)) {
@@ -136,7 +136,7 @@ public class GenMCSolver extends ModelChecker {
             logger.info((revisit instanceof ForwardRevisit ? "Forward" : "Backward") + " revisiting execution for read " + revisitedRead + " and write "
                     + newRead.getReadFrom().getEvent());
 
-            Set<EventData> nonRevisitableEvents = model.getEventsAfter(model.getData(revisitedRead).get());
+            Set<Event> nonRevisitableEvents = model.getEventsAfter(model.getData(revisitedRead).get());
             revisitableReads.removeAll(nonRevisitableEvents);
             backwardsRevisits.remove(nonRevisitableEvents);
             if (!visit(revisitModel, revisitableReads, backwardsRevisits, revisitsToDo)) {
@@ -148,8 +148,7 @@ public class GenMCSolver extends ModelChecker {
         return true;
     }
 
-    private boolean visit(GenMCExecutionModel model, Set<EventData> revisitableReads, Checklist backwardsRevisits, Worklist revisitsToDo)
-            throws InterruptedException, SolverException {
+    private boolean visit(GenMCExecutionModel model, Set<Event> revisitableReads, Checklist backwardsRevisits, Worklist revisitsToDo) throws InterruptedException, SolverException {
         logger.info("Exploring new execution");
         EventData event;
         while ((event = model.nextEvent()) != null) {
@@ -168,7 +167,7 @@ public class GenMCSolver extends ModelChecker {
                     logger.info("Aborting exploration: Inconsistent execution");
                     return true;
                 }
-                revisitableReads.add(event);
+                revisitableReads.add(event.getEvent());
                 for (EventData writeData : writesData) {
                     if (writeData != event.getReadFrom()) {
                         logger.info("Adding new forward revisit for " + event.getEvent());
@@ -186,7 +185,7 @@ public class GenMCSolver extends ModelChecker {
         return model.checkProperties();
     }
 
-    private boolean calcBackwardRevisits(GenMCExecutionModel model, Set<EventData> revisitableReads, Checklist backwardsRevisits, Worklist revisitsToDo, EventData write)
+    private boolean calcBackwardRevisits(GenMCExecutionModel model, Set<Event> revisitableReads, Checklist backwardsRevisits, Worklist revisitsToDo, EventData write)
             throws InterruptedException, SolverException {
         Set<EventData> writePrefix = model.getPorfPrefix(write);
         Set<EventData> readsForAddress = model.getMayAliasMap().get(write);
@@ -204,11 +203,15 @@ public class GenMCSolver extends ModelChecker {
         return true;
     }
 
-    private static <T> Set<T> getRelevantReads(Set<T> firstSet, Set<T> secondSet, Set<T> differenceSet) {
-        Set<T> resultSet = new HashSet<>();
-        for (T t : firstSet) {
-            if (secondSet.contains(t) && !differenceSet.contains(t)) {
-                resultSet.add(t);
+    private static Set<EventData> getRelevantReads(Set<Event> revisitableReads, Set<EventData> readsForAddress, Set<EventData> writePrefix) {
+        Set<EventData> resultSet = new HashSet<>();
+        Set<Event> writePrefixEvents = writePrefix.stream()
+                .map(EventData::getEvent)
+                .collect(Collectors.toSet());
+        for (EventData data : readsForAddress) {
+            Event event = data.getEvent();
+            if (revisitableReads.contains(event) && !writePrefixEvents.contains(event)) {
+                resultSet.add(data);
             }
         }
         return resultSet;
@@ -271,9 +274,9 @@ public class GenMCSolver extends ModelChecker {
             return true;
         }
 
-        private void remove(Set<EventData> events) {
-            for (EventData event : events) {
-                backwardsRevisits.remove(event.getEvent());
+        private void remove(Set<Event> events) {
+            for (Event event : events) {
+                backwardsRevisits.remove(event);
             }
         }
     }

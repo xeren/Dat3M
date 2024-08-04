@@ -111,9 +111,9 @@
                 <configuration>
                     <mainClass>com.dat3m.dartagnan.Dartagnan</mainClass>
                     <arguments>
-                        <argument>../cat/rc11.cat</argument>
-                        <argument>--target=c11</argument>
-                        <argument>../litmus/C11/auto/b_reorder.litmus</argument>
+                        <argument>../cat/ptx-v6.0.cat</argument>
+                        <argument>--target=ptx</argument>
+                        <argument>../litmus/PTX/Manual/SB+bar-const-diff.litmus</argument>
                         <argument>--property=program_spec</argument>
                         <argument>--bound=3</argument>
                         <argument>--modeling.threadCreateAlwaysSucceeds=true</argument>
