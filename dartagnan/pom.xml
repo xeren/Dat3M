@@ -111,12 +111,13 @@
                 <configuration>
                     <mainClass>com.dat3m.dartagnan.Dartagnan</mainClass>
                     <arguments>
-                        <argument>../cat/ptx-v6.0.cat</argument>
-                        <argument>--target=ptx</argument>
-                        <argument>../litmus/PTX/Manual/SB+bar-const-diff.litmus</argument>
+                        <argument>../cat/imm.cat</argument>
+                        <argument>--target=imm</argument>
+                        <argument>../benchmarks/imm/paper-E3.6.c</argument>
                         <argument>--property=program_spec</argument>
                         <argument>--bound=3</argument>
                         <argument>--modeling.threadCreateAlwaysSucceeds=true</argument>
+                        <argument>--encoding.mergeCFVars=false</argument>
                         <argument>--solver=z3</argument>
                         <argument>--witness=png</argument>
                         <argument>--method=genmc</argument>

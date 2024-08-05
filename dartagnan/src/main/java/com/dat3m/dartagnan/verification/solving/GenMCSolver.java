@@ -163,7 +163,7 @@ public class GenMCSolver extends ModelChecker {
                         .stream()
                         .filter(EventData::isWrite)
                         .collect(Collectors.toSet());
-                if (writesData.size() > 1 && !model.check(true)) {
+                if (writesData.size() > 1 && !model.checkConsistency(true)) {
                     logger.info("Aborting exploration: Inconsistent execution");
                     return true;
                 }
@@ -190,7 +190,7 @@ public class GenMCSolver extends ModelChecker {
         Set<EventData> writePrefix = model.getPorfPrefix(write);
         Set<EventData> readsForAddress = model.getMayAliasMap().get(write);
         Set<EventData> relevantReads = getRelevantReads(revisitableReads, readsForAddress, writePrefix);
-        if (!relevantReads.isEmpty() && !model.check(false)) {
+        if (!relevantReads.isEmpty() && !model.checkConsistency(false)) {
             return false;
         }
         for (EventData readData : relevantReads) {

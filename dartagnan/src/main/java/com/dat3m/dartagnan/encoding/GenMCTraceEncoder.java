@@ -9,8 +9,6 @@ import com.dat3m.dartagnan.program.analysis.Dependency;
 import com.dat3m.dartagnan.program.analysis.ExecutionAnalysis;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.RegWriter;
-import com.dat3m.dartagnan.program.event.core.CondJump;
-import com.dat3m.dartagnan.program.event.core.Label;
 import com.dat3m.dartagnan.program.event.core.MemoryCoreEvent;
 import com.dat3m.dartagnan.program.event.core.threading.ThreadStart;
 import com.dat3m.dartagnan.program.memory.Memory;
@@ -133,30 +131,17 @@ public class GenMCTraceEncoder implements Encoder {
         }
         enc.add(startEvent.encodeExec(context));
 
-        Event pred = startEvent;
         List<Event> traceEvents = trace.getElements()
                 .stream()
                 .map(EventData::getEvent)
-                .distinct()
                 .toList();
-        List<Event> relevantEvents = startEvent.getSuccessor().getSuccessors();
-        relevantEvents.removeIf(evt -> !traceEvents.contains(evt));
-        for(Event e : relevantEvents) {
-            // Immediate control flow
-            BooleanFormula cfCond = context.controlFlow(pred);
-            if (pred instanceof CondJump jump) {
-                cfCond = bmgr.and(cfCond, bmgr.not(context.jumpCondition(jump)));
-            }
-
-            // Control flow via jumps
-            if (e instanceof Label label) {
-                for (CondJump jump : label.getJumpSet()) {
-                    cfCond = bmgr.or(cfCond, bmgr.and(context.controlFlow(jump), context.jumpCondition(jump)));
-                }
-            }
-            enc.add(bmgr.equivalence(context.controlFlow(e), cfCond));
+        for (Event e : startEvent.getSuccessor().getSuccessors()) {
             enc.add(e.encodeExec(context));
-            pred = e;
+            if (traceEvents.contains(e)) {
+                enc.add(bmgr.equivalence(context.controlFlow(e), bmgr.makeTrue()));
+            } else {
+                enc.add(bmgr.equivalence(context.controlFlow(e), bmgr.makeFalse()));
+            }
         }
         return bmgr.and(enc);
     }

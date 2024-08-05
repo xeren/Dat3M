@@ -2,6 +2,7 @@ package com.dat3m.dartagnan.verification.model;
 
 import com.dat3m.dartagnan.encoding.EncodingContext;
 import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
+import com.dat3m.dartagnan.expression.booleans.BoolLiteral;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.analysis.alias.AliasAnalysis;
@@ -158,13 +159,15 @@ public class GenMCExecutionModel {
 
     //========================== Public methods =========================
 
-    public boolean check(boolean ignoreLast) throws InterruptedException, SolverException {
+    public boolean checkConsistency(boolean ignoreLast) throws InterruptedException, SolverException {
+        logger.info("Checking consistency");
         EventData event = null;
         if (ignoreLast) {
             event = trace.getElements().removeLast();
         }
         Model model = calculateModel();
         if (model == null) {
+            isConsistent = false;
             return false;
         }
         Filter eventFilter = Filter.intersection(Filter.byTag(Tag.VISIBLE), trace.eventFilter());
@@ -235,7 +238,7 @@ public class GenMCExecutionModel {
         }
         while (threadIndex < relevantThreads.size()) {
             Thread thread = relevantThreads.get(threadIndex);
-            Event e = initialize ? getLastAddedThreadEvent(thread) : startEvent.getSuccessor();
+            Event e = initialize ? getLastAddedThreadEvent(thread) : startEvent;
             initialize = true;
             while (e != null) {
                 if (eventFilter.apply(e)) {
@@ -280,19 +283,27 @@ public class GenMCExecutionModel {
         } else if (data.isJump()) {
             // ===== Jumps =====
             // We override the meaning of execution here. A jump is executed IFF its condition was true.
-            if (!check()) {
+            CondJump jump = (CondJump) e;
+            trace.addEvent(data);
+            if (jump.getGuard() instanceof BoolLiteral bool) {
+                data.setWasExecuted(bool.getValue());
+            } else if (checkConsistency()) {
+                data.setWasExecuted(isTrue(encodingContext.jumpCondition(jump)));
+            } else {
                 return data;
             }
-            data.setWasExecuted(isTrue(encodingContext.jumpCondition((CondJump) e)));
-            trace.addEvent(data);
         } else if (data.getEvent() instanceof Assert assertionEvent) {
             // ===== Assertions =====
-            if (!check()) {
+            if (assertionEvent.getExpression() instanceof BoolLiteral bool) {
+                trace.addEvent(data);
+                hasError = !bool.getValue();
+            } else if (checkConsistency()) {
+                trace.addEvent(data);
+                AssertInline assertion = new AssertInline(assertionEvent);
+                hasError = !checkProperties(assertion.encode(encodingContext));
+            } else {
                 return data;
             }
-            trace.addEvent(data);
-            AssertInline assertion = new AssertInline(assertionEvent);
-            hasError = checkProperties(assertion.encode(encodingContext));
         }
         if (!trace.getElements().contains(data)) {
             trace.addEvent(data);
@@ -349,15 +360,15 @@ public class GenMCExecutionModel {
                 .filter(evt -> evt.getThread() == thread)
                 .max(Comparator.comparingInt(trace::getId))
                 .map(EventData::getEvent)
-                .map(Event::getSuccessor)
                 .orElse(thread.getEntry());
     }
 
-    private boolean check() throws InterruptedException, SolverException {
-        return check(false);
+    private boolean checkConsistency() throws InterruptedException, SolverException {
+        return checkConsistency(false);
     }
 
     private boolean checkProperties(BooleanFormula properties) throws InterruptedException, SolverException {
+        logger.info("Checking properties");
         List<BooleanFormula> propertiesList = new ArrayList<>(2);
         propertiesList.add(properties);
         Model model = calculateModel(propertiesList);
