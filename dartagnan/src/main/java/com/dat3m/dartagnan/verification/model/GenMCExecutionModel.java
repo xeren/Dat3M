@@ -249,6 +249,9 @@ public class GenMCExecutionModel {
                 Optional<EventData> data = getData(e);
                 if (e instanceof CondJump jump && data.isPresent() && data.get().wasExecuted()) {
                     e = jump.getLabel();
+                    if (getData(e).isPresent()) {
+                        // TODO: Handle loops
+                    }
                 } else {
                     e = e.getSuccessor();
                 }
@@ -287,22 +290,21 @@ public class GenMCExecutionModel {
             trace.addEvent(data);
             if (jump.getGuard() instanceof BoolLiteral bool) {
                 data.setWasExecuted(bool.getValue());
-            } else if (checkConsistency()) {
-                data.setWasExecuted(isTrue(encodingContext.jumpCondition(jump)));
             } else {
-                return data;
+                data.setWasExecuted(calculateModel(encodingContext.jumpCondition(jump)) != null);
             }
         } else if (data.getEvent() instanceof Assert assertionEvent) {
             // ===== Assertions =====
             if (assertionEvent.getExpression() instanceof BoolLiteral bool) {
                 trace.addEvent(data);
-                hasError = !bool.getValue();
-            } else if (checkConsistency()) {
+                boolean failure = !bool.getValue();
+                if (failure && checkConsistency(false)) {
+                    hasError = true;
+                }
+            } else {
                 trace.addEvent(data);
                 AssertInline assertion = new AssertInline(assertionEvent);
                 hasError = !checkProperties(assertion.encode(encodingContext));
-            } else {
-                return data;
             }
         }
         if (!trace.getElements().contains(data)) {
@@ -363,10 +365,6 @@ public class GenMCExecutionModel {
                 .orElse(thread.getEntry());
     }
 
-    private boolean checkConsistency() throws InterruptedException, SolverException {
-        return checkConsistency(false);
-    }
-
     private boolean checkProperties(BooleanFormula properties) throws InterruptedException, SolverException {
         logger.info("Checking properties");
         List<BooleanFormula> propertiesList = new ArrayList<>(2);
@@ -386,7 +384,13 @@ public class GenMCExecutionModel {
     }
 
     private Model calculateModel() throws InterruptedException, SolverException {
-        return calculateModel(new ArrayList<>());
+        return calculateModel(new ArrayList<>(1));
+    }
+
+    private Model calculateModel(BooleanFormula assumption) throws InterruptedException, SolverException {
+        List<BooleanFormula> assumptions = new ArrayList<>(2);
+        assumptions.add(assumption);
+        return calculateModel(assumptions);
     }
 
     private Model calculateModel(Collection<BooleanFormula> assumptions) throws InterruptedException, SolverException {
@@ -396,11 +400,5 @@ public class GenMCExecutionModel {
             model = prover.getModel();
         }
         return model;
-    }
-
-    // ===================================================
-
-    private boolean isTrue(BooleanFormula formula) {
-        return Boolean.TRUE.equals(getExecution().getModel().evaluate(formula));
     }
 }
