@@ -4,6 +4,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.program.event.RegWriter;
+import com.dat3m.dartagnan.program.event.Tag;
+import com.dat3m.dartagnan.program.event.core.Init;
+import com.dat3m.dartagnan.program.event.core.Label;
+import com.dat3m.dartagnan.program.event.core.threading.ThreadCreate;
 import com.dat3m.dartagnan.program.filter.Filter;
 import com.dat3m.dartagnan.solver.caat.domain.Domain;
 
@@ -47,6 +53,16 @@ public class SimpleEventDomain implements Domain<EventData> {
         }
     }
 
+    public EventData getLast() {
+        return events.get(events.size() - 1);
+    }
+
+    public EventData removeLast() {
+        EventData last = getLast();
+        events.remove(last);
+        return last;
+    }
+
     public Filter eventFilter() {
         return Filter.byEvents(getElements()
                 .stream()
@@ -59,20 +75,74 @@ public class SimpleEventDomain implements Domain<EventData> {
         return toString(getElements());
     }
 
+    public String toString(Filter eventFilter) {
+        return toString(getElements(), eventFilter);
+    }
+
+    public static String toString(Collection<EventData> events, Filter eventFilter) {
+        return toString(events.stream()
+                .filter(event -> eventFilter.apply(event.getEvent()))
+                .toList());
+    }
+
     public static String toString(Collection<EventData> events) {
         StringBuilder builder = new StringBuilder();
-        events.forEach(evt -> {
-            builder.append(evt.getEvent().getGlobalId())
+        Event pred = null;
+        for (EventData eventData : events) {
+            Event event = eventData.getEvent();
+            if (pred != null && pred.getThread() != event.getThread() && !(event instanceof Init)) {
+                builder.append("\n");
+            }
+            builder.append(event.getThread().getId())
                     .append(": ");
-            builder.append(evt.getEvent().getClass().getSimpleName())
+            builder.append(event.getGlobalId())
                     .append(": ");
-            builder.append(evt.getEvent());
-            if (evt.getReadFrom() != null) {
+            builder.append(event.getClass().getSimpleName())
+                    .append(": ");
+            builder.append(event);
+            if (eventData.getReadFrom() != null) {
                 builder.append(" reads from ")
-                        .append(evt.getReadFrom().getEvent());
+                        .append(eventData.getReadFrom().getEvent());
             }
             builder.append('\n');
-        });
+            pred = event;
+        }
         return builder.toString();
+    }
+
+    public String toRelevantEventsString() {
+        return toRelevantEventsString(getElements());
+    }
+
+    public static String toRelevantEventsString(Collection<EventData> events) {
+        List<EventData> filteredEvents = new ArrayList<>();
+        for (EventData eventData : events) {
+            Event event = eventData.getEvent();
+            if ("pthread_join".equals(event.getFunction().getName())) {
+                continue;
+            }
+            if (event instanceof Init init && isSynthetic(init.getBase().getName())) {
+                continue;
+            }
+            if (event instanceof RegWriter writer && isSynthetic(writer.getResultRegister().getName())) {
+                continue;
+            }
+            if (event.getPredecessor() instanceof ThreadCreate) {
+                continue;
+            }
+            if (isThreadEndStore(eventData)) {
+                continue;
+            }
+            filteredEvents.add(eventData);
+        }
+        return toString(filteredEvents, Filter.byTag(Tag.VISIBLE));
+    }
+
+    private static boolean isSynthetic(String name) {
+        return name.startsWith("__");
+    }
+
+    static boolean isThreadEndStore(EventData store) {
+        return store.getEvent().getSuccessor() instanceof Label label && label.getThread().getEntry().isSpawned() && label.getName().startsWith("END_OF_T");
     }
 }
