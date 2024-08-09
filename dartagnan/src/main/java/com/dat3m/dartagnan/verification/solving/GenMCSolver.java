@@ -40,6 +40,9 @@ public class GenMCSolver extends ModelChecker {
 
     private static final Logger logger = LogManager.getLogger(GenMCSolver.class);
 
+    private int completeExecutions = 0;
+    private int executions = 0;
+
     // ================================================================================================================
     // GenMC solver
 
@@ -95,7 +98,16 @@ public class GenMCSolver extends ModelChecker {
         prover.push();
 
         logger.info("GenMC algorithm started.");
+        long startTime = System.currentTimeMillis();
         boolean result = genmc(model);
+        long endTime = System.currentTimeMillis();
+        long genmcTime = endTime - startTime;
+        logger.info("GenMC took " + genmcTime + " ms");
+
+        int failedExecutions = executions - completeExecutions;
+        logger.info("Number of complete executions explored: " + completeExecutions);
+        logger.info("Number of failed executions found: " + failedExecutions);
+        logger.info("Time per execution estimation: " + genmcTime / (completeExecutions + failedExecutions / 2) + " ms");
 
         if (logger.isInfoEnabled()) {
             final String message = !result ? (propertyType == Property.Type.SAFETY ? "Specification violation found." : "Specification witness found.") :
@@ -122,9 +134,9 @@ public class GenMCSolver extends ModelChecker {
     private boolean genmc(GenMCExecutionModel model) throws InvalidConfigurationException, SolverException, InterruptedException {
         model.initialize();
         Set<Event> revisitableReads = new HashSet<>();
-        Checklist backwardsRevisits = new Checklist();
+        Checklist backwardRevisits = new Checklist();
         Worklist revisitsToDo = new Worklist();
-        if (!visit(model, revisitableReads, backwardsRevisits, revisitsToDo)) {
+        if (!visit(model, revisitableReads, backwardRevisits, revisitsToDo)) {
             return false;
         }
         revisitsToDo.setReadOrder(model);
@@ -138,8 +150,8 @@ public class GenMCSolver extends ModelChecker {
 
             Set<Event> nonRevisitableEvents = model.getEventsAfter(model.getData(revisitedRead).get());
             revisitableReads.removeAll(nonRevisitableEvents);
-            backwardsRevisits.remove(nonRevisitableEvents);
-            if (!visit(revisitModel, revisitableReads, backwardsRevisits, revisitsToDo)) {
+            backwardRevisits.remove(nonRevisitableEvents);
+            if (!visit(revisitModel, revisitableReads, backwardRevisits, revisitsToDo)) {
                 return false;
             }
             model = revisitModel;
@@ -148,8 +160,9 @@ public class GenMCSolver extends ModelChecker {
         return true;
     }
 
-    private boolean visit(GenMCExecutionModel model, Set<Event> revisitableReads, Checklist backwardsRevisits, Worklist revisitsToDo) throws InterruptedException, SolverException {
+    private boolean visit(GenMCExecutionModel model, Set<Event> revisitableReads, Checklist backwardRevisits, Worklist revisitsToDo) throws InterruptedException, SolverException {
         logger.info("Exploring new execution");
+        ++executions;
         EventData event;
         while ((event = model.nextEvent()) != null) {
             if (!model.isConsistent()) {
@@ -176,16 +189,21 @@ public class GenMCSolver extends ModelChecker {
                 }
             }
             if (event.isWrite()) {
-                if (!calcBackwardRevisits(model, revisitableReads, backwardsRevisits, revisitsToDo, event)) {
+                if (!calcBackwardRevisits(model, revisitableReads, backwardRevisits, revisitsToDo, event)) {
                     logger.info("Aborting exploration: Inconsistent execution");
                     return true;
                 }
             }
         }
+        if (!model.threadsAreJoined()) {
+            logger.info("Exploration finished without joining all threads");
+            return true;
+        }
+        ++completeExecutions;
         return model.checkProperties();
     }
 
-    private boolean calcBackwardRevisits(GenMCExecutionModel model, Set<Event> revisitableReads, Checklist backwardsRevisits, Worklist revisitsToDo, EventData write)
+    private boolean calcBackwardRevisits(GenMCExecutionModel model, Set<Event> revisitableReads, Checklist backwardRevisits, Worklist revisitsToDo, EventData write)
             throws InterruptedException, SolverException {
         Set<EventData> writePrefix = model.getPorfPrefix(write);
         Set<EventData> readsForAddress = model.getMayAliasMap().get(write);
@@ -196,7 +214,7 @@ public class GenMCSolver extends ModelChecker {
         for (EventData readData : relevantReads) {
             logger.info("Adding new backward revisit with " + write.getEvent());
             BackwardRevisit newRevisit = new BackwardRevisit(model, readData, writePrefix);
-            if (backwardsRevisits.add(readData, newRevisit)) {
+            if (backwardRevisits.add(readData, newRevisit)) {
                 revisitsToDo.add(newRevisit);
             }
         }
@@ -365,14 +383,14 @@ public class GenMCSolver extends ModelChecker {
 
         @Override
         protected GenMCExecutionModel calculateModel(GenMCExecutionModel oldModel) throws InvalidConfigurationException, InterruptedException, SolverException {
-            EventData readData = eventsToKeep.getFirst();
+            EventData readData = eventsToKeep.get(0);
             int readIndex = oldModel.getTrace().getId(oldModel.getData(getRead()).get());
             List<EventData> copiedEvents = oldModel.copyTraceEvents();
             for (int i = readIndex - 1; i >= 0; --i) {
                 EventData event = copiedEvents.get(i);
-                eventsToKeep.addFirst(event);
+                eventsToKeep.add(0, event);
             }
-            return newModel(oldModel, eventsToKeep, readData, eventsToKeep.getLast());
+            return newModel(oldModel, eventsToKeep, readData, eventsToKeep.get(eventsToKeep.size() - 1));
         }
     }
 }

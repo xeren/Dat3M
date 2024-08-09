@@ -8,6 +8,7 @@ import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.analysis.alias.AliasAnalysis;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.event.core.*;
+import com.dat3m.dartagnan.program.event.core.threading.ThreadStart;
 import com.dat3m.dartagnan.program.filter.Filter;
 import com.dat3m.dartagnan.program.specification.AssertInline;
 import com.dat3m.dartagnan.solver.caat.CAATSolver;
@@ -24,7 +25,10 @@ import org.sosy_lab.java_smt.api.ProverEnvironment;
 import org.sosy_lab.java_smt.api.SolverException;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static com.dat3m.dartagnan.verification.model.SimpleEventDomain.isThreadEndStore;
 
 /*
 The ExecutionModel wraps a Model and extracts data from it in a more workable manner.
@@ -42,6 +46,7 @@ public class GenMCExecutionModel {
     private boolean hasError = false;
     private boolean isExplored = false;
     private boolean isConsistent = true;
+    private boolean threadsAreJoined = true;
 
     private final EncodingContext encodingContext;
     private final GenMCTraceEncoder traceEncoder;
@@ -79,7 +84,9 @@ public class GenMCExecutionModel {
     }
 
     public GenMCExecutionModel newInstance() throws InvalidConfigurationException {
-        return GenMCExecutionModel.withContext(encodingContext, traceEncoder, prover, properties);
+        GenMCExecutionModel model = GenMCExecutionModel.withContext(encodingContext, traceEncoder, prover, properties);
+        model.threadsAreJoined = threadsAreJoined;
+        return model;
     }
 
     private void createViews() {
@@ -126,6 +133,10 @@ public class GenMCExecutionModel {
         return isExplored;
     }
 
+    public boolean threadsAreJoined() {
+        return threadsAreJoined;
+    }
+
     //========================== Initialization =========================
 
     public void initialize() throws InterruptedException, SolverException {
@@ -142,6 +153,7 @@ public class GenMCExecutionModel {
         lastAdded = null;
         isExplored = false;
         isConsistent = true;
+        threadsAreJoined = true;
     }
 
     public void initialize(List<EventData> startTraceEvents, EventData revisitRead, EventData write) throws InterruptedException, SolverException {
@@ -155,6 +167,7 @@ public class GenMCExecutionModel {
         lastAdded = getLastAddedThreadEvent(firstThread);
         isExplored = false;
         isConsistent = true;
+        threadsAreJoined = threadsAreJoined || isThreadEndStore(write);
     }
 
     //========================== Public methods =========================
@@ -163,7 +176,7 @@ public class GenMCExecutionModel {
         logger.info("Checking consistency");
         EventData event = null;
         if (ignoreLast) {
-            event = trace.getElements().removeLast();
+            event = trace.removeLast();
         }
         Model model = calculateModel();
         if (model == null) {
@@ -227,7 +240,7 @@ public class GenMCExecutionModel {
         try {
             startEvent = trace.getObjectById(0).getEvent();
         } catch (NullPointerException e) {
-            startEvent = getProgram().getThreads().getFirst().getEntry();
+            startEvent = getProgram().getThreads().get(0).getEntry();
         }
         int threadIndex = 0;
         boolean initialize = true;
@@ -270,7 +283,13 @@ public class GenMCExecutionModel {
         data.setWasExecuted(true);
         if (data.isMemoryEvent()) {
             // ===== Memory Events =====
-            Set<EventData> mayAliasSet = mayAliasMap.computeIfAbsent(data, this::mayAliasSet);
+            Function<EventData, Set<EventData>> mayAliasComputation;
+            if (trace.getLast().getEvent() instanceof ThreadStart start && start.isSpawned()) {
+                mayAliasComputation = threadStartLoad -> Set.of(getThreadStartStore(start));
+            } else {
+                mayAliasComputation = this::mayAliasSet;
+            }
+            Set<EventData> mayAliasSet = mayAliasMap.computeIfAbsent(data, mayAliasComputation);            
             if (data.isRead()) {
                 try {
                     data.setReadFrom(mayAliasSet.iterator().next());
@@ -306,6 +325,19 @@ public class GenMCExecutionModel {
                 AssertInline assertion = new AssertInline(assertionEvent);
                 hasError = !checkProperties(assertion.encode(encodingContext));
             }
+        } else if (isThreadEndStore(trace.getLast())) {
+            Event threadEndStore = trace.getLast().getEvent();
+            boolean isRead = false;
+            for (EventData event : trace.getElements()) {
+                EventData readFrom = event.getReadFrom();
+                if (readFrom != null && readFrom.getEvent() == threadEndStore) {
+                    isRead = true;
+                    break;
+                }
+            }
+            if (!isRead) {
+                threadsAreJoined = false;
+            }
         }
         if (!trace.getElements().contains(data)) {
             trace.addEvent(data);
@@ -325,6 +357,10 @@ public class GenMCExecutionModel {
             }
         }
         return mayAliasSet;
+    }
+
+    private EventData getThreadStartStore(ThreadStart thread) {
+        return trace.getObjectById(trace.getId(getData(thread.getCreator()).get()) + 1);
     }
 
     private Set<EventData> getPorfPrefixPreviousPo(EventData event) {

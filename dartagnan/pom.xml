@@ -113,9 +113,9 @@
                     <arguments>
                         <argument>../cat/rc11.cat</argument>
                         <argument>--target=c11</argument>
-                        <argument>../litmus/C11/manual/imm-E3.9.litmus</argument>
+                        <argument>../benchmarks/lfds/treiber.c</argument>
                         <argument>--property=program_spec</argument>
-                        <argument>--bound=3</argument>
+                        <argument>--bound=1</argument>
                         <argument>--encoding.mergeCFVars=false</argument>
                         <argument>--solver=yices2</argument>
                         <argument>--witness=png</argument>
