@@ -6,6 +6,8 @@ import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
 import com.dat3m.dartagnan.encoding.PropertyEncoder;
 import com.dat3m.dartagnan.encoding.WmmEncoder;
 import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.program.processing.AssertionTransformer;
+import com.dat3m.dartagnan.program.specification.AssertInline;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.verification.VerificationTask;
@@ -75,6 +77,7 @@ public class GenMCSolver extends ModelChecker {
 
         memoryModel.configureAll(config);
         preprocessProgram(task, config);
+        new AssertionTransformer().run(task.getProgram());
         preprocessMemoryModel(task, config);
 
         performStaticProgramAnalyses(task, analysisContext, config);
@@ -87,7 +90,12 @@ public class GenMCSolver extends ModelChecker {
         final PropertyEncoder propertyEncoder = PropertyEncoder.withContext(context);
         final WmmEncoder baselineEncoder = WmmEncoder.withContext(context);
 
-        final BooleanFormula properties = propertyEncoder.encodeProperties(task.getProperty());
+        final BooleanFormula properties;
+        if (task.getProgram().getSpecification() instanceof AssertInline) {
+            properties = null;
+        } else {
+            properties = propertyEncoder.encodeProperties(task.getProperty());
+        }
         final GenMCExecutionModel model = GenMCExecutionModel.withContext(context, traceEncoder, prover, properties);
         final Property.Type propertyType = Property.getCombinedType(task.getProperty(), task);
 

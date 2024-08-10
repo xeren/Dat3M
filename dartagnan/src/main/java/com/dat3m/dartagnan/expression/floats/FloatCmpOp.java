@@ -31,4 +31,23 @@ public enum FloatCmpOp implements ExpressionKind {
         };
     }
 
+    public FloatCmpOp inverted() {
+        return switch (this) {
+            case OEQ -> UNEQ;
+            case ONEQ -> UEQ;
+            case OGT -> ULTE;
+            case OGTE -> ULT;
+            case OLT -> UGTE;
+            case OLTE -> UGT;
+            case ORD -> UNO;
+            case UEQ -> ONEQ;
+            case UNEQ -> OEQ;
+            case UGT -> OLTE;
+            case UGTE -> OLT;
+            case ULT -> OGTE;
+            case ULTE -> OGT;
+            case UNO -> ORD;
+        };
+    }
+
 }

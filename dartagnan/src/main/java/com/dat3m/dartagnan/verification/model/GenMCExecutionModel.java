@@ -206,6 +206,10 @@ public class GenMCExecutionModel {
     }
 
     public boolean checkProperties() throws InterruptedException, SolverException {
+        if (properties == null) {
+            logger.info("No global properties to check");
+            return true;
+        }
         BooleanFormulaManager bmgr = encodingContext.getBooleanFormulaManager();
         return checkProperties(bmgr.and(properties, traceEncoder.getPropertyRelevantEncoding()));
     }
