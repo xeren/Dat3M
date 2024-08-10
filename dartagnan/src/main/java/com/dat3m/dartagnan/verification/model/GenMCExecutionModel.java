@@ -46,7 +46,7 @@ public class GenMCExecutionModel {
     private boolean hasError = false;
     private boolean isExplored = false;
     private boolean isConsistent = true;
-    private boolean threadsAreJoined = true;
+    private boolean[] threadsAreJoined;
 
     private final EncodingContext encodingContext;
     private final GenMCTraceEncoder traceEncoder;
@@ -70,6 +70,7 @@ public class GenMCExecutionModel {
         this.properties = properties;
 
         relevantThreads = new ArrayList<>(getProgram().getThreads());
+        threadsAreJoined = new boolean[relevantThreads.size()];
 
         initEvents = new ArrayList<>(getProgram().getThreadEvents(Init.class).size() * 3);
         mayAliasMap = new HashMap<>();
@@ -85,7 +86,9 @@ public class GenMCExecutionModel {
 
     public GenMCExecutionModel newInstance() throws InvalidConfigurationException {
         GenMCExecutionModel model = GenMCExecutionModel.withContext(encodingContext, traceEncoder, prover, properties);
-        model.threadsAreJoined = threadsAreJoined;
+        for (int i = 0; i < threadsAreJoined.length; ++i) {
+            model.threadsAreJoined[i] = threadsAreJoined[i];
+        }
         return model;
     }
 
@@ -134,7 +137,12 @@ public class GenMCExecutionModel {
     }
 
     public boolean threadsAreJoined() {
-        return threadsAreJoined;
+        for (boolean threadIsJoined : threadsAreJoined) {
+            if (!threadIsJoined) {
+                return false;
+            }
+        }
+        return true;
     }
 
     //========================== Initialization =========================
@@ -153,7 +161,9 @@ public class GenMCExecutionModel {
         lastAdded = null;
         isExplored = false;
         isConsistent = true;
-        threadsAreJoined = true;
+        for (Thread thread : getProgram().getThreads()) {
+            threadsAreJoined[thread.getId()] = !thread.getEntry().isSpawned();
+        }
     }
 
     public void initialize(List<EventData> startTraceEvents, EventData revisitRead, EventData write) throws InterruptedException, SolverException {
@@ -167,7 +177,7 @@ public class GenMCExecutionModel {
         lastAdded = getLastAddedThreadEvent(firstThread);
         isExplored = false;
         isConsistent = true;
-        threadsAreJoined = threadsAreJoined || isThreadEndStore(write);
+        threadsAreJoined[write.getEvent().getThread().getId()] |= isThreadEndStore(write);
     }
 
     //========================== Public methods =========================
@@ -336,7 +346,7 @@ public class GenMCExecutionModel {
                 }
             }
             if (!isRead) {
-                threadsAreJoined = false;
+                threadsAreJoined[threadEndStore.getThread().getId()] = false;
             }
         }
         if (!trace.getElements().contains(data)) {
