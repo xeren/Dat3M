@@ -3,6 +3,7 @@ package com.dat3m.dartagnan.verification.model;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.core.CondJump;
+import com.google.common.base.Preconditions;
 
 import static com.dat3m.dartagnan.program.event.Tag.*;
 
@@ -61,6 +62,10 @@ public class EventData implements Comparable<EventData> {
     	return readFrom;
     }
     void setReadFrom(EventData store) {
+        if (store != null) {
+            Preconditions.checkArgument(isRead());
+            Preconditions.checkArgument(store.isWrite());
+        }
     	readFrom = store;
     }
 

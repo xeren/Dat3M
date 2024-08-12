@@ -101,8 +101,11 @@ public class SimpleEventDomain implements Domain<EventData> {
                     .append(": ");
             builder.append(event);
             if (eventData.getReadFrom() != null) {
+                Event readFrom = eventData.getReadFrom().getEvent();
                 builder.append(" reads from ")
-                        .append(eventData.getReadFrom().getEvent());
+                        .append(readFrom.getGlobalId())
+                        .append(": ")
+                        .append(readFrom);
             }
             builder.append('\n');
             pred = event;

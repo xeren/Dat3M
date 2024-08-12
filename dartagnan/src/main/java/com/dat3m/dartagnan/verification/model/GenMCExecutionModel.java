@@ -25,9 +25,10 @@ import org.sosy_lab.java_smt.api.ProverEnvironment;
 import org.sosy_lab.java_smt.api.SolverException;
 
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static com.dat3m.dartagnan.program.event.Tag.READ;
+import static com.dat3m.dartagnan.program.event.Tag.WRITE;
 import static com.dat3m.dartagnan.verification.model.SimpleEventDomain.isThreadEndStore;
 
 /*
@@ -44,7 +45,6 @@ public class GenMCExecutionModel {
     private SimpleEventDomain trace;
     private Event lastAdded = null;
     private boolean hasError = false;
-    private boolean isExplored = false;
     private boolean isConsistent = true;
     private boolean[] threadsAreJoined;
 
@@ -53,14 +53,12 @@ public class GenMCExecutionModel {
     private final ProverEnvironment prover;
     private final GenMCWMMSolver solver;
     private final BooleanFormula properties;
+    private final Filter threadEventFilter;
     
     private final List<Thread> relevantThreads;
 
     private final List<EventData> initEvents;
-    private final Map<EventData, Set<EventData>> mayAliasMap;
-
-    // The following are a read-only views which get passed to the outside
-    private Map<EventData, Set<EventData>> mayAliasMapView;
+    private final Map<EventData, Set<EventData>> mayRfMap;
 
     private GenMCExecutionModel(EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, ProverEnvironment prover, GenMCWMMSolver solver, BooleanFormula properties) {
         this.encodingContext = encodingContext;
@@ -68,14 +66,13 @@ public class GenMCExecutionModel {
         this.prover = prover;
         this.solver = solver;
         this.properties = properties;
+        this.threadEventFilter = Filter.byEvents(getProgram().getThreadEvents());
 
         relevantThreads = new ArrayList<>(getProgram().getThreads());
         threadsAreJoined = new boolean[relevantThreads.size()];
 
         initEvents = new ArrayList<>(getProgram().getThreadEvents(Init.class).size() * 3);
-        mayAliasMap = new HashMap<>();
-
-        createViews();
+        mayRfMap = new HashMap<>();
     }
 
     public static GenMCExecutionModel withContext(EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, ProverEnvironment prover, BooleanFormula properties)
@@ -90,10 +87,6 @@ public class GenMCExecutionModel {
             model.threadsAreJoined[i] = threadsAreJoined[i];
         }
         return model;
-    }
-
-    private void createViews() {
-        mayAliasMapView = Collections.unmodifiableMap(mayAliasMap);
     }
 
     //======================== Public data ===========================‚
@@ -121,8 +114,8 @@ public class GenMCExecutionModel {
         return isConsistent;
     }
 
-    public Map<EventData, Set<EventData>> getMayAliasMap() {
-        return mayAliasMapView;
+    public Map<EventData, Set<EventData>> getMayRfMap() {
+        return mayRfMap;
     }
 
     public Optional<EventData> getData(Event e) {
@@ -130,10 +123,6 @@ public class GenMCExecutionModel {
                 .stream()
                 .filter(event -> event.getEvent() == e)
                 .findAny();
-    }
-
-    public boolean isExplored() {
-        return isExplored;
     }
 
     public boolean threadsAreJoined() {
@@ -159,7 +148,6 @@ public class GenMCExecutionModel {
         }
         trace = new SimpleEventDomain(initEvents);
         lastAdded = null;
-        isExplored = false;
         isConsistent = true;
         for (Thread thread : getProgram().getThreads()) {
             threadsAreJoined[thread.getId()] = !thread.getEntry().isSpawned();
@@ -175,7 +163,6 @@ public class GenMCExecutionModel {
                 .min(Comparator.comparingInt(relevantThreads::indexOf))
                 .get();
         lastAdded = getLastAddedThreadEvent(firstThread);
-        isExplored = false;
         isConsistent = true;
         threadsAreJoined[write.getEvent().getThread().getId()] |= isThreadEndStore(write);
     }
@@ -249,7 +236,7 @@ public class GenMCExecutionModel {
     }
 
     public EventData nextEvent() throws InterruptedException, SolverException {
-        Filter eventFilter = Filter.difference(Filter.byEvents(getProgram().getThreadEvents()), trace.eventFilter());
+        Filter eventFilter = Filter.difference(threadEventFilter, trace.eventFilter());
         Event startEvent;
         try {
             startEvent = trace.getObjectById(0).getEvent();
@@ -297,17 +284,19 @@ public class GenMCExecutionModel {
         data.setWasExecuted(true);
         if (data.isMemoryEvent()) {
             // ===== Memory Events =====
-            Function<EventData, Set<EventData>> mayAliasComputation;
+            Set<EventData> mayRfSet;
             if (trace.getLast().getEvent() instanceof ThreadStart start && start.isSpawned()) {
-                mayAliasComputation = threadStartLoad -> Set.of(getThreadStartStore(start));
+                mayRfSet = new HashSet<>();
+                mayRfSet.add(getThreadStartStore(start));
             } else {
-                mayAliasComputation = this::mayAliasSet;
+                mayRfSet = mayRfSet(data);
             }
-            Set<EventData> mayAliasSet = mayAliasMap.computeIfAbsent(data, mayAliasComputation);            
+            mayRfMap.put(data, mayRfSet);            
             if (data.isRead()) {
                 try {
-                    data.setReadFrom(mayAliasSet.iterator().next());
+                    data.setReadFrom(mayRfSet.iterator().next());
                 } catch (NoSuchElementException ex) {
+                    isConsistent = false;
                     logger.error("Read " + e + " has nowhere to read from in trace " + trace);
                     throw ex;
                 }
@@ -359,14 +348,15 @@ public class GenMCExecutionModel {
         return data;
     }
 
-    private Set<EventData> mayAliasSet(EventData targetEvent) {
+    private Set<EventData> mayRfSet(EventData targetEvent) {
         if (!(targetEvent.getEvent() instanceof MemoryCoreEvent targetMemEvent)) {
             return Collections.emptySet();
         }
+        String targetTag = targetEvent.isRead() ? WRITE : READ;
         Set<EventData> mayAliasSet = new HashSet<>();
         AliasAnalysis aliasAnalysis = encodingContext.getAnalysisContext().requires(AliasAnalysis.class);
         for (EventData event : trace.getElements()) {
-            if (event.getEvent() instanceof MemoryCoreEvent memEvent && aliasAnalysis.mayAlias(targetMemEvent, memEvent)) {
+            if (event.getEvent() instanceof MemoryCoreEvent memEvent && memEvent.hasTag(targetTag) && aliasAnalysis.mayAlias(targetMemEvent, memEvent)) {
                 mayAliasSet.add(event);
             }
         }
@@ -421,7 +411,6 @@ public class GenMCExecutionModel {
         propertiesList.add(properties);
         Model model = calculateModel(propertiesList);
         if (model == null) {
-            isExplored = true;
             return true;
         }
         Filter eventFilter = Filter.intersection(Filter.byTag(Tag.VISIBLE), trace.eventFilter());
@@ -429,7 +418,6 @@ public class GenMCExecutionModel {
         if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
             return false;
         }
-        isExplored = true;
         return true;
     }
 
