@@ -24,12 +24,14 @@ import org.sosy_lab.java_smt.api.Model;
 import org.sosy_lab.java_smt.api.ProverEnvironment;
 import org.sosy_lab.java_smt.api.SolverException;
 
+import java.math.BigInteger;
 import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.dat3m.dartagnan.program.event.Tag.READ;
 import static com.dat3m.dartagnan.program.event.Tag.WRITE;
 import static com.dat3m.dartagnan.verification.model.SimpleEventDomain.isThreadEndStore;
+import static com.dat3m.dartagnan.wmm.RelationNameRepository.CO;
 
 /*
 The ExecutionModel wraps a Model and extracts data from it in a more workable manner.
@@ -180,16 +182,15 @@ public class GenMCExecutionModel {
             isConsistent = false;
             return false;
         }
-        Filter eventFilter = Filter.intersection(Filter.byTag(Tag.VISIBLE), trace.eventFilter());
-        GenMCWMMSolver.Result result = solver.check(model, eventFilter);
-        if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
+        if (checkConsistency(model)) {
             if (ignoreLast) {
                 trace.addEvent(event);
             }
             return true;
+        } else {
+            isConsistent = false;
+            return false;
         }
-        isConsistent = false;
-        return false;
     }
 
     public boolean checkProperties() throws InterruptedException, SolverException {
@@ -407,18 +408,13 @@ public class GenMCExecutionModel {
 
     private boolean checkProperties(BooleanFormula properties) throws InterruptedException, SolverException {
         logger.info("Checking properties");
-        List<BooleanFormula> propertiesList = new ArrayList<>(2);
+        List<BooleanFormula> propertiesList = new ArrayList<>();
         propertiesList.add(properties);
         Model model = calculateModel(propertiesList);
         if (model == null) {
             return true;
         }
-        Filter eventFilter = Filter.intersection(Filter.byTag(Tag.VISIBLE), trace.eventFilter());
-        GenMCWMMSolver.Result result = solver.check(model, eventFilter);
-        if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
-            return false;
-        }
-        return true;
+        return !checkConsistency(model, propertiesList);
     }
 
     private Model calculateModel() throws InterruptedException, SolverException {
@@ -438,5 +434,42 @@ public class GenMCExecutionModel {
             model = prover.getModel();
         }
         return model;
+    }
+
+    private boolean checkConsistency(Model model) throws InterruptedException, SolverException {
+        return checkConsistency(model, new ArrayList<>());
+    }
+
+    private boolean checkConsistency(Model model, List<BooleanFormula> assumptions) throws InterruptedException, SolverException {
+        Filter eventFilter = Filter.intersection(Filter.byTag(Tag.VISIBLE), trace.eventFilter());
+        while (model != null) {
+            GenMCWMMSolver.Result result = solver.check(model, eventFilter);
+            if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
+                return true;
+            } else {
+                logger.info("Looking for consistent coherences");
+                assumptions.add(prohibitCoherences());
+                model = calculateModel(assumptions);
+            }
+        }
+        return false;
+    }
+
+    private BooleanFormula prohibitCoherences() {
+        BooleanFormulaManager bmgr = encodingContext.getBooleanFormulaManager();
+        EncodingContext.EdgeEncoder co = encodingContext.edge(getTask().getMemoryModel().getRelation(CO));
+        Map<BigInteger, List<EventData>> coherences = solver.getExecution().getCoherenceMap();
+        List<BooleanFormula> enc = new ArrayList<>();
+        for (List<EventData> addressCoherence : coherences.values()) {
+            Event pred = null;
+            for (EventData eventData : addressCoherence) {
+                Event event = eventData.getEvent();
+                if (pred != null) {
+                    enc.add(co.encode(pred, event));
+                }
+                pred = event;
+            }
+        }
+        return bmgr.not(bmgr.and(enc));
     }
 }

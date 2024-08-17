@@ -15,7 +15,6 @@ import com.dat3m.dartagnan.verification.model.EventData;
 import com.dat3m.dartagnan.verification.model.GenMCExecutionModel;
 import com.dat3m.dartagnan.verification.model.SimpleEventDomain;
 import com.dat3m.dartagnan.wmm.Wmm;
-import com.dat3m.dartagnan.wmm.axiom.Acyclicity;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -102,7 +101,7 @@ public class GenMCSolver extends ModelChecker {
         final Property.Type propertyType = Property.getCombinedType(task.getProperty(), task);
 
         logger.info("Starting encoding using " + ctx.getVersion());
-        prover.addConstraint(baselineEncoder.encodeFullMemoryModel());
+        prover.addConstraint(baselineEncoder.encodeRelations());
 
         // ------------------------ Solving ------------------------
         prover.push();
@@ -117,7 +116,11 @@ public class GenMCSolver extends ModelChecker {
         int failedExecutions = executions - completeExecutions;
         logger.info("Number of complete executions explored: " + completeExecutions);
         logger.info("Number of failed executions found: " + failedExecutions);
-        logger.info("Time per execution estimation: " + (genmcTime + (completeExecutions + failedExecutions / 2) / 2) / (completeExecutions + failedExecutions / 2) + " ms");
+        if (completeExecutions + failedExecutions / 2 != 0) {
+            logger.info("Time per execution estimation: " + (genmcTime + (completeExecutions + failedExecutions / 2) / 2) / (completeExecutions + failedExecutions / 2) + " ms");
+        } else if (failedExecutions == 1) {
+            logger.info("Time per execution estimation: " + genmcTime + " ms");
+        }
 
         if (logger.isInfoEnabled()) {
             final String message = !result ? (propertyType == Property.Type.SAFETY ? "Specification violation found." : "Specification witness found.") :
@@ -149,7 +152,7 @@ public class GenMCSolver extends ModelChecker {
     }
 
     private static boolean isPorfAcyclicity(Axiom axiom) {
-        if (axiom instanceof Acyclicity) {
+        if (axiom.isAcyclicity()) {
             String acyclicTerm = axiom.getRelation().getDefinition().getTerm();
             return "po | rf".equals(acyclicTerm) || "rf | po".equals(acyclicTerm);
         }
