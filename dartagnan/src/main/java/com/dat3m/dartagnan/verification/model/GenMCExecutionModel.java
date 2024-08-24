@@ -86,7 +86,7 @@ public class GenMCExecutionModel {
     }
 
     public GenMCExecutionModel newInstance(int idToKeepCoBefore) throws InvalidConfigurationException {
-        GenMCExecutionModel model = GenMCExecutionModel.withContext(encodingContext, traceEncoder, prover, properties);
+        GenMCExecutionModel model = new GenMCExecutionModel(encodingContext, traceEncoder, prover, solver, properties);
         for (int i = 0; i < threadsAreJoined.length; ++i) {
             model.threadsAreJoined[i] = threadsAreJoined[i];
         }

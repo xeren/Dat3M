@@ -73,6 +73,9 @@ public class OptionNames {
     public static final String GRAPHVIZ_DEBUG_FILES = "refinement.generageGraphvizDebugFiles";
     public static final String SYMMETRIC_LEARNING = "refinement.symmetricLearning";
 
+    // Execution model Options
+    public static final String TRACK_DEPENDENCIES = "execution.trackDeps";
+
     // SMT solver Options
     public static final String PHANTOM_REFERENCES = "solver.z3.usePhantomReferences";
 

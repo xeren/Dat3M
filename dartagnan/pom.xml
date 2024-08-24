@@ -117,6 +117,7 @@
                         <argument>--property=program_spec</argument>
                         <argument>--bound=1</argument>
                         <argument>--encoding.mergeCFVars=false</argument>
+                        <argument>--execution.trackDeps=false</argument>
                         <argument>--solver=yices2</argument>
                         <argument>--witness=png</argument>
                         <argument>--method=genmc</argument>
