@@ -14,7 +14,6 @@ import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.verification.model.EventData;
 import com.dat3m.dartagnan.verification.model.GenMCExecutionModel;
-import com.dat3m.dartagnan.verification.model.SimpleEventDomain;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
 
@@ -334,7 +333,8 @@ public class GenMCSolver extends ModelChecker {
 
         @Override
         protected GenMCExecutionModel calculateModel(GenMCExecutionModel oldModel) throws InvalidConfigurationException, InterruptedException, SolverException {
-            List<EventData> traceEvents = oldModel.copyTraceEvents();
+            int oldReadId = oldModel.getTrace().getId(oldModel.getData(getRead()).get());
+            List<EventData> traceEvents = oldModel.copyTraceEvents(data -> oldModel.getTrace().getId(data) <= oldReadId);
             EventData readData = null;
             EventData writeData = null;
             for (EventData event : traceEvents) {
@@ -346,8 +346,6 @@ public class GenMCSolver extends ModelChecker {
                 }
             }
             assert readData != null && writeData != null;
-            EventData readDataRef = readData;
-            traceEvents.removeIf(data -> traceEvents.indexOf(data) > traceEvents.indexOf(readDataRef));
             GenMCExecutionModel newModel = oldModel.newInstance(oldModel.getTrace().getId(writeData));
             newModel.initialize(traceEvents, readData, writeData);
             return newModel;
@@ -359,16 +357,19 @@ public class GenMCSolver extends ModelChecker {
 
         private BackwardRevisit(GenMCExecutionModel oldModel, EventData read, Set<EventData> writePrefix) {
             super(read.getEvent());
-            SimpleEventDomain oldTrace = oldModel.getTrace();
-            int readIndex = oldTrace.getId(read);
-            List<EventData> copiedEvents = oldModel.copyTraceEvents();
-            eventsToKeep = new ArrayList<>();
-            eventsToKeep.add(copiedEvents.get(readIndex));
-            for (int i = readIndex + 1; i < copiedEvents.size(); ++i) {
-                if (writePrefix.contains(oldTrace.getObjectById(i))) {
-                    eventsToKeep.add(copiedEvents.get(i));
-                }
-            }
+            int readId = oldModel.getTrace().getId(read);
+            eventsToKeep = oldModel.copyTraceEvents(event -> event == read || (oldModel.getTrace().getId(event) > readId && writePrefix.contains(event)));
+        }
+
+        private EventData getNewRead() {
+            return eventsToKeep.stream()
+                    .filter(event -> event.getEvent() == getRead())
+                    .findAny()
+                    .get();
+        }
+
+        private EventData getNewWrite() {
+            return eventsToKeep.get(eventsToKeep.size() - 1);
         }
 
         private Map<Event, Event> getRelevantReadsFromRelation() {
@@ -379,21 +380,17 @@ public class GenMCSolver extends ModelChecker {
                     readsFromRelation.put(relevantEventData.getEvent(), readFrom.getEvent());
                 }
             }
-            readsFromRelation.put(getRead(), eventsToKeep.get(eventsToKeep.size() - 1).getEvent());
+            readsFromRelation.put(getRead(), getNewWrite().getEvent());
             return readsFromRelation;
         }
 
         @Override
         protected GenMCExecutionModel calculateModel(GenMCExecutionModel oldModel) throws InvalidConfigurationException, InterruptedException, SolverException {
-            EventData readData = eventsToKeep.get(0);
-            int readIndex = oldModel.getTrace().getId(oldModel.getData(getRead()).get());
-            List<EventData> copiedEvents = oldModel.copyTraceEvents();
-            for (int i = readIndex - 1; i >= 0; --i) {
-                EventData event = copiedEvents.get(i);
-                eventsToKeep.add(0, event);
-            }
-            GenMCExecutionModel newModel = oldModel.newInstance(readIndex);
-            newModel.initialize(eventsToKeep, readData, eventsToKeep.get(eventsToKeep.size() - 1));
+            int readId = oldModel.getTrace().getId(oldModel.getData(getRead()).get());
+            List<EventData> newTraceEvents = oldModel.copyTraceEvents(event -> oldModel.getTrace().getId(event) < readId);
+            newTraceEvents.addAll(eventsToKeep);
+            GenMCExecutionModel newModel = oldModel.newInstance(readId);
+            newModel.initialize(newTraceEvents, getNewRead(), getNewWrite());
             return newModel;
         }
     }

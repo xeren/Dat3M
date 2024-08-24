@@ -26,6 +26,7 @@ import org.sosy_lab.java_smt.api.SolverException;
 
 import java.math.BigInteger;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static com.dat3m.dartagnan.program.event.Tag.READ;
@@ -167,6 +168,16 @@ public class GenMCExecutionModel {
     public void initialize(List<EventData> startTraceEvents, EventData revisitRead, EventData write) throws InterruptedException, SolverException {
         trace = new SimpleEventDomain(startTraceEvents);
         revisitRead.setReadFrom(write);
+        for (EventData event : startTraceEvents) {
+            EventData readFrom = event.getReadFrom();
+            if (readFrom != null && !startTraceEvents.contains(readFrom)) {
+                EventData newReadFrom = startTraceEvents.stream()
+                        .filter(newEvent -> newEvent.getEvent() == readFrom.getEvent())
+                        .findAny()
+                        .get();
+                event.setReadFrom(newReadFrom);
+            }
+        }
         Thread firstThread = trace.getElements()
                 .stream()
                 .map(EventData::getThread)
@@ -210,19 +221,22 @@ public class GenMCExecutionModel {
         return checkProperties(bmgr.and(properties, traceEncoder.getPropertyRelevantEncoding()));
     }
 
-    public List<EventData> copyTraceEvents() {
+    public List<EventData> copyTraceEvents(Predicate<EventData> filter) {
         List<EventData> events = trace.getElements();
         EventMap eventMap = new EventMap();
         List<EventData> copiedEvents = new ArrayList<>(events.size());
-        for (EventData event : events) {
+        events.stream().filter(filter).forEach(event -> {
             EventData copiedEvent = eventMap.getOrCreate(event.getEvent());
             copiedEvent.setReadFrom(event.getReadFrom());
             copiedEvent.setWasExecuted(event.wasExecuted());
             copiedEvents.add(copiedEvent);
-        }
+        });
         for (EventData event : copiedEvents) {
             if (event.getReadFrom() != null) {
-                event.setReadFrom(eventMap.get(event.getReadFrom().getEvent()));
+                EventData newReadFrom = eventMap.get(event.getReadFrom().getEvent());
+                if (newReadFrom != null) {
+                    event.setReadFrom(eventMap.get(event.getReadFrom().getEvent()));
+                }
             }
         }
         return copiedEvents;
