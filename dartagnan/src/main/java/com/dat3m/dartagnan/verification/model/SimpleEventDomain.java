@@ -89,6 +89,7 @@ public class SimpleEventDomain implements Domain<EventData> {
         StringBuilder builder = new StringBuilder();
         Event pred = null;
         for (EventData eventData : events) {
+            builder.append('\n');
             Event event = eventData.getEvent();
             if (pred != null && pred.getThread() != event.getThread() && !(event instanceof Init)) {
                 builder.append("\n");
@@ -107,7 +108,6 @@ public class SimpleEventDomain implements Domain<EventData> {
                         .append(": ")
                         .append(readFrom);
             }
-            builder.append('\n');
             pred = event;
         }
         return builder.toString();

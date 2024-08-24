@@ -105,7 +105,7 @@ public class GenMCTraceEncoder implements Encoder {
     }
 
     public BooleanFormula encodeControlFlow(Domain<EventData> trace) {
-        logger.info("Encoding program control flow");
+        logger.debug("Encoding program control flow");
 
         BooleanFormulaManager bmgr = context.getBooleanFormulaManager();
         List<BooleanFormula> enc = new ArrayList<>();
@@ -211,7 +211,7 @@ public class GenMCTraceEncoder implements Encoder {
      * Also, if no fitting writer is executed, the reader uses 0.
      */
     public BooleanFormula encodeDependencies(Domain<EventData> trace) {
-        logger.info("Encoding dependencies");
+        logger.debug("Encoding dependencies");
         final BooleanFormulaManager bmgr = context.getBooleanFormulaManager();
         List<BooleanFormula> enc = new ArrayList<>();
 

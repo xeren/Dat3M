@@ -9,6 +9,7 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.processing.AssertionTransformer;
 import com.dat3m.dartagnan.program.specification.AssertInline;
 import com.dat3m.dartagnan.utils.Result;
+import com.dat3m.dartagnan.utils.Utils;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.verification.model.EventData;
@@ -16,6 +17,7 @@ import com.dat3m.dartagnan.verification.model.GenMCExecutionModel;
 import com.dat3m.dartagnan.verification.model.SimpleEventDomain;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sosy_lab.common.configuration.Configuration;
@@ -111,15 +113,16 @@ public class GenMCSolver extends ModelChecker {
         boolean result = genmc(model);
         long endTime = System.currentTimeMillis();
         long genmcTime = endTime - startTime;
-        logger.info("GenMC took " + genmcTime + " ms");
+        logger.info("GenMC took " + Utils.toTimeString(genmcTime));
 
         int failedExecutions = executions - completeExecutions;
         logger.info("Number of complete executions explored: " + completeExecutions);
         logger.info("Number of failed executions found: " + failedExecutions);
         if (completeExecutions + failedExecutions / 2 != 0) {
-            logger.info("Time per execution estimation: " + (genmcTime + (completeExecutions + failedExecutions / 2) / 2) / (completeExecutions + failedExecutions / 2) + " ms");
+            logger.info("Time per execution estimation: " +
+                    Utils.toTimeString((genmcTime + (completeExecutions + failedExecutions / 2) / 2) / (completeExecutions + failedExecutions / 2)));
         } else if (failedExecutions == 1) {
-            logger.info("Time per execution estimation: " + genmcTime + " ms");
+            logger.info("Time per execution estimation: " + Utils.toTimeString(genmcTime));
         }
 
         if (logger.isInfoEnabled()) {
@@ -173,7 +176,7 @@ public class GenMCSolver extends ModelChecker {
             Event revisitedRead = revisit.getRead();
             GenMCExecutionModel revisitModel = revisit.getModel(model);
             Event newWrite = revisitModel.getData(revisitedRead).get().getReadFrom().getEvent();
-            logger.info((revisit instanceof ForwardRevisit ? "Forward" : "Backward") + " revisiting execution for read " + revisitedRead.getGlobalId() + ": " + revisitedRead +
+            logger.debug((revisit instanceof ForwardRevisit ? "Forward" : "Backward") + " revisiting execution for read " + revisitedRead.getGlobalId() + ": " + revisitedRead +
                     " and write " + newWrite.getGlobalId() + ": " + newWrite);
 
             Set<Event> nonRevisitableEvents = model.getEventsAfter(model.getData(revisitedRead).get());
@@ -189,38 +192,38 @@ public class GenMCSolver extends ModelChecker {
     }
 
     private boolean visit(GenMCExecutionModel model, Set<Event> revisitableReads, Checklist backwardRevisits, Worklist revisitsToDo) throws InterruptedException, SolverException {
-        logger.info("Exploring new execution");
+        logger.debug("Exploring new execution");
         ++executions;
         EventData event;
         while ((event = model.nextEvent()) != null) {
             if (!model.isConsistent()) {
-                logger.info("Aborting exploration: Inconsistent execution");
+                logger.debug("Aborting exploration: Inconsistent execution");
                 return true;
             }
             if (model.hasError()) return false;
             if (event.isRead()) {
                 Set<EventData> writesData = model.getMayRfMap().get(event);
                 if (writesData.size() > 1 && !model.checkConsistency(true)) {
-                    logger.info("Aborting exploration: Inconsistent execution");
+                    logger.debug("Aborting exploration: Inconsistent execution");
                     return true;
                 }
                 revisitableReads.add(event.getEvent());
                 for (EventData writeData : writesData) {
                     if (writeData != event.getReadFrom()) {
-                        logger.info("Adding new forward revisit for load " + event.getEvent() + " and store " + writeData.getEvent());
+                        logger.debug("Adding new forward revisit for load " + event.getEvent() + " and store " + writeData.getEvent());
                         revisitsToDo.add(new ForwardRevisit(event, writeData));
                     }
                 }
             }
             if (event.isWrite()) {
                 if (!calcBackwardRevisits(model, revisitableReads, backwardRevisits, revisitsToDo, event)) {
-                    logger.info("Aborting exploration: Inconsistent execution");
+                    logger.debug("Aborting exploration: Inconsistent execution");
                     return true;
                 }
             }
         }
         if (!model.threadsAreJoined()) {
-            logger.info("Exploration finished without joining all threads");
+            logger.debug("Exploration finished without joining all threads");
             return true;
         }
         ++completeExecutions;
@@ -238,7 +241,7 @@ public class GenMCSolver extends ModelChecker {
         for (EventData readData : relevantReads) {
             BackwardRevisit newRevisit = new BackwardRevisit(model, readData, writePrefix);
             if (backwardRevisits.add(newRevisit)) {
-                logger.info("Adding new backward revisit for load" + readData.getEvent() + " and store " + write.getEvent());
+                logger.debug("Adding new backward revisit for load" + readData.getEvent() + " and store " + write.getEvent());
                 revisitsToDo.add(newRevisit);
             }
         }

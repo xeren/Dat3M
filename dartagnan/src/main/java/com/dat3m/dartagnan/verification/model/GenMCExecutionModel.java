@@ -172,7 +172,7 @@ public class GenMCExecutionModel {
     //========================== Public methods =========================
 
     public boolean checkConsistency(boolean ignoreLast) throws InterruptedException, SolverException {
-        logger.info("Checking consistency");
+        logger.debug("Checking consistency");
         EventData event = null;
         if (ignoreLast) {
             event = trace.removeLast();
@@ -195,7 +195,7 @@ public class GenMCExecutionModel {
 
     public boolean checkProperties() throws InterruptedException, SolverException {
         if (properties == null) {
-            logger.info("No global properties to check");
+            logger.debug("No global properties to check");
             return true;
         }
         BooleanFormulaManager bmgr = encodingContext.getBooleanFormulaManager();
@@ -407,7 +407,7 @@ public class GenMCExecutionModel {
     }
 
     private boolean checkProperties(BooleanFormula properties) throws InterruptedException, SolverException {
-        logger.info("Checking properties");
+        logger.debug("Checking properties");
         List<BooleanFormula> propertiesList = new ArrayList<>();
         propertiesList.add(properties);
         Model model = calculateModel(propertiesList);
@@ -447,7 +447,7 @@ public class GenMCExecutionModel {
             if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
                 return true;
             } else {
-                logger.info("Looking for consistent coherences");
+                logger.debug("Looking for consistent coherences");
                 assumptions.add(prohibitCoherences());
                 model = calculateModel(assumptions);
             }
