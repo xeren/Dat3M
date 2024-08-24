@@ -322,13 +322,6 @@ public class GenMCSolver extends ModelChecker {
         }
 
         protected abstract GenMCExecutionModel calculateModel(GenMCExecutionModel oldModel) throws InvalidConfigurationException, InterruptedException, SolverException;
-
-        protected static GenMCExecutionModel newModel(GenMCExecutionModel oldModel, List<EventData> traceEvents, EventData read, EventData write)
-                throws InvalidConfigurationException, InterruptedException, SolverException {
-            GenMCExecutionModel newModel = oldModel.newInstance();
-            newModel.initialize(traceEvents, read, write);
-            return newModel;
-        }
     }
 
     private static class ForwardRevisit extends Revisit {
@@ -355,7 +348,9 @@ public class GenMCSolver extends ModelChecker {
             assert readData != null && writeData != null;
             EventData readDataRef = readData;
             traceEvents.removeIf(data -> traceEvents.indexOf(data) > traceEvents.indexOf(readDataRef));
-            return newModel(oldModel, traceEvents, readData, writeData);
+            GenMCExecutionModel newModel = oldModel.newInstance(oldModel.getTrace().getId(writeData));
+            newModel.initialize(traceEvents, readData, writeData);
+            return newModel;
         }
     }
 
@@ -397,7 +392,9 @@ public class GenMCSolver extends ModelChecker {
                 EventData event = copiedEvents.get(i);
                 eventsToKeep.add(0, event);
             }
-            return newModel(oldModel, eventsToKeep, readData, eventsToKeep.get(eventsToKeep.size() - 1));
+            GenMCExecutionModel newModel = oldModel.newInstance(readIndex);
+            newModel.initialize(eventsToKeep, readData, eventsToKeep.get(eventsToKeep.size() - 1));
+            return newModel;
         }
     }
 }

@@ -58,6 +58,7 @@ public class GenMCExecutionModel {
     private final Filter threadEventFilter;
     
     private final List<Thread> relevantThreads;
+    private final Map<BooleanFormula, Integer> prohibitedCoherences;
 
     private final List<EventData> initEvents;
     private final Map<EventData, Set<EventData>> mayRfMap;
@@ -72,6 +73,7 @@ public class GenMCExecutionModel {
 
         relevantThreads = new ArrayList<>(getProgram().getThreads());
         threadsAreJoined = new boolean[relevantThreads.size()];
+        prohibitedCoherences = new HashMap<>();
 
         initEvents = new ArrayList<>(getProgram().getThreadEvents(Init.class).size() * 3);
         mayRfMap = new HashMap<>();
@@ -83,10 +85,16 @@ public class GenMCExecutionModel {
                 GenMCWMMSolver.withContext(encodingContext.getTask().getMemoryModel(), encodingContext, encodingContext.getAnalysisContext()), properties);
     }
 
-    public GenMCExecutionModel newInstance() throws InvalidConfigurationException {
+    public GenMCExecutionModel newInstance(int idToKeepCoBefore) throws InvalidConfigurationException {
         GenMCExecutionModel model = GenMCExecutionModel.withContext(encodingContext, traceEncoder, prover, properties);
         for (int i = 0; i < threadsAreJoined.length; ++i) {
             model.threadsAreJoined[i] = threadsAreJoined[i];
+        }
+        for (Map.Entry<BooleanFormula, Integer> prohibitedCoherence : prohibitedCoherences.entrySet()) {
+            int currentMaxCoId = prohibitedCoherence.getValue();
+            if (currentMaxCoId < idToKeepCoBefore) {
+                model.prohibitedCoherences.put(prohibitedCoherence.getKey(), currentMaxCoId);
+            }
         }
         return model;
     }
@@ -428,6 +436,7 @@ public class GenMCExecutionModel {
     }
 
     private Model calculateModel(Collection<BooleanFormula> assumptions) throws InterruptedException, SolverException {
+        assumptions.addAll(prohibitedCoherences.keySet());
         assumptions.add(traceEncoder.encodeFullTrace(trace));
         Model model = null;
         if (!prover.isUnsatWithAssumptions(assumptions)) {
@@ -448,28 +457,34 @@ public class GenMCExecutionModel {
                 return true;
             } else {
                 logger.debug("Looking for consistent coherences");
-                assumptions.add(prohibitCoherences());
+                Map.Entry<BooleanFormula, Integer> probitedCoherence = prohibitCoherences();
+                prohibitedCoherences.put(probitedCoherence.getKey(), probitedCoherence.getValue());
                 model = calculateModel(assumptions);
             }
         }
         return false;
     }
 
-    private BooleanFormula prohibitCoherences() {
+    private Map.Entry<BooleanFormula, Integer> prohibitCoherences() {
         BooleanFormulaManager bmgr = encodingContext.getBooleanFormulaManager();
         EncodingContext.EdgeEncoder co = encodingContext.edge(getTask().getMemoryModel().getRelation(CO));
         Map<BigInteger, List<EventData>> coherences = solver.getExecution().getCoherenceMap();
         List<BooleanFormula> enc = new ArrayList<>();
+        int maxId = -1;
         for (List<EventData> addressCoherence : coherences.values()) {
             Event pred = null;
             for (EventData eventData : addressCoherence) {
                 Event event = eventData.getEvent();
+                int eventId = trace.getId(getData(event));
+                if (eventId > maxId) {
+                    maxId = eventId;
+                }
                 if (pred != null) {
                     enc.add(co.encode(pred, event));
                 }
                 pred = event;
             }
         }
-        return bmgr.not(bmgr.and(enc));
+        return new AbstractMap.SimpleEntry<>(bmgr.not(bmgr.and(enc)), maxId);
     }
 }
