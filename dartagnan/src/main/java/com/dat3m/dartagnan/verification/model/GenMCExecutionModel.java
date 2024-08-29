@@ -48,6 +48,8 @@ public class GenMCExecutionModel {
     private Event lastAdded = null;
     private boolean hasError = false;
     private boolean isConsistent = true;
+    private boolean needsNewConsistencyCheck = true;
+    private boolean lastNeedsNewConsistencyCheck = true;
 
     private final EncodingContext encodingContext;
     private final GenMCTraceEncoder traceEncoder;
@@ -147,6 +149,8 @@ public class GenMCExecutionModel {
         trace = new SimpleEventDomain(initEvents);
         lastAdded = null;
         isConsistent = true;
+        needsNewConsistencyCheck = false;
+        lastNeedsNewConsistencyCheck = false;
     }
 
     public void initialize(List<EventData> startTraceEvents, EventData revisitRead, EventData write) throws InterruptedException, SolverException {
@@ -169,11 +173,17 @@ public class GenMCExecutionModel {
                 .get();
         lastAdded = getLastAddedThreadEvent(firstThread);
         isConsistent = true;
+        needsNewConsistencyCheck = true;
+        lastNeedsNewConsistencyCheck = false;
     }
 
     //========================== Public methods =========================
 
     public boolean checkConsistency(boolean ignoreLast) throws InterruptedException, SolverException {
+        if ((!needsNewConsistencyCheck && !ignoreLast) || (!lastNeedsNewConsistencyCheck && ignoreLast)) {
+            return isConsistent;
+        }
+
         logger.debug("Checking consistency");
         EventData event = null;
         if (ignoreLast) {
@@ -186,8 +196,12 @@ public class GenMCExecutionModel {
         }
         if (checkConsistency(model)) {
             if (ignoreLast) {
+                lastNeedsNewConsistencyCheck = false;
                 trace.addEvent(event);
+            } else {
+                needsNewConsistencyCheck = false;
             }
+            isConsistent = true;
             return true;
         } else {
             isConsistent = false;
@@ -298,9 +312,13 @@ public class GenMCExecutionModel {
                 mayRfSet = mayRfSet(data);
             }
             mayRfMap.put(data, mayRfSet);
+            lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
             if (data.isRead()) {
                 try {
                     data.setReadFrom(mayRfSet.iterator().next());
+                    if (mayRfSet.size() > 1) {
+                        needsNewConsistencyCheck = true;
+                    }
                 } catch (NoSuchElementException ex) {
                     isConsistent = false;
                     logger.error("Read " + e + " has nowhere to read from in trace " + trace);
@@ -316,6 +334,7 @@ public class GenMCExecutionModel {
             // We override the meaning of execution here. A jump is executed IFF its condition was true.
             CondJump jump = (CondJump) e;
             trace.addEvent(data);
+            lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
             if (jump.getGuard() instanceof BoolLiteral bool) {
                 data.setWasExecuted(bool.getValue());
             } else {
@@ -328,8 +347,9 @@ public class GenMCExecutionModel {
             }
         } else if (data.getEvent() instanceof Assert assertionEvent) {
             // ===== Assertions =====
+            trace.addEvent(data);
+            lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
             if (assertionEvent.getExpression() instanceof BoolLiteral bool) {
-                trace.addEvent(data);
                 boolean failure = !bool.getValue();
                 if (failure && checkConsistency(false)) {
                     hasError = true;
@@ -342,6 +362,7 @@ public class GenMCExecutionModel {
         }
         if (!trace.getElements().contains(data)) {
             trace.addEvent(data);
+            lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
         }
         return data;
     }
