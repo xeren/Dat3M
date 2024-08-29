@@ -5,7 +5,6 @@ import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
 import com.dat3m.dartagnan.expression.booleans.BoolLiteral;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
-import com.dat3m.dartagnan.program.analysis.alias.AliasAnalysis;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.event.core.*;
 import com.dat3m.dartagnan.program.event.core.threading.ThreadStart;
@@ -14,6 +13,8 @@ import com.dat3m.dartagnan.program.specification.AssertInline;
 import com.dat3m.dartagnan.solver.caat.CAATSolver;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCWMMSolver;
 import com.dat3m.dartagnan.verification.VerificationTask;
+import com.dat3m.dartagnan.wmm.analysis.RelationAnalysis;
+import com.dat3m.dartagnan.wmm.utils.EventGraph;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -29,10 +30,8 @@ import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import static com.dat3m.dartagnan.program.event.Tag.READ;
-import static com.dat3m.dartagnan.program.event.Tag.WRITE;
-import static com.dat3m.dartagnan.verification.model.SimpleEventDomain.isThreadEndStore;
 import static com.dat3m.dartagnan.wmm.RelationNameRepository.CO;
+import static com.dat3m.dartagnan.wmm.RelationNameRepository.RF;
 
 /*
 The ExecutionModel wraps a Model and extracts data from it in a more workable manner.
@@ -49,7 +48,6 @@ public class GenMCExecutionModel {
     private Event lastAdded = null;
     private boolean hasError = false;
     private boolean isConsistent = true;
-    private boolean[] threadsAreJoined;
 
     private final EncodingContext encodingContext;
     private final GenMCTraceEncoder traceEncoder;
@@ -57,6 +55,7 @@ public class GenMCExecutionModel {
     private final GenMCWMMSolver solver;
     private final BooleanFormula properties;
     private final Filter threadEventFilter;
+    private final EventGraph mayRfGraph;
     
     private final List<Thread> relevantThreads;
     private final Map<BooleanFormula, Integer> prohibitedCoherences;
@@ -71,9 +70,9 @@ public class GenMCExecutionModel {
         this.solver = solver;
         this.properties = properties;
         this.threadEventFilter = Filter.byEvents(getProgram().getThreadEvents());
+        this.mayRfGraph = encodingContext.getAnalysisContext().requires(RelationAnalysis.class).getKnowledge(getTask().getMemoryModel().getRelation(RF)).getMaySet();
 
         relevantThreads = new ArrayList<>(getProgram().getThreads());
-        threadsAreJoined = new boolean[relevantThreads.size()];
         prohibitedCoherences = new HashMap<>();
 
         initEvents = new ArrayList<>(getProgram().getThreadEvents(Init.class).size() * 3);
@@ -88,9 +87,6 @@ public class GenMCExecutionModel {
 
     public GenMCExecutionModel newInstance(int idToKeepCoBefore) throws InvalidConfigurationException {
         GenMCExecutionModel model = new GenMCExecutionModel(encodingContext, traceEncoder, prover, solver, properties);
-        for (int i = 0; i < threadsAreJoined.length; ++i) {
-            model.threadsAreJoined[i] = threadsAreJoined[i];
-        }
         for (Map.Entry<BooleanFormula, Integer> prohibitedCoherence : prohibitedCoherences.entrySet()) {
             int currentMaxCoId = prohibitedCoherence.getValue();
             if (currentMaxCoId < idToKeepCoBefore) {
@@ -136,15 +132,6 @@ public class GenMCExecutionModel {
                 .findAny();
     }
 
-    public boolean threadsAreJoined() {
-        for (boolean threadIsJoined : threadsAreJoined) {
-            if (!threadIsJoined) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     //========================== Initialization =========================
 
     public void initialize() throws InterruptedException, SolverException {
@@ -160,9 +147,6 @@ public class GenMCExecutionModel {
         trace = new SimpleEventDomain(initEvents);
         lastAdded = null;
         isConsistent = true;
-        for (Thread thread : getProgram().getThreads()) {
-            threadsAreJoined[thread.getId()] = !thread.getEntry().isSpawned();
-        }
     }
 
     public void initialize(List<EventData> startTraceEvents, EventData revisitRead, EventData write) throws InterruptedException, SolverException {
@@ -185,7 +169,6 @@ public class GenMCExecutionModel {
                 .get();
         lastAdded = getLastAddedThreadEvent(firstThread);
         isConsistent = true;
-        threadsAreJoined[write.getEvent().getThread().getId()] |= isThreadEndStore(write);
     }
 
     //========================== Public methods =========================
@@ -314,7 +297,7 @@ public class GenMCExecutionModel {
             } else {
                 mayRfSet = mayRfSet(data);
             }
-            mayRfMap.put(data, mayRfSet);            
+            mayRfMap.put(data, mayRfSet);
             if (data.isRead()) {
                 try {
                     data.setReadFrom(mayRfSet.iterator().next());
@@ -336,7 +319,12 @@ public class GenMCExecutionModel {
             if (jump.getGuard() instanceof BoolLiteral bool) {
                 data.setWasExecuted(bool.getValue());
             } else {
-                data.setWasExecuted(calculateModel(encodingContext.jumpCondition(jump)) != null);
+                Model model;
+                if ((model = calculateModel()) != null) {
+                    data.setWasExecuted(model.evaluate(encodingContext.jumpCondition(jump)));
+                } else {
+                    isConsistent = false;
+                }
             }
         } else if (data.getEvent() instanceof Assert assertionEvent) {
             // ===== Assertions =====
@@ -351,19 +339,6 @@ public class GenMCExecutionModel {
                 AssertInline assertion = new AssertInline(assertionEvent);
                 hasError = !checkProperties(assertion.encode(encodingContext));
             }
-        } else if (isThreadEndStore(trace.getLast())) {
-            Event threadEndStore = trace.getLast().getEvent();
-            boolean isRead = false;
-            for (EventData event : trace.getElements()) {
-                EventData readFrom = event.getReadFrom();
-                if (readFrom != null && readFrom.getEvent() == threadEndStore) {
-                    isRead = true;
-                    break;
-                }
-            }
-            if (!isRead) {
-                threadsAreJoined[threadEndStore.getThread().getId()] = false;
-            }
         }
         if (!trace.getElements().contains(data)) {
             trace.addEvent(data);
@@ -372,18 +347,21 @@ public class GenMCExecutionModel {
     }
 
     private Set<EventData> mayRfSet(EventData targetEvent) {
-        if (!(targetEvent.getEvent() instanceof MemoryCoreEvent targetMemEvent)) {
+        Map<Event, Set<Event>> mayRfMap;
+        if (targetEvent.isWrite()) {
+            mayRfMap = mayRfGraph.getOutMap();
+        } else {
+            mayRfMap = mayRfGraph.getInMap();
+        }
+        Set<Event> mayRfSet = mayRfMap.get(targetEvent.getEvent());
+        if (mayRfSet == null) {
             return Collections.emptySet();
         }
-        String targetTag = targetEvent.isRead() ? WRITE : READ;
-        Set<EventData> mayAliasSet = new HashSet<>();
-        AliasAnalysis aliasAnalysis = encodingContext.getAnalysisContext().requires(AliasAnalysis.class);
-        for (EventData event : trace.getElements()) {
-            if (event.getEvent() instanceof MemoryCoreEvent memEvent && memEvent.hasTag(targetTag) && aliasAnalysis.mayAlias(targetMemEvent, memEvent)) {
-                mayAliasSet.add(event);
-            }
-        }
-        return mayAliasSet;
+        return mayRfSet.stream()
+                .map(this::getData)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(Collectors.toSet());
     }
 
     private EventData getThreadStartStore(ThreadStart thread) {
@@ -443,12 +421,6 @@ public class GenMCExecutionModel {
         return calculateModel(new ArrayList<>(1));
     }
 
-    private Model calculateModel(BooleanFormula assumption) throws InterruptedException, SolverException {
-        List<BooleanFormula> assumptions = new ArrayList<>(2);
-        assumptions.add(assumption);
-        return calculateModel(assumptions);
-    }
-
     private Model calculateModel(Collection<BooleanFormula> assumptions) throws InterruptedException, SolverException {
         assumptions.addAll(prohibitedCoherences.keySet());
         assumptions.add(traceEncoder.encodeFullTrace(trace));
@@ -465,17 +437,21 @@ public class GenMCExecutionModel {
 
     private boolean checkConsistency(Model model, List<BooleanFormula> assumptions) throws InterruptedException, SolverException {
         Filter eventFilter = Filter.intersection(Filter.byTag(Tag.VISIBLE), trace.eventFilter());
+        List<BooleanFormula> locallyProhibitedCoherences = new ArrayList<>();
         while (model != null) {
             GenMCWMMSolver.Result result = solver.check(model, eventFilter);
             if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
                 return true;
             } else {
                 logger.debug("Looking for consistent coherences");
-                Map.Entry<BooleanFormula, Integer> probitedCoherence = prohibitCoherences();
-                prohibitedCoherences.put(probitedCoherence.getKey(), probitedCoherence.getValue());
+                Map.Entry<BooleanFormula, Integer> prohibitedCoherence = prohibitCoherences();
+                BooleanFormula locallyProhibitedCoherence = prohibitedCoherence.getKey();
+                locallyProhibitedCoherences.add(locallyProhibitedCoherence);
+                prohibitedCoherences.put(locallyProhibitedCoherence, prohibitedCoherence.getValue());
                 model = calculateModel(assumptions);
             }
         }
+        locallyProhibitedCoherences.forEach(prohibitedCoherences::remove);
         return false;
     }
 

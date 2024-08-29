@@ -56,7 +56,7 @@ public abstract class AbstractCTest {
     }
 
     protected Provider<Solvers> getSolverProvider() {
-        return () -> Solvers.Z3;
+        return () -> Solvers.YICES2;
     }
 
     protected Provider<Wmm> getWmmProvider() {

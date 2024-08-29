@@ -57,16 +57,13 @@ public class GenMCWMMSolver {
 
      public static class Result {
         private CAATSolver.Status status;
-        //private DNF<CoreLiteral> coreReasons;
         private Statistics stats;
 
         public CAATSolver.Status getStatus() { return status; }
-        //public DNF<CoreLiteral> getCoreReasons() { return coreReasons; }
         public Statistics getStatistics() { return stats; }
 
         Result() {
             status = CAATSolver.Status.INCONCLUSIVE;
-            //coreReasons = DNF.FALSE();
         }
 
         static Result fromCAATResult(CAATSolver.Result caatResult) {
@@ -81,7 +78,6 @@ public class GenMCWMMSolver {
         @Override
         public String toString() {
             return status + "\n" +
-                    //coreReasons + "\n" +
                     stats;
         }
     }
@@ -89,21 +85,15 @@ public class GenMCWMMSolver {
     public static class Statistics {
         CAATSolver.Statistics caatStats;
         long modelExtractionTime;
-        //long coreReasonComputationTime;
         int modelSize;
-        //int numComputedCoreReasons;
-        //int numComputedReducedCoreReasons;
 
         public long getModelExtractionTime() { return modelExtractionTime; }
         public long getPopulationTime() { return caatStats.getPopulationTime(); }
         public long getBaseReasonComputationTime() { return caatStats.getReasonComputationTime(); }
-        //public long getCoreReasonComputationTime() { return coreReasonComputationTime; }
         public long getConsistencyCheckTime() { return caatStats.getConsistencyCheckTime(); }
         public int getModelSize() { return modelSize; }
         public int getNumComputedBaseReasons() { return caatStats.getNumComputedReasons(); }
         public int getNumComputedReducedBaseReasons() { return caatStats.getNumComputedReducedReasons(); }
-        //public int getNumComputedCoreReasons() { return numComputedCoreReasons; }
-        //public int getNumComputedReducedCoreReasons() { return numComputedReducedCoreReasons; }
 
         public String toString() {
             StringBuilder str = new StringBuilder();
@@ -111,12 +101,7 @@ public class GenMCWMMSolver {
             str.append("Population time(ms): ").append(getPopulationTime()).append("\n");
             str.append("Consistency check time(ms): ").append(getConsistencyCheckTime()).append("\n");
             str.append("Base Reason computation time(ms): ").append(getBaseReasonComputationTime()).append("\n");
-            //str.append("Core Reason computation time(ms): ").append(getCoreReasonComputationTime()).append("\n");
             str.append("Model size (#events): ").append(getModelSize()).append("\n");
-            /*str.append("#Computed reasons (base/core): ").append(getNumComputedBaseReasons())
-                    .append("/").append(getNumComputedCoreReasons()).append("\n");*/
-            /*str.append("#Computed reduced reasons (base/core): ").append(getNumComputedReducedBaseReasons())
-                    .append("/").append(getNumComputedReducedCoreReasons()).append("\n");*/
             return str.toString();
         }
     }

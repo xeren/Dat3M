@@ -221,10 +221,6 @@ public class GenMCSolver extends ModelChecker {
                 }
             }
         }
-        if (!model.threadsAreJoined()) {
-            logger.debug("Exploration finished without joining all threads");
-            return true;
-        }
         ++completeExecutions;
         return model.checkProperties();
     }
