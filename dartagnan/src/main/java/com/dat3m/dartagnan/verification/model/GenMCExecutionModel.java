@@ -2,6 +2,7 @@ package com.dat3m.dartagnan.verification.model;
 
 import com.dat3m.dartagnan.encoding.EncodingContext;
 import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
+import com.dat3m.dartagnan.expression.Expression;
 import com.dat3m.dartagnan.expression.booleans.BoolLiteral;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
@@ -312,6 +313,7 @@ public class GenMCExecutionModel {
                 mayRfSet = mayRfSet(data);
             }
             mayRfMap.put(data, mayRfSet);
+            trace.addEvent(data);
             lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
             if (data.isRead()) {
                 try {
@@ -328,7 +330,6 @@ public class GenMCExecutionModel {
                 //FIXME: Handle other kinds of memory events such as SRCU_SYNC.
                 throw new UnsupportedOperationException("Unexpected memory event " + data.getEvent());
             }
-            trace.addEvent(data);
         } else if (data.isJump()) {
             // ===== Jumps =====
             // We override the meaning of execution here. A jump is executed IFF its condition was true.
@@ -343,6 +344,23 @@ public class GenMCExecutionModel {
                     data.setWasExecuted(model.evaluate(encodingContext.jumpCondition(jump)));
                 } else {
                     isConsistent = false;
+                }
+            }
+        } else if (data.getEvent() instanceof Assume assumptionEvent) {
+            // ===== Assumptions =====
+            if (!(trace.getLast().getEvent().getPredecessor() instanceof ThreadStart start && start.isSpawned())) {
+                trace.addEvent(data);
+                lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
+                Expression assumption = assumptionEvent.getExpr();
+                if (assumption instanceof BoolLiteral bool) {
+                    isConsistent = bool.getValue();
+                } else {
+                    Model model;
+                    if ((model = calculateModel()) != null) {
+                        isConsistent = model.evaluate(encodingContext.encodeExpressionAsBooleanAt(assumption, assumptionEvent));
+                    } else {
+                        isConsistent = false;
+                    }
                 }
             }
         } else if (data.getEvent() instanceof Assert assertionEvent) {
