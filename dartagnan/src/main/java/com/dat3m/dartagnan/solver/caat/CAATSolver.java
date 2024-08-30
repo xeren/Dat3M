@@ -43,6 +43,35 @@ public class CAATSolver {
     // ======================================== Solving ==============================================
 
     /*
+        <simpleCheck> assumes the following:
+            - The CAATModel <model> has been initialized to some domain (<model.initializeToDomain>)
+            - All base predicates are populated or will populate themselves.
+
+        <simpleCheck> will:
+            - Populate the derived predicates in <model>
+            - Check consistency of <model>
+     */
+    public Result simpleCheck(CAATModel model) {
+        Result result = new Result();
+        stats = result.getStatistics();
+
+        PathAlgorithm.ensureCapacity(model.getDomain().size());
+        // ============== Populate derived predicates ===============
+        long curTime = System.currentTimeMillis();
+        model.populate();
+        stats.populationTime = System.currentTimeMillis() - curTime;
+
+        // ============== Check for inconsistencies ===============
+        curTime = System.currentTimeMillis();
+        List<Constraint> violatedConstraints = model.getViolatedConstraints();
+        Status status = violatedConstraints.isEmpty() ? CONSISTENT : INCONSISTENT;
+        result.setStatus(status);
+        stats.consistencyCheckTime = System.currentTimeMillis() - curTime;
+
+        return result;
+    }
+
+    /*
         <check> assumes the following:
             - The CAATModel <model> has been initialized to some domain (<model.initializeToDomain>)
             - All base predicates are populated or will populate themselves.

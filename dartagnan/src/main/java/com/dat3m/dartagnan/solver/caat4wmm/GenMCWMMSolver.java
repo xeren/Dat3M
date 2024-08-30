@@ -44,7 +44,7 @@ public class GenMCWMMSolver {
         long extractTime = System.currentTimeMillis() - curTime;
 
         // ============== Run the CAATSolver ==============
-        CAATSolver.Result caatResult = solver.check(executionGraph.getCAATModel());
+        CAATSolver.Result caatResult = solver.simpleCheck(executionGraph.getCAATModel());
         Result result = Result.fromCAATResult(caatResult);
         Statistics stats = result.stats;
         stats.modelExtractionTime = extractTime;
