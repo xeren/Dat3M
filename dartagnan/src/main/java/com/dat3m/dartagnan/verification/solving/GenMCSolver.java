@@ -75,8 +75,6 @@ public class GenMCSolver extends ModelChecker {
         //  so we cannot perform property-aware transformation in those pipelines right now.
         removeFlaggedAxiomsIfNotNeeded(task);
         
-        removePorfAcyclicityAxiom(task);
-
         memoryModel.configureAll(config);
         preprocessProgram(task, config);
         new AssertionTransformer().run(task.getProgram());
@@ -84,6 +82,8 @@ public class GenMCSolver extends ModelChecker {
 
         performStaticProgramAnalyses(task, analysisContext, config);
         performStaticWmmAnalyses(task, analysisContext, config);
+
+        removePorfAcyclicityAxiom(task);
 
         // ------------------------ Encoding ------------------------
 
@@ -123,6 +123,22 @@ public class GenMCSolver extends ModelChecker {
         } else if (failedExecutions == 1) {
             logger.info("Time per execution estimation: " + Utils.toTimeString(genmcTime));
         }
+
+        int solverChecks = GenMCExecutionModel.getSolverChecks();
+        int solverCheckTime = GenMCExecutionModel.getSolverCheckTime();
+
+        logger.info("Solver checks: " + solverChecks);
+        logger.info("Total solver check time: " + Utils.toTimeString(solverCheckTime));
+        logger.info("Average solver check time: " + Utils.toTimeString((solverCheckTime + solverChecks / 2) / solverChecks));
+        
+        int consistencyChecks = GenMCExecutionModel.getConsistencyChecks();
+        int consistencyCheckTime = GenMCExecutionModel.getConsistencyCheckTime();
+
+        logger.info("Consistency checks: " + consistencyChecks);
+        logger.info("Total consistency check time: " + Utils.toTimeString(consistencyCheckTime));
+        logger.info("Average consistency check time: " + Utils.toTimeString((consistencyCheckTime + consistencyChecks / 2) / consistencyChecks));
+
+        logger.info("Total encoding time: " + Utils.toTimeString(traceEncoder.getEncodingTime()));
 
         if (logger.isInfoEnabled()) {
             final String message = !result ? (propertyType == Property.Type.SAFETY ? "Specification violation found." : "Specification witness found.") :

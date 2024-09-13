@@ -58,6 +58,8 @@ public class GenMCTraceEncoder implements Encoder {
     private final BooleanFormula finalRegisterValues;
     private final BooleanFormula filter;
 
+    private int encodingTime = 0;
+
     private GenMCTraceEncoder(EncodingContext c) {
         Preconditions.checkArgument(c.getTask().getProgram().isCompiled(), "The program must be compiled before encoding.");
         context = c;
@@ -81,11 +83,14 @@ public class GenMCTraceEncoder implements Encoder {
     // ============================== Encoding ==============================
 
     public BooleanFormula encodeFullTrace(Domain<EventData> trace) {
-        return context.getBooleanFormulaManager().and(
+        long start = System.currentTimeMillis();
+        BooleanFormula enc = context.getBooleanFormulaManager().and(
                 constants,
                 memory,
                 encodeControlFlow(trace),
                 encodeDependencies(trace));
+        encodingTime += System.currentTimeMillis() - start;
+        return enc;
     }
 
     public BooleanFormula encodeConstants() {
@@ -315,5 +320,9 @@ public class GenMCTraceEncoder implements Encoder {
 
     public BooleanFormula getPropertyRelevantEncoding() {
         return context.getBooleanFormulaManager().and(finalRegisterValues, filter);
+    }
+
+    public int getEncodingTime() {
+        return encodingTime;
     }
 }

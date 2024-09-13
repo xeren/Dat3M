@@ -44,6 +44,11 @@ public class GenMCExecutionModel {
 
     private static final Logger logger = LogManager.getLogger(GenMCExecutionModel.class);
 
+    private static int solverChecks = 0;
+    private static int solverCheckTime = 0;
+    private static int consistencyChecks = 0;
+    private static int consistencyCheckTime = 0;
+
     // ============= Model specific  =============
     private SimpleEventDomain trace;
     private Event lastAdded = null;
@@ -100,6 +105,23 @@ public class GenMCExecutionModel {
     }
 
     //======================== Public data ===========================‚
+
+    // Static data
+    public static int getSolverChecks() {
+        return solverChecks;
+    }
+
+    public static int getSolverCheckTime() {
+        return solverCheckTime;
+    }
+
+    public static int getConsistencyChecks() {
+        return consistencyChecks;
+    }
+
+    public static int getConsistencyCheckTime() {
+        return consistencyCheckTime;
+    }
 
     // General data
     public VerificationTask getTask() {
@@ -190,9 +212,12 @@ public class GenMCExecutionModel {
         if (ignoreLast) {
             event = trace.removeLast();
         }
+        long start = System.currentTimeMillis();
+        ++consistencyChecks;
         Model model = calculateModel();
         if (model == null) {
             isConsistent = false;
+            consistencyCheckTime += System.currentTimeMillis() - start;
             return false;
         }
         if (checkConsistency(model)) {
@@ -203,9 +228,11 @@ public class GenMCExecutionModel {
                 needsNewConsistencyCheck = false;
             }
             isConsistent = true;
+            consistencyCheckTime += System.currentTimeMillis() - start;
             return true;
         } else {
             isConsistent = false;
+            consistencyCheckTime += System.currentTimeMillis() - start;
             return false;
         }
     }
@@ -464,9 +491,12 @@ public class GenMCExecutionModel {
         assumptions.addAll(prohibitedCoherences.keySet());
         assumptions.add(traceEncoder.encodeFullTrace(trace));
         Model model = null;
+        long start = System.currentTimeMillis();
         if (!prover.isUnsatWithAssumptions(assumptions)) {
             model = prover.getModel();
         }
+        solverCheckTime += System.currentTimeMillis() - start;
+        ++solverChecks;
         return model;
     }
 
