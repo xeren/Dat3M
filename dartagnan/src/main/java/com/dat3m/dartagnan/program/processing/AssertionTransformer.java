@@ -21,7 +21,15 @@ import com.dat3m.dartagnan.program.event.core.Assert;
 import com.dat3m.dartagnan.program.event.core.CondJump;
 import com.dat3m.dartagnan.program.event.core.Label;
 
+// TODO: also for normal assertions
+// TODO: Check that loads are not moved over barriers
 public class AssertionTransformer implements ProgramProcessor {
+
+    private AssertionTransformer() { }
+
+    public static AssertionTransformer newInstance() {
+        return new AssertionTransformer();
+    }
 
     @Override
     public void run(Program program) {

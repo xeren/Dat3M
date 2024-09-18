@@ -6,7 +6,9 @@ import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
 import com.dat3m.dartagnan.encoding.PropertyEncoder;
 import com.dat3m.dartagnan.encoding.WmmEncoder;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.processing.AssertionTransformer;
+import com.dat3m.dartagnan.program.memory.MemoryObject;
+import com.dat3m.dartagnan.program.processing.DynamicMemoryAllocation;
+import com.dat3m.dartagnan.program.processing.GenMCProcessingManager;
 import com.dat3m.dartagnan.program.specification.AssertInline;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.utils.Utils;
@@ -76,11 +78,16 @@ public class GenMCSolver extends ModelChecker {
         removeFlaggedAxiomsIfNotNeeded(task);
         
         memoryModel.configureAll(config);
-        preprocessProgram(task, config);
-        new AssertionTransformer().run(task.getProgram());
+        preprocessProgram(GenMCProcessingManager.fromConfig(config), task, config);
         preprocessMemoryModel(task, config);
 
+        Set<MemoryObject> baseMemoryObjects = task.getProgram().getMemory().getObjects();
+        DynamicMemoryAllocation.fromConfig(config).run(task.getProgram());
         performStaticProgramAnalyses(task, analysisContext, config);
+        Set<MemoryObject> currentMemoryObjects = task.getProgram().getMemory().getObjects();
+        Set<MemoryObject> newMemoryObjects = new HashSet<>(currentMemoryObjects);
+        newMemoryObjects.removeAll(baseMemoryObjects);
+        newMemoryObjects.forEach(task.getProgram().getMemory()::deleteMemoryObject);
         performStaticWmmAnalyses(task, analysisContext, config);
 
         removePorfAcyclicityAxiom(task);
@@ -98,7 +105,7 @@ public class GenMCSolver extends ModelChecker {
         } else {
             properties = propertyEncoder.encodeProperties(task.getProperty());
         }
-        final GenMCExecutionModel model = GenMCExecutionModel.withContext(context, traceEncoder, prover, properties);
+        final GenMCExecutionModel model = GenMCExecutionModel.withContext(config, context, traceEncoder, prover, properties);
         final Property.Type propertyType = Property.getCombinedType(task.getProperty(), task);
 
         logger.info("Starting encoding using " + ctx.getVersion());
