@@ -235,8 +235,13 @@ public class GenMCExecutionModel {
         lastNeedsNewConsistencyCheck = false;
         
         for (MemoryObject memObj : memory.getObjects()) {
-            if (memObj.isDynamicallyAllocated() && !getData(memObj.getAllocationSite()).isPresent()) {
-                memory.deleteMemoryObject(memObj);
+            if (!getData(memObj.getAllocationSite()).isPresent()) {
+                free(memObj);
+            }
+        }
+        for (EventData event : trace.getElements()) {
+            if (event.getEvent() instanceof Alloc alloc && !alloc.isAllocated()) {
+                allocate(alloc);
             }
         }
     }
@@ -399,34 +404,7 @@ public class GenMCExecutionModel {
                 throw new UnsupportedOperationException("Unexpected memory event " + data.getEvent());
             }
         } else if (data.getEvent() instanceof Alloc alloc) {
-            final MemoryObject allocatedObject = memory.allocate(alloc);
-            alloc.setAllocatedObject(allocatedObject);
-
-            if (alloc.doesZeroOutMemory() || createInitsForDynamicAllocations) {
-                for (int i = 0; i < allocatedObject.size(); i++) {
-                    final Expression zero = expressions.makeZero(types.getByteType());
-                    allocatedObject.setInitialValue(i, zero);
-                }
-            }
-
-            final FunctionType initThreadType = types.getFunctionType(types.getVoidType(), List.of());
-            final List<String> paramNames = List.of();
-            int nextThreadId = Stream.concat(threads.stream(), getProgram().getFunctions().stream())
-                .mapToInt(Function::getId).max().getAsInt() + 1;
-            for (int field : allocatedObject.getInitializedFields()) {
-                // NOTE: We use different names to avoid symmetry detection treating all inits as symmetric.
-                final String threadName = "Init_" + nextThreadId;
-                final Thread thread = new Thread(threadName, initThreadType, paramNames, nextThreadId,
-                        EventFactory.newThreadStart(null));
-                thread.append(EventFactory.newInit(allocatedObject, field));
-                thread.append(EventFactory.newLabel("END_OF_T" + thread.getId()));
-                threads.add(thread);
-                nextThreadId++;
-
-                for (Event initThreadEvent : thread.getEvents()) {
-                    trace.addEvent(new EventData(initThreadEvent));
-                }
-            }
+            allocate(alloc);
         } else if (data.isJump()) {
             // ===== Jumps =====
             // We override the meaning of execution here. A jump is executed IFF its condition was true.
@@ -540,6 +518,62 @@ public class GenMCExecutionModel {
                 .max(Comparator.comparingInt(trace::getId))
                 .map(EventData::getEvent)
                 .orElse(thread.getEntry());
+    }
+
+    private void allocate(Alloc alloc) {
+        final MemoryObject allocatedObject = memory.allocate(alloc);
+        alloc.setAllocatedObject(allocatedObject);
+
+        if (alloc.doesZeroOutMemory() || createInitsForDynamicAllocations) {
+            for (int i = 0; i < allocatedObject.size(); i++) {
+                final Expression zero = expressions.makeZero(types.getByteType());
+                allocatedObject.setInitialValue(i, zero);
+            }
+        }
+
+        final FunctionType initThreadType = types.getFunctionType(types.getVoidType(), List.of());
+        final List<String> paramNames = List.of();
+        int nextThreadId = Stream.concat(threads.stream(), getProgram().getFunctions().stream())
+            .mapToInt(Function::getId).max().getAsInt() + 1;
+        for (int field : allocatedObject.getInitializedFields()) {
+            // NOTE: We use different names to avoid symmetry detection treating all inits as symmetric.
+            final String threadName = "Init_" + nextThreadId;
+            final Thread thread = new Thread(threadName, initThreadType, paramNames, nextThreadId,
+                    EventFactory.newThreadStart(null));
+            thread.append(EventFactory.newInit(allocatedObject, field));
+            thread.append(EventFactory.newLabel("END_OF_T" + thread.getId()));
+            threads.add(thread);
+            nextThreadId++;
+
+            for (Event initThreadEvent : thread.getEvents()) {
+                EventData event = new EventData(initThreadEvent);
+                if (initThreadEvent instanceof Init) {
+                    initEvents.add(event);
+                }
+                trace.addEvent(event);
+            }
+        }
+    }
+
+    private void free(MemoryObject memObj) {
+        if (memObj.isDynamicallyAllocated()) {
+            memory.deleteMemoryObject(memObj);
+            memObj.getAllocationSite().setAllocatedObject(null);
+            List<EventData> initEventsForObj = trace.getElements().stream()
+                    .filter(e -> e.getEvent() instanceof Init init && init.getBase() == memObj)
+                    .toList();
+            for (EventData initEvent : initEventsForObj) {
+                initEvents.remove(initEvent);
+                Thread initThread = initEvent.getEvent().getThread();
+                for (Event initThreadEvent : initThread.getEvents()) {
+                    EventData initThreadData = getData(initThreadEvent).orElse(null);
+                    if (initThreadData != null) {
+                        trace.getElements().remove(initThreadData);
+                    }
+                }
+                threads.remove(initThread);
+            }
+        }
     }
 
     private boolean checkProperties(BooleanFormula properties) throws InterruptedException, SolverException {

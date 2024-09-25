@@ -139,8 +139,8 @@ public class GenMCTraceEncoder implements Encoder {
                 .map(EventData::getEvent)
                 .toList();
         for (Event e : startEvent.getSuccessor().getSuccessors()) {
-            enc.add(e.encodeExec(context));
             if (traceEvents.contains(e)) {
+                enc.add(e.encodeExec(context));
                 enc.add(bmgr.equivalence(context.controlFlow(e), bmgr.makeTrue()));
             } else {
                 enc.add(bmgr.equivalence(context.controlFlow(e), bmgr.makeFalse()));
