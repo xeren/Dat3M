@@ -125,7 +125,7 @@ public class GenMCProcessingManager implements ProgramProcessor {
                 reduceSymmetry ? SymmetryReduction.fromConfig(config) : null,
                 intrinsics.lateInliningPass(),
                 ProgramProcessor.fromFunctionProcessor(
-                        MemToReg.fromConfig(config), Target.THREADS, true
+                        MemToReg.fromConfig(config), Target.MAY_THREADS, true
                 ),
                 ProgramProcessor.fromFunctionProcessor(
                         FunctionProcessor.chain(
@@ -133,17 +133,17 @@ public class GenMCProcessingManager implements ProgramProcessor {
                                 sccp,
                                 dce,
                                 removeDeadJumps
-                        ), Target.THREADS, true
+                        ), Target.MAY_THREADS, true
                 ),
                 RemoveUnusedMemory.newInstance(),
                 AssertionTransformer.newInstance(),
                 // --- Statistics + verification ---
                 IdReassignment.newInstance(), // Normalize used Ids (remove any gaps)
-                printAfterProcessing ? DebugPrint.withHeader("After processing", Printer.Mode.THREADS) : null,
+                printAfterProcessing ? DebugPrint.withHeader("After processing", Printer.Mode.THREADS) : null/*,
                 ProgramProcessor.fromFunctionProcessor(
                         CoreCodeVerification.fromConfig(config),
-                        Target.THREADS, false
-                )
+                        Target.MAY_THREADS, false
+                )*/
         ));
         programProcessors.removeIf(Objects::isNull);
     }

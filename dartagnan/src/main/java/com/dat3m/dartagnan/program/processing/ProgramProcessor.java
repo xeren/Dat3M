@@ -16,6 +16,7 @@ public interface ProgramProcessor {
 
     enum Target {
         THREADS,
+        MAY_THREADS,
         FUNCTIONS,
         ALL
     }
@@ -26,6 +27,7 @@ public interface ProgramProcessor {
         program -> {
             final Iterable<? extends Function> targets = switch (type) {
                 case THREADS -> program.getThreads();
+                case MAY_THREADS -> program.getMayThreads();
                 case FUNCTIONS -> program.getFunctions();
                 case ALL -> Iterables.concat(program.getThreads(), program.getFunctions());
             };

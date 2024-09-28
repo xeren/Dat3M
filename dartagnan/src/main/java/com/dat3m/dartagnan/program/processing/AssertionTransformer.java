@@ -55,7 +55,6 @@ public class AssertionTransformer implements ProgramProcessor {
                             } else {
                                 transformAndAssertions(assertEvent, assertions, last, firstAfter);
                             }
-                            IdReassignment.newInstance().run(program);
                         }
                     }
                 }
