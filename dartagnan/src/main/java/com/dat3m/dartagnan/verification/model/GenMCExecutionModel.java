@@ -84,6 +84,8 @@ public class GenMCExecutionModel {
     private boolean isConsistent = true;
     private boolean needsNewConsistencyCheck = true;
     private boolean lastNeedsNewConsistencyCheck = true;
+    private Model consistentModel = null;
+    private BooleanFormula jumpRevisitFormula = null;
     private Filter threadEventFilter;
 
     private final EncodingContext encodingContext;
@@ -97,6 +99,7 @@ public class GenMCExecutionModel {
     private final Map<BooleanFormula, Integer> prohibitedCoherences;
     private final List<Thread> threads;
     private final Memory memory;
+    private final Map<Event, BooleanFormula> cfContext;
 
     private final List<EventData> initEvents;
     private final Map<EventData, Set<EventData>> mayRfMap;
@@ -113,13 +116,14 @@ public class GenMCExecutionModel {
         this.threadEventFilter = Filter.byEvents(getProgram().getThreadEvents());
         this.mayRfGraph = encodingContext.getAnalysisContext().requires(RelationAnalysis.class).getKnowledge(getTask().getMemoryModel().getRelation(RF)).getMaySet();
 
-        relevantThreads = new ArrayList<>(getProgram().getThreads());
-        prohibitedCoherences = new HashMap<>();
+        this.relevantThreads = new ArrayList<>(getProgram().getThreads());
+        this.prohibitedCoherences = new HashMap<>();
         this.threads = new ArrayList<>();
         this.memory = memory;
+        this.cfContext = new HashMap<>();
 
-        initEvents = new ArrayList<>();
-        mayRfMap = new HashMap<>();
+        this.initEvents = new ArrayList<>();
+        this.mayRfMap = new HashMap<>();
     }
 
     public static GenMCExecutionModel withContext(Configuration config, EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, ProverEnvironment prover,
@@ -185,6 +189,9 @@ public class GenMCExecutionModel {
     public boolean isConsistent() {
         return isConsistent;
     }
+    public BooleanFormula getJumpRevisitFormula() {
+        return jumpRevisitFormula;
+    }
 
     public Map<EventData, Set<EventData>> getMayRfMap() {
         return mayRfMap;
@@ -219,6 +226,17 @@ public class GenMCExecutionModel {
     public void initialize(List<EventData> startTraceEvents, EventData revisitRead, EventData write) throws InterruptedException, SolverException {
         trace = new SimpleEventDomain(startTraceEvents);
         revisitRead.setReadFrom(write);
+        initialize(startTraceEvents);
+    }
+
+    public void initialize(List<EventData> startTraceEvents, EventData jump, boolean jumpIsExecuted, BooleanFormula jumpFormula) throws InterruptedException, SolverException {
+        trace = new SimpleEventDomain(startTraceEvents);
+        jump.setWasExecuted(jumpIsExecuted);
+        cfContext.put(jump.getEvent(), jumpFormula);
+        initialize(startTraceEvents);
+    }
+
+    private void initialize(List<EventData> startTraceEvents) {
         for (EventData event : startTraceEvents) {
             EventData readFrom = event.getReadFrom();
             if (readFrom != null && !startTraceEvents.contains(readFrom)) {
@@ -387,6 +405,7 @@ public class GenMCExecutionModel {
     //========================== Internal methods  =========================
 
     private EventData addEvent(Event e) throws InterruptedException, SolverException {
+        jumpRevisitFormula = null;
         EventData data = new EventData(e);
 
         data.setWasExecuted(true);
@@ -454,8 +473,12 @@ public class GenMCExecutionModel {
                 if (jump.getGuard().accept(nonDetCollector)) {
                     if (checkConsistency(false)) {
                         // TODO: Handle non-determinism
-                        logger.debug("Exploring non-deterministic jump");
-                        data.setWasExecuted(calculateModel(encodingContext.jumpCondition(jump)) != null);
+                        logger.debug("Exploring non-deterministic jump " + jump);
+                        BooleanFormula encodedJumpCondition = encodingContext.jumpCondition(jump);
+                        boolean evaluatedJumpCondition = consistentModel.evaluate(encodedJumpCondition);
+                        data.setWasExecuted(evaluatedJumpCondition);
+                        cfContext.put(jump, encodedJumpCondition);
+                        jumpRevisitFormula = encodingContext.getBooleanFormulaManager().not(encodedJumpCondition);
                     } else {
                         isConsistent = false;
                     }
@@ -646,14 +669,9 @@ public class GenMCExecutionModel {
         return calculateModel(new ArrayList<>());
     }
 
-    private Model calculateModel(BooleanFormula property) throws InterruptedException, SolverException {
-        List<BooleanFormula> wrapper = new ArrayList<>();
-        wrapper.add(property);
-        return calculateModel(wrapper);
-    }
-
     private Model calculateModel(Collection<BooleanFormula> assumptions) throws InterruptedException, SolverException {
         assumptions.addAll(prohibitedCoherences.keySet());
+        assumptions.addAll(cfContext.values());
         assumptions.add(traceEncoder.encodeFullTrace(trace, memory));
         Model model = null;
         long start = System.currentTimeMillis();
@@ -675,6 +693,7 @@ public class GenMCExecutionModel {
         while (model != null) {
             GenMCWMMSolver.Result result = solver.check(model, eventFilter);
             if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
+                consistentModel = model;
                 return true;
             } else {
                 logger.debug("Looking for consistent coherences");

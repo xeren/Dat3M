@@ -10,6 +10,7 @@ import com.dat3m.dartagnan.program.memory.MemoryObject;
 import com.dat3m.dartagnan.program.processing.DynamicMemoryAllocation;
 import com.dat3m.dartagnan.program.processing.GenMCProcessingManager;
 import com.dat3m.dartagnan.program.specification.AssertInline;
+import com.dat3m.dartagnan.solver.caat.domain.Domain;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.utils.Utils;
 import com.dat3m.dartagnan.verification.Context;
@@ -195,13 +196,18 @@ public class GenMCSolver extends ModelChecker {
         revisitsToDo.setReadOrder(model);
         Revisit revisit;
         while ((revisit = revisitsToDo.removeMax()) != null) {
-            Event revisitedRead = revisit.getRead();
+            Event revisitedEvent = revisit.getBacktrackingPoint();
             GenMCExecutionModel revisitModel = revisit.getModel(model);
-            Event newWrite = revisitModel.getData(revisitedRead).get().getReadFrom().getEvent();
-            logger.debug((revisit instanceof ForwardRevisit ? "Forward" : "Backward") + " revisiting execution for read " + revisitedRead.getGlobalId() + ": " + revisitedRead +
+            if (revisit instanceof ControlFlowRevisit) {
+                logger.debug("Doing control flow revisit for jump " + revisitedEvent.getGlobalId() + ": " + revisitedEvent + " and its execution status " +
+                        revisitModel.getTrace().getLast().wasExecuted());
+            } else {
+                Event newWrite = revisitModel.getData(revisitedEvent).get().getReadFrom().getEvent();
+                logger.debug((revisit instanceof ForwardRevisit ? "Forward" : "Backward") + " revisiting execution for read " + revisitedEvent.getGlobalId() + ": " + revisitedEvent +
                     " and write " + newWrite.getGlobalId() + ": " + newWrite);
+            }
 
-            Set<Event> nonRevisitableEvents = model.getEventsAfter(model.getData(revisitedRead).get());
+            Set<Event> nonRevisitableEvents = model.getEventsAfter(model.getData(revisitedEvent).get());
             revisitableReads.removeAll(nonRevisitableEvents);
             backwardRevisits.remove(nonRevisitableEvents);
             if (!visit(revisitModel, revisitableReads, backwardRevisits, revisitsToDo)) {
@@ -223,6 +229,13 @@ public class GenMCSolver extends ModelChecker {
                 return true;
             }
             if (model.hasError()) return false;
+            if (event.isJump()) {
+                BooleanFormula jumpRevisitFormula = model.getJumpRevisitFormula();
+                if (jumpRevisitFormula != null) {
+                    logger.debug("Adding new control flow revisit for jump " + event.getEvent() + " and execution status " + !event.wasExecuted());
+                    revisitsToDo.add(new ControlFlowRevisit(event, jumpRevisitFormula));
+                }
+            }
             if (event.isRead()) {
                 Set<EventData> writesData = model.getMayRfMap().get(event);
                 if (writesData.size() > 1 && !model.checkConsistency(true)) {
@@ -279,7 +292,7 @@ public class GenMCSolver extends ModelChecker {
         }
 
         private void add(Revisit revisitGraph) {
-            revisitsToDo.computeIfAbsent(revisitGraph.getRead(), evt -> new HashSet<>())
+            revisitsToDo.computeIfAbsent(revisitGraph.getBacktrackingPoint(), evt -> new HashSet<>())
                     .add(revisitGraph);
         }
 
@@ -321,15 +334,15 @@ public class GenMCSolver extends ModelChecker {
     }
 
     private static abstract class Revisit {
-        private final Event read;
+        private final Event backtrackingPoint;
         private GenMCExecutionModel model = null;
 
-        protected Revisit(Event read) {
-            this.read = read;
+        protected Revisit(Event backtrackingPoint) {
+            this.backtrackingPoint = backtrackingPoint;
         }
 
-        protected Event getRead() {
-            return read;
+        protected Event getBacktrackingPoint() {
+            return backtrackingPoint;
         }
 
         protected GenMCExecutionModel getModel(GenMCExecutionModel oldModel) throws InvalidConfigurationException, InterruptedException, SolverException {
@@ -352,19 +365,13 @@ public class GenMCSolver extends ModelChecker {
 
         @Override
         protected GenMCExecutionModel calculateModel(GenMCExecutionModel oldModel) throws InvalidConfigurationException, InterruptedException, SolverException {
-            int oldReadId = oldModel.getTrace().getId(oldModel.getData(getRead()).get());
-            List<EventData> traceEvents = oldModel.copyTraceEvents(data -> oldModel.getTrace().getId(data) <= oldReadId);
-            EventData readData = null;
-            EventData writeData = null;
-            for (EventData event : traceEvents) {
-                if (event.getEvent() == write) {
-                    writeData = event;
-                }
-                if (event.getEvent() == getRead()) {
-                    readData = event;
-                }
-            }
-            assert readData != null && writeData != null;
+            int backtrackingId = oldModel.getTrace().getId(oldModel.getData(getBacktrackingPoint()).get());
+            List<EventData> traceEvents = oldModel.copyTraceEvents(data -> oldModel.getTrace().getId(data) <= backtrackingId);
+            EventData readData = traceEvents.get(traceEvents.size() - 1);
+            EventData writeData = traceEvents.stream()
+                    .filter(event -> event.getEvent() == write)
+                    .findAny()
+                    .get();
             GenMCExecutionModel newModel = oldModel.newInstance(oldModel.getTrace().getId(writeData));
             newModel.initialize(traceEvents, readData, writeData);
             return newModel;
@@ -376,8 +383,13 @@ public class GenMCSolver extends ModelChecker {
 
         private BackwardRevisit(GenMCExecutionModel oldModel, EventData read, Set<EventData> writePrefix) {
             super(read.getEvent());
-            int readId = oldModel.getTrace().getId(read);
-            eventsToKeep = oldModel.copyTraceEvents(event -> event == read || (oldModel.getTrace().getId(event) > readId && writePrefix.contains(event)));
+            Domain<EventData> oldTrace = oldModel.getTrace();
+            int readId = oldTrace.getId(read);
+            eventsToKeep = oldModel.copyTraceEvents(event -> event == read || (oldTrace.getId(event) > readId && writePrefix.contains(event)));
+        }
+
+        private Event getRead() {
+            return getBacktrackingPoint();
         }
 
         private EventData getNewRead() {
@@ -405,11 +417,33 @@ public class GenMCSolver extends ModelChecker {
 
         @Override
         protected GenMCExecutionModel calculateModel(GenMCExecutionModel oldModel) throws InvalidConfigurationException, InterruptedException, SolverException {
-            int readId = oldModel.getTrace().getId(oldModel.getData(getRead()).get());
-            List<EventData> newTraceEvents = oldModel.copyTraceEvents(event -> oldModel.getTrace().getId(event) < readId);
+            Domain<EventData> oldTrace = oldModel.getTrace();
+            int backtrackingId = oldTrace.getId(oldModel.getData(getBacktrackingPoint()).get());
+            List<EventData> newTraceEvents = oldModel.copyTraceEvents(event -> oldTrace.getId(event) < backtrackingId);
             newTraceEvents.addAll(eventsToKeep);
-            GenMCExecutionModel newModel = oldModel.newInstance(readId);
+            GenMCExecutionModel newModel = oldModel.newInstance(backtrackingId);
             newModel.initialize(newTraceEvents, getNewRead(), getNewWrite());
+            return newModel;
+        }
+    }
+
+    private static class ControlFlowRevisit extends Revisit {
+        private final boolean willJumpBeExecuted;
+        private final BooleanFormula conditionToRevisit;
+
+        private ControlFlowRevisit(EventData jump, BooleanFormula conditionToRevisit) {
+            super(jump.getEvent());
+            this.willJumpBeExecuted = !jump.wasExecuted();
+            this.conditionToRevisit = conditionToRevisit;
+        }
+
+        @Override
+        protected GenMCExecutionModel calculateModel(GenMCExecutionModel oldModel) throws InvalidConfigurationException, InterruptedException, SolverException {
+            int backtrackId = oldModel.getTrace().getId(oldModel.getData(getBacktrackingPoint()).get());
+            List<EventData> newTraceEvents = oldModel.copyTraceEvents(event -> oldModel.getTrace().getId(event) <= backtrackId);
+            EventData jumpData = newTraceEvents.get(newTraceEvents.size() - 1);
+            GenMCExecutionModel newModel = oldModel.newInstance(backtrackId);
+            newModel.initialize(newTraceEvents, jumpData, willJumpBeExecuted, conditionToRevisit);
             return newModel;
         }
     }
