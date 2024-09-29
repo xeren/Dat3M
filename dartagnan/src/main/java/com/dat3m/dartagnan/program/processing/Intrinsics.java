@@ -320,6 +320,10 @@ public class Intrinsics {
         }
     }
 
+    public static void replace(FunctionCall call, Info intrinsicInfo) {
+        Intrinsics.newInstance().replace(call, intrinsicInfo.replacer);
+    }
+
     private void replace(FunctionCall call, Replacer replacer) {
         if (replacer == null) {
             throw new MalformedProgramException(
@@ -1436,11 +1440,13 @@ public class Intrinsics {
                 continue;
             }
             final Intrinsics.Info info = call.getCalledFunction().getIntrinsicInfo();
-            if (info != null && !info.isEarly()) {
-                replace(call, info.replacer);
-            } else {
-                final String error = String.format("Undefined function %s", call.getCalledFunction().getName());
-                throw new UnsupportedOperationException(error);
+            if (info != Info.VERIFIER_NONDET) {
+                if (info != null && !info.isEarly()) {
+                    replace(call, info.replacer);
+                } else {
+                    final String error = String.format("Undefined function %s", call.getCalledFunction().getName());
+                    throw new UnsupportedOperationException(error);
+                }
             }
         }
     }

@@ -53,7 +53,6 @@ public class GenMCTraceEncoder implements Encoder {
     private final ExecutionAnalysis exec;
     private final Dependency dep;
 
-    private final BooleanFormula constants;
     private final BooleanFormula finalRegisterValues;
     private final BooleanFormula filter;
 
@@ -66,7 +65,6 @@ public class GenMCTraceEncoder implements Encoder {
         this.exec = c.getAnalysisContext().requires(ExecutionAnalysis.class);
         this.dep = c.getAnalysisContext().requires(Dependency.class);
 
-        constants = encodeConstants();
         finalRegisterValues = encodeFinalRegisterValues();
         filter = encodeFilter();
     }
@@ -83,7 +81,7 @@ public class GenMCTraceEncoder implements Encoder {
     public BooleanFormula encodeFullTrace(Domain<EventData> trace, Memory memory) {
         long start = System.currentTimeMillis();
         BooleanFormula enc = context.getBooleanFormulaManager().and(
-                constants,
+                encodeConstants(),
                 encodeMemory(memory),
                 encodeControlFlow(trace),
                 encodeDependencies(trace));

@@ -6,6 +6,7 @@ import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
 import com.dat3m.dartagnan.expression.Expression;
 import com.dat3m.dartagnan.expression.ExpressionFactory;
 import com.dat3m.dartagnan.expression.booleans.BoolLiteral;
+import com.dat3m.dartagnan.expression.processing.NonDetCollector;
 import com.dat3m.dartagnan.expression.type.FunctionType;
 import com.dat3m.dartagnan.expression.type.TypeFactory;
 import com.dat3m.dartagnan.program.Function;
@@ -14,9 +15,11 @@ import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.event.core.*;
 import com.dat3m.dartagnan.program.event.core.threading.ThreadStart;
+import com.dat3m.dartagnan.program.event.functions.ValueFunctionCall;
 import com.dat3m.dartagnan.program.filter.Filter;
 import com.dat3m.dartagnan.program.memory.Memory;
 import com.dat3m.dartagnan.program.memory.MemoryObject;
+import com.dat3m.dartagnan.program.processing.Intrinsics;
 import com.dat3m.dartagnan.program.specification.AssertInline;
 import com.dat3m.dartagnan.solver.caat.CAATSolver;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCWMMSolver;
@@ -44,6 +47,7 @@ import java.util.stream.Stream;
 
 import static com.dat3m.dartagnan.wmm.RelationNameRepository.CO;
 import static com.dat3m.dartagnan.wmm.RelationNameRepository.RF;
+import static java.util.function.Predicate.not;
 
 /*
 The ExecutionModel wraps a Model and extracts data from it in a more workable manner.
@@ -80,13 +84,13 @@ public class GenMCExecutionModel {
     private boolean isConsistent = true;
     private boolean needsNewConsistencyCheck = true;
     private boolean lastNeedsNewConsistencyCheck = true;
+    private Filter threadEventFilter;
 
     private final EncodingContext encodingContext;
     private final GenMCTraceEncoder traceEncoder;
     private final ProverEnvironment prover;
     private final GenMCWMMSolver solver;
     private final BooleanFormula properties;
-    private final Filter threadEventFilter;
     private final EventGraph mayRfGraph;
     
     private final List<Thread> relevantThreads;
@@ -114,7 +118,7 @@ public class GenMCExecutionModel {
         this.threads = new ArrayList<>();
         this.memory = memory;
 
-        initEvents = new ArrayList<>(getProgram().getThreadEvents(Init.class).size() * 3);
+        initEvents = new ArrayList<>();
         mayRfMap = new HashMap<>();
     }
 
@@ -130,6 +134,7 @@ public class GenMCExecutionModel {
 
     public GenMCExecutionModel newInstance(int idToKeepCoBefore) throws InvalidConfigurationException {
         GenMCExecutionModel model = new GenMCExecutionModel(encodingContext, traceEncoder, prover, solver, properties, memory.copy(), createInitsForDynamicAllocations);
+        model.relevantThreads.removeIf(not(this.relevantThreads::contains));
         for (Map.Entry<BooleanFormula, Integer> prohibitedCoherence : prohibitedCoherences.entrySet()) {
             int currentMaxCoId = prohibitedCoherence.getValue();
             if (currentMaxCoId < idToKeepCoBefore) {
@@ -227,6 +232,7 @@ public class GenMCExecutionModel {
         Thread firstThread = trace.getElements()
                 .stream()
                 .map(EventData::getThread)
+                .filter(relevantThreads::contains)
                 .min(Comparator.comparingInt(relevantThreads::indexOf))
                 .get();
         lastAdded = getLastAddedThreadEvent(firstThread);
@@ -289,7 +295,7 @@ public class GenMCExecutionModel {
             return true;
         }
         BooleanFormulaManager bmgr = encodingContext.getBooleanFormulaManager();
-        return checkProperties(bmgr.and(properties, traceEncoder.getPropertyRelevantEncoding()));
+        return !checkProperties(bmgr.and(properties, traceEncoder.getPropertyRelevantEncoding()));
     }
 
     public List<EventData> copyTraceEvents(Predicate<EventData> filter) {
@@ -330,7 +336,8 @@ public class GenMCExecutionModel {
     }
 
     public EventData nextEvent() throws InterruptedException, SolverException {
-        Filter eventFilter = Filter.difference(threadEventFilter, trace.eventFilter());
+        Filter traceFilter = trace.eventFilter();
+        Filter eventFilter = Filter.difference(threadEventFilter, traceFilter);
         Event startEvent;
         try {
             startEvent = trace.getObjectById(0).getEvent();
@@ -351,7 +358,14 @@ public class GenMCExecutionModel {
             while (e != null) {
                 if (eventFilter.apply(e)) {
                     lastAdded = e;
-                    return addEvent(e);
+                    Event predecessor = e.getPredecessor();
+                    EventData addedEvent = addEvent(e);
+                    if (addedEvent != null) {
+                        return addedEvent;
+                    }
+                    eventFilter = Filter.difference(threadEventFilter, traceFilter);
+                    e = predecessor.getSuccessor();
+                    continue;
                 }
 
                 Optional<EventData> data = getData(e);
@@ -376,6 +390,12 @@ public class GenMCExecutionModel {
         EventData data = new EventData(e);
 
         data.setWasExecuted(true);
+        NonDetCollector nonDetCollector = new NonDetCollector(trace);
+        if (data.getEvent() instanceof RegWriter writer) {
+            if (writer instanceof Local local) {
+                data.setNonDet(local.getExpr().accept(nonDetCollector));
+            }
+        }
         if (data.isMemoryEvent()) {
             // ===== Memory Events =====
             Set<EventData> mayRfSet;
@@ -399,12 +419,29 @@ public class GenMCExecutionModel {
                     logger.error("Read " + e + " has nowhere to read from in trace " + trace);
                     throw ex;
                 }
-            } else if (!data.isWrite()) {
+            } else if (data.isWrite()) {
+                Store write = (Store) data.getEvent();
+                data.setNonDet(write.getMemValue().accept(nonDetCollector));
+            } else {
                 //FIXME: Handle other kinds of memory events such as SRCU_SYNC.
                 throw new UnsupportedOperationException("Unexpected memory event " + data.getEvent());
             }
         } else if (data.getEvent() instanceof Alloc alloc) {
             allocate(alloc);
+        } else if (data.getEvent() instanceof ValueFunctionCall call && call.isDirectCall()) {
+            Intrinsics.Info intrinsic = call.getCalledFunction().getIntrinsicInfo();
+            if (intrinsic == Intrinsics.Info.VERIFIER_NONDET) {
+                Event predecessor = call.getPredecessor();
+                Event successor = call.getSuccessor();
+                Intrinsics.replace(call, intrinsic);
+                List<Event> replacement = predecessor.getSuccessor().getSuccessors()
+                    .stream()
+                    .filter(successor.getPredecessor().getPredecessors()::contains)
+                    .toList();
+                encodingContext.replaceResultEvent(call, replacement);
+                updateFilter();
+                return null;
+            }
         } else if (data.isJump()) {
             // ===== Jumps =====
             // We override the meaning of execution here. A jump is executed IFF its condition was true.
@@ -414,11 +451,21 @@ public class GenMCExecutionModel {
             if (jump.getGuard() instanceof BoolLiteral bool) {
                 data.setWasExecuted(bool.getValue());
             } else {
-                Model model;
-                if ((model = calculateModel()) != null) {
-                    data.setWasExecuted(model.evaluate(encodingContext.jumpCondition(jump)));
+                if (jump.getGuard().accept(nonDetCollector)) {
+                    if (checkConsistency(false)) {
+                        // TODO: Handle non-determinism
+                        logger.debug("Exploring non-deterministic jump");
+                        data.setWasExecuted(calculateModel(encodingContext.jumpCondition(jump)) != null);
+                    } else {
+                        isConsistent = false;
+                    }
                 } else {
-                    isConsistent = false;
+                    Model model;
+                    if ((model = calculateModel()) != null) {
+                        data.setWasExecuted(model.evaluate(encodingContext.jumpCondition(jump)));
+                    } else {
+                        isConsistent = false;
+                    }
                 }
             }
         } else if (data.getEvent() instanceof Assume assumptionEvent) {
@@ -520,6 +567,10 @@ public class GenMCExecutionModel {
                 .orElse(thread.getEntry());
     }
 
+    private void updateFilter() {
+        threadEventFilter = Filter.byEvents(getProgram().getThreadEvents());
+    }
+
     private void allocate(Alloc alloc) {
         final MemoryObject allocatedObject = memory.allocate(alloc);
         alloc.setAllocatedObject(allocatedObject);
@@ -582,17 +633,23 @@ public class GenMCExecutionModel {
         propertiesList.add(properties);
         Model model = calculateModel(propertiesList);
         if (model == null) {
-            return true;
+            return false;
         }
         ++consistencyChecks;
         long start = System.currentTimeMillis();
-        boolean execFound = !checkConsistency(model, propertiesList);
+        boolean execWithPropertiesFound = checkConsistency(model, propertiesList);
         consistencyCheckTime += System.currentTimeMillis() - start;
-        return execFound;
+        return execWithPropertiesFound;
     }
 
     private Model calculateModel() throws InterruptedException, SolverException {
-        return calculateModel(new ArrayList<>(1));
+        return calculateModel(new ArrayList<>());
+    }
+
+    private Model calculateModel(BooleanFormula property) throws InterruptedException, SolverException {
+        List<BooleanFormula> wrapper = new ArrayList<>();
+        wrapper.add(property);
+        return calculateModel(wrapper);
     }
 
     private Model calculateModel(Collection<BooleanFormula> assumptions) throws InterruptedException, SolverException {

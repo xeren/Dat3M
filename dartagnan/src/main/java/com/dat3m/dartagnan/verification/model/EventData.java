@@ -18,6 +18,7 @@ public class EventData implements Comparable<EventData> {
     private Object accessedAddress;
     private int coIndex = Integer.MIN_VALUE;
     private boolean wasExecuted;
+    private boolean isNonDet = false;
 
     EventData(Event e) {
         this.event = e;
@@ -65,8 +66,16 @@ public class EventData implements Comparable<EventData> {
         if (store != null) {
             Preconditions.checkArgument(isRead());
             Preconditions.checkArgument(store.isWrite());
+            isNonDet = store.isNonDet;
         }
     	readFrom = store;
+    }
+
+    public boolean isNonDet() {
+    	return isNonDet;
+    }
+    void setNonDet(boolean isNonDet) {
+        this.isNonDet = isNonDet;
     }
 
     public boolean wasExecuted() {
