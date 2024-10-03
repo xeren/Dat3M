@@ -113,17 +113,8 @@ public class GenMCProcessingManager implements ProgramProcessor {
                 StaticMemoryAllocation.fromConfig(config),
                 LoopUnrolling.fromConfig(config), // We keep unrolling global for now
                 printAfterUnrolling ? DebugPrint.withHeader("After loop unrolling", Printer.Mode.ALL) : null,
-                ProgramProcessor.fromFunctionProcessor(
-                        FunctionProcessor.chain(
-                                ResolveLLVMObjectSizeCalls.fromConfig(config),
-                                sccp,
-                                dce,
-                                removeDeadJumps
-                        ), Target.FUNCTIONS, true
-                ),
                 ThreadCreation.fromConfig(config),
-                reduceSymmetry ? SymmetryReduction.fromConfig(config) : null,
-                intrinsics.lateInliningPass(),
+                intrinsics.genMCLateInliningPass(),
                 ProgramProcessor.fromFunctionProcessor(
                         MemToReg.fromConfig(config), Target.MAY_THREADS, true
                 ),

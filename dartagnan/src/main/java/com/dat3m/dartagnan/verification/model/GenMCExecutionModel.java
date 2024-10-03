@@ -14,12 +14,14 @@ import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.event.core.*;
+import com.dat3m.dartagnan.program.event.core.threading.ThreadArgument;
 import com.dat3m.dartagnan.program.event.core.threading.ThreadStart;
 import com.dat3m.dartagnan.program.event.functions.ValueFunctionCall;
 import com.dat3m.dartagnan.program.filter.Filter;
 import com.dat3m.dartagnan.program.memory.Memory;
 import com.dat3m.dartagnan.program.memory.MemoryObject;
 import com.dat3m.dartagnan.program.processing.Intrinsics;
+import com.dat3m.dartagnan.program.processing.ResolveLLVMObjectSizeCalls;
 import com.dat3m.dartagnan.program.specification.AssertInline;
 import com.dat3m.dartagnan.solver.caat.CAATSolver;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCWMMSolver;
@@ -45,6 +47,8 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.dat3m.dartagnan.program.processing.Intrinsics.Info.VERIFIER_NONDET;
+import static com.dat3m.dartagnan.program.processing.Intrinsics.Info.LLVM_OBJECTSIZE;
 import static com.dat3m.dartagnan.wmm.RelationNameRepository.CO;
 import static com.dat3m.dartagnan.wmm.RelationNameRepository.RF;
 import static java.util.function.Predicate.not;
@@ -413,6 +417,11 @@ public class GenMCExecutionModel {
         if (data.getEvent() instanceof RegWriter writer) {
             if (writer instanceof Local local) {
                 data.setNonDet(local.getExpr().accept(nonDetCollector));
+            } else if (writer instanceof ThreadArgument arg) {
+                Expression argExpr = arg.getCreator().getArguments().get(arg.getIndex());
+                data.setNonDet(argExpr.accept(nonDetCollector));
+            } else if (writer instanceof Load) {
+                // handled elsewhere
             }
         }
         if (data.isMemoryEvent()) {
@@ -449,10 +458,14 @@ public class GenMCExecutionModel {
             allocate(alloc);
         } else if (data.getEvent() instanceof ValueFunctionCall call && call.isDirectCall()) {
             Intrinsics.Info intrinsic = call.getCalledFunction().getIntrinsicInfo();
-            if (intrinsic == Intrinsics.Info.VERIFIER_NONDET) {
+            if (intrinsic == VERIFIER_NONDET || intrinsic == LLVM_OBJECTSIZE) {
                 Event predecessor = call.getPredecessor();
                 Event successor = call.getSuccessor();
-                Intrinsics.replace(call, intrinsic);
+                if (intrinsic == LLVM_OBJECTSIZE) {
+                    ResolveLLVMObjectSizeCalls.resolveObjectSizeCall(getTask().getConfig(), call);
+                } else {
+                    Intrinsics.replace(call, intrinsic);
+                }
                 List<Event> replacement = predecessor.getSuccessor().getSuccessors()
                     .stream()
                     .filter(successor.getPredecessor().getPredecessors()::contains)
@@ -470,12 +483,19 @@ public class GenMCExecutionModel {
             if (jump.getGuard() instanceof BoolLiteral bool) {
                 data.setWasExecuted(bool.getValue());
             } else {
+                Model model;
                 if (jump.getGuard().accept(nonDetCollector)) {
-                    if (checkConsistency(false)) {
-                        // TODO: Handle non-determinism
+                    boolean isConsistent = true;
+                    if (!needsNewConsistencyCheck) {
+                        model = calculateModel();
+                    } else {
+                        isConsistent = checkConsistency(false);
+                        model = consistentModel;
+                    }
+                    if (isConsistent && model != null) {
                         logger.debug("Exploring non-deterministic jump " + jump);
                         BooleanFormula encodedJumpCondition = encodingContext.jumpCondition(jump);
-                        boolean evaluatedJumpCondition = consistentModel.evaluate(encodedJumpCondition);
+                        boolean evaluatedJumpCondition = model.evaluate(encodedJumpCondition);
                         data.setWasExecuted(evaluatedJumpCondition);
                         cfContext.put(jump, encodedJumpCondition);
                         jumpRevisitFormula = encodingContext.getBooleanFormulaManager().not(encodedJumpCondition);
@@ -483,7 +503,6 @@ public class GenMCExecutionModel {
                         isConsistent = false;
                     }
                 } else {
-                    Model model;
                     if ((model = calculateModel()) != null) {
                         data.setWasExecuted(model.evaluate(encodingContext.jumpCondition(jump)));
                     } else {
