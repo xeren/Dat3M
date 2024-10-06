@@ -91,6 +91,7 @@ public class GenMCExecutionModel {
     private Model consistentModel = null;
     private BooleanFormula jumpRevisitFormula = null;
     private Filter threadEventFilter;
+    private Map<Event, BooleanFormula> cfContext = new HashMap<>();
 
     private final EncodingContext encodingContext;
     private final GenMCTraceEncoder traceEncoder;
@@ -103,9 +104,7 @@ public class GenMCExecutionModel {
     private final Map<BooleanFormula, Integer> prohibitedCoherences;
     private final List<Thread> threads;
     private final Memory memory;
-    private final Map<Event, BooleanFormula> cfContext;
 
-    private final List<EventData> initEvents;
     private final Map<EventData, Set<EventData>> mayRfMap;
 
     private GenMCExecutionModel(EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, ProverEnvironment prover, GenMCWMMSolver solver, BooleanFormula properties,
@@ -117,16 +116,15 @@ public class GenMCExecutionModel {
         this.prover = prover;
         this.solver = solver;
         this.properties = properties;
-        this.threadEventFilter = Filter.byEvents(getProgram().getThreadEvents());
         this.mayRfGraph = encodingContext.getAnalysisContext().requires(RelationAnalysis.class).getKnowledge(getTask().getMemoryModel().getRelation(RF)).getMaySet();
+
+        this.threadEventFilter = Filter.byEvents(getProgram().getThreadEvents());
 
         this.relevantThreads = new ArrayList<>(getProgram().getThreads());
         this.prohibitedCoherences = new HashMap<>();
         this.threads = new ArrayList<>();
         this.memory = memory;
-        this.cfContext = new HashMap<>();
 
-        this.initEvents = new ArrayList<>();
         this.mayRfMap = new HashMap<>();
     }
 
@@ -143,6 +141,7 @@ public class GenMCExecutionModel {
     public GenMCExecutionModel newInstance(int idToKeepCoBefore) throws InvalidConfigurationException {
         GenMCExecutionModel model = new GenMCExecutionModel(encodingContext, traceEncoder, prover, solver, properties, memory.copy(), createInitsForDynamicAllocations);
         model.relevantThreads.removeIf(not(this.relevantThreads::contains));
+        model.cfContext = this.cfContext;
         for (Map.Entry<BooleanFormula, Integer> prohibitedCoherence : prohibitedCoherences.entrySet()) {
             int currentMaxCoId = prohibitedCoherence.getValue();
             if (currentMaxCoId < idToKeepCoBefore) {
@@ -212,15 +211,14 @@ public class GenMCExecutionModel {
 
     public void initialize() throws InterruptedException, SolverException {
         List<Init> inits = getProgram().getThreadEvents(Init.class);
-        initEvents.clear();
+        trace = new SimpleEventDomain();
         for (Init init : inits) {
             Thread initThread = init.getThread();
             relevantThreads.remove(initThread);
             for (Event initThreadEvent : initThread.getEvents()) {
-                initEvents.add(new EventData(initThreadEvent));
+                trace.addEvent(new EventData(initThreadEvent));
             }
         }
-        trace = new SimpleEventDomain(initEvents);
         lastAdded = null;
         isConsistent = true;
         needsNewConsistencyCheck = false;
@@ -271,6 +269,16 @@ public class GenMCExecutionModel {
             if (event.getEvent() instanceof Alloc alloc && !alloc.isAllocated()) {
                 allocate(alloc);
             }
+        }
+
+        List<Event> cfEventsToRemove = new ArrayList<>();
+        for (Event cfEvent : cfContext.keySet()) {
+            if (getData(cfEvent).isEmpty()) {
+                cfEventsToRemove.add(cfEvent);
+            }
+        }
+        for (Event cfEventToRemove : cfEventsToRemove) {
+            cfContext.remove(cfEventToRemove);
         }
     }
 
@@ -328,6 +336,7 @@ public class GenMCExecutionModel {
             EventData copiedEvent = eventMap.getOrCreate(event.getEvent());
             copiedEvent.setReadFrom(event.getReadFrom());
             copiedEvent.setWasExecuted(event.wasExecuted());
+            copiedEvent.setNonDet(event.isNonDet());
             copiedEvents.add(copiedEvent);
         });
         for (EventData event : copiedEvents) {
@@ -341,8 +350,8 @@ public class GenMCExecutionModel {
         return copiedEvents;
     }
 
-    public Set<EventData> getPorfPrefix(EventData event) {
-        Set<EventData> porfPrefix = new HashSet<>(initEvents);
+    public Collection<EventData> getPorfPrefix(EventData event) {
+        List<EventData> porfPrefix = new ArrayList<>();
         porfPrefix.addAll(getPorfPrefixPreviousPo(event));
         porfPrefix.addAll(getPorfPrefixPreviousRf(event));
         porfPrefix.add(event);
@@ -387,6 +396,7 @@ public class GenMCExecutionModel {
                     }
                     eventFilter = Filter.difference(threadEventFilter, traceFilter);
                     e = predecessor.getSuccessor();
+                    predecessor.setSuccessor(lastAdded);
                     continue;
                 }
 
@@ -467,9 +477,11 @@ public class GenMCExecutionModel {
                     Intrinsics.replace(call, intrinsic);
                 }
                 List<Event> replacement = predecessor.getSuccessor().getSuccessors()
-                    .stream()
-                    .filter(successor.getPredecessor().getPredecessors()::contains)
-                    .toList();
+                        .stream()
+                        .filter(successor.getPredecessor().getPredecessors()::contains)
+                        .toList();
+                call.setPredecessor(predecessor);
+                call.setSuccessor(successor);
                 encodingContext.replaceResultEvent(call, replacement);
                 updateFilter();
                 return null;
@@ -497,8 +509,14 @@ public class GenMCExecutionModel {
                         BooleanFormula encodedJumpCondition = encodingContext.jumpCondition(jump);
                         boolean evaluatedJumpCondition = model.evaluate(encodedJumpCondition);
                         data.setWasExecuted(evaluatedJumpCondition);
-                        cfContext.put(jump, encodedJumpCondition);
-                        jumpRevisitFormula = encodingContext.getBooleanFormulaManager().not(encodedJumpCondition);
+                        BooleanFormula negatedJumpCondition = encodingContext.getBooleanFormulaManager().not(encodedJumpCondition);
+                        if (evaluatedJumpCondition) {
+                            cfContext.put(jump, encodedJumpCondition);
+                            jumpRevisitFormula = negatedJumpCondition;
+                        } else {
+                            cfContext.put(jump, negatedJumpCondition);
+                            jumpRevisitFormula = encodedJumpCondition;
+                        }
                     } else {
                         isConsistent = false;
                     }
@@ -536,7 +554,7 @@ public class GenMCExecutionModel {
                 if (failure && checkConsistency(false)) {
                     hasError = true;
                 }
-            } else {
+            } else if (checkConsistency(false)) {
                 trace.addEvent(data);
                 AssertInline assertion = new AssertInline(assertionEvent);
                 hasError = !checkProperties(assertion.encode(encodingContext));
@@ -568,15 +586,20 @@ public class GenMCExecutionModel {
     }
 
     private EventData getThreadStartStore(ThreadStart thread) {
-        return trace.getObjectById(trace.getId(getData(thread.getCreator()).get()) + 1);
+        try {
+            return trace.getObjectById(trace.getId(getData(thread.getCreator()).get()) + 1);
+        } catch (NoSuchElementException e) {
+            isConsistent = false;
+            return null;
+        }
     }
 
-    private Set<EventData> getPorfPrefixPreviousPo(EventData event) {
+    private Collection<EventData> getPorfPrefixPreviousPo(EventData event) {
         Optional<EventData> previousEvent = findPoPredecessor(event);
         if (previousEvent.isPresent()) {
             return getPorfPrefix(previousEvent.get());
         }
-        return new HashSet<>();
+        return new ArrayList<>();
     }
 
     private Optional<EventData> findPoPredecessor(EventData event) {
@@ -593,11 +616,11 @@ public class GenMCExecutionModel {
         return Optional.ofNullable(predecessor);
     }
 
-    private Set<EventData> getPorfPrefixPreviousRf(EventData event) {
+    private Collection<EventData> getPorfPrefixPreviousRf(EventData event) {
         if (event.isRead()) {
             return getPorfPrefix(event.getReadFrom());
         }
-        return Collections.emptySet();
+        return Collections.emptyList();
     }
 
     private Event getLastAddedThreadEvent(Thread thread) {
@@ -640,9 +663,6 @@ public class GenMCExecutionModel {
 
             for (Event initThreadEvent : thread.getEvents()) {
                 EventData event = new EventData(initThreadEvent);
-                if (initThreadEvent instanceof Init) {
-                    initEvents.add(event);
-                }
                 trace.addEvent(event);
             }
         }
@@ -656,7 +676,6 @@ public class GenMCExecutionModel {
                     .filter(e -> e.getEvent() instanceof Init init && init.getBase() == memObj)
                     .toList();
             for (EventData initEvent : initEventsForObj) {
-                initEvents.remove(initEvent);
                 Thread initThread = initEvent.getEvent().getThread();
                 for (Event initThreadEvent : initThread.getEvents()) {
                     EventData initThreadData = getData(initThreadEvent).orElse(null);

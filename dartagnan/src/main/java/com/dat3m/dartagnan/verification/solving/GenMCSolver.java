@@ -47,6 +47,7 @@ public class GenMCSolver extends ModelChecker {
 
     private int completeExecutions = 0;
     private int executions = 0;
+    private int porfPrefixTime = 0;
 
     // ================================================================================================================
     // GenMC solver
@@ -147,6 +148,7 @@ public class GenMCSolver extends ModelChecker {
         logger.info("Average consistency check time: " + Utils.toTimeString((consistencyCheckTime + consistencyChecks / 2) / consistencyChecks));
 
         logger.info("Total encoding time: " + Utils.toTimeString(traceEncoder.getEncodingTime()));
+        logger.info("Total porf-prefix calculation time: " + Utils.toTimeString(porfPrefixTime));
 
         if (logger.isInfoEnabled()) {
             final String message = !result ? (propertyType == Property.Type.SAFETY ? "Specification violation found." : "Specification witness found.") :
@@ -199,7 +201,7 @@ public class GenMCSolver extends ModelChecker {
             Event revisitedEvent = revisit.getBacktrackingPoint();
             GenMCExecutionModel revisitModel = revisit.getModel(model);
             if (revisit instanceof ControlFlowRevisit) {
-                logger.debug("Doing control flow revisit for jump " + revisitedEvent.getGlobalId() + ": " + revisitedEvent + " and its execution status " +
+                logger.debug("Doing control flow revisit for jump " + revisitedEvent.getGlobalId() + ": " + revisitedEvent + " with execution status " +
                         revisitModel.getTrace().getLast().wasExecuted());
             } else {
                 Event newWrite = revisitModel.getData(revisitedEvent).get().getReadFrom().getEvent();
@@ -232,7 +234,8 @@ public class GenMCSolver extends ModelChecker {
             if (event.isJump()) {
                 BooleanFormula jumpRevisitFormula = model.getJumpRevisitFormula();
                 if (jumpRevisitFormula != null) {
-                    logger.debug("Adding new control flow revisit for jump " + event.getEvent() + " and execution status " + !event.wasExecuted());
+                    logger.debug("Adding new control flow revisit for jump " + event.getEvent().getGlobalId() + ": " + event.getEvent() + " with execution status " +
+                            !event.wasExecuted());
                     revisitsToDo.add(new ControlFlowRevisit(event, jumpRevisitFormula));
                 }
             }
@@ -245,7 +248,8 @@ public class GenMCSolver extends ModelChecker {
                 revisitableReads.add(event.getEvent());
                 for (EventData writeData : writesData) {
                     if (writeData != event.getReadFrom()) {
-                        logger.debug("Adding new forward revisit for load " + event.getEvent() + " and store " + writeData.getEvent());
+                        logger.debug("Adding new forward revisit for load " + event.getEvent().getGlobalId() + ": " + event.getEvent() + " and store " +
+                                writeData.getEvent().getGlobalId() + ": " + writeData.getEvent());
                         revisitsToDo.add(new ForwardRevisit(event, writeData));
                     }
                 }
@@ -263,7 +267,9 @@ public class GenMCSolver extends ModelChecker {
 
     private boolean calcBackwardRevisits(GenMCExecutionModel model, Set<Event> revisitableReads, Checklist backwardRevisits, Worklist revisitsToDo, EventData write)
             throws InterruptedException, SolverException {
-        Set<EventData> writePrefix = model.getPorfPrefix(write);
+        long start = System.currentTimeMillis();
+        Collection<EventData> writePrefix = model.getPorfPrefix(write);
+        porfPrefixTime += System.currentTimeMillis() - start;
         Set<EventData> relevantReads = model.getMayRfMap().get(write);
         relevantReads.removeIf(event -> writePrefix.contains(event) || !revisitableReads.contains(event.getEvent()));
         if (!relevantReads.isEmpty() && !model.checkConsistency(false)) {
@@ -272,7 +278,8 @@ public class GenMCSolver extends ModelChecker {
         for (EventData readData : relevantReads) {
             BackwardRevisit newRevisit = new BackwardRevisit(model, readData, writePrefix);
             if (backwardRevisits.add(newRevisit)) {
-                logger.debug("Adding new backward revisit for load" + readData.getEvent() + " and store " + write.getEvent());
+                logger.debug("Adding new backward revisit for load " + readData.getEvent().getGlobalId() + ": " + readData.getEvent() + " and store " +
+                        write.getEvent().getGlobalId() + ": " + write.getEvent());
                 revisitsToDo.add(newRevisit);
             }
         }
@@ -381,7 +388,7 @@ public class GenMCSolver extends ModelChecker {
     private static class BackwardRevisit extends Revisit {
         private final List<EventData> eventsToKeep;
 
-        private BackwardRevisit(GenMCExecutionModel oldModel, EventData read, Set<EventData> writePrefix) {
+        private BackwardRevisit(GenMCExecutionModel oldModel, EventData read, Collection<EventData> writePrefix) {
             super(read.getEvent());
             Domain<EventData> oldTrace = oldModel.getTrace();
             int readId = oldTrace.getId(read);

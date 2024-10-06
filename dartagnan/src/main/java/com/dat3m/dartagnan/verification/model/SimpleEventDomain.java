@@ -124,7 +124,13 @@ public class SimpleEventDomain implements Domain<EventData> {
             if ("pthread_join".equals(event.getFunction().getName())) {
                 continue;
             }
-            if (event instanceof Init init && isSynthetic(init.getBase().getName())) {
+            if (event.getPredecessor() instanceof Init) {
+                continue;
+            }
+            if (event instanceof Init) {
+                continue;
+            }
+            if (event.getSuccessor() instanceof Init) {
                 continue;
             }
             if (event instanceof RegWriter writer && isSynthetic(writer.getResultRegister().getName())) {
