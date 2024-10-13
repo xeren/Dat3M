@@ -151,15 +151,19 @@ public class GenMCSolver extends ModelChecker {
         int solverCheckTime = GenMCExecutionModel.getSolverCheckTime();
 
         logger.info("Solver checks: " + solverChecks);
-        logger.info("Total solver check time: " + Utils.toTimeString(solverCheckTime));
-        logger.info("Average solver check time: " + Utils.toTimeString((solverCheckTime + solverChecks / 2) / solverChecks));
+        if (solverChecks != 0) {
+            logger.info("Total solver check time: " + Utils.toTimeString(solverCheckTime));
+            logger.info("Average solver check time: " + Utils.toTimeString((solverCheckTime + solverChecks / 2) / solverChecks));
+        }
         
         int consistencyChecks = GenMCExecutionModel.getConsistencyChecks();
         int consistencyCheckTime = GenMCExecutionModel.getConsistencyCheckTime();
 
         logger.info("Consistency checks: " + consistencyChecks);
-        logger.info("Total consistency check time: " + Utils.toTimeString(consistencyCheckTime));
-        logger.info("Average consistency check time: " + Utils.toTimeString((consistencyCheckTime + consistencyChecks / 2) / consistencyChecks));
+        if (consistencyChecks != 0) {
+            logger.info("Total consistency check time: " + Utils.toTimeString(consistencyCheckTime));
+            logger.info("Average consistency check time: " + Utils.toTimeString((consistencyCheckTime + consistencyChecks / 2) / consistencyChecks));
+        }
 
         logger.info("Total encoding time: " + Utils.toTimeString(traceEncoder.getEncodingTime()));
         logger.info("Total porf-prefix calculation time: " + Utils.toTimeString(porfPrefixTime));

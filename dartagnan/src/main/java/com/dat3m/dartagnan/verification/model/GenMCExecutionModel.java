@@ -623,17 +623,12 @@ public class GenMCExecutionModel {
     }
 
     private Optional<EventData> findPoPredecessor(EventData event) {
-        EventData predecessor = null;
+        Optional<EventData> predecessor = Optional.empty();
         Event currentPredecessor = event.getEvent();
-        while (predecessor == null && (currentPredecessor = currentPredecessor.getPredecessor()) != null) {
-            Event lambdaPredecessor = currentPredecessor;
-            predecessor = trace.getElements()
-                    .stream()
-                    .filter(evt -> evt.getEvent() == lambdaPredecessor)
-                    .findAny()
-                    .orElse(null);
+        while (predecessor.isEmpty() && (currentPredecessor = currentPredecessor.getPredecessor()) != null) {
+            predecessor = getData(currentPredecessor);
         }
-        return Optional.ofNullable(predecessor);
+        return predecessor;
     }
 
     private Collection<EventData> getPorfPrefixPreviousRf(EventData event) {

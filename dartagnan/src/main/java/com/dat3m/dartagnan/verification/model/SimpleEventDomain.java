@@ -10,6 +10,7 @@ import com.dat3m.dartagnan.program.event.Tag;
 import com.dat3m.dartagnan.program.event.core.Init;
 import com.dat3m.dartagnan.program.event.core.Label;
 import com.dat3m.dartagnan.program.event.core.threading.ThreadCreate;
+import com.dat3m.dartagnan.program.event.core.threading.ThreadStart;
 import com.dat3m.dartagnan.program.filter.Filter;
 import com.dat3m.dartagnan.solver.caat.domain.Domain;
 
@@ -93,8 +94,11 @@ public class SimpleEventDomain implements Domain<EventData> {
         StringBuilder builder = new StringBuilder();
         Event pred = null;
         for (EventData eventData : events) {
-            builder.append('\n');
             Event event = eventData.getEvent();
+            if ((event instanceof ThreadStart && event.getSuccessor() instanceof Init) || (event.getFunction().getExit() == event && event.getPredecessor() instanceof Init)) {
+                continue;
+            }
+            builder.append('\n');
             if (pred != null && pred.getThread() != event.getThread() && !(event instanceof Init)) {
                 builder.append("\n");
             }

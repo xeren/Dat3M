@@ -127,6 +127,7 @@ public class GenMCProcessingManager implements ProgramProcessor {
                         ), Target.MAY_THREADS, true
                 ),
                 RemoveUnusedMemory.newInstance(),
+                ConsecutiveGotoSimplification.newInstance(),
                 AssertionTransformer.newInstance(),
                 // --- Statistics + verification ---
                 IdReassignment.newInstance(), // Normalize used Ids (remove any gaps)
