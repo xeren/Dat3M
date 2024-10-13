@@ -29,6 +29,10 @@ public class SimpleEventDomain implements Domain<EventData> {
         events.add(event);
     }
 
+    protected void addEvents(List<EventData> newEvents) {
+        events.addAll(newEvents);
+    }
+
     @Override
     public int size() {
         return events.size();

@@ -113,7 +113,7 @@
                     <arguments>
                         <argument>../cat/rc11.cat</argument>
                         <argument>--target=c11</argument>
-                        <argument>../benchmarks/lfds/treiber_nondet.c</argument>
+                        <argument>../benchmarks/rc11/genmc_cas_nondet.c</argument>
                         <argument>--property=program_spec</argument>
                         <argument>--bound=1</argument>
                         <argument>--encoding.mergeCFVars=false</argument>

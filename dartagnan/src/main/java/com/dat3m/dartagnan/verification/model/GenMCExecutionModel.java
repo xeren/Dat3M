@@ -225,8 +225,19 @@ public class GenMCExecutionModel {
         lastNeedsNewConsistencyCheck = false;
     }
 
-    public void initialize(List<EventData> startTraceEvents, EventData revisitRead, EventData write) throws InterruptedException, SolverException {
+    public void initialize(List<EventData> startTraceEvents, EventData revisitRead, EventData write, Map<Event, Event> nonDetJumpStatus) throws InterruptedException, SolverException {
         trace = new SimpleEventDomain(startTraceEvents);
+        for (Map.Entry<Event, Event> nonDetJump : nonDetJumpStatus.entrySet()) {
+            CondJump jump = (CondJump) nonDetJump.getKey();
+            boolean wasExecuted = nonDetJump.getValue() == jump.getLabel();
+            logger.debug("Status for non-deterministic jump " + jump.getGlobalId() + ": " + jump + ", executed: " + wasExecuted);
+            BooleanFormula encodedJumpCondition = encodingContext.jumpCondition(jump);
+            BooleanFormula newCfContext = encodedJumpCondition;
+            if (!wasExecuted) {
+                newCfContext = encodingContext.getBooleanFormulaManager().not(encodedJumpCondition);
+            }
+            cfContext.put(jump, newCfContext);
+        }
         revisitRead.setReadFrom(write);
         initialize(startTraceEvents);
     }
@@ -261,7 +272,7 @@ public class GenMCExecutionModel {
         lastNeedsNewConsistencyCheck = false;
         
         for (MemoryObject memObj : memory.getObjects()) {
-            if (!getData(memObj.getAllocationSite()).isPresent()) {
+            if (getData(memObj.getAllocationSite()).isEmpty()) {
                 free(memObj);
             }
         }
@@ -284,15 +295,23 @@ public class GenMCExecutionModel {
 
     //========================== Public methods =========================
 
-    public boolean checkConsistency(boolean ignoreLast) throws InterruptedException, SolverException {
-        if ((!needsNewConsistencyCheck && !ignoreLast) || (!lastNeedsNewConsistencyCheck && ignoreLast)) {
+    public boolean checkConsistency() throws InterruptedException, SolverException {
+        return checkConsistency((EventData) null);
+    }
+
+    public boolean checkConsistency(EventData eventToIgnoreFrom) throws InterruptedException, SolverException {
+        if ((!needsNewConsistencyCheck && eventToIgnoreFrom == null) || (!lastNeedsNewConsistencyCheck && eventToIgnoreFrom != null)) {
             return isConsistent;
         }
 
         logger.debug("Checking consistency");
         EventData event = null;
-        if (ignoreLast) {
-            event = trace.removeLast();
+        List<EventData> ignoredEvents = new ArrayList<>();
+        if (eventToIgnoreFrom != null) {
+            while ((event = trace.removeLast()) != eventToIgnoreFrom) {
+                ignoredEvents.add(0, event);
+            }
+            ignoredEvents.add(0, event);
         }
         long start = System.currentTimeMillis();
         ++consistencyChecks;
@@ -303,9 +322,9 @@ public class GenMCExecutionModel {
             return false;
         }
         if (checkConsistency(model)) {
-            if (ignoreLast) {
+            if (eventToIgnoreFrom != null) {
+                trace.addEvents(ignoredEvents);
                 lastNeedsNewConsistencyCheck = false;
-                trace.addEvent(event);
             } else {
                 needsNewConsistencyCheck = false;
             }
@@ -497,11 +516,12 @@ public class GenMCExecutionModel {
             } else {
                 Model model;
                 if (jump.getGuard().accept(nonDetCollector)) {
+                    data.setNonDet(true);
                     boolean isConsistent = true;
                     if (!needsNewConsistencyCheck) {
                         model = calculateModel();
                     } else {
-                        isConsistent = checkConsistency(false);
+                        isConsistent = checkConsistency();
                         model = consistentModel;
                     }
                     if (isConsistent && model != null) {
@@ -551,10 +571,10 @@ public class GenMCExecutionModel {
             lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
             if (assertionEvent.getExpression() instanceof BoolLiteral bool) {
                 boolean failure = !bool.getValue();
-                if (failure && checkConsistency(false)) {
+                if (failure && checkConsistency()) {
                     hasError = true;
                 }
-            } else if (checkConsistency(false)) {
+            } else if (checkConsistency()) {
                 trace.addEvent(data);
                 AssertInline assertion = new AssertInline(assertionEvent);
                 hasError = !checkProperties(assertion.encode(encodingContext));
@@ -761,7 +781,12 @@ public class GenMCExecutionModel {
                     maxId = eventId;
                 }
                 if (pred != null) {
-                    enc.add(co.encode(pred, event));
+                    BooleanFormula encodedCoEdge = co.encode(pred, event);
+                    if (bmgr.isFalse(encodedCoEdge)) {
+                        throw new IllegalArgumentException("The SMT solver returned a coherence edge that cannot be true in trace " + trace + "\nco(" + pred.getGlobalId() + ", "
+                                + event.getGlobalId() + ")" + traceEncoder.encodeFullTrace(trace, memory));
+                    }
+                    enc.add(encodedCoEdge);
                 }
                 pred = event;
             }
