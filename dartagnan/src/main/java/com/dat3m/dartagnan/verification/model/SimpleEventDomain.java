@@ -4,11 +4,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.RegWriter;
 import com.dat3m.dartagnan.program.event.Tag;
 import com.dat3m.dartagnan.program.event.core.Init;
 import com.dat3m.dartagnan.program.event.core.Label;
+import com.dat3m.dartagnan.program.event.core.Store;
 import com.dat3m.dartagnan.program.event.core.threading.ThreadCreate;
 import com.dat3m.dartagnan.program.event.core.threading.ThreadStart;
 import com.dat3m.dartagnan.program.filter.Filter;
@@ -159,7 +161,22 @@ public class SimpleEventDomain implements Domain<EventData> {
         return name.startsWith("__");
     }
 
+    public boolean isFinished(Program program) {
+        if (program.getFormat() == Program.SourceLanguage.LITMUS) {
+            return true;
+        }
+        List<Event> mainThreadEvents = program.getThreads().get(0).getEvents();
+        Event mainThreadEndLabel = mainThreadEvents.get(mainThreadEvents.size() - 1);
+        for (EventData event : events) {
+            if (event.getEvent() == mainThreadEndLabel.getPredecessor()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     static boolean isThreadEndStore(EventData store) {
-        return store.getEvent().getSuccessor() instanceof Label label && label.getThread().getEntry().isSpawned() && label.getName().startsWith("END_OF_T");
+        return store.getEvent() instanceof Store && store.getEvent().getSuccessor() instanceof Label label && label.getThread().getEntry().isSpawned()
+                && label.getName().startsWith("END_OF_T");
     }
 }

@@ -297,7 +297,9 @@ public class GenMCSolver extends ModelChecker {
                 }
             }
         }
-        ++completeExecutions;
+        if (model.getTrace().isFinished(model.getProgram())) {
+            ++completeExecutions;
+        }
         return model.checkProperties();
     }
 
