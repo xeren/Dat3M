@@ -76,7 +76,6 @@ public final class Alloc extends AbstractEvent implements RegReader, RegWriter {
     public boolean isArrayAllocation() { return !isSimpleAllocation(); }
 
     public void setAllocatedObject(MemoryObject obj) { this.allocatedObject = obj; }
-    public boolean isAllocated() { return this.allocatedObject != null; }
     // WARNING: This should only be accessed after program processing.
     public MemoryObject getAllocatedObject() {
         Preconditions.checkState(allocatedObject != null,

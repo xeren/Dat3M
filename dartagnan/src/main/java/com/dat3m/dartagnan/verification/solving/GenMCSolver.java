@@ -5,13 +5,13 @@ import com.dat3m.dartagnan.encoding.EncodingContext;
 import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
 import com.dat3m.dartagnan.encoding.PropertyEncoder;
 import com.dat3m.dartagnan.encoding.WmmEncoder;
+import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.core.CondJump;
 import com.dat3m.dartagnan.program.event.core.Label;
-import com.dat3m.dartagnan.program.memory.MemoryObject;
-import com.dat3m.dartagnan.program.processing.DynamicMemoryAllocation;
-import com.dat3m.dartagnan.program.processing.GenMCProcessingManager;
-import com.dat3m.dartagnan.program.specification.AssertInline;
+import com.dat3m.dartagnan.program.processing.AssertionTransformer;
+import com.dat3m.dartagnan.program.processing.ConsecutiveGotoSimplification;
+import com.dat3m.dartagnan.program.processing.IdReassignment;
 import com.dat3m.dartagnan.solver.caat.domain.Domain;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.utils.Utils;
@@ -82,16 +82,13 @@ public class GenMCSolver extends ModelChecker {
         removeFlaggedAxiomsIfNotNeeded(task);
         
         memoryModel.configureAll(config);
-        preprocessProgram(GenMCProcessingManager.fromConfig(config), task, config);
+        preprocessProgram(task, config);
+        ConsecutiveGotoSimplification.newInstance().run(task.getProgram());
+        AssertionTransformer.newInstance().run(task.getProgram());
+        IdReassignment.newInstance().run(task.getProgram());
         preprocessMemoryModel(task, config);
 
-        Set<MemoryObject> baseMemoryObjects = task.getProgram().getMemory().getObjects();
-        DynamicMemoryAllocation.fromConfig(config).run(task.getProgram());
         performStaticProgramAnalyses(task, analysisContext, config);
-        Set<MemoryObject> currentMemoryObjects = task.getProgram().getMemory().getObjects();
-        Set<MemoryObject> newMemoryObjects = new HashSet<>(currentMemoryObjects);
-        newMemoryObjects.removeAll(baseMemoryObjects);
-        newMemoryObjects.forEach(task.getProgram().getMemory()::deleteMemoryObject);
         performStaticWmmAnalyses(task, analysisContext, config);
 
         removePorfAcyclicityAxiom(task);
@@ -104,12 +101,12 @@ public class GenMCSolver extends ModelChecker {
         final WmmEncoder baselineEncoder = WmmEncoder.withContext(context);
 
         final BooleanFormula properties;
-        if (task.getProgram().getSpecification() instanceof AssertInline) {
+        if (task.getProgram().getFormat() != Program.SourceLanguage.LITMUS) {
             properties = null;
         } else {
             properties = propertyEncoder.encodeProperties(task.getProperty());
         }
-        final GenMCExecutionModel model = GenMCExecutionModel.withContext(config, context, traceEncoder, prover, properties);
+        final GenMCExecutionModel model = GenMCExecutionModel.withContext(context, traceEncoder, prover, properties);
         final Property.Type propertyType = Property.getCombinedType(task.getProperty(), task);
 
         logger.info("Starting encoding using " + ctx.getVersion());

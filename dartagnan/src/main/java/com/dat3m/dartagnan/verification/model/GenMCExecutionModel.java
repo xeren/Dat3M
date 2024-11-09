@@ -1,27 +1,17 @@
 package com.dat3m.dartagnan.verification.model;
 
-import com.dat3m.dartagnan.configuration.OptionNames;
 import com.dat3m.dartagnan.encoding.EncodingContext;
 import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
 import com.dat3m.dartagnan.expression.Expression;
-import com.dat3m.dartagnan.expression.ExpressionFactory;
 import com.dat3m.dartagnan.expression.booleans.BoolLiteral;
 import com.dat3m.dartagnan.expression.processing.NonDetCollector;
-import com.dat3m.dartagnan.expression.type.FunctionType;
-import com.dat3m.dartagnan.expression.type.TypeFactory;
-import com.dat3m.dartagnan.program.Function;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.event.core.*;
 import com.dat3m.dartagnan.program.event.core.threading.ThreadArgument;
 import com.dat3m.dartagnan.program.event.core.threading.ThreadStart;
-import com.dat3m.dartagnan.program.event.functions.ValueFunctionCall;
 import com.dat3m.dartagnan.program.filter.Filter;
-import com.dat3m.dartagnan.program.memory.Memory;
-import com.dat3m.dartagnan.program.memory.MemoryObject;
-import com.dat3m.dartagnan.program.processing.Intrinsics;
-import com.dat3m.dartagnan.program.processing.ResolveLLVMObjectSizeCalls;
 import com.dat3m.dartagnan.program.specification.AssertInline;
 import com.dat3m.dartagnan.solver.caat.CAATSolver;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCWMMSolver;
@@ -31,10 +21,7 @@ import com.dat3m.dartagnan.wmm.utils.EventGraph;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.sosy_lab.common.configuration.Configuration;
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
-import org.sosy_lab.common.configuration.Option;
-import org.sosy_lab.common.configuration.Options;
 import org.sosy_lab.java_smt.api.BooleanFormula;
 import org.sosy_lab.java_smt.api.BooleanFormulaManager;
 import org.sosy_lab.java_smt.api.Model;
@@ -45,13 +32,9 @@ import java.math.BigInteger;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import static com.dat3m.dartagnan.program.processing.Intrinsics.Info.VERIFIER_NONDET;
-import static com.dat3m.dartagnan.program.processing.Intrinsics.Info.LLVM_OBJECTSIZE;
 import static com.dat3m.dartagnan.wmm.RelationNameRepository.CO;
 import static com.dat3m.dartagnan.wmm.RelationNameRepository.RF;
-import static java.util.function.Predicate.not;
 
 /*
 The ExecutionModel wraps a Model and extracts data from it in a more workable manner.
@@ -59,22 +42,9 @@ The ExecutionModel wraps a Model and extracts data from it in a more workable ma
 
 //TODO: Add the capability to remove unnecessary init events from a model
 // i.e. those that init some address which no read nor write accesses.
-@Options
 public class GenMCExecutionModel {
 
     private static final Logger logger = LogManager.getLogger(GenMCExecutionModel.class);
-
-    private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
-    private static final TypeFactory types = TypeFactory.getInstance();
-
-    // =========================== Configurables ===========================
-
-    @Option(name = OptionNames.INIT_DYNAMIC_ALLOCATIONS,
-            description = "Creates init events for all dynamic allocations. Those init events zero out the memory.",
-            secure = true)
-    private boolean createInitsForDynamicAllocations = false;
-
-    // ======================================================================
 
     private static int solverChecks = 0;
     private static int solverCheckTime = 0;
@@ -90,7 +60,6 @@ public class GenMCExecutionModel {
     private boolean lastNeedsNewConsistencyCheck = true;
     private Model consistentModel = null;
     private BooleanFormula jumpRevisitFormula = null;
-    private Filter threadEventFilter;
     private Map<Event, BooleanFormula> cfContext = new HashMap<>();
 
     private final EncodingContext encodingContext;
@@ -98,49 +67,39 @@ public class GenMCExecutionModel {
     private final ProverEnvironment prover;
     private final GenMCWMMSolver solver;
     private final BooleanFormula properties;
+    private final Filter threadEventFilter;
     private final EventGraph mayRfGraph;
     
     private final List<Thread> relevantThreads;
     private final Map<BooleanFormula, Integer> prohibitedCoherences;
-    private final List<Thread> threads;
-    private final Memory memory;
 
     private final Map<EventData, Set<EventData>> mayRfMap;
 
-    private GenMCExecutionModel(EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, ProverEnvironment prover, GenMCWMMSolver solver, BooleanFormula properties,
-            Memory memory, boolean createInitsForDynamicAllocations) {
-        this.createInitsForDynamicAllocations = createInitsForDynamicAllocations;
-        
+    private GenMCExecutionModel(EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, ProverEnvironment prover, GenMCWMMSolver solver, BooleanFormula properties) {
         this.encodingContext = encodingContext;
         this.traceEncoder = traceEncoder;
         this.prover = prover;
         this.solver = solver;
         this.properties = properties;
-        this.mayRfGraph = encodingContext.getAnalysisContext().requires(RelationAnalysis.class).getKnowledge(getTask().getMemoryModel().getRelation(RF)).getMaySet();
-
         this.threadEventFilter = Filter.byEvents(getProgram().getThreadEvents());
+        this.mayRfGraph = encodingContext.getAnalysisContext().requires(RelationAnalysis.class).getKnowledge(getTask().getMemoryModel().getRelation(RF)).getMaySet();
 
         this.relevantThreads = new ArrayList<>(getProgram().getThreads());
         this.prohibitedCoherences = new HashMap<>();
-        this.threads = new ArrayList<>();
-        this.memory = memory;
 
         this.mayRfMap = new HashMap<>();
     }
 
-    public static GenMCExecutionModel withContext(Configuration config, EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, ProverEnvironment prover,
+    public static GenMCExecutionModel withContext(EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, ProverEnvironment prover,
             BooleanFormula properties) throws InvalidConfigurationException {
         VerificationTask task = encodingContext.getTask();
         GenMCWMMSolver solver = GenMCWMMSolver.withContext(task.getMemoryModel(), encodingContext, encodingContext.getAnalysisContext());
-        Memory memory = task.getProgram().getMemory().copy();
-        GenMCExecutionModel model = new GenMCExecutionModel(encodingContext, traceEncoder, prover, solver, properties, memory, false);
-        config.inject(model);
+        GenMCExecutionModel model = new GenMCExecutionModel(encodingContext, traceEncoder, prover, solver, properties);
         return model;
     }
 
     public GenMCExecutionModel newInstance(int idToKeepCoBefore) throws InvalidConfigurationException {
-        GenMCExecutionModel model = new GenMCExecutionModel(encodingContext, traceEncoder, prover, solver, properties, memory.copy(), createInitsForDynamicAllocations);
-        model.relevantThreads.removeIf(not(this.relevantThreads::contains));
+        GenMCExecutionModel model = new GenMCExecutionModel(encodingContext, traceEncoder, prover, solver, properties);
         model.cfContext = this.cfContext;
         for (Map.Entry<BooleanFormula, Integer> prohibitedCoherence : prohibitedCoherences.entrySet()) {
             int currentMaxCoId = prohibitedCoherence.getValue();
@@ -270,17 +229,6 @@ public class GenMCExecutionModel {
         isConsistent = true;
         needsNewConsistencyCheck = true;
         lastNeedsNewConsistencyCheck = false;
-        
-        for (MemoryObject memObj : memory.getObjects()) {
-            if (getData(memObj.getAllocationSite()).isEmpty()) {
-                free(memObj);
-            }
-        }
-        for (EventData event : trace.getElements()) {
-            if (event.getEvent() instanceof Alloc alloc && !alloc.isAllocated()) {
-                allocate(alloc);
-            }
-        }
 
         List<Event> cfEventsToRemove = new ArrayList<>();
         for (Event cfEvent : cfContext.keySet()) {
@@ -386,8 +334,7 @@ public class GenMCExecutionModel {
     }
 
     public EventData nextEvent() throws InterruptedException, SolverException {
-        Filter traceFilter = trace.eventFilter();
-        Filter eventFilter = Filter.difference(threadEventFilter, traceFilter);
+        Filter eventFilter = Filter.difference(threadEventFilter, trace.eventFilter());
         Event startEvent;
         try {
             startEvent = trace.getObjectById(0).getEvent();
@@ -408,27 +355,15 @@ public class GenMCExecutionModel {
             while (e != null) {
                 if (eventFilter.apply(e)) {
                     lastAdded = e;
-                    Event predecessor = e.getPredecessor();
-                    EventData addedEvent = addEvent(e);
-                    if (addedEvent != null) {
-                        return addedEvent;
-                    }
-                    eventFilter = Filter.difference(threadEventFilter, traceFilter);
-                    e = predecessor.getSuccessor();
-                    predecessor.setSuccessor(lastAdded);
-                    continue;
+                    return addEvent(e);
                 }
 
                 Optional<EventData> data = getData(e);
                 if (e instanceof CondJump jump && data.isPresent() && data.get().wasExecuted()) {
                     e = jump.getLabel();
-                    if (getData(e).isPresent()) {
-                        // TODO: Handle loops
-                    }
                 } else {
                     e = e.getSuccessor();
                 }
-
             }
             ++threadIndex;
         }
@@ -483,28 +418,6 @@ public class GenMCExecutionModel {
                 //FIXME: Handle other kinds of memory events such as SRCU_SYNC.
                 throw new UnsupportedOperationException("Unexpected memory event " + data.getEvent());
             }
-        } else if (data.getEvent() instanceof Alloc alloc) {
-            allocate(alloc);
-        } else if (data.getEvent() instanceof ValueFunctionCall call && call.isDirectCall()) {
-            Intrinsics.Info intrinsic = call.getCalledFunction().getIntrinsicInfo();
-            if (intrinsic == VERIFIER_NONDET || intrinsic == LLVM_OBJECTSIZE) {
-                Event predecessor = call.getPredecessor();
-                Event successor = call.getSuccessor();
-                if (intrinsic == LLVM_OBJECTSIZE) {
-                    ResolveLLVMObjectSizeCalls.resolveObjectSizeCall(getTask().getConfig(), call);
-                } else {
-                    Intrinsics.replace(call, intrinsic);
-                }
-                List<Event> replacement = predecessor.getSuccessor().getSuccessors()
-                        .stream()
-                        .filter(successor.getPredecessor().getPredecessors()::contains)
-                        .toList();
-                call.setPredecessor(predecessor);
-                call.setSuccessor(successor);
-                encodingContext.replaceResultEvent(call, replacement);
-                updateFilter();
-                return null;
-            }
         } else if (data.isJump()) {
             // ===== Jumps =====
             // We override the meaning of execution here. A jump is executed IFF its condition was true.
@@ -538,7 +451,7 @@ public class GenMCExecutionModel {
                             jumpRevisitFormula = encodedJumpCondition;
                         }
                     } else {
-                        isConsistent = false;
+                        this.isConsistent = false;
                     }
                 } else {
                     if ((model = calculateModel()) != null) {
@@ -647,62 +560,6 @@ public class GenMCExecutionModel {
                 .orElse(thread.getEntry());
     }
 
-    private void updateFilter() {
-        threadEventFilter = Filter.byEvents(getProgram().getThreadEvents());
-    }
-
-    private void allocate(Alloc alloc) {
-        final MemoryObject allocatedObject = memory.allocate(alloc);
-        alloc.setAllocatedObject(allocatedObject);
-
-        if (alloc.doesZeroOutMemory() || createInitsForDynamicAllocations) {
-            for (int i = 0; i < allocatedObject.size(); i++) {
-                final Expression zero = expressions.makeZero(types.getByteType());
-                allocatedObject.setInitialValue(i, zero);
-            }
-        }
-
-        final FunctionType initThreadType = types.getFunctionType(types.getVoidType(), List.of());
-        final List<String> paramNames = List.of();
-        int nextThreadId = Stream.concat(threads.stream(), getProgram().getFunctions().stream())
-            .mapToInt(Function::getId).max().getAsInt() + 1;
-        for (int field : allocatedObject.getInitializedFields()) {
-            // NOTE: We use different names to avoid symmetry detection treating all inits as symmetric.
-            final String threadName = "Init_" + nextThreadId;
-            final Thread thread = new Thread(threadName, initThreadType, paramNames, nextThreadId,
-                    EventFactory.newThreadStart(null));
-            thread.append(EventFactory.newInit(allocatedObject, field));
-            thread.append(EventFactory.newLabel("END_OF_T" + thread.getId()));
-            threads.add(thread);
-            nextThreadId++;
-
-            for (Event initThreadEvent : thread.getEvents()) {
-                EventData event = new EventData(initThreadEvent);
-                trace.addEvent(event);
-            }
-        }
-    }
-
-    private void free(MemoryObject memObj) {
-        if (memObj.isDynamicallyAllocated()) {
-            memory.deleteMemoryObject(memObj);
-            memObj.getAllocationSite().setAllocatedObject(null);
-            List<EventData> initEventsForObj = trace.getElements().stream()
-                    .filter(e -> e.getEvent() instanceof Init init && init.getBase() == memObj)
-                    .toList();
-            for (EventData initEvent : initEventsForObj) {
-                Thread initThread = initEvent.getEvent().getThread();
-                for (Event initThreadEvent : initThread.getEvents()) {
-                    EventData initThreadData = getData(initThreadEvent).orElse(null);
-                    if (initThreadData != null) {
-                        trace.getElements().remove(initThreadData);
-                    }
-                }
-                threads.remove(initThread);
-            }
-        }
-    }
-
     private boolean checkProperties(BooleanFormula properties) throws InterruptedException, SolverException {
         logger.debug("Checking properties");
         List<BooleanFormula> propertiesList = new ArrayList<>();
@@ -725,7 +582,7 @@ public class GenMCExecutionModel {
     private Model calculateModel(Collection<BooleanFormula> assumptions) throws InterruptedException, SolverException {
         assumptions.addAll(prohibitedCoherences.keySet());
         assumptions.addAll(cfContext.values());
-        assumptions.add(traceEncoder.encodeFullTrace(trace, memory));
+        assumptions.add(traceEncoder.encodeFullTrace(trace));
         Model model = null;
         long start = System.currentTimeMillis();
         if (!prover.isUnsatWithAssumptions(assumptions)) {
@@ -779,7 +636,7 @@ public class GenMCExecutionModel {
                     BooleanFormula encodedCoEdge = co.encode(pred, event);
                     if (bmgr.isFalse(encodedCoEdge)) {
                         throw new IllegalArgumentException("The SMT solver returned a coherence edge that cannot be true in trace " + trace + "\nco(" + pred.getGlobalId() + ", "
-                                + event.getGlobalId() + ")" + traceEncoder.encodeFullTrace(trace, memory));
+                                + event.getGlobalId() + ")" + traceEncoder.encodeFullTrace(trace));
                     }
                     enc.add(encodedCoEdge);
                 }

@@ -44,10 +44,6 @@ public class ResolveLLVMObjectSizeCalls implements FunctionProcessor {
                 .forEach(this::resolveObjectSizeCall);
     }
 
-    public static void resolveObjectSizeCall(Configuration config, ValueFunctionCall call) {
-        fromConfig(config).resolveObjectSizeCall(call);
-    }
-
     private void resolveObjectSizeCall(ValueFunctionCall call) {
         //final Expression ptr = call.getArguments().get(0);
         final IntLiteral zeroIfUnknown = (IntLiteral)call.getArguments().get(1); // else -1 if unknown

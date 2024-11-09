@@ -30,7 +30,6 @@ public class Program {
     private Expression spec;
     private Expression filterSpec; // Acts like "assume" statements, filtering out executions
     private final List<Thread> threads;
-    private Set<Function> mayThreads = new HashSet<>();
     private final List<Function> functions;
     private final List<NonDetValue> constants = new ArrayList<>();
     private final Memory memory;
@@ -147,17 +146,6 @@ public class Program {
 
     public List<Thread> getThreads() {
         return threads;
-    }
-
-    public void setMayThreads(Set<Function> mayThreads) {
-        this.mayThreads = mayThreads;
-    }
-
-    public Collection<? extends Function> getMayThreads() {
-        if (mayThreads.isEmpty()) {
-            return threads;
-        }
-        return mayThreads;
     }
 
     public List<Function> getFunctions() { return functions; }

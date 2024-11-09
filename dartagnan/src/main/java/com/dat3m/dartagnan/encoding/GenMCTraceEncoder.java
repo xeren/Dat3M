@@ -53,6 +53,8 @@ public class GenMCTraceEncoder implements Encoder {
     private final ExecutionAnalysis exec;
     private final Dependency dep;
 
+    private final BooleanFormula constants;
+    private final BooleanFormula memory;
     private final BooleanFormula finalRegisterValues;
     private final BooleanFormula filter;
 
@@ -65,6 +67,8 @@ public class GenMCTraceEncoder implements Encoder {
         this.exec = c.getAnalysisContext().requires(ExecutionAnalysis.class);
         this.dep = c.getAnalysisContext().requires(Dependency.class);
 
+        constants = encodeConstants();
+        memory = encodeMemory();
         finalRegisterValues = encodeFinalRegisterValues();
         filter = encodeFilter();
     }
@@ -78,11 +82,11 @@ public class GenMCTraceEncoder implements Encoder {
 
     // ============================== Encoding ==============================
 
-    public BooleanFormula encodeFullTrace(Domain<EventData> trace, Memory memory) {
+    public BooleanFormula encodeFullTrace(Domain<EventData> trace) {
         long start = System.currentTimeMillis();
         BooleanFormula enc = context.getBooleanFormulaManager().and(
-                encodeConstants(),
-                encodeMemory(memory),
+                constants,
+                memory,
                 encodeControlFlow(trace),
                 encodeDependencies(trace));
         encodingTime += System.currentTimeMillis() - start;
@@ -148,8 +152,9 @@ public class GenMCTraceEncoder implements Encoder {
     }
 
     // Encodes the address values of memory objects.
-    public BooleanFormula encodeMemory(Memory memory) {
-        logger.debug("Encoding memory");
+    public BooleanFormula encodeMemory() {
+        logger.info("Encoding memory");
+        final Memory memory = context.getTask().getProgram().getMemory();
         final FormulaManager fmgr = context.getFormulaManager();
         // TODO: Once we want to encode dynamic memory layouts (e.g., due to dynamically-sized mallocs)
         //  we need to compute a Map<MemoryObject, Formula> where each formula describes a
