@@ -25,16 +25,20 @@ public class ConsecutiveGotoSimplification implements ProgramProcessor {
             Set<CondJump> jumpSet = label.getJumpSet();
             if (jumpSet.size() == 1) {
                 CondJump jump = jumpSet.iterator().next();
-                if (label.getSuccessor() instanceof CondJump consecutiveJump && consecutiveJump.isGoto()
-                        && label.getPredecessor() instanceof CondJump previousInstr && previousInstr.isGoto()) {
+                if (label.getSuccessor() instanceof CondJump consecutiveJump && consecutiveJump.isGoto()) {
                     CondJump newJump = EventFactory.newJump(jump.getGuard(), consecutiveJump.getLabel());
                     jump.getPredecessor().setSuccessor(newJump);
                     jump.getSuccessor().setPredecessor(newJump);
                     newJump.setPredecessor(jump.getPredecessor());
                     newJump.setSuccessor(jump.getSuccessor());
                     newJump.setFunction(jump.getFunction());
-                    label.forceDelete();
-                    consecutiveJump.forceDelete();
+                    label.removeUser(jump);
+                    if (label.getPredecessor() instanceof CondJump previousInstr && previousInstr.isGoto()) {
+                        label.forceDelete();
+                        consecutiveJump.forceDelete();
+                    } else if (label.getJumpSet().size() == 0) {
+                        label.forceDelete();
+                    }
                     simplifyConsecutiveGotos(program);
                     break;
                 }
