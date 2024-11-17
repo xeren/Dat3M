@@ -3,6 +3,7 @@ package com.dat3m.dartagnan.verification.model;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.event.Event;
@@ -68,6 +69,12 @@ public class SimpleEventDomain implements Domain<EventData> {
         EventData last = getLast();
         events.remove(last);
         return last;
+    }
+
+    public Optional<EventData> getData(Event e) {
+        return getElements().stream()
+                .filter(event -> event.getEvent() == e)
+                .findAny();
     }
 
     public Filter eventFilter() {
