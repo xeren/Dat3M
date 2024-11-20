@@ -73,6 +73,9 @@ public class OptionNames {
     public static final String GRAPHVIZ_DEBUG_FILES = "refinement.generageGraphvizDebugFiles";
     public static final String SYMMETRIC_LEARNING = "refinement.symmetricLearning";
 
+    // GenMC Options
+    public static final String USE_SMT_SOLVER = "genmc.useSmtSolver";
+
     // Execution model Options
     public static final String TRACK_DEPENDENCIES = "execution.trackDeps";
 

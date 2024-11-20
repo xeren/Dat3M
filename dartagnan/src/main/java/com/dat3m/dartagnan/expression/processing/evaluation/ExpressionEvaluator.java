@@ -1,8 +1,7 @@
 package com.dat3m.dartagnan.expression.processing.evaluation;
 
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Collection;
+import java.util.List;
 
 import org.sosy_lab.java_smt.api.ProverEnvironment;
 import org.sosy_lab.java_smt.api.SolverException;
@@ -10,37 +9,20 @@ import org.sosy_lab.java_smt.api.SolverException;
 import com.dat3m.dartagnan.encoding.EncodingContext;
 import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
 import com.dat3m.dartagnan.expression.Expression;
-import com.dat3m.dartagnan.expression.ExpressionFactory;
 import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.verification.model.EventData;
 import com.dat3m.dartagnan.verification.model.SimpleEventDomain;
 
 public interface ExpressionEvaluator {
     
-    BigInteger evaluate(Expression expr, Collection<Expression> assumptions) throws SolverException, InterruptedException;
-    void update(Collection<Expression> assumptions) throws SolverException, InterruptedException;
+    BigInteger evaluate(Expression expr) throws SolverException, InterruptedException;
+    boolean evaluateReachability(Expression target) throws SolverException, InterruptedException;
 
-    void setTrace(SimpleEventDomain trace);
+    void setTrace(SimpleEventDomain trace, List<EventData> unchangedEvents);
     void addNonDetCondition(Event event, Expression condition, boolean isTrue);
 
     int getSolverCheckTime();
     int getSolverChecks();
-    
-    default BigInteger evaluate(Expression expr) throws SolverException, InterruptedException {
-        return evaluate(expr, new ArrayList<>());
-    }
-
-    default void update() throws SolverException, InterruptedException {
-        update(new ArrayList<>());
-    }
-
-    default boolean evaluateReachability(Expression target) throws SolverException, InterruptedException {
-        return evaluateReachability(target, new ArrayList<>());
-    }
-
-    default boolean evaluateReachability(Expression target, Collection<Expression> assumptions) throws SolverException, InterruptedException {
-        assumptions.add(target);
-        return BigInteger.ZERO.equals(evaluate(ExpressionFactory.getInstance().makeTrue(), assumptions));
-    }
 
     static BigInteger getValue(Object value) {
         String valueString = String.valueOf(value);
@@ -53,7 +35,11 @@ public interface ExpressionEvaluator {
         };
     }
 
-    public static ExpressionEvaluator getInstance(EncodingContext encodingContext, ProverEnvironment prover, GenMCTraceEncoder traceEncoder) {
-        return new ProverExpressionEvaluator(encodingContext, prover, traceEncoder);
+    public static ExpressionEvaluator getInstance(EncodingContext encodingContext, ProverEnvironment prover, GenMCTraceEncoder traceEncoder, boolean useSMTSolver) {
+        if (useSMTSolver) {
+            return new ProverExpressionEvaluator(encodingContext, prover, traceEncoder);
+        } else {
+            return new ConstantPropagationExpressionEvaluator(encodingContext, prover, traceEncoder);
+        }
     }
 }

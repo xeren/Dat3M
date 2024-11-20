@@ -44,6 +44,7 @@ public abstract class AbstractCTest {
     protected Configuration getConfiguration() throws InvalidConfigurationException {
         return Configuration.builder()
                 .setOption(OptionNames.USE_INTEGERS, "true")
+                .setOption(OptionNames.USE_SMT_SOLVER, "false")
                 .build();
     }
 

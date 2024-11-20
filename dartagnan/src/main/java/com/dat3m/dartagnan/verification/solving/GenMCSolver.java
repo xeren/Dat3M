@@ -26,8 +26,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sosy_lab.common.configuration.Configuration;
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
+import org.sosy_lab.common.configuration.Option;
 import org.sosy_lab.common.configuration.Options;
 import org.sosy_lab.java_smt.api.*;
+
+import static com.dat3m.dartagnan.configuration.OptionNames.USE_SMT_SOLVER;
 
 import java.util.*;
 
@@ -46,6 +49,12 @@ import java.util.*;
 public class GenMCSolver extends ModelChecker {
 
     private static final Logger logger = LogManager.getLogger(GenMCSolver.class);
+    
+    @Option(
+            name=USE_SMT_SOLVER,
+            description = "Use SMT solver to resolve the data flow with GenMC",
+            secure = true)
+    boolean useSMTSolver = false;
 
     private int completeExecutions = 0;
     private int executions = 0;
@@ -64,6 +73,7 @@ public class GenMCSolver extends ModelChecker {
             throws InterruptedException, SolverException, InvalidConfigurationException {
         GenMCSolver solver = new GenMCSolver();
         task.getConfig().inject(solver);
+        logger.info("{}: {}", USE_SMT_SOLVER, solver.useSMTSolver);
         solver.runInternal(ctx, prover, task);
         return solver;
     }
@@ -106,7 +116,7 @@ public class GenMCSolver extends ModelChecker {
         } else {
             properties = propertyEncoder.encodeProperties(task.getProperty());
         }
-        final GenMCExecutionModel model = GenMCExecutionModel.withContext(context, traceEncoder, prover, properties);
+        final GenMCExecutionModel model = GenMCExecutionModel.withContext(context, traceEncoder, prover, properties, useSMTSolver);
         final Property.Type propertyType = Property.getCombinedType(task.getProperty(), task);
 
         logger.info("Starting encoding using " + ctx.getVersion());
@@ -448,7 +458,7 @@ public class GenMCSolver extends ModelChecker {
                     .findAny()
                     .get();
             GenMCExecutionModel newModel = oldModel.newInstance(oldModel.getTrace().getId(writeData));
-            newModel.initialize(traceEvents, readData, writeData, new HashMap<>());
+            newModel.initialize(traceEvents, readData, writeData, new HashMap<>(), Collections.emptyList());
             return newModel;
         }
     }
@@ -507,7 +517,7 @@ public class GenMCSolver extends ModelChecker {
             List<EventData> newTraceEvents = oldModel.copyTraceEvents(event -> oldTrace.getId(event) < backtrackingId);
             newTraceEvents.addAll(eventsToKeep);
             GenMCExecutionModel newModel = oldModel.newInstance(backtrackingId);
-            newModel.initialize(newTraceEvents, getNewRead(), getNewWrite(), nonDetJumpStatus);
+            newModel.initialize(newTraceEvents, getNewRead(), getNewWrite(), nonDetJumpStatus, eventsToKeep);
             return newModel;
         }
     }

@@ -47,12 +47,16 @@ public class ProverExpressionEvaluator implements ExpressionEvaluator {
     }
 
     @Override
+    public BigInteger evaluate(Expression expr) throws SolverException, InterruptedException {
+        return evaluate(exprToFormula(expr, trace.getLast().getEvent()), new ArrayList<>());
+    }
+
     public BigInteger evaluate(Expression expr, Collection<Expression> assumptions) throws SolverException, InterruptedException {
         return evaluate(exprToFormula(expr, trace.getLast().getEvent()), exprsToBoolFormula(assumptions));
     }
 
     public BigInteger evaluate(Formula formula, List<BooleanFormula> assumptions) throws SolverException, InterruptedException {
-        update(assumptions);
+        Model model = calculateModel(assumptions);
         if (model == null) {
             return null;
         }
@@ -60,11 +64,17 @@ public class ProverExpressionEvaluator implements ExpressionEvaluator {
     }
 
     @Override
-    public void update(Collection<Expression> assumptions) throws SolverException, InterruptedException {
-        update(exprsToBoolFormula(assumptions));
+    public boolean evaluateReachability(Expression expr) throws SolverException, InterruptedException {
+        List<BooleanFormula> exprWrapper = new ArrayList<>();
+        exprWrapper.add(encodingContext.encodeExpressionAsBooleanAt(expr, trace.getLast().getEvent()));
+        return calculateModel(exprWrapper) != null;
     }
 
-    public void update(List<BooleanFormula> assumptions) throws SolverException, InterruptedException {
+    public Model calculateModel() throws SolverException, InterruptedException {
+        return calculateModel(new ArrayList<>());
+    }
+
+    public Model calculateModel(Collection<BooleanFormula> assumptions) throws SolverException, InterruptedException {
         assumptions.addAll(prohibitedCoherences.keySet());
         assumptions.addAll(cfContext.values());
         assumptions.add(traceEncoder.encodeFullTrace(trace));
@@ -75,15 +85,6 @@ public class ProverExpressionEvaluator implements ExpressionEvaluator {
         }
         solverCheckTime += System.currentTimeMillis() - start;
         ++solverChecks;
-        this.model = model;
-    }
-
-    public Model calculateModel() throws SolverException, InterruptedException {
-        return calculateModel(new ArrayList<>());
-    }
-
-    public Model calculateModel(List<BooleanFormula> assumptions) throws SolverException, InterruptedException {
-        update(assumptions);
         return model;
     }
 
@@ -92,7 +93,7 @@ public class ProverExpressionEvaluator implements ExpressionEvaluator {
     }
 
     @Override
-    public void setTrace(SimpleEventDomain trace) {
+    public void setTrace(SimpleEventDomain trace, List<EventData> unchangedEvents) {
         this.trace = trace;
         List<Event> cfEventsToRemove = new ArrayList<>();
         for (Event cfEvent : cfContext.keySet()) {

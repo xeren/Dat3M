@@ -6,20 +6,17 @@ import com.dat3m.dartagnan.expression.ExpressionVisitor;
 import com.dat3m.dartagnan.expression.UnaryExpression;
 import com.dat3m.dartagnan.program.Function;
 import com.dat3m.dartagnan.program.Register;
-import com.dat3m.dartagnan.program.event.RegWriter;
 import com.dat3m.dartagnan.program.memory.Location;
 import com.dat3m.dartagnan.program.memory.MemoryObject;
 import com.dat3m.dartagnan.program.misc.NonDetValue;
-import com.dat3m.dartagnan.solver.caat.domain.Domain;
 import com.dat3m.dartagnan.verification.model.EventData;
-
-import java.util.Comparator;
+import com.dat3m.dartagnan.verification.model.SimpleEventDomain;
 
 public class NonDetCollector implements ExpressionVisitor<Boolean> {
 
-    private final Domain<EventData> trace;
+    private final SimpleEventDomain trace;
 
-    public NonDetCollector(Domain<EventData> trace) {
+    public NonDetCollector(SimpleEventDomain trace) {
         this.trace = trace;
     }
 
@@ -44,10 +41,7 @@ public class NonDetCollector implements ExpressionVisitor<Boolean> {
     // =================================== Program-specific ===================================
     @Override
     public Boolean visitRegister(Register reg) {
-        EventData lastWriter = trace.getElements().stream()
-                .filter(event -> event.getEvent() instanceof RegWriter writer && writer.getResultRegister() == reg)
-                .max(Comparator.comparingInt(EventData::getId))
-                .orElse(null);
+        EventData lastWriter = trace.getLastRegWriter(reg);
         if (lastWriter == null) {
             return false;
         } else {

@@ -2,10 +2,12 @@ package com.dat3m.dartagnan.verification.model;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
 import com.dat3m.dartagnan.program.Program;
+import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.RegWriter;
 import com.dat3m.dartagnan.program.event.Tag;
@@ -72,9 +74,20 @@ public class SimpleEventDomain implements Domain<EventData> {
     }
 
     public Optional<EventData> getData(Event e) {
-        return getElements().stream()
+        return getData(getElements(), e);
+    }
+
+    public static Optional<EventData> getData(List<EventData> events, Event e) {
+        return events.stream()
                 .filter(event -> event.getEvent() == e)
                 .findAny();
+    }
+
+    public EventData getLastRegWriter(Register reg) {
+         return getElements().stream()
+                    .filter(event -> event.getEvent() instanceof RegWriter writer && writer.getResultRegister() == reg)
+                    .max(Comparator.comparingInt(EventData::getId))
+                    .orElse(null);
     }
 
     public Filter eventFilter() {

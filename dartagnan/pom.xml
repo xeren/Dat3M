@@ -113,11 +113,12 @@
                     <arguments>
                         <argument>../cat/rc11.cat</argument>
                         <argument>--target=c11</argument>
-                        <argument>../benchmarks/lfds/treiber.c</argument>
+                        <argument>../../trust-benchmarks/ll/ainc.6.ll</argument>
                         <argument>--property=program_spec</argument>
-                        <argument>--bound=1</argument>
+                        <argument>--bound=6</argument>
                         <argument>--encoding.mergeCFVars=false</argument>
                         <argument>--execution.trackDeps=false</argument>
+                        <argument>--genmc.useSmtSolver=false</argument>
                         <argument>--solver=yices2</argument>
                         <argument>--witness=png</argument>
                         <argument>--method=genmc</argument>
