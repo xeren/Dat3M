@@ -106,7 +106,6 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
         evaluator.clear(unchangedEvents);
     }
 
-    // TODO: Ergebnisse zwischenspeichern
     @Override
     public void addNonDetCondition(Event event, Expression condition, boolean isTrue) {
         BooleanFormula encodedCondition = encodingContext.encodeExpressionAsBooleanAt(condition, event);

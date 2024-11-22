@@ -85,6 +85,7 @@ public class ProverExpressionEvaluator implements ExpressionEvaluator {
         }
         solverCheckTime += System.currentTimeMillis() - start;
         ++solverChecks;
+        this.model = model;
         return model;
     }
 
