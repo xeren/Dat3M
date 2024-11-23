@@ -37,6 +37,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static com.dat3m.dartagnan.wmm.RelationNameRepository.RF;
+import static java.util.function.Predicate.isEqual;
 
 /*
 The ExecutionModel wraps a Model and extracts data from it in a more workable manner.
@@ -51,6 +52,7 @@ public class GenMCExecutionModel {
 
     private static int consistencyChecks = 0;
     private static int consistencyCheckTime = 0;
+    private static int eventFilterTime = 0;
 
     // ============= Model specific  =============
     private SimpleEventDomain trace;
@@ -65,7 +67,6 @@ public class GenMCExecutionModel {
     private final GenMCTraceEncoder traceEncoder;
     private final GenMCWMMSolver solver;
     private final BooleanFormula properties;
-    private final Filter threadEventFilter;
     private final EventGraph mayRfGraph;
     private final ExpressionEvaluator exprEvaluator;
     private final ProverExpressionEvaluator modelProvider;
@@ -79,7 +80,6 @@ public class GenMCExecutionModel {
         this.traceEncoder = traceEncoder;
         this.solver = solver;
         this.properties = properties;
-        this.threadEventFilter = Filter.byEvents(getProgram().getThreadEvents());
         this.mayRfGraph = encodingContext.getAnalysisContext().requires(RelationAnalysis.class).getKnowledge(getTask().getMemoryModel().getRelation(RF)).getMaySet();
         this.exprEvaluator = exprEvaluator;
         this.modelProvider = modelProvider;
@@ -113,6 +113,10 @@ public class GenMCExecutionModel {
 
     public static int getConsistencyCheckTime() {
         return consistencyCheckTime;
+    }
+
+    public static int getEventFilterTime() {
+        return eventFilterTime;
     }
 
     // General data
@@ -285,7 +289,6 @@ public class GenMCExecutionModel {
     }
 
     public EventData nextEvent() throws InterruptedException, SolverException {
-        Filter eventFilter = Filter.difference(threadEventFilter, trace.eventFilter());
         Event startEvent;
         try {
             startEvent = trace.getObjectById(0).getEvent();
@@ -304,9 +307,13 @@ public class GenMCExecutionModel {
             Event e = initialize ? getLastAddedThreadEvent(thread) : startEvent;
             initialize = true;
             while (e != null) {
-                if (eventFilter.apply(e)) {
+                long start = System.currentTimeMillis();
+                if (!trace.getElements().stream().map(EventData::getEvent).anyMatch(isEqual(e))) {
+                    eventFilterTime += System.currentTimeMillis() - start;
                     lastAdded = e;
                     return addEvent(e);
+                } else {
+                    eventFilterTime += System.currentTimeMillis() - start;
                 }
 
                 Optional<EventData> data = trace.getData(e);
@@ -556,7 +563,9 @@ public class GenMCExecutionModel {
     }
 
     private boolean checkConsistency(Model model, List<BooleanFormula> assumptions) throws InterruptedException, SolverException {
+        long start = System.currentTimeMillis();
         Filter eventFilter = Filter.intersection(Filter.byTag(Tag.VISIBLE), trace.eventFilter());
+        eventFilterTime += System.currentTimeMillis() - start;
         while (model != null) {
             GenMCWMMSolver.Result result = solver.check(model, eventFilter);
             if (result.getStatus() == CAATSolver.Status.CONSISTENT) {

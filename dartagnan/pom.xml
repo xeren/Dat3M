@@ -113,9 +113,9 @@
                     <arguments>
                         <argument>../cat/rc11.cat</argument>
                         <argument>--target=c11</argument>
-                        <argument>../benchmarks/rc11/genmc_cas_nondet.c</argument>
+                        <argument>../benchmarks/lfds/treiber.c</argument>
                         <argument>--property=program_spec</argument>
-                        <argument>--bound=1</argument>
+                        <argument>--bound=2</argument>
                         <argument>--encoding.mergeCFVars=false</argument>
                         <argument>--execution.trackDeps=false</argument>
                         <argument>--genmc.useSmtSolver=false</argument>

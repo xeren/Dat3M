@@ -174,6 +174,7 @@ public class GenMCSolver extends ModelChecker {
 
         logger.info("Total encoding time: " + Utils.toTimeString(traceEncoder.getEncodingTime()));
         logger.info("Total porf-prefix calculation time: " + Utils.toTimeString(porfPrefixTime));
+        logger.info("Total event filter time: " + Utils.toTimeString(GenMCExecutionModel.getEventFilterTime()));
     }
 
     private static void removeFlaggedAxiomsIfNotNeeded(VerificationTask task) {
