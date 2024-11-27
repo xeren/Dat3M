@@ -138,6 +138,24 @@ public class SimpleEventDomain implements Domain<EventData> {
                         .append(": ")
                         .append(readFrom);
             }
+            if (eventData.getCoPredecessor() != null) {
+                Event coPred = eventData.getCoPredecessor().getEvent();
+                builder.append(", writes after ")
+                        .append(coPred.getGlobalId())
+                        .append(": ")
+                        .append(coPred);
+            }
+            if (eventData.getCoSuccessor() != null) {
+                Event coSuc = eventData.getCoSuccessor().getEvent();
+                builder.append(", writes before ")
+                        .append(coSuc.getGlobalId())
+                        .append(": ")
+                        .append(coSuc);
+            }
+            if (eventData.getCoherenceIndex() != Integer.MIN_VALUE) {
+                builder.append(", coherence index: ")
+                        .append(eventData.getCoherenceIndex());
+            }
             pred = event;
         }
         return builder.toString();

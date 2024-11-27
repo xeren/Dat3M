@@ -1,7 +1,6 @@
 package com.dat3m.dartagnan.expression.processing.evaluation;
 
 import java.math.BigInteger;
-import java.util.List;
 
 import org.sosy_lab.java_smt.api.ProverEnvironment;
 import org.sosy_lab.java_smt.api.SolverException;
@@ -10,15 +9,16 @@ import com.dat3m.dartagnan.encoding.EncodingContext;
 import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
 import com.dat3m.dartagnan.expression.Expression;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.verification.model.EventData;
 import com.dat3m.dartagnan.verification.model.SimpleEventDomain;
 
 public interface ExpressionEvaluator {
+
+    ExpressionEvaluator newInstance();
     
     BigInteger evaluate(Expression expr) throws SolverException, InterruptedException;
     boolean evaluateReachability(Expression target) throws SolverException, InterruptedException;
 
-    void setTrace(SimpleEventDomain trace, List<EventData> unchangedEvents);
+    void setTrace(SimpleEventDomain trace, Event changedEvent);
     void addNonDetCondition(Event event, Expression condition, boolean isTrue);
 
     int getSolverCheckTime();

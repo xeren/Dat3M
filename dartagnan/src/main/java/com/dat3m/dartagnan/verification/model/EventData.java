@@ -17,6 +17,8 @@ public class EventData implements Comparable<EventData> {
     private Object value;
     private Object accessedAddress;
     private int coIndex = Integer.MIN_VALUE;
+    private EventData coPredecessor;
+    private EventData coSuccessor;
     private boolean wasExecuted;
     private boolean isNonDet = false;
 
@@ -87,6 +89,10 @@ public class EventData implements Comparable<EventData> {
 
     public int getCoherenceIndex() { return coIndex; }
     void setCoherenceIndex(int index) { coIndex = index; }
+    public EventData getCoPredecessor() { return coPredecessor; }
+    public void setCoPredecessor(EventData predecessor) { coPredecessor = predecessor; }
+    public EventData getCoSuccessor() { return coSuccessor; }
+    public void setCoSuccessor(EventData successor) { coSuccessor = successor; }
 
     public boolean isMemoryEvent() { return event.hasTag(MEMORY); }
     public boolean isInit() {

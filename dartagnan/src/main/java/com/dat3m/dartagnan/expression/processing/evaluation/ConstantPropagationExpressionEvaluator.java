@@ -51,6 +51,14 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
     }
 
     @Override
+    public ConstantPropagationExpressionEvaluator newInstance() {
+        ConstantPropagationExpressionEvaluator newEvaluator = new ConstantPropagationExpressionEvaluator(encodingContext, prover, traceEncoder);
+        newEvaluator.cfContext.putAll(cfContext);
+        newEvaluator.evaluator.registerValues.putAll(evaluator.registerValues);
+        return newEvaluator;
+    }
+
+    @Override
     public BigInteger evaluate(Expression expr) throws SolverException, InterruptedException {
         Expression result = expr.accept(evaluator);
         if (result instanceof BoolLiteral bool) {
@@ -101,9 +109,16 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
     }
 
     @Override
-    public void setTrace(SimpleEventDomain trace, List<EventData> unchangedEvents) {
+    public void setTrace(SimpleEventDomain trace, Event changedEvent) {
         this.trace = trace;
-        evaluator.clear(unchangedEvents);
+        List<Event> cfEventsToRemove = new ArrayList<>();
+        for (Event cfEvent : cfContext.keySet()) {
+            if (trace.getData(cfEvent).isEmpty()) {
+                cfEventsToRemove.add(cfEvent);
+            }
+        }
+        cfEventsToRemove.forEach(cfContext::remove);
+        evaluator.clear(changedEvent);
     }
 
     @Override
@@ -161,14 +176,14 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
             return result;
         }
 
-        private void clear(List<EventData> unchangedEvents) {
+        private void clear(Event changedEvent) {
             if (trace.size() == 0) {
                 return;
             }
             List<Register> valuesToRemove = new ArrayList<>();
             for (Map.Entry<Register, Map.Entry<Event, Expression>> registerValue : registerValues.entrySet()) {
                 Event event = registerValue.getValue().getKey();
-                if (trace.getData(event).isEmpty() || SimpleEventDomain.getData(unchangedEvents, event).isPresent()) {
+                if (trace.getData(event).isEmpty() || event == changedEvent) {
                     valuesToRemove.add(registerValue.getKey());
                 }
             }
@@ -177,9 +192,7 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
             if (revisitEvent instanceof Load load) {
                 valuesToRemove.add(load.getResultRegister());
             }
-            for (Register valueToRemove : valuesToRemove) {
-                registerValues.remove(valueToRemove);
-            }
+            valuesToRemove.forEach(registerValues::remove);
         }
     }
 }

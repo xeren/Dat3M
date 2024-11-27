@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.dat3m.dartagnan.configuration.OptionNames.INITIALIZE_REGISTERS;
+import static com.dat3m.dartagnan.wmm.RelationNameRepository.CO;
 import static com.dat3m.dartagnan.wmm.RelationNameRepository.RF;
 import static com.google.common.collect.Lists.reverse;
 
@@ -221,9 +222,10 @@ public class GenMCTraceEncoder implements Encoder {
         List<BooleanFormula> enc = new ArrayList<>();
 
         EncodingContext.EdgeEncoder rf = context.edge(context.getTask().getMemoryModel().getRelation(RF));
+        EncodingContext.EdgeEncoder co = context.edge(context.getTask().getMemoryModel().getRelation(CO));
         for (EventData eventData : trace.getElements()) {
             EventData readFromData = eventData.getReadFrom();
-            if (readFromData != null) {
+            if (eventData.isRead()) {
                 MemoryCoreEvent readFrom = (MemoryCoreEvent) readFromData.getEvent();
                 MemoryCoreEvent event = (MemoryCoreEvent) eventData.getEvent();
 
@@ -233,6 +235,12 @@ public class GenMCTraceEncoder implements Encoder {
                 // Data flow
                 enc.add(context.equal(context.address(event), context.address(readFrom)));
                 enc.add(context.equal(context.value(event), context.value(readFrom)));
+            } else if (eventData.isWrite() && eventData.getCoSuccessor() != null) {
+                MemoryCoreEvent event = (MemoryCoreEvent) eventData.getEvent();
+                MemoryCoreEvent coSuccessor = (MemoryCoreEvent) eventData.getCoSuccessor().getEvent();
+
+                enc.add(co.encode(event, coSuccessor));
+                enc.add(context.equal(context.address(event), context.address(coSuccessor)));
             }
         }
         for (Map.Entry<Event, Map<Register, Dependency.State>> e : dep.getAll()) {
