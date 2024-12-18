@@ -6,18 +6,21 @@ import com.dat3m.dartagnan.expression.ExpressionVisitor;
 import com.dat3m.dartagnan.expression.UnaryExpression;
 import com.dat3m.dartagnan.program.Function;
 import com.dat3m.dartagnan.program.Register;
+import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.memory.Location;
 import com.dat3m.dartagnan.program.memory.MemoryObject;
 import com.dat3m.dartagnan.program.misc.NonDetValue;
+import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
 import com.dat3m.dartagnan.verification.model.EventData;
-import com.dat3m.dartagnan.verification.model.SimpleEventDomain;
 
 public class NonDetCollector implements ExpressionVisitor<Boolean> {
 
-    private final SimpleEventDomain trace;
+    private final GenMCEventDomain trace;
+    private final Event event;
 
-    public NonDetCollector(SimpleEventDomain trace) {
+    public NonDetCollector(GenMCEventDomain trace, Event event) {
         this.trace = trace;
+        this.event = event;
     }
 
     // =================================== General ===================================
@@ -41,7 +44,7 @@ public class NonDetCollector implements ExpressionVisitor<Boolean> {
     // =================================== Program-specific ===================================
     @Override
     public Boolean visitRegister(Register reg) {
-        EventData lastWriter = trace.getLastRegWriter(reg);
+        EventData lastWriter = trace.getLastRegWriter(reg, event);
         if (lastWriter == null) {
             return false;
         } else {

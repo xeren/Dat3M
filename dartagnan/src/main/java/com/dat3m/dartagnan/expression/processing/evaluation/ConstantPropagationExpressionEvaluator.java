@@ -18,8 +18,10 @@ import com.dat3m.dartagnan.expression.Expression;
 import com.dat3m.dartagnan.expression.ExpressionFactory;
 import com.dat3m.dartagnan.expression.booleans.BoolLiteral;
 import com.dat3m.dartagnan.expression.integers.IntLiteral;
+import com.dat3m.dartagnan.expression.misc.GEPExpr;
 import com.dat3m.dartagnan.expression.processing.ExprSimplifier;
 import com.dat3m.dartagnan.expression.type.IntegerType;
+import com.dat3m.dartagnan.expression.type.TypeFactory;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.core.Alloc;
@@ -27,20 +29,22 @@ import com.dat3m.dartagnan.program.event.core.Load;
 import com.dat3m.dartagnan.program.event.core.Local;
 import com.dat3m.dartagnan.program.event.core.Store;
 import com.dat3m.dartagnan.program.event.core.threading.ThreadArgument;
+import com.dat3m.dartagnan.program.memory.MemoryObject;
+import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
 import com.dat3m.dartagnan.verification.model.EventData;
-import com.dat3m.dartagnan.verification.model.SimpleEventDomain;
 
 import static com.dat3m.dartagnan.expression.processing.evaluation.ExpressionEvaluator.getValue;
 
 public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluator {
 
-    private SimpleEventDomain trace;
+    private GenMCEventDomain trace;
     private int solverCheckTime = 0;
     private int solverChecks = 0;
 
     private final EncodingContext encodingContext;
     private final ProverEnvironment prover;
     private final GenMCTraceEncoder traceEncoder;
+    private final Map<MemoryObject, BigInteger> staticMemoryLayout;
     private final Map<Event, BooleanFormula> cfContext = new HashMap<>();
     private final ConstantPropagator evaluator = new ConstantPropagator();
 
@@ -48,6 +52,7 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
         this.encodingContext = encodingContext;
         this.prover = prover;
         this.traceEncoder = traceEncoder;
+        this.staticMemoryLayout = traceEncoder.getStaticMemoryLayout();
     }
 
     @Override
@@ -67,6 +72,11 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
             return num.getValue();
         }
         return evaluateNonDet(result);
+    }
+
+    @Override
+    public boolean evaluateReachability(BooleanFormula formula) throws SolverException, InterruptedException {
+        return calculateModel(formula) != null;
     }
 
     @Override
@@ -95,8 +105,12 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
     }
 
     private Model calculateModel(Expression assumption) throws SolverException, InterruptedException {
+        return calculateModel(encodingContext.encodeExpressionAsBooleanAt(assumption, trace.getLast().getEvent()));
+    }
+
+    private Model calculateModel(BooleanFormula assumption) throws SolverException, InterruptedException {
         Collection<BooleanFormula> assumptions = new ArrayList<>(cfContext.values());
-        assumptions.add(encodingContext.encodeExpressionAsBooleanAt(assumption, trace.getLast().getEvent()));
+        assumptions.add(assumption);
         assumptions.add(traceEncoder.encodeFullTrace(trace));
         Model model = null;
         long start = System.currentTimeMillis();
@@ -109,7 +123,7 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
     }
 
     @Override
-    public void setTrace(SimpleEventDomain trace, Event changedEvent) {
+    public void setTrace(GenMCEventDomain trace, Event changedEvent) {
         this.trace = trace;
         List<Event> cfEventsToRemove = new ArrayList<>();
         for (Event cfEvent : cfContext.keySet()) {
@@ -143,7 +157,9 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
     
     private class ConstantPropagator extends ExprSimplifier {
 
+        private static final TypeFactory types = TypeFactory.getInstance();
         private final Map<Register, Map.Entry<Event, Expression>> registerValues = new HashMap<>();
+        private Event currentEvent = null;
 
         private ConstantPropagator() {
             super(true);
@@ -151,7 +167,7 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
 
         @Override
         public Expression visitRegister(Register register) {
-            EventData lastWriter = trace.getLastRegWriter(register);
+            EventData lastWriter = trace.getLastRegWriter(register, currentEvent);
             Event lastWriterEvent = lastWriter.getEvent();
             Map.Entry<Event, Expression> registerValue = registerValues.get(register);
             if (registerValue != null && registerValue.getKey() == lastWriterEvent) {
@@ -159,20 +175,37 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
             }
             Expression result;
             if (lastWriterEvent instanceof Local local) {
-                result = local.getExpr().accept(this);
+                result = propagate(local.getExpr(), local);
             } else if (lastWriterEvent instanceof ThreadArgument arg) {
                 Expression argExpr = arg.getCreator().getArguments().get(arg.getIndex());
-                result = argExpr.accept(this);
+                result = propagate(argExpr, arg);
             } else if (lastWriterEvent instanceof Load) {
                 Store store = (Store) lastWriter.getReadFrom().getEvent();
-                result = store.getMemValue().accept(this);
+                result = propagate(store.getMemValue(), store);
             } else if (lastWriterEvent instanceof Alloc alloc) {
-                result = new IntLiteral((IntegerType) alloc.getAllocationType(), BigInteger.valueOf(42));
+                result = new IntLiteral((IntegerType) types.getPointerType(), staticMemoryLayout.get(alloc.getAllocatedObject()));
             } else {
                 throw new UnsupportedOperationException("Cannot handle RegWriter that is neither Local, ThreadArgument, Load nor Alloc (" +
                         lastWriterEvent.getClass().getSimpleName() + ")");
             }
             registerValues.put(register, Map.entry(lastWriterEvent, result));
+            return result;
+        }
+
+        @Override
+        public Expression visitMemoryObject(MemoryObject memObj) {
+            return new IntLiteral((IntegerType) types.getPointerType(), staticMemoryLayout.get(memObj));
+        }
+
+        @Override
+        public Expression visitGEPExpression(GEPExpr gep) {
+            throw new UnsupportedOperationException();
+        }
+
+        private Expression propagate(Expression expr, Event event) {
+            currentEvent = event;
+            Expression result = expr.accept(this);
+            currentEvent = null;
             return result;
         }
 

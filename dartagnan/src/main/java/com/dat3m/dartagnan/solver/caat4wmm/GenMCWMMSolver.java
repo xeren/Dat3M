@@ -1,10 +1,8 @@
 package com.dat3m.dartagnan.solver.caat4wmm;
 
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
-import org.sosy_lab.java_smt.api.Model;
 
 import com.dat3m.dartagnan.encoding.EncodingContext;
-import com.dat3m.dartagnan.program.filter.Filter;
 import com.dat3m.dartagnan.solver.caat.CAATSolver;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.verification.model.ExecutionModel;
@@ -36,11 +34,10 @@ public class GenMCWMMSolver {
         return executionGraph;
     }
 
-    public Result check(Model model, Filter filter) {
-        // ============ Extract ExecutionModel ==============
+    public Result check(GenMCEventDomain trace) {
+        // ============ Extract GenMCEventDomain ==============
         long curTime = System.currentTimeMillis();
-        executionModel.initialize(model, filter, true);
-        executionGraph.initializeFromModel(executionModel);
+        executionGraph.initializeFromDomain(trace);
         long extractTime = System.currentTimeMillis() - curTime;
 
         // ============== Run the CAATSolver ==============

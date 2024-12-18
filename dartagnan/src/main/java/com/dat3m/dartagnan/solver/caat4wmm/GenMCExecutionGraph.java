@@ -10,9 +10,8 @@ import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.RelationGraph;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.base.EmptyGraph;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.derived.*;
 import com.dat3m.dartagnan.solver.caat.predicates.sets.SetPredicate;
-import com.dat3m.dartagnan.solver.caat4wmm.basePredicates.*;
+import com.dat3m.dartagnan.solver.caat4wmm.basePredicates.genmc.*;
 import com.dat3m.dartagnan.utils.dependable.DependencyGraph;
-import com.dat3m.dartagnan.verification.model.ExecutionModel;
 import com.dat3m.dartagnan.wmm.Relation;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.analysis.RelationAnalysis;
@@ -43,7 +42,7 @@ public class GenMCExecutionGraph {
     private final BiMap<Axiom, Constraint> constraintMap;
 
     private CAATModel caatModel;
-    private EventDomain domain;
+    private GenMCEventDomain domain;
 
     // =================================================
 
@@ -59,9 +58,9 @@ public class GenMCExecutionGraph {
         constructMappings();
     }
 
-    public void initializeFromModel(ExecutionModel executionModel) {
-        domain = new EventDomain(executionModel);
-        caatModel.initializeToDomain(domain);
+    public void initializeFromDomain(GenMCEventDomain trace) {
+        domain = trace;
+        caatModel.initializeToDomain(trace);
     }
 
     // --------------------------------------------------
@@ -111,7 +110,7 @@ public class GenMCExecutionGraph {
 
     public CAATModel getCAATModel() { return caatModel; }
 
-    public EventDomain getDomain() { return domain; }
+    public GenMCEventDomain getDomain() { return domain; }
 
     public BiMap<Relation, RelationGraph> getRelationGraphMap() {
         return Maps.unmodifiableBiMap(relationGraphMap);
@@ -193,13 +192,13 @@ public class GenMCExecutionGraph {
         final List<Relation> dependencies = rel.getDependencies();
 
         if (relClass == ReadFrom.class) {
-            graph = new ReadFromGraph();
+            graph = new GenMCReadFromGraph();
         } else if (relClass == SameLocation.class) {
-            graph = new LocationGraph();
+            graph = new GenMCLocationGraph();
         } else if (relClass == ProgramOrder.class) {
-            graph = new ProgramOrderGraph();
+            graph = new GenMCProgramOrderGraph();
         } else if (relClass == Coherence.class) {
-            graph = new CoherenceGraph();
+            graph = new GenMCCoherenceGraph();
         } else if (relClass == Inverse.class || relClass == TransitiveClosure.class || relClass == RangeIdentity.class) {
             RelationGraph g = getOrCreateGraphFromRelation(dependencies.get(0));
             graph = relClass == Inverse.class ? new InverseGraph(g) :
@@ -223,11 +222,11 @@ public class GenMCExecutionGraph {
             SetPredicate rhs = getOrCreateSetFromFilter(cartRel.getSecondFilter());
             graph = new CartesianGraph(lhs, rhs);
         } else if (relClass == ReadModifyWrites.class) {
-            graph = new RMWGraph();
+            graph = new GenMCRMWGraph();
         } else if (relClass == External.class) {
-            graph = new ExternalGraph();
+            graph = new GenMCExternalGraph();
         } else if (relClass == Internal.class) {
-            graph = new InternalGraph();
+            graph = new GenMCInternalGraph();
         } else if (relClass == Fences.class) {
             throw new UnsupportedOperationException("fencerel is not supported in CAAT.");
         } else if (relClass == SetIdentity.class) {
@@ -237,7 +236,7 @@ public class GenMCExecutionGraph {
             graph = new EmptyGraph();
         } else {
             // This is a fallback for all unimplemented static graphs
-            graph = new StaticDefaultWMMGraph(rel, ra);
+            graph = new StaticDefaultGenMCWMMGraph(rel, ra);
         }
 
         graph.setName(rel.getNameOrTerm());
@@ -249,7 +248,7 @@ public class GenMCExecutionGraph {
             return filterSetMap.get(filter);
         }
 
-        SetPredicate set = new StaticWMMSet(filter);
+        SetPredicate set = new StaticGenMCWMMSet(filter);
         set.setName(filter.toString());
         filterSetMap.put(filter, set);
         return set;

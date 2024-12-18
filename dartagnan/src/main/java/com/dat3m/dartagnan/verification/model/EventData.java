@@ -5,6 +5,9 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.core.CondJump;
 import com.google.common.base.Preconditions;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static com.dat3m.dartagnan.program.event.Tag.*;
 
 
@@ -93,6 +96,26 @@ public class EventData implements Comparable<EventData> {
     public void setCoPredecessor(EventData predecessor) { coPredecessor = predecessor; }
     public EventData getCoSuccessor() { return coSuccessor; }
     public void setCoSuccessor(EventData successor) { coSuccessor = successor; }
+
+    public List<EventData> getCoPredecessors() {
+        List<EventData> events = new ArrayList<>();
+        EventData cur = this;
+        while (cur != null) {
+            events.add(cur);
+            cur = cur.getCoPredecessor();
+        }
+        return events;
+    }
+
+    public List<EventData> getCoSuccessors() {
+        List<EventData> events = new ArrayList<>();
+        EventData cur = this;
+        while (cur != null) {
+            events.add(cur);
+            cur = cur.getCoSuccessor();
+        }
+        return events;
+    }
 
     public boolean isMemoryEvent() { return event.hasTag(MEMORY); }
     public boolean isInit() {

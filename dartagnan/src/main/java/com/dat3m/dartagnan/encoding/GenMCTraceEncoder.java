@@ -56,6 +56,7 @@ public class GenMCTraceEncoder implements Encoder {
 
     private final BooleanFormula constants;
     private final BooleanFormula memory;
+    private final Map<MemoryObject, BigInteger> memObj2Addr = new HashMap<>();
     private final BooleanFormula finalRegisterValues;
     private final BooleanFormula filter;
 
@@ -160,7 +161,8 @@ public class GenMCTraceEncoder implements Encoder {
         // TODO: Once we want to encode dynamic memory layouts (e.g., due to dynamically-sized mallocs)
         //  we need to compute a Map<MemoryObject, Formula> where each formula describes a
         //  unique, properly aligned, and non-overlapping address of the memory object.
-        final Map<MemoryObject, BigInteger> memObj2Addr = computeStaticMemoryLayout(memory);
+        memObj2Addr.clear();
+        memObj2Addr.putAll(computeStaticMemoryLayout(memory));
 
         final var enc = new ArrayList<BooleanFormula>();
         for (final MemoryObject memObj : memory.getObjects()) {
@@ -328,6 +330,10 @@ public class GenMCTraceEncoder implements Encoder {
 
     public BooleanFormula getPropertyRelevantEncoding() {
         return context.getBooleanFormulaManager().and(finalRegisterValues, filter);
+    }
+
+    public Map<MemoryObject, BigInteger> getStaticMemoryLayout() {
+        return memObj2Addr;
     }
 
     public int getEncodingTime() {

@@ -9,13 +9,13 @@ import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.processing.AssertionTransformer;
 import com.dat3m.dartagnan.program.processing.ConsecutiveGotoSimplification;
 import com.dat3m.dartagnan.program.processing.IdReassignment;
+import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.utils.Utils;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.verification.model.EventData;
 import com.dat3m.dartagnan.verification.model.GenMCExecutionModel;
-import com.dat3m.dartagnan.verification.model.SimpleEventDomain;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
 
@@ -174,6 +174,11 @@ public class GenMCSolver extends ModelChecker {
         logger.info("Total event filter time: " + Utils.toTimeString(GenMCExecutionModel.getEventFilterTime()));
     }
 
+    @Override
+    public boolean hasModel() {
+        return false;
+    }
+
     private static void removeFlaggedAxiomsIfNotNeeded(VerificationTask task) {
         // We remove flagged axioms if we do not check for them.
         if (!task.getProperty().contains(Property.CAT_SPEC)) {
@@ -235,16 +240,16 @@ public class GenMCSolver extends ModelChecker {
                 return false;
             }
             Collection<EventData> writePrefix = getPorfPrefix(model, event);
-            Set<EventData> relevantReads = model.getMayRfSet(event);
+            Collection<EventData> relevantReads = model.getMayRfSet(event);
             relevantReads.removeIf(writePrefix::contains);
-            if (!relevantReads.isEmpty() && !event.isRMW() && !model.checkConsistency()) {
+            if (!relevantReads.isEmpty() && !event.isRMW() && !model.checkConsistency(true)) {
                 ++failedExecutions;
                 logger.debug("Aborting exploration: Inconsistent execution");
                 return true;
             }
             for (EventData read : relevantReads) {
                 int readId = model.getTrace().getId(read);
-                SimpleEventDomain trace = model.getTrace();
+                GenMCEventDomain trace = model.getTrace();
                 List<EventData> eventsToDelete = trace.getElements().stream()
                         .filter(e -> readId < trace.getId(e) && !writePrefix.contains(e))
                         .toList();
@@ -272,6 +277,10 @@ public class GenMCSolver extends ModelChecker {
             model.rollback(event);
             model.setJump(event, !event.wasExecuted());
             logger.debug("Visiting non-deterministic jump " + event.getEvent().getGlobalId() + ": " + event.getEvent() + " with execution status " + event.wasExecuted());
+            if (!model.isConsistent()) {
+                logger.debug("Aborting exploration: Inconsistent execution");
+                return true;
+            }
             return visit(model);
         } else {
             return visit(model);
@@ -279,8 +288,8 @@ public class GenMCSolver extends ModelChecker {
     }
 
     private boolean visitRfs(GenMCExecutionModel model, EventData read) throws SolverException, InterruptedException, InvalidConfigurationException {
-        Set<EventData> mayRfSet = model.getMayRfSet(read);
-        if (mayRfSet.size() > 1 && !model.checkConsistency(read)) {
+        Collection<EventData> mayRfSet = model.getMayRfSet(read);
+        if (mayRfSet.size() > 1 && !model.checkConsistency(true)) {
             ++failedExecutions;
             logger.debug("Aborting exploration: Inconsistent execution");
             return true;
@@ -300,9 +309,10 @@ public class GenMCSolver extends ModelChecker {
     private boolean visitCos(GenMCExecutionModel model, EventData write) throws SolverException, InterruptedException, InvalidConfigurationException {
         Collection<EventData> mayCoSet = model.getMayCoSet(write);
         if (mayCoSet.size() == 0) {
+            model.getTrace().addAddressInit(write);
             return visit(model);
         }
-        if (mayCoSet.size() > 1 && !model.checkConsistency()) {
+        if (mayCoSet.size() > 1 && !model.checkConsistency(true)) {
             ++failedExecutions;
             logger.debug("Aborting exploration: Inconsistent execution");
             return true;
@@ -352,7 +362,7 @@ public class GenMCSolver extends ModelChecker {
         if (maximalEvent.getCoPredecessor() != null && writePrefix.contains(maximalEvent.getCoSuccessor())) {
             return false;
         }
-        SimpleEventDomain trace = model.getTrace();
+        GenMCEventDomain trace = model.getTrace();
         int eventId = trace.getId(event);
         List<EventData> previous = trace.getElements().stream()
                 .filter(e -> trace.getId(e) <= eventId)
@@ -368,11 +378,11 @@ public class GenMCSolver extends ModelChecker {
 
     private GenMCExecutionModel getBackwardRevisitModel(GenMCExecutionModel oldModel, List<EventData> eventsToDelete, EventData read, EventData write)
             throws InterruptedException, SolverException, InvalidConfigurationException {
-        GenMCExecutionModel newModel = oldModel.newInstance();
         List<EventData> startTraceEvents = oldModel.copyTraceEvents(not(eventsToDelete::contains));
-        EventData newRead = SimpleEventDomain.getData(startTraceEvents, read.getEvent()).get();
-        EventData newWrite = SimpleEventDomain.getData(startTraceEvents, write.getEvent()).get();
-        newModel.initialize(startTraceEvents, newRead, newWrite);
+        GenMCExecutionModel newModel = oldModel.newInstance(startTraceEvents);
+        EventData newRead = GenMCEventDomain.getData(startTraceEvents, read.getEvent()).get();
+        EventData newWrite = GenMCEventDomain.getData(startTraceEvents, write.getEvent()).get();
+        newModel.initialize(newRead, newWrite);
         return newModel;
     }
 }

@@ -17,13 +17,13 @@ import com.dat3m.dartagnan.encoding.EncodingContext;
 import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
 import com.dat3m.dartagnan.expression.Expression;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.verification.model.SimpleEventDomain;
+import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
 
 import static com.dat3m.dartagnan.expression.processing.evaluation.ExpressionEvaluator.getValue;
 
 public class ProverExpressionEvaluator implements ExpressionEvaluator {
 
-    private SimpleEventDomain trace;
+    private GenMCEventDomain trace;
     private Model model;
     private int solverCheckTime = 0;
     private int solverChecks = 0;
@@ -49,6 +49,13 @@ public class ProverExpressionEvaluator implements ExpressionEvaluator {
     @Override
     public BigInteger evaluate(Expression expr) throws SolverException, InterruptedException {
         return evaluate(exprToFormula(expr, trace.getLast().getEvent()), new ArrayList<>());
+    }
+
+    @Override
+    public boolean evaluateReachability(BooleanFormula formula) throws SolverException, InterruptedException {
+        List<BooleanFormula> assumptionWrapper = new ArrayList<>();
+        assumptionWrapper.add(formula);
+        return calculateModel(assumptionWrapper) != null;
     }
 
     public BigInteger evaluate(Expression expr, Collection<Expression> assumptions) throws SolverException, InterruptedException {
@@ -93,7 +100,7 @@ public class ProverExpressionEvaluator implements ExpressionEvaluator {
     }
 
     @Override
-    public void setTrace(SimpleEventDomain trace, Event changedEvent) {
+    public void setTrace(GenMCEventDomain trace, Event changedEvent) {
         this.trace = trace;
         List<Event> cfEventsToRemove = new ArrayList<>();
         for (Event cfEvent : cfContext.keySet()) {
