@@ -56,6 +56,7 @@ public class GenMCSolver extends ModelChecker {
 
     private int completeExecutions = 0;
     private int failedExecutions = 0;
+    private int blockedExecutions = 0;
     private int porfPrefixTime = 0;
 
     // ================================================================================================================
@@ -143,13 +144,10 @@ public class GenMCSolver extends ModelChecker {
         logger.info("Verification finished with result " + res);
 
         logger.info("Number of complete executions explored: " + completeExecutions);
+        logger.info("Number of blocked executions found: " + blockedExecutions);
         logger.info("Number of failed executions found: " + failedExecutions);
-        if (completeExecutions + failedExecutions / 2 != 0) {
-            logger.info("Time per execution estimation: " +
-                    Utils.toTimeString((genmcTime + (completeExecutions + (failedExecutions + 1) / 2) / 2) / (completeExecutions + (failedExecutions + 1) / 2)));
-        } else if (failedExecutions == 1) {
-            logger.info("Time per execution estimation: " + Utils.toTimeString(genmcTime));
-        }
+        logger.info("Time per execution estimation: " + Utils.toTimeString(
+                (genmcTime + (completeExecutions + (failedExecutions + blockedExecutions + 1) / 2) / 2) / (completeExecutions + (failedExecutions + blockedExecutions + 1) / 2)));
 
         int solverChecks = model.getSolverChecks();
         int solverCheckTime = model.getSolverCheckTime();
@@ -224,7 +222,7 @@ public class GenMCSolver extends ModelChecker {
                 ++completeExecutions;
                 return model.checkProperties();
             } else {
-                ++failedExecutions;
+                ++blockedExecutions;
                 logger.debug("Not all threads are finished yet");
                 return true;
             }
