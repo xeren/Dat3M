@@ -261,6 +261,8 @@ public class GenMCExecutionModel {
         if (coPredecessor.getCoSuccessor() != null) {
             coPredecessor.getCoSuccessor().setCoPredecessor(coPredecessor);
         }
+        backtrackingPoint.setCoPredecessor(null);
+        backtrackingPoint.setCoSuccessor(null);
         setTrace(trace, null);
         initializeFields();
     }

@@ -59,7 +59,7 @@ public class GenMCEventDomain implements Domain<EventData> {
                 .map(e -> getData(e.getEvent()))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
-                .collect(toList());;
+                .collect(toList());
         this.readWriteMap = new HashMap<>();
         for (EventData read : readWriteMap.keySet()) {
             Optional<EventData> readData = getData(read.getEvent());
@@ -344,9 +344,8 @@ public class GenMCEventDomain implements Domain<EventData> {
         }
         sb.append('\n').append("Read-write map: ");
         for (Map.Entry<EventData, EventData> entry : readWriteMap.entrySet()) {
-            sb.append('\n').append(entry.getKey().getEvent()).append(": [");
-            sb.append(entry.getValue().getEvent()).append(", ");
-            sb.append("]");
+            sb.append('\n').append(entry.getKey().getEvent()).append(": ");
+            sb.append(entry.getValue().getEvent());
         }
         sb.append('\n').append("Write-reads map: ");
         for (Map.Entry<EventData, List<EventData>> entry : writeReadsMap.entrySet()) {

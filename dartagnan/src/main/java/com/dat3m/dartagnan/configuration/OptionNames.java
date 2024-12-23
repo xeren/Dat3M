@@ -76,9 +76,6 @@ public class OptionNames {
     // GenMC Options
     public static final String USE_SMT_SOLVER = "genmc.useSmtSolver";
 
-    // Execution model Options
-    public static final String TRACK_DEPENDENCIES = "execution.trackDeps";
-
     // SMT solver Options
     public static final String PHANTOM_REFERENCES = "solver.z3.usePhantomReferences";
 
