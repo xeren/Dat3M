@@ -228,15 +228,17 @@ public class GenMCTraceEncoder implements Encoder {
         for (EventData eventData : trace.getElements()) {
             EventData readFromData = eventData.getReadFrom();
             if (eventData.isRead()) {
-                MemoryCoreEvent readFrom = (MemoryCoreEvent) readFromData.getEvent();
-                MemoryCoreEvent event = (MemoryCoreEvent) eventData.getEvent();
-
-                // Execution model
-                enc.add(rf.encode(readFrom, event));
-
-                // Data flow
-                enc.add(context.equal(context.address(event), context.address(readFrom)));
-                enc.add(context.equal(context.value(event), context.value(readFrom)));
+                if (readFromData != null) {
+                    MemoryCoreEvent readFrom = (MemoryCoreEvent) readFromData.getEvent();
+                    MemoryCoreEvent event = (MemoryCoreEvent) eventData.getEvent();
+    
+                    // Execution model
+                    enc.add(rf.encode(readFrom, event));
+    
+                    // Data flow
+                    enc.add(context.sameAddress(event, readFrom));
+                    enc.add(context.equal(context.value(event), context.value(readFrom)));
+                }
             } else if (eventData.isWrite() && eventData.getCoSuccessor() != null) {
                 MemoryCoreEvent event = (MemoryCoreEvent) eventData.getEvent();
                 MemoryCoreEvent coSuccessor = (MemoryCoreEvent) eventData.getCoSuccessor().getEvent();

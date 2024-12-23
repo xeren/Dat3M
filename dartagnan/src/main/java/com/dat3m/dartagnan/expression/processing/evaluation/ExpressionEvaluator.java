@@ -11,6 +11,7 @@ import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
 import com.dat3m.dartagnan.expression.Expression;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
+import com.dat3m.dartagnan.verification.model.EventData;
 
 public interface ExpressionEvaluator {
 
@@ -18,6 +19,7 @@ public interface ExpressionEvaluator {
     
     BigInteger evaluate(Expression expr) throws SolverException, InterruptedException;
     BigInteger evaluateNonDet(Expression expr) throws SolverException, InterruptedException;
+    BigInteger evaluateAddress(EventData e) throws SolverException, InterruptedException;
     boolean evaluateReachability(BooleanFormula formula) throws SolverException, InterruptedException;
     boolean evaluateReachability(Expression target) throws SolverException, InterruptedException;
 

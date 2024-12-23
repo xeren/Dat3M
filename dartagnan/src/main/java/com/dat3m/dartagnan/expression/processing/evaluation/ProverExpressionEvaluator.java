@@ -18,7 +18,10 @@ import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
 import com.dat3m.dartagnan.expression.Expression;
 import com.dat3m.dartagnan.expression.processing.NonDetCollector;
 import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.program.event.core.MemoryCoreEvent;
+import com.dat3m.dartagnan.program.memory.MemoryObject;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
+import com.dat3m.dartagnan.verification.model.EventData;
 
 import static com.dat3m.dartagnan.expression.processing.evaluation.ExpressionEvaluator.getValue;
 
@@ -32,12 +35,14 @@ public class ProverExpressionEvaluator implements ExpressionEvaluator {
     private final EncodingContext encodingContext;
     private final ProverEnvironment prover;
     private final GenMCTraceEncoder traceEncoder;
+    private final Map<MemoryObject, BigInteger> staticMemoryLayout;
     private final Map<Event, BooleanFormula> cfContext = new HashMap<>();
 
     public ProverExpressionEvaluator(EncodingContext encodingContext, ProverEnvironment prover, GenMCTraceEncoder traceEncoder) {
         this.encodingContext = encodingContext;
         this.prover = prover;
         this.traceEncoder = traceEncoder;
+        this.staticMemoryLayout = traceEncoder.getStaticMemoryLayout();
     }
 
     @Override
@@ -59,6 +64,21 @@ public class ProverExpressionEvaluator implements ExpressionEvaluator {
     @Override
     public BigInteger evaluateNonDet(Expression expr) throws SolverException, InterruptedException {
         return evaluate(exprToFormula(expr, trace.getLast().getEvent()), new ArrayList<>());
+    }
+
+    @Override
+    public BigInteger evaluateAddress(EventData event) throws SolverException, InterruptedException {
+        if (event.getEvent() instanceof MemoryCoreEvent memEvent) {
+            if (memEvent.getAddress() instanceof MemoryObject memObj) {
+                return staticMemoryLayout.get(memObj);
+            } else {
+                trace.addEvent(event);
+                BigInteger ret = evaluate(memEvent.getAddress());
+                trace.removeLast();
+                return ret;
+            }
+        }
+        return null;
     }
 
     @Override

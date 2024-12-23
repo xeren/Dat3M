@@ -145,9 +145,10 @@ public class GenMCSolver extends ModelChecker {
 
         logger.info("Number of complete executions explored: " + completeExecutions);
         logger.info("Number of blocked executions found: " + blockedExecutions);
-        logger.info("Number of failed executions found: " + failedExecutions);
+        logger.info("Number of inconsistent executions found: " + failedExecutions);
+        int incompleteExecutions = failedExecutions + blockedExecutions;
         logger.info("Time per execution estimation: " + Utils.toTimeString(
-                (genmcTime + (completeExecutions + (failedExecutions + blockedExecutions + 1) / 2) / 2) / (completeExecutions + (failedExecutions + blockedExecutions + 1) / 2)));
+                (genmcTime + (completeExecutions + (incompleteExecutions + 1) / 2) / 2) / (completeExecutions + (incompleteExecutions + 1) / 2)));
 
         int solverChecks = model.getSolverChecks();
         int solverCheckTime = model.getSolverCheckTime();

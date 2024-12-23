@@ -437,9 +437,11 @@ public class GenMCExecutionModel {
         data.setWasExecuted(true);
         if (data.isMemoryEvent()) {
             // ===== Memory Events =====
-            MemoryCoreEvent memEvent = (MemoryCoreEvent) data.getEvent();
-            BigInteger address = exprEvaluator.evaluate(memEvent.getAddress());
-            if (address == null) {
+            BigInteger address = exprEvaluator.evaluateAddress(data);
+            if (address == null || BigInteger.ZERO.equals(address)) {
+                if (address != null) {
+                    logger.warn("NULL access");
+                }
                 isConsistent = false;
                 trace.addEvent(data);
                 return data;
@@ -516,7 +518,6 @@ public class GenMCExecutionModel {
             if (assertionEvent.getExpression() instanceof BoolLiteral bool) {
                 boolean failure = !bool.getValue();
                 if (failure && checkConsistency(false)) {
-                    logger.info(trace);
                     hasError = true;
                 }
             } else if (checkConsistency(false)) {

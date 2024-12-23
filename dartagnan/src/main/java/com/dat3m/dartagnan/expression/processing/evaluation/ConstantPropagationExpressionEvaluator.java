@@ -27,6 +27,7 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.core.Alloc;
 import com.dat3m.dartagnan.program.event.core.Load;
 import com.dat3m.dartagnan.program.event.core.Local;
+import com.dat3m.dartagnan.program.event.core.MemoryCoreEvent;
 import com.dat3m.dartagnan.program.event.core.Store;
 import com.dat3m.dartagnan.program.event.core.threading.ThreadArgument;
 import com.dat3m.dartagnan.program.memory.MemoryObject;
@@ -81,6 +82,14 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
             return null;
         }
         return getValue(model.evaluate(encodingContext.encodeExpressionAt(expr, trace.getLast().getEvent())));
+    }
+
+    @Override
+    public BigInteger evaluateAddress(EventData event) throws SolverException, InterruptedException {
+        if (event.getEvent() instanceof MemoryCoreEvent memEvent) {
+            return evaluate(memEvent.getAddress());
+        }
+        return null;
     }
 
     @Override
