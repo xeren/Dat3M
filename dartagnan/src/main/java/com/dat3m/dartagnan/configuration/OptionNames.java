@@ -74,6 +74,7 @@ public class OptionNames {
     public static final String SYMMETRIC_LEARNING = "refinement.symmetricLearning";
 
     // GenMC Options
+    public static final String SHOW_CONSISTENT_EXECUTIONS = "genmc.numberOfConsistentExecutions";
     public static final String USE_SMT_SOLVER = "genmc.useSmtSolver";
 
     // SMT solver Options

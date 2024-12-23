@@ -27,6 +27,7 @@ import org.sosy_lab.common.configuration.Option;
 import org.sosy_lab.common.configuration.Options;
 import org.sosy_lab.java_smt.api.*;
 
+import static com.dat3m.dartagnan.configuration.OptionNames.SHOW_CONSISTENT_EXECUTIONS;
 import static com.dat3m.dartagnan.configuration.OptionNames.USE_SMT_SOLVER;
 import static java.util.function.Predicate.not;
 
@@ -49,11 +50,18 @@ public class GenMCSolver extends ModelChecker {
     private static final Logger logger = LogManager.getLogger(GenMCSolver.class);
     
     @Option(
+            name=SHOW_CONSISTENT_EXECUTIONS,
+            description = "Check consistency for every complete execution to show the number of consistent executions with GenMC",
+            secure = true)
+    boolean showConsistentExecutions = false;
+    
+    @Option(
             name=USE_SMT_SOLVER,
             description = "Use SMT solver to resolve the data flow with GenMC",
             secure = true)
     boolean useSMTSolver = false;
 
+    private int consistentExecutions = 0;
     private int completeExecutions = 0;
     private int failedExecutions = 0;
     private int blockedExecutions = 0;
@@ -143,6 +151,9 @@ public class GenMCSolver extends ModelChecker {
         res = propertyType == Property.Type.SAFETY ? res : res.invert();
         logger.info("Verification finished with result " + res);
 
+        if (showConsistentExecutions) {
+            logger.info("Number of consistent executions explored: " + consistentExecutions);
+        }
         logger.info("Number of complete executions explored: " + completeExecutions);
         logger.info("Number of blocked executions found: " + blockedExecutions);
         logger.info("Number of inconsistent executions found: " + failedExecutions);
@@ -221,6 +232,9 @@ public class GenMCSolver extends ModelChecker {
         if (event == null) {
             if (model.getTrace().isFinished(model.getProgram())) {
                 ++completeExecutions;
+                if (showConsistentExecutions && model.checkConsistency(false)) {
+                    ++consistentExecutions;
+                }
                 return model.checkProperties();
             } else {
                 ++blockedExecutions;

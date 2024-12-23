@@ -113,12 +113,13 @@
                     <arguments>
                         <argument>../cat/rc11.cat</argument>
                         <argument>--target=c11</argument>
-                        <argument>../benchmarks/rc11/genmc_cas.c</argument>
+                        <argument>../benchmarks/lfds/treiber.c</argument>
                         <argument>--property=program_spec</argument>
-                        <argument>--bound=1</argument>
+                        <argument>--bound=3</argument>
                         <argument>--encoding.mergeCFVars=false</argument>
-                        <argument>--program.processing.spinloops=true</argument>
-                        <argument>--genmc.useSmtSolver=true</argument>
+                        <argument>--program.processing.spinloops=false</argument>
+                        <argument>--genmc.useSmtSolver=false</argument>
+                        <argument>--genmc.numberOfConsistentExecutions=true</argument>
                         <argument>--solver=yices2</argument>
                         <argument>--witness=png</argument>
                         <argument>--method=genmc</argument>
