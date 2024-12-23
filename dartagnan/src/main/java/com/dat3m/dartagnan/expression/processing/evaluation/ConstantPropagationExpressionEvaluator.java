@@ -71,7 +71,16 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
         } else if (result instanceof IntLiteral num) {
             return num.getValue();
         }
-        return evaluateNonDet(result);
+        return null;
+    }
+
+    @Override
+    public BigInteger evaluateNonDet(Expression expr) throws SolverException, InterruptedException {
+        Model model = calculateModel();
+        if (model == null) {
+            return null;
+        }
+        return getValue(model.evaluate(encodingContext.encodeExpressionAt(expr, trace.getLast().getEvent())));
     }
 
     @Override
@@ -86,14 +95,6 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
             return bool.getValue();
         }
         return evaluateReachabilityNonDet(result);
-    }
-
-    private BigInteger evaluateNonDet(Expression expr) throws SolverException, InterruptedException {
-        Model model = calculateModel();
-        if (model == null) {
-            return null;
-        }
-        return getValue(model.evaluate(encodingContext.encodeExpressionAt(expr, trace.getLast().getEvent())));
     }
 
     private boolean evaluateReachabilityNonDet(Expression expr) throws SolverException, InterruptedException {

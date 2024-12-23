@@ -5,13 +5,11 @@ import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
 import com.dat3m.dartagnan.expression.Expression;
 import com.dat3m.dartagnan.expression.ExpressionFactory;
 import com.dat3m.dartagnan.expression.booleans.BoolLiteral;
-import com.dat3m.dartagnan.expression.processing.NonDetCollector;
 import com.dat3m.dartagnan.expression.processing.evaluation.ExpressionEvaluator;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.event.core.*;
-import com.dat3m.dartagnan.program.event.core.threading.ThreadArgument;
 import com.dat3m.dartagnan.program.event.core.threading.ThreadStart;
 import com.dat3m.dartagnan.program.specification.AssertInline;
 import com.dat3m.dartagnan.solver.caat.CAATSolver;
@@ -437,17 +435,6 @@ public class GenMCExecutionModel {
         data.setId(trace.size());
 
         data.setWasExecuted(true);
-        NonDetCollector nonDetCollector = new NonDetCollector(trace, data.getEvent());
-        if (data.getEvent() instanceof RegWriter writer) {
-            if (writer instanceof Local local) {
-                data.setNonDet(local.getExpr().accept(nonDetCollector));
-            } else if (writer instanceof ThreadArgument arg) {
-                Expression argExpr = arg.getCreator().getArguments().get(arg.getIndex());
-                data.setNonDet(argExpr.accept(nonDetCollector));
-            } else if (writer instanceof Load) {
-                // handled elsewhere
-            }
-        }
         if (data.isMemoryEvent()) {
             // ===== Memory Events =====
             MemoryCoreEvent memEvent = (MemoryCoreEvent) data.getEvent();
@@ -469,10 +456,7 @@ public class GenMCExecutionModel {
             mayRfMap.put(data, mayRfSet);
             trace.addEvent(data);
             lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
-            if (data.isWrite()) {
-                Store write = (Store) data.getEvent();
-                data.setNonDet(write.getMemValue().accept(nonDetCollector));
-            } else if (!data.isRead()) {
+            if (!data.isRead() && !data.isWrite()) {
                 //FIXME: Handle other kinds of memory events such as SRCU_SYNC.
                 throw new UnsupportedOperationException("Unexpected memory event " + data.getEvent());
             }
@@ -485,8 +469,8 @@ public class GenMCExecutionModel {
             if (jump.getGuard() instanceof BoolLiteral bool) {
                 data.setWasExecuted(bool.getValue());
             } else {
-                if (jump.getGuard().accept(nonDetCollector)) {
-                    data.setNonDet(true);
+                BigInteger guardResult = exprEvaluator.evaluate(jump.getGuard());
+                if (guardResult == null) {
                     if (needsNewConsistencyCheck) {
                         boolean isConsistent = checkConsistency(false);
                         if (!isConsistent) {
@@ -494,7 +478,7 @@ public class GenMCExecutionModel {
                             return data;
                         }
                     }
-                    BigInteger result = exprEvaluator.evaluate(jump.getGuard());
+                    BigInteger result = exprEvaluator.evaluateNonDet(jump.getGuard());
                     if (result == null) {
                         isConsistent = false;
                         return data;
@@ -505,12 +489,7 @@ public class GenMCExecutionModel {
                     exprEvaluator.addNonDetCondition(jump, jump.getGuard(), wasExecuted);
                     needsJumpRevisit = true;
                 } else {
-                    BigInteger wasExecuted = exprEvaluator.evaluate(jump.getGuard());
-                    if (wasExecuted != null) {
-                        data.setWasExecuted(!BigInteger.ZERO.equals(wasExecuted));
-                    } else {
-                        isConsistent = false;
-                    }
+                    data.setWasExecuted(!BigInteger.ZERO.equals(guardResult));
                 }
             }
         } else if (data.getEvent() instanceof Assume assumptionEvent) {

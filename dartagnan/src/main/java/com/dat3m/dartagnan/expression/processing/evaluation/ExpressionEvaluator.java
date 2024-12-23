@@ -17,6 +17,7 @@ public interface ExpressionEvaluator {
     ExpressionEvaluator newInstance();
     
     BigInteger evaluate(Expression expr) throws SolverException, InterruptedException;
+    BigInteger evaluateNonDet(Expression expr) throws SolverException, InterruptedException;
     boolean evaluateReachability(BooleanFormula formula) throws SolverException, InterruptedException;
     boolean evaluateReachability(Expression target) throws SolverException, InterruptedException;
 

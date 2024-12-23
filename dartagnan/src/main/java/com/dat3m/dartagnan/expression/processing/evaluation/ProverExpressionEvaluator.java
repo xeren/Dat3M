@@ -16,6 +16,7 @@ import org.sosy_lab.java_smt.api.Formula;
 import com.dat3m.dartagnan.encoding.EncodingContext;
 import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
 import com.dat3m.dartagnan.expression.Expression;
+import com.dat3m.dartagnan.expression.processing.NonDetCollector;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
 
@@ -48,6 +49,15 @@ public class ProverExpressionEvaluator implements ExpressionEvaluator {
 
     @Override
     public BigInteger evaluate(Expression expr) throws SolverException, InterruptedException {
+        NonDetCollector nonDetCollector = new NonDetCollector(trace, null);
+        if (expr.accept(nonDetCollector)) {
+            return null;
+        }
+        return evaluateNonDet(expr);
+    }
+
+    @Override
+    public BigInteger evaluateNonDet(Expression expr) throws SolverException, InterruptedException {
         return evaluate(exprToFormula(expr, trace.getLast().getEvent()), new ArrayList<>());
     }
 

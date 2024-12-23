@@ -23,7 +23,7 @@ public class EventData implements Comparable<EventData> {
     private EventData coPredecessor;
     private EventData coSuccessor;
     private boolean wasExecuted;
-    private boolean isNonDet = false;
+    private Boolean isNonDet = null;
 
     EventData(Event e) {
         this.event = e;
@@ -76,10 +76,13 @@ public class EventData implements Comparable<EventData> {
     	readFrom = store;
     }
 
-    public boolean isNonDet() {
+    public Boolean isNonDet() {
     	return isNonDet;
     }
-    void setNonDet(boolean isNonDet) {
+    void setNonDet(Boolean isNonDet) {
+        this.isNonDet = isNonDet;
+    }
+    public void setNonDet(boolean isNonDet) {
         this.isNonDet = isNonDet;
     }
 
