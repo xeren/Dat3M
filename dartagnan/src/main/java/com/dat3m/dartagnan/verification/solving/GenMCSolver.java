@@ -352,12 +352,12 @@ public class GenMCSolver extends ModelChecker {
                 }
             }
             maximalEvent = event;
-        } else if (event.isWrite()) {
+        } else if (event.isRead()) {
             maximalEvent = event.getReadFrom();
         } else {
             return true;
         }
-        if (maximalEvent.getCoPredecessor() != null && writePrefix.contains(maximalEvent.getCoSuccessor())) {
+        if (writePrefix.contains(maximalEvent.getCoSuccessor())) {
             return false;
         }
         GenMCEventDomain trace = model.getTrace();
