@@ -97,7 +97,7 @@ public class GenMCExecutionModel {
     public static GenMCExecutionModel withContext(EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, ProverEnvironment prover, BooleanFormula properties,
             boolean useSMTSolver) throws InvalidConfigurationException {
         VerificationTask task = encodingContext.getTask();
-        GenMCWMMSolver solver = GenMCWMMSolver.withContext(task.getMemoryModel(), encodingContext, encodingContext.getAnalysisContext());
+        GenMCWMMSolver solver = GenMCWMMSolver.withContext(task.getMemoryModel(), encodingContext.getAnalysisContext());
         ExpressionEvaluator exprEvaluator = ExpressionEvaluator.getInstance(encodingContext, prover, traceEncoder, useSMTSolver);
         GenMCExecutionModel model = new GenMCExecutionModel(encodingContext, traceEncoder, solver, properties, exprEvaluator);
         return model;
@@ -145,9 +145,6 @@ public class GenMCExecutionModel {
     }
 
     // Model specific data
-    public ExecutionModel getExecution() {
-        return solver.getExecution();
-    }
     public GenMCEventDomain getTrace() {
         return trace;
     }

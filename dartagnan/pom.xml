@@ -117,9 +117,9 @@
                         <argument>--property=program_spec</argument>
                         <argument>--bound=3</argument>
                         <argument>--encoding.mergeCFVars=false</argument>
-                        <argument>--program.processing.spinloops=false</argument>
+                        <argument>--program.processing.spinloops=true</argument>
                         <argument>--genmc.useSmtSolver=false</argument>
-                        <argument>--genmc.numberOfConsistentExecutions=true</argument>
+                        <argument>--genmc.numberOfConsistentExecutions=false</argument>
                         <argument>--solver=yices2</argument>
                         <argument>--witness=png</argument>
                         <argument>--method=genmc</argument>

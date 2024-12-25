@@ -2,7 +2,6 @@ package com.dat3m.dartagnan.program.filter;
 
 import com.dat3m.dartagnan.program.event.Event;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -36,10 +35,6 @@ public abstract class Filter {
 
     public static TagFilter byTag(String tag) {
         return (TagFilter) canonicalizer.computeIfAbsent(new TagFilter(tag), key -> key);
-    }
-
-    public static EventFilter byEvents(Collection<? extends Event> events) {
-        return (EventFilter) canonicalizer.computeIfAbsent(new EventFilter(events), key -> key);
     }
 
     public static IntersectionFilter intersection(Filter a, Filter b) {

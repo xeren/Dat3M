@@ -213,13 +213,6 @@ public class GenMCEventDomain implements Domain<EventData> {
                     .orElse(null);
     }
 
-    public Filter eventFilter() {
-        return Filter.byEvents(getElements()
-                .stream()
-                .map(EventData::getEvent)
-                .toList());
-    }
-
     @Override
     public String toString() {
         return toString(getElements());
