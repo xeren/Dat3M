@@ -208,7 +208,7 @@ public class GenMCEventDomain implements Domain<EventData> {
 
     public EventData getLastRegWriter(Register reg, Event forEvent) {
          return getElements().stream()
-                    .filter(event -> event.getEvent() instanceof RegWriter writer && writer.getResultRegister() == reg && writer != forEvent)
+                    .filter(event -> event.getEvent() instanceof RegWriter writer && writer.getResultRegister() == reg && writer.getGlobalId() < forEvent.getGlobalId())
                     .max(Comparator.comparingInt(EventData::getId))
                     .orElse(null);
     }

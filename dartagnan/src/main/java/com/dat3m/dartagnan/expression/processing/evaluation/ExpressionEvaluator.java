@@ -17,11 +17,11 @@ public interface ExpressionEvaluator {
 
     ExpressionEvaluator newInstance();
     
-    BigInteger evaluate(Expression expr) throws SolverException, InterruptedException;
-    BigInteger evaluateNonDet(Expression expr) throws SolverException, InterruptedException;
+    BigInteger evaluate(Expression expr, Event forEvent) throws SolverException, InterruptedException;
+    BigInteger evaluateNonDet(Expression expr, Event forEvent) throws SolverException, InterruptedException;
     BigInteger evaluateAddress(EventData e) throws SolverException, InterruptedException;
     boolean evaluateReachability(BooleanFormula formula) throws SolverException, InterruptedException;
-    boolean evaluateReachability(Expression target) throws SolverException, InterruptedException;
+    boolean evaluateReachability(Expression target, Event forEvent) throws SolverException, InterruptedException;
 
     void setTrace(GenMCEventDomain trace, Event changedEvent);
     void addNonDetCondition(Event event, Expression condition, boolean isTrue);

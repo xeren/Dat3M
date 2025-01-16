@@ -53,17 +53,17 @@ public class ProverExpressionEvaluator implements ExpressionEvaluator {
     }
 
     @Override
-    public BigInteger evaluate(Expression expr) throws SolverException, InterruptedException {
-        NonDetCollector nonDetCollector = new NonDetCollector(trace, null);
+    public BigInteger evaluate(Expression expr, Event forEvent) throws SolverException, InterruptedException {
+        NonDetCollector nonDetCollector = new NonDetCollector(trace, forEvent);
         if (expr.accept(nonDetCollector)) {
             return null;
         }
-        return evaluateNonDet(expr);
+        return evaluateNonDet(expr, forEvent);
     }
 
     @Override
-    public BigInteger evaluateNonDet(Expression expr) throws SolverException, InterruptedException {
-        return evaluate(exprToFormula(expr, trace.getLast().getEvent()), new ArrayList<>());
+    public BigInteger evaluateNonDet(Expression expr, Event forEvent) throws SolverException, InterruptedException {
+        return evaluate(exprToFormula(expr, forEvent), new ArrayList<>());
     }
 
     @Override
@@ -73,7 +73,7 @@ public class ProverExpressionEvaluator implements ExpressionEvaluator {
                 return staticMemoryLayout.get(memObj);
             } else {
                 trace.addEvent(event);
-                BigInteger ret = evaluate(memEvent.getAddress());
+                BigInteger ret = evaluate(memEvent.getAddress(), event.getEvent());
                 trace.removeLast();
                 return ret;
             }
@@ -88,8 +88,8 @@ public class ProverExpressionEvaluator implements ExpressionEvaluator {
         return calculateModel(assumptionWrapper) != null;
     }
 
-    public BigInteger evaluate(Expression expr, Collection<Expression> assumptions) throws SolverException, InterruptedException {
-        return evaluate(exprToFormula(expr, trace.getLast().getEvent()), exprsToBoolFormula(assumptions));
+    public BigInteger evaluate(Expression expr, Collection<Expression> assumptions, Event forEvent) throws SolverException, InterruptedException {
+        return evaluate(exprToFormula(expr, forEvent), exprsToBoolFormula(assumptions, forEvent));
     }
 
     public BigInteger evaluate(Formula formula, List<BooleanFormula> assumptions) throws SolverException, InterruptedException {
@@ -101,9 +101,9 @@ public class ProverExpressionEvaluator implements ExpressionEvaluator {
     }
 
     @Override
-    public boolean evaluateReachability(Expression expr) throws SolverException, InterruptedException {
+    public boolean evaluateReachability(Expression expr, Event forEvent) throws SolverException, InterruptedException {
         List<BooleanFormula> exprWrapper = new ArrayList<>();
-        exprWrapper.add(encodingContext.encodeExpressionAsBooleanAt(expr, trace.getLast().getEvent()));
+        exprWrapper.add(encodingContext.encodeExpressionAsBooleanAt(expr, forEvent));
         return calculateModel(exprWrapper) != null;
     }
 
@@ -161,14 +161,13 @@ public class ProverExpressionEvaluator implements ExpressionEvaluator {
         return solverChecks;
     }
     
-    private List<BooleanFormula> exprsToBoolFormula(Collection<Expression> exprs) {
-        Event atEvent = trace.getLast().getEvent();
+    private List<BooleanFormula> exprsToBoolFormula(Collection<Expression> exprs, Event forEvent) {
         return new ArrayList<>(exprs.stream()
-                .map(expr -> encodingContext.encodeExpressionAsBooleanAt(expr, atEvent))
+                .map(expr -> encodingContext.encodeExpressionAsBooleanAt(expr, forEvent))
                 .toList());
     }
     
-    private Formula exprToFormula(Expression expr, Event atEvent) {
-        return encodingContext.encodeExpressionAt(expr, atEvent);
+    private Formula exprToFormula(Expression expr, Event forEvent) {
+        return encodingContext.encodeExpressionAt(expr, forEvent);
     }
 }

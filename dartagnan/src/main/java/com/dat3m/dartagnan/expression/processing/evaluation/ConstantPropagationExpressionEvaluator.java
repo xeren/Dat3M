@@ -65,8 +65,8 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
     }
 
     @Override
-    public BigInteger evaluate(Expression expr) throws SolverException, InterruptedException {
-        Expression result = expr.accept(evaluator);
+    public BigInteger evaluate(Expression expr, Event forEvent) throws SolverException, InterruptedException {
+        Expression result = evaluator.propagate(expr, forEvent);
         if (result instanceof BoolLiteral bool) {
             return bool.getValue() ? BigInteger.ONE : BigInteger.ZERO;
         } else if (result instanceof IntLiteral num) {
@@ -76,18 +76,18 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
     }
 
     @Override
-    public BigInteger evaluateNonDet(Expression expr) throws SolverException, InterruptedException {
+    public BigInteger evaluateNonDet(Expression expr, Event forEvent) throws SolverException, InterruptedException {
         Model model = calculateModel();
         if (model == null) {
             return null;
         }
-        return getValue(model.evaluate(encodingContext.encodeExpressionAt(expr, trace.getLast().getEvent())));
+        return getValue(model.evaluate(encodingContext.encodeExpressionAt(expr, forEvent)));
     }
 
     @Override
     public BigInteger evaluateAddress(EventData event) throws SolverException, InterruptedException {
         if (event.getEvent() instanceof MemoryCoreEvent memEvent) {
-            return evaluate(memEvent.getAddress());
+            return evaluate(memEvent.getAddress(), event.getEvent());
         }
         return null;
     }
@@ -98,8 +98,8 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
     }
 
     @Override
-    public boolean evaluateReachability(Expression expr) throws SolverException, InterruptedException {
-        Expression result = expr.accept(evaluator);
+    public boolean evaluateReachability(Expression expr, Event forEvent) throws SolverException, InterruptedException {
+        Expression result = evaluator.propagate(expr, forEvent);
         if (result instanceof BoolLiteral bool) {
             return bool.getValue();
         }
@@ -213,9 +213,10 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
         }
 
         private Expression propagate(Expression expr, Event event) {
+            Event oldEvent = currentEvent;
             currentEvent = event;
             Expression result = expr.accept(this);
-            currentEvent = null;
+            currentEvent = oldEvent;
             return result;
         }
 

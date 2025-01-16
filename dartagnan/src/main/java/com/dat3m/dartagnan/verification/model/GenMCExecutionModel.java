@@ -193,7 +193,7 @@ public class GenMCExecutionModel {
                 EventData data = new EventData(initThreadEvent);
                 data.setId(trace.size());
                 if (initThreadEvent == init) {
-                    data.setAccessedAddress(exprEvaluator.evaluate(init.getAddress()));
+                    data.setAccessedAddress(exprEvaluator.evaluate(init.getAddress(), init));
                 }
                 trace.addEvent(data);
             }
@@ -218,7 +218,7 @@ public class GenMCExecutionModel {
         exprEvaluator.addNonDetCondition(jumpEvent, jumpEvent.getGuard(), jumpIsExecuted);
         needsNewConsistencyCheck = jump.wasExecuted() != jumpIsExecuted;
         jump.setWasExecuted(jumpIsExecuted);
-        isConsistent = exprEvaluator.evaluateReachability(jumpIsExecuted ? jumpEvent.getGuard() : expressions.makeNot(jumpEvent.getGuard()));
+        isConsistent = exprEvaluator.evaluateReachability(jumpIsExecuted ? jumpEvent.getGuard() : expressions.makeNot(jumpEvent.getGuard()), jumpEvent);
     }
 
     public void setRf(EventData read, EventData write) {
@@ -468,7 +468,7 @@ public class GenMCExecutionModel {
             if (jump.getGuard() instanceof BoolLiteral bool) {
                 data.setWasExecuted(bool.getValue());
             } else {
-                BigInteger guardResult = exprEvaluator.evaluate(jump.getGuard());
+                BigInteger guardResult = exprEvaluator.evaluate(jump.getGuard(), jump);
                 if (guardResult == null) {
                     if (needsNewConsistencyCheck) {
                         boolean isConsistent = checkConsistency(false);
@@ -477,7 +477,7 @@ public class GenMCExecutionModel {
                             return data;
                         }
                     }
-                    BigInteger result = exprEvaluator.evaluateNonDet(jump.getGuard());
+                    BigInteger result = exprEvaluator.evaluateNonDet(jump.getGuard(), jump);
                     if (result == null) {
                         isConsistent = false;
                         return data;
@@ -502,7 +502,7 @@ public class GenMCExecutionModel {
                 } else {
                     List<BooleanFormula> assumptionWrapper = new ArrayList<>();
                     assumptionWrapper.add(encodingContext.encodeExpressionAsBooleanAt(assumption, assumptionEvent));
-                    isConsistent = exprEvaluator.evaluateReachability(assumption);
+                    isConsistent = exprEvaluator.evaluateReachability(assumption, assumptionEvent);
                     if (isConsistent) {
                         exprEvaluator.addNonDetCondition(assumptionEvent, assumption, true);
                     }

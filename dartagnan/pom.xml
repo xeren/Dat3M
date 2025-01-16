@@ -111,11 +111,11 @@
                 <configuration>
                     <mainClass>com.dat3m.dartagnan.Dartagnan</mainClass>
                     <arguments>
-                        <argument>../cat/rc11.cat</argument>
+                        <argument>../cat/sc.cat</argument>
                         <argument>--target=c11</argument>
-                        <argument>../benchmarks/lfds/treiber.c</argument>
+                        <argument>../benchmarks/lfds/dglm.c</argument>
                         <argument>--property=program_spec</argument>
-                        <argument>--bound=3</argument>
+                        <argument>--bound=2</argument>
                         <argument>--encoding.mergeCFVars=false</argument>
                         <argument>--program.processing.spinloops=true</argument>
                         <argument>--genmc.useSmtSolver=false</argument>

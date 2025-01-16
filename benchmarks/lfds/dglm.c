@@ -2,7 +2,7 @@
 #include <pthread.h>
 
 #ifndef NTHREADS
-#define NTHREADS 3
+#define NTHREADS 2
 #endif
 
 int data[NTHREADS];
