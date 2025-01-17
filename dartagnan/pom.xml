@@ -113,7 +113,7 @@
                     <arguments>
                         <argument>../cat/sc.cat</argument>
                         <argument>--target=c11</argument>
-                        <argument>../benchmarks/lfds/dglm.c</argument>
+                        <argument>../benchmarks/lfds/harris-2.c</argument>
                         <argument>--property=program_spec</argument>
                         <argument>--bound=2</argument>
                         <argument>--encoding.mergeCFVars=false</argument>

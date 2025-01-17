@@ -436,9 +436,6 @@ public class GenMCExecutionModel {
             // ===== Memory Events =====
             BigInteger address = exprEvaluator.evaluateAddress(data);
             if (address == null || BigInteger.ZERO.equals(address)) {
-                if (address != null) {
-                    logger.warn("NULL access");
-                }
                 isConsistent = false;
                 trace.addEvent(data);
                 return data;
