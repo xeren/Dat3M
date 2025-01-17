@@ -2,6 +2,7 @@ package com.dat3m.dartagnan.expression.processing.evaluation;
 
 import java.math.BigInteger;
 
+import org.sosy_lab.common.configuration.InvalidConfigurationException;
 import org.sosy_lab.java_smt.api.BooleanFormula;
 import org.sosy_lab.java_smt.api.ProverEnvironment;
 import org.sosy_lab.java_smt.api.SolverException;
@@ -17,11 +18,11 @@ public interface ExpressionEvaluator {
 
     ExpressionEvaluator newInstance();
     
-    BigInteger evaluate(Expression expr, Event forEvent) throws SolverException, InterruptedException;
-    BigInteger evaluateNonDet(Expression expr, Event forEvent) throws SolverException, InterruptedException;
-    BigInteger evaluateAddress(EventData e) throws SolverException, InterruptedException;
-    boolean evaluateReachability(BooleanFormula formula) throws SolverException, InterruptedException;
-    boolean evaluateReachability(Expression target, Event forEvent) throws SolverException, InterruptedException;
+    BigInteger evaluate(Expression expr, Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException;
+    BigInteger evaluateNonDet(Expression expr, Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException;
+    BigInteger evaluateAddress(EventData e) throws SolverException, InterruptedException, InvalidConfigurationException;
+    boolean evaluateReachability(BooleanFormula formula) throws SolverException, InterruptedException, InvalidConfigurationException;
+    boolean evaluateReachability(Expression target, Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException;
 
     void setTrace(GenMCEventDomain trace, Event changedEvent);
     void addNonDetCondition(Event event, Expression condition, boolean isTrue);

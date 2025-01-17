@@ -35,7 +35,6 @@ import java.util.stream.Collectors;
 
 import static com.dat3m.dartagnan.wmm.RelationNameRepository.CO;
 import static com.dat3m.dartagnan.wmm.RelationNameRepository.RF;
-import static java.util.function.Predicate.isEqual;
 
 /*
 The ExecutionModel wraps a Model and extracts data from it in a more workable manner.
@@ -154,6 +153,18 @@ public class GenMCExecutionModel {
     public boolean isConsistent() {
         return isConsistent;
     }
+    public boolean needsNewConsistencyCheck() {
+        return needsNewConsistencyCheck;
+    }
+    public boolean lastNeedsNewConsistencyCheck() {
+        return lastNeedsNewConsistencyCheck;
+    }
+    public void needsNewConsistencyCheck(boolean needsNewConsistencyCheck) {
+        this.needsNewConsistencyCheck = needsNewConsistencyCheck;
+    }
+    public void lastNeedsNewConsistencyCheck(boolean lastNeedsNewConsistencyCheck) {
+        this.lastNeedsNewConsistencyCheck = lastNeedsNewConsistencyCheck;
+    }
     public boolean needsJumpRevisit() {
         return needsJumpRevisit;
     }
@@ -183,7 +194,7 @@ public class GenMCExecutionModel {
 
     //========================== Initialization =========================
 
-    public void initialize() throws InterruptedException, SolverException {
+    public void initialize() throws InterruptedException, SolverException, InvalidConfigurationException {
         List<Init> inits = getProgram().getThreadEvents(Init.class);
         setTrace(new GenMCEventDomain(), null);
         for (Init init : inits) {
@@ -213,7 +224,7 @@ public class GenMCExecutionModel {
 
     //========================== Public methods =========================
 
-    public void setJump(EventData jump, boolean jumpIsExecuted) throws SolverException, InterruptedException {
+    public void setJump(EventData jump, boolean jumpIsExecuted) throws SolverException, InterruptedException, InvalidConfigurationException {
         CondJump jumpEvent = (CondJump) jump.getEvent();
         exprEvaluator.addNonDetCondition(jumpEvent, jumpEvent.getGuard(), jumpIsExecuted);
         needsNewConsistencyCheck = jump.wasExecuted() != jumpIsExecuted;
@@ -230,7 +241,7 @@ public class GenMCExecutionModel {
         }
     }
 
-    public void setCo(EventData write, EventData newWrite) {
+    public void setCo(EventData write, EventData newWrite, Collection<EventData> mayCoSet) {
         if (write.getCoSuccessor() == newWrite) {
             return;
         }
@@ -240,7 +251,9 @@ public class GenMCExecutionModel {
         if (newWrite.getCoSuccessor() != null) {
             newWrite.getCoSuccessor().setCoPredecessor(newWrite);
         }
-        needsNewConsistencyCheck = true;
+        if (mayCoSet == null || mayCoSet.size() > 1) {
+            needsNewConsistencyCheck = true;
+        }
     }
 
     public void rollback(EventData backtrackingPoint) {
@@ -299,7 +312,7 @@ public class GenMCExecutionModel {
         }
     }
 
-    public boolean checkProperties() throws InterruptedException, SolverException {
+    public boolean checkProperties() throws InterruptedException, SolverException, InvalidConfigurationException {
         if (properties == null) {
             logger.debug("No global properties to check");
             return true;
@@ -358,8 +371,12 @@ public class GenMCExecutionModel {
     public Collection<EventData> getPorfPrefix(EventData event) {
         List<EventData> porfPrefix = new ArrayList<>();
         porfPrefix.addAll(getPorfPrefixPreviousPo(event));
-        porfPrefix.addAll(getPorfPrefixPreviousRf(event));
-        porfPrefix.add(event);
+        if (event.isRead()) {
+            porfPrefix.addAll(getPorfPrefixPreviousRf(event));
+        }
+        if (event.isMemoryEvent()) {
+            porfPrefix.add(event);
+        }
         return porfPrefix;
     }
 
@@ -371,7 +388,7 @@ public class GenMCExecutionModel {
                 .collect(Collectors.toSet());
     }
 
-    public EventData nextEvent() throws InterruptedException, SolverException {
+    public EventData nextEvent() throws InterruptedException, SolverException, InvalidConfigurationException {
         Event startEvent;
         try {
             startEvent = trace.getObjectById(0).getEvent();
@@ -387,11 +404,12 @@ public class GenMCExecutionModel {
         }
         while (threadIndex < relevantThreads.size()) {
             Thread thread = relevantThreads.get(threadIndex);
-            Event e = initialize ? getLastAddedThreadEvent(thread) : startEvent;
+            Event e = initialize ? trace.getLastAddedThreadEvent(thread) : startEvent;
             initialize = true;
             while (e != null) {
                 long start = System.currentTimeMillis();
-                if (!trace.getElements().stream().map(EventData::getEvent).anyMatch(isEqual(e))) {
+                List<EventData> threadEvents = trace.getThreadEventsMap().get(thread);
+                if (threadEvents == null || threadEvents.isEmpty() || threadEvents.get(threadEvents.size() - 1).getEvent() != e) {
                     eventFilterTime += System.currentTimeMillis() - start;
                     lastAdded = e;
                     return addEvent(e);
@@ -420,13 +438,13 @@ public class GenMCExecutionModel {
                 .filter(relevantThreads::contains)
                 .min(Comparator.comparingInt(relevantThreads::indexOf))
                 .get();
-        lastAdded = getLastAddedThreadEvent(firstThread);
+        lastAdded = trace.getLastAddedThreadEvent(firstThread);
         isConsistent = true;
         needsNewConsistencyCheck = true;
         lastNeedsNewConsistencyCheck = false;
     }
 
-    private EventData addEvent(Event e) throws InterruptedException, SolverException {
+    private EventData addEvent(Event e) throws InterruptedException, SolverException, InvalidConfigurationException {
         needsJumpRevisit = false;
         EventData data = new EventData(e);
         data.setId(trace.size());
@@ -562,31 +580,16 @@ public class GenMCExecutionModel {
     }
 
     private Optional<EventData> findPoPredecessor(EventData event) {
-        Optional<EventData> predecessor = Optional.empty();
-        Event currentPredecessor = event.getEvent();
-        while (predecessor.isEmpty() && (currentPredecessor = currentPredecessor.getPredecessor()) != null) {
-            predecessor = trace.getData(currentPredecessor);
-        }
-        return predecessor;
+        List<EventData> threadEvents = trace.getThreadEventsMap().get(event.getEvent().getThread());
+        int eventIndex = threadEvents.indexOf(event);
+        return eventIndex == 0 ? Optional.empty() : Optional.of(threadEvents.get(eventIndex - 1));
     }
 
     private Collection<EventData> getPorfPrefixPreviousRf(EventData event) {
-        if (event.isRead()) {
-            return getPorfPrefix(event.getReadFrom());
-        }
-        return Collections.emptyList();
+        return getPorfPrefix(event.getReadFrom());
     }
 
-    private Event getLastAddedThreadEvent(Thread thread) {
-        return trace.getElements()
-                .stream()
-                .filter(evt -> evt.getThread() == thread)
-                .max(Comparator.comparingInt(trace::getId))
-                .map(EventData::getEvent)
-                .orElse(thread.getEntry());
-    }
-
-    private boolean checkProperties(BooleanFormula properties) throws InterruptedException, SolverException {
+    private boolean checkProperties(BooleanFormula properties) throws InterruptedException, SolverException, InvalidConfigurationException {
         logger.debug("Checking properties");
         if (!exprEvaluator.evaluateReachability(properties)) {
             return false;

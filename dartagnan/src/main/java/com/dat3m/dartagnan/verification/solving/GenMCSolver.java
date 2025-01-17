@@ -4,8 +4,9 @@ import com.dat3m.dartagnan.configuration.Property;
 import com.dat3m.dartagnan.encoding.EncodingContext;
 import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
 import com.dat3m.dartagnan.encoding.PropertyEncoder;
-import com.dat3m.dartagnan.encoding.WmmEncoder;
 import com.dat3m.dartagnan.program.Program;
+import com.dat3m.dartagnan.program.Thread;
+import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.processing.AssertionTransformer;
 import com.dat3m.dartagnan.program.processing.ConsecutiveGotoSimplification;
 import com.dat3m.dartagnan.program.processing.IdReassignment;
@@ -114,9 +115,8 @@ public class GenMCSolver extends ModelChecker {
         // ------------------------ Encoding ------------------------
 
         context = EncodingContext.of(task, analysisContext, ctx.getFormulaManager());
-        final GenMCTraceEncoder traceEncoder = GenMCTraceEncoder.withContext(context);
+        final GenMCTraceEncoder traceEncoder = GenMCTraceEncoder.withContext(context, prover);
         final PropertyEncoder propertyEncoder = PropertyEncoder.withContext(context);
-        final WmmEncoder baselineEncoder = WmmEncoder.withContext(context);
 
         final BooleanFormula properties;
         if (task.getProgram().getFormat() != Program.SourceLanguage.LITMUS) {
@@ -128,10 +128,8 @@ public class GenMCSolver extends ModelChecker {
         final Property.Type propertyType = Property.getCombinedType(task.getProperty(), task);
 
         logger.info("Starting encoding using " + ctx.getVersion());
-        prover.addConstraint(baselineEncoder.encodeRelations());
 
         // ------------------------ Solving ------------------------
-        prover.push();
 
         logger.info("TruSt algorithm started.");
         long startTime = System.currentTimeMillis();
@@ -264,8 +262,10 @@ public class GenMCSolver extends ModelChecker {
             for (EventData read : relevantReads) {
                 int readId = model.getTrace().getId(read);
                 GenMCEventDomain trace = model.getTrace();
+                Map<Thread, Integer> prefixLimits = getPrefixLimits(model, writePrefix);
                 List<EventData> eventsToDelete = trace.getElements().stream()
-                        .filter(e -> readId < trace.getId(e) && !writePrefix.contains(e))
+                        .filter(e -> readId < trace.getId(e) &&
+                                !(writePrefix.contains(e) || (!e.isMemoryEvent() && prefixLimits.get(e.getEvent().getThread()) > e.getEvent().getGlobalId())))
                         .toList();
                 if (shouldRevisit(model, eventsToDelete, read, event, writePrefix)) {
                     logger.debug("Backward revisiting load " + read.getEvent().getGlobalId() + ": " + read.getEvent() + " for store " + event.getEvent().getGlobalId() + ": " +
@@ -308,6 +308,8 @@ public class GenMCSolver extends ModelChecker {
             logger.debug("Aborting exploration: Inconsistent execution");
             return true;
         }
+        boolean needsNewConsistencyCheck = model.needsNewConsistencyCheck();
+        boolean lastNeedsNewConsistencyCheck = model.lastNeedsNewConsistencyCheck();
         for (EventData write : mayRfSet) {
             model.setRf(read, write);
             logger.debug("Forward revisiting load " + read.getEvent().getGlobalId() + ": " + read.getEvent() + " for store " + write.getEvent().getGlobalId() + ": " +
@@ -317,6 +319,8 @@ public class GenMCSolver extends ModelChecker {
             }
             model.rollback(read);
         }
+        model.needsNewConsistencyCheck(needsNewConsistencyCheck);
+        model.lastNeedsNewConsistencyCheck(lastNeedsNewConsistencyCheck);
         return true;
     }
 
@@ -331,8 +335,10 @@ public class GenMCSolver extends ModelChecker {
             logger.debug("Aborting exploration: Inconsistent execution");
             return true;
         }
+        boolean needsNewConsistencyCheck = model.needsNewConsistencyCheck();
+        boolean lastNeedsNewConsistencyCheck = model.lastNeedsNewConsistencyCheck();
         for (EventData otherWrite : mayCoSet) {
-            model.setCo(otherWrite, write);
+            model.setCo(otherWrite, write, mayCoSet);
             logger.debug("Visiting coherence (" + otherWrite.getEvent().getGlobalId() + ", " + write.getEvent().getGlobalId() + "): (" + otherWrite.getEvent() + ",  " +
                     write.getEvent() + ")");
             if (!visit(model)) {
@@ -340,6 +346,8 @@ public class GenMCSolver extends ModelChecker {
             }
             model.rollbackCo(otherWrite, write);
         }
+        model.needsNewConsistencyCheck(needsNewConsistencyCheck);
+        model.lastNeedsNewConsistencyCheck(lastNeedsNewConsistencyCheck);
         return true;
     }
 
@@ -348,6 +356,21 @@ public class GenMCSolver extends ModelChecker {
         Collection<EventData> porfPrefix = model.getPorfPrefix(write);
         porfPrefixTime += System.currentTimeMillis() - start;
         return porfPrefix;
+    }
+
+    private Map<Thread, Integer> getPrefixLimits(GenMCExecutionModel model, Collection<EventData> writePrefix) {
+        Map<Thread, Integer> prefixLimits = new HashMap<>();
+        for (Thread thread : model.getTrace().getThreadEventsMap().keySet()) {
+            int limit = Integer.MIN_VALUE;
+            for (EventData prefixData : writePrefix) {
+                Event prefixEvent = prefixData.getEvent();
+                if (prefixEvent.getThread() == thread && prefixData.isMemoryEvent() && prefixEvent.getGlobalId() > limit) {
+                    limit = prefixEvent.getGlobalId();
+                }
+            }
+            prefixLimits.put(thread, limit);
+        }
+        return prefixLimits;
     }
 
     private boolean shouldRevisit(GenMCExecutionModel model, List<EventData> eventsToDelete, EventData read, EventData write, Collection<EventData> writePrefix) {

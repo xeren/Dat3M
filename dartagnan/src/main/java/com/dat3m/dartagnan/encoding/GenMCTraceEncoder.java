@@ -53,30 +53,28 @@ public class GenMCTraceEncoder implements Encoder {
     private final EncodingContext context;
     private final ExecutionAnalysis exec;
     private final Dependency dep;
+    private final ProverEnvironment prover;
 
-    private final BooleanFormula constants;
-    private final BooleanFormula memory;
-    private final Map<MemoryObject, BigInteger> memObj2Addr = new HashMap<>();
-    private final BooleanFormula finalRegisterValues;
-    private final BooleanFormula filter;
+    private BooleanFormula constants;
+    private BooleanFormula memory;
+    private BooleanFormula finalRegisterValues;
+    private BooleanFormula filter;
+
+    private boolean initialized = false;
 
     private int encodingTime = 0;
 
-    private GenMCTraceEncoder(EncodingContext c) {
+    private GenMCTraceEncoder(EncodingContext c, ProverEnvironment prover) {
         Preconditions.checkArgument(c.getTask().getProgram().isCompiled(), "The program must be compiled before encoding.");
         context = c;
         c.getAnalysisContext().requires(BranchEquivalence.class);
         this.exec = c.getAnalysisContext().requires(ExecutionAnalysis.class);
         this.dep = c.getAnalysisContext().requires(Dependency.class);
-
-        constants = encodeConstants();
-        memory = encodeMemory();
-        finalRegisterValues = encodeFinalRegisterValues();
-        filter = encodeFilter();
+        this.prover = prover;
     }
 
-    public static GenMCTraceEncoder withContext(EncodingContext context) throws InvalidConfigurationException {
-        GenMCTraceEncoder encoder = new GenMCTraceEncoder(context);
+    public static GenMCTraceEncoder withContext(EncodingContext context, ProverEnvironment prover) throws InvalidConfigurationException {
+        GenMCTraceEncoder encoder = new GenMCTraceEncoder(context, prover);
         context.getTask().getConfig().inject(encoder);
         logger.info("{}: {}", INITIALIZE_REGISTERS, encoder.initializeRegisters);
         return encoder;
@@ -84,7 +82,22 @@ public class GenMCTraceEncoder implements Encoder {
 
     // ============================== Encoding ==============================
 
-    public BooleanFormula encodeFullTrace(Domain<EventData> trace) {
+    private void init() throws InterruptedException, InvalidConfigurationException {
+        if (!initialized) {
+            long start = System.currentTimeMillis();
+            prover.addConstraint(WmmEncoder.withContext(context).encodeRelations());
+            prover.push();
+            constants = encodeConstants();
+            memory = encodeMemory();
+            finalRegisterValues = encodeFinalRegisterValues();
+            filter = encodeFilter();
+            encodingTime += System.currentTimeMillis() - start;
+            initialized = true;
+        }
+    }
+
+    public BooleanFormula encodeFullTrace(Domain<EventData> trace) throws InterruptedException, InvalidConfigurationException {
+        init();
         long start = System.currentTimeMillis();
         BooleanFormula enc = context.getBooleanFormulaManager().and(
                 constants,
@@ -161,8 +174,7 @@ public class GenMCTraceEncoder implements Encoder {
         // TODO: Once we want to encode dynamic memory layouts (e.g., due to dynamically-sized mallocs)
         //  we need to compute a Map<MemoryObject, Formula> where each formula describes a
         //  unique, properly aligned, and non-overlapping address of the memory object.
-        memObj2Addr.clear();
-        memObj2Addr.putAll(computeStaticMemoryLayout(memory));
+        Map<MemoryObject, BigInteger> memObj2Addr = computeStaticMemoryLayout(memory);
 
         final var enc = new ArrayList<BooleanFormula>();
         for (final MemoryObject memObj : memory.getObjects()) {
@@ -330,12 +342,13 @@ public class GenMCTraceEncoder implements Encoder {
         return bmgr.and(enc);
     }
 
-    public BooleanFormula getPropertyRelevantEncoding() {
+    public BooleanFormula getPropertyRelevantEncoding() throws InterruptedException, InvalidConfigurationException {
+        init();
         return context.getBooleanFormulaManager().and(finalRegisterValues, filter);
     }
 
     public Map<MemoryObject, BigInteger> getStaticMemoryLayout() {
-        return memObj2Addr;
+        return computeStaticMemoryLayout(context.getTask().getProgram().getMemory());
     }
 
     public int getEncodingTime() {

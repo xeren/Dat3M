@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.sosy_lab.common.configuration.InvalidConfigurationException;
 import org.sosy_lab.java_smt.api.BooleanFormula;
 import org.sosy_lab.java_smt.api.Model;
 import org.sosy_lab.java_smt.api.ProverEnvironment;
@@ -76,7 +77,7 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
     }
 
     @Override
-    public BigInteger evaluateNonDet(Expression expr, Event forEvent) throws SolverException, InterruptedException {
+    public BigInteger evaluateNonDet(Expression expr, Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException {
         Model model = calculateModel();
         if (model == null) {
             return null;
@@ -93,12 +94,12 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
     }
 
     @Override
-    public boolean evaluateReachability(BooleanFormula formula) throws SolverException, InterruptedException {
+    public boolean evaluateReachability(BooleanFormula formula) throws SolverException, InterruptedException, InvalidConfigurationException {
         return calculateModel(formula) != null;
     }
 
     @Override
-    public boolean evaluateReachability(Expression expr, Event forEvent) throws SolverException, InterruptedException {
+    public boolean evaluateReachability(Expression expr, Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException {
         Expression result = evaluator.propagate(expr, forEvent);
         if (result instanceof BoolLiteral bool) {
             return bool.getValue();
@@ -106,19 +107,19 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
         return evaluateReachabilityNonDet(result);
     }
 
-    private boolean evaluateReachabilityNonDet(Expression expr) throws SolverException, InterruptedException {
+    private boolean evaluateReachabilityNonDet(Expression expr) throws SolverException, InterruptedException, InvalidConfigurationException {
         return calculateModel(expr) != null;
     }
 
-    private Model calculateModel() throws SolverException, InterruptedException {
+    private Model calculateModel() throws SolverException, InterruptedException, InvalidConfigurationException {
         return calculateModel(ExpressionFactory.getInstance().makeTrue());
     }
 
-    private Model calculateModel(Expression assumption) throws SolverException, InterruptedException {
+    private Model calculateModel(Expression assumption) throws SolverException, InterruptedException, InvalidConfigurationException {
         return calculateModel(encodingContext.encodeExpressionAsBooleanAt(assumption, trace.getLast().getEvent()));
     }
 
-    private Model calculateModel(BooleanFormula assumption) throws SolverException, InterruptedException {
+    private Model calculateModel(BooleanFormula assumption) throws SolverException, InterruptedException, InvalidConfigurationException {
         Collection<BooleanFormula> assumptions = new ArrayList<>(cfContext.values());
         assumptions.add(assumption);
         assumptions.add(traceEncoder.encodeFullTrace(trace));

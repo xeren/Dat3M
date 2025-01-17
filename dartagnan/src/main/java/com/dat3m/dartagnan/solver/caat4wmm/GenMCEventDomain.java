@@ -129,6 +129,19 @@ public class GenMCEventDomain implements Domain<EventData> {
         readWriteMap.put(read, newWrite);
     }
 
+    public Optional<EventData> getLastAddedThreadEventData(Thread thread) {
+        List<EventData> threadEvents = threadEventsMap.get(thread);
+        if (threadEvents == null || threadEvents.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(threadEvents.get(threadEvents.size() - 1));
+    }
+
+    public Event getLastAddedThreadEvent(Thread thread) {
+        Optional<EventData> lastAdded = getLastAddedThreadEventData(thread);
+        return lastAdded.isPresent() ? lastAdded.get().getEvent() : thread.getEntry();
+    }
+
     @Override
     public int size() {
         return events.size();
