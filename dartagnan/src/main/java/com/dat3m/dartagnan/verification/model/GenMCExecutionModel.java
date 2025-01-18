@@ -573,7 +573,13 @@ public class GenMCExecutionModel {
     private Optional<EventData> findPoPredecessor(EventData event) {
         List<EventData> threadEvents = trace.getThreadEventsMap().get(event.getEvent().getThread());
         int eventIndex = threadEvents.indexOf(event);
-        return eventIndex == 0 ? Optional.empty() : Optional.of(threadEvents.get(eventIndex - 1));
+        for (int i = eventIndex - 1; i >= 0; --i) {
+            EventData current = threadEvents.get(i);
+            if (current.isMemoryEvent()) {
+                return Optional.of(current);
+            }
+        }
+        return Optional.empty();
     }
 
     private Collection<EventData> getPorfPrefixPreviousRf(EventData event) {
