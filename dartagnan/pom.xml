@@ -121,7 +121,6 @@
                         <argument>--genmc.useSmtSolver=false</argument>
                         <argument>--genmc.numberOfConsistentExecutions=false</argument>
                         <argument>--solver=yices2</argument>
-                        <argument>--witness=png</argument>
                         <argument>--method=genmc</argument>
                     </arguments>
                 </configuration>

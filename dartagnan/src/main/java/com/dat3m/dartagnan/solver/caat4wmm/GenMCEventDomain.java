@@ -28,6 +28,8 @@ import static java.util.stream.Collectors.toList;
 public class GenMCEventDomain implements Domain<EventData> {
 
     private final List<EventData> events;
+    private final Map<Event, EventData> eventMap;
+    private final Map<Integer, EventData> idMap;
     private final Map<Thread, List<EventData>> threadEventsMap;
     private final List<EventData> addressInits;
     private final Map<EventData, EventData> readWriteMap;
@@ -35,6 +37,8 @@ public class GenMCEventDomain implements Domain<EventData> {
 
     public GenMCEventDomain() {
         this.events = new ArrayList<>();
+        this.eventMap = new HashMap<>();
+        this.idMap = new HashMap<>();
         this.threadEventsMap = new HashMap<>();
         this.addressInits = new ArrayList<>();
         this.readWriteMap = new HashMap<>();
@@ -44,6 +48,12 @@ public class GenMCEventDomain implements Domain<EventData> {
     public GenMCEventDomain(Collection<EventData> events, Map<Thread, List<EventData>> threadEventsMap, List<EventData> addressInits, Map<EventData, EventData> readWriteMap,
             Map<EventData, List<EventData>> writeReadsMap) {
         this.events = new ArrayList<>(events);
+        this.eventMap = new HashMap<>();
+        this.idMap = new HashMap<>();
+        for (EventData event : events) {
+            eventMap.put(event.getEvent(), event);
+            idMap.put(event.getId(), event);
+        }
         this.threadEventsMap = new HashMap<>();
         for (Map.Entry<Thread, List<EventData>> threadEvents : threadEventsMap.entrySet()) {
             List<EventData> newThreadEvents = threadEvents.getValue().stream()
@@ -83,6 +93,8 @@ public class GenMCEventDomain implements Domain<EventData> {
 
     public void addEvent(EventData event) {
         events.add(event);
+        eventMap.put(event.getEvent(), event);
+        idMap.put(event.getId(), event);
         threadEventsMap.computeIfAbsent(event.getEvent().getThread(), thread -> new ArrayList<>()).add(event);
         if (event.getEvent() instanceof Init) {
             addressInits.add(event);
@@ -103,7 +115,7 @@ public class GenMCEventDomain implements Domain<EventData> {
     }
 
     public void rollback(EventData backtrackingPoint) {
-        int backtrackingIndex = events.indexOf(backtrackingPoint);
+        int backtrackingIndex = backtrackingPoint.getId();
         List<EventData> eventsToRemove = events.subList(backtrackingIndex + 1, events.size());
         for (EventData eventToRemove : eventsToRemove) {
             threadEventsMap.get(eventToRemove.getEvent().getThread()).remove(eventToRemove);
@@ -118,6 +130,8 @@ public class GenMCEventDomain implements Domain<EventData> {
                 writeReadsMap.remove(eventToRemove);
             }
         }
+        eventsToRemove.forEach(event -> eventMap.remove(event.getEvent()));
+        eventsToRemove.forEach(event -> idMap.remove(event.getId()));
         eventsToRemove.clear();
     }
 
@@ -152,18 +166,21 @@ public class GenMCEventDomain implements Domain<EventData> {
         return events;
     }
 
+    public Map<Event, EventData> getEventMap() {
+        return eventMap;
+    }
+
     @Override
     public int getId(Object obj) {
-        return events.indexOf(obj);
+        if (obj != null && obj instanceof EventData event) {
+            return event.getId();
+        }
+        throw new IllegalArgumentException("Excepted non-null object of class EventData");
     }
 
     @Override
     public EventData getObjectById(int id) {
-        try {
-            return events.get(id);
-        } catch (IndexOutOfBoundsException e) {
-            return null;
-        }
+        return idMap.get(id);
     }
 
     public int getLocalId(EventData event) {
@@ -177,6 +194,8 @@ public class GenMCEventDomain implements Domain<EventData> {
     public EventData removeLast() {
         EventData last = getLast();
         events.remove(last);
+        eventMap.remove(last.getEvent());
+        idMap.remove(last.getId());
         threadEventsMap.get(last.getEvent().getThread()).remove(last);
         if (last.getReadFrom() != null) {
             readWriteMap.remove(last);
@@ -210,7 +229,7 @@ public class GenMCEventDomain implements Domain<EventData> {
     }
 
     public Optional<EventData> getData(Event e) {
-        return getData(getElements(), e);
+        return Optional.ofNullable(eventMap.get(e));
     }
 
     public static Optional<EventData> getData(List<EventData> events, Event e) {

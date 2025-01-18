@@ -115,6 +115,7 @@ public class GenMCSolver extends ModelChecker {
         // ------------------------ Encoding ------------------------
 
         context = EncodingContext.of(task, analysisContext, ctx.getFormulaManager());
+        logger.info("Used SMT solver: " + ctx.getVersion());
         final GenMCTraceEncoder traceEncoder = GenMCTraceEncoder.withContext(context, prover);
         final PropertyEncoder propertyEncoder = PropertyEncoder.withContext(context);
 
@@ -125,9 +126,6 @@ public class GenMCSolver extends ModelChecker {
             properties = propertyEncoder.encodeProperties(task.getProperty());
         }
         final GenMCExecutionModel model = GenMCExecutionModel.withContext(context, traceEncoder, prover, properties, useSMTSolver);
-        final Property.Type propertyType = Property.getCombinedType(task.getProperty(), task);
-
-        logger.info("Starting encoding using " + ctx.getVersion());
 
         // ------------------------ Solving ------------------------
 
@@ -138,6 +136,7 @@ public class GenMCSolver extends ModelChecker {
         long genmcTime = endTime - startTime;
         logger.info("TruSt took " + Utils.toTimeString(genmcTime));
 
+        final Property.Type propertyType = Property.getCombinedType(task.getProperty(), task);
         if (logger.isInfoEnabled()) {
             final String message = !result ? (propertyType == Property.Type.SAFETY ? "Specification violation found." : "Specification witness found.") :
                         (propertyType == Property.Type.SAFETY ? "Specification proven." : "Specification falsified.");
@@ -401,9 +400,7 @@ public class GenMCSolver extends ModelChecker {
         }
         GenMCEventDomain trace = model.getTrace();
         int eventId = trace.getId(event);
-        List<EventData> previous = trace.getElements().stream()
-                .filter(e -> trace.getId(e) <= eventId)
-                .toList();
+        List<EventData> previous = trace.getElements().subList(0, eventId + 1);
         for (EventData e : previous) {
             if (e.getReadFrom() == event) {
                 return false;

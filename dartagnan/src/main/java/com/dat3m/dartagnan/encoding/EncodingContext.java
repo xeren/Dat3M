@@ -70,6 +70,11 @@ public final class EncodingContext {
             secure = true)
     boolean useIntegers = false;
 
+    @Option(name = PRINT_ACYCLICITY_ENCODE_GRAPH,
+            description = "Prints the size of the encodeGraph for each acyclicity axiom.  Default: false.",
+            secure = true)
+    boolean acyclicityGraphPrint = false;
+
     private final Map<Event, BooleanFormula> controlFlowVariables = new HashMap<>();
     private final Map<Event, BooleanFormula> executionVariables = new HashMap<>();
     private final Map<NamedBarrier, BooleanFormula> syncVariables = new HashMap<>();
@@ -99,8 +104,9 @@ public final class EncodingContext {
         task.getConfig().inject(context);
         logger.info("{}: {}", IDL_TO_SAT, context.useSATEncoding);
         logger.info("{}: {}", MERGE_CF_VARS, context.shouldMergeCFVars);
+        logger.info("{}: {}", PRINT_ACYCLICITY_ENCODE_GRAPH, context.acyclicityGraphPrint);
         context.initialize();
-        if (logger.isInfoEnabled()) {
+        if (context.acyclicityGraphPrint && logger.isInfoEnabled()) {
             logger.info("Number of encoded edges for acyclicity: {}",
                     task.getMemoryModel().getAxioms().stream()
                             .filter(Acyclicity.class::isInstance)

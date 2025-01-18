@@ -25,10 +25,7 @@ public abstract class AbstractGenMCWMMPredicate extends AbstractPredicate {
     }
 
     protected EventData getEvent(int id) {
-        return getDomain().getElements().stream()
-                .filter(e -> e.getId() == id)
-                .findAny()
-                .orElse(null);
+        return trace.getObjectById(id);
     }
 
 }

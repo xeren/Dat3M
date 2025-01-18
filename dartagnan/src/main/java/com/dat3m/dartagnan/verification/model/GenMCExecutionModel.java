@@ -380,14 +380,6 @@ public class GenMCExecutionModel {
         return porfPrefix;
     }
 
-    public Set<Event> getEventsAfter(EventData event) {
-        return trace.getElements()
-                .stream()
-                .filter(evt -> trace.getId(evt) > trace.getId(event))
-                .map(EventData::getEvent)
-                .collect(Collectors.toSet());
-    }
-
     public EventData nextEvent() throws InterruptedException, SolverException, InvalidConfigurationException {
         Event startEvent;
         try {
@@ -432,9 +424,8 @@ public class GenMCExecutionModel {
     //========================== Internal methods  =========================
 
     private void initializeFields() {
-        Thread firstThread = trace.getElements()
+        Thread firstThread = trace.getThreadEventsMap().keySet()
                 .stream()
-                .map(EventData::getThread)
                 .filter(relevantThreads::contains)
                 .min(Comparator.comparingInt(relevantThreads::indexOf))
                 .get();

@@ -14,7 +14,7 @@ import com.dat3m.dartagnan.program.event.core.threading.ThreadStart;
 import com.dat3m.dartagnan.program.memory.Memory;
 import com.dat3m.dartagnan.program.memory.MemoryObject;
 import com.dat3m.dartagnan.program.misc.NonDetValue;
-import com.dat3m.dartagnan.solver.caat.domain.Domain;
+import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
 import com.dat3m.dartagnan.verification.model.EventData;
 import com.google.common.base.Preconditions;
 import org.apache.logging.log4j.LogManager;
@@ -27,6 +27,7 @@ import org.sosy_lab.java_smt.api.NumeralFormula.IntegerFormula;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -84,6 +85,7 @@ public class GenMCTraceEncoder implements Encoder {
 
     private void init() throws InterruptedException, InvalidConfigurationException {
         if (!initialized) {
+            logger.info("Starting encoding");
             long start = System.currentTimeMillis();
             prover.addConstraint(WmmEncoder.withContext(context).encodeRelations());
             prover.push();
@@ -96,7 +98,7 @@ public class GenMCTraceEncoder implements Encoder {
         }
     }
 
-    public BooleanFormula encodeFullTrace(Domain<EventData> trace) throws InterruptedException, InvalidConfigurationException {
+    public BooleanFormula encodeFullTrace(GenMCEventDomain trace) throws InterruptedException, InvalidConfigurationException {
         init();
         long start = System.currentTimeMillis();
         BooleanFormula enc = context.getBooleanFormulaManager().and(
@@ -124,19 +126,16 @@ public class GenMCTraceEncoder implements Encoder {
         return context.getBooleanFormulaManager().and(enc);
     }
 
-    public BooleanFormula encodeControlFlow(Domain<EventData> trace) {
+    public BooleanFormula encodeControlFlow(GenMCEventDomain trace) {
         logger.debug("Encoding program control flow");
 
         BooleanFormulaManager bmgr = context.getBooleanFormulaManager();
         List<BooleanFormula> enc = new ArrayList<>();
-        trace.getElements().stream()
-                .map(EventData::getThread)
-                .distinct()
-                .forEach(thread -> enc.add(encodeThreadCF(thread, trace)));
+        trace.getThreadEventsMap().keySet().forEach(thread -> enc.add(encodeThreadCF(thread, trace)));
         return bmgr.and(enc);
     }
 
-    private BooleanFormula encodeThreadCF(Thread thread, Domain<EventData> trace) {
+    private BooleanFormula encodeThreadCF(Thread thread, GenMCEventDomain trace) {
         final BooleanFormulaManager bmgr = context.getBooleanFormulaManager();
         final ThreadStart startEvent = thread.getEntry();
         final List<BooleanFormula> enc = new ArrayList<>();
@@ -151,10 +150,7 @@ public class GenMCTraceEncoder implements Encoder {
         }
         enc.add(startEvent.encodeExec(context));
 
-        List<Event> traceEvents = trace.getElements()
-                .stream()
-                .map(EventData::getEvent)
-                .toList();
+        Collection<Event> traceEvents = trace.getEventMap().keySet();
         for (Event e : startEvent.getSuccessor().getSuccessors()) {
             if (traceEvents.contains(e)) {
                 enc.add(e.encodeExec(context));
@@ -230,7 +226,7 @@ public class GenMCTraceEncoder implements Encoder {
      * Also, the reader may only use the value of the latest writer that is executed.
      * Also, if no fitting writer is executed, the reader uses 0.
      */
-    public BooleanFormula encodeDependencies(Domain<EventData> trace) {
+    public BooleanFormula encodeDependencies(GenMCEventDomain trace) {
         logger.debug("Encoding dependencies");
         final BooleanFormulaManager bmgr = context.getBooleanFormulaManager();
         List<BooleanFormula> enc = new ArrayList<>();
@@ -261,7 +257,7 @@ public class GenMCTraceEncoder implements Encoder {
         }
         for (Map.Entry<Event, Map<Register, Dependency.State>> e : dep.getAll()) {
             final Event reader = e.getKey();
-            if (trace.getElements().stream().anyMatch(evt -> evt.getEvent() == reader)) {
+            if (trace.getEventMap().containsKey(reader)) {
                 for (Map.Entry<Register, Dependency.State> r : e.getValue().entrySet()) {
                     final Formula value = context.encodeExpressionAt(r.getKey(), reader);
                     final Dependency.State state = r.getValue();

@@ -23,7 +23,7 @@ public class GenMCExternalGraph extends StaticGenMCWMMGraph {
 
     @Override
     public int size(int id, EdgeDirection dir) {
-        return domain.getElements().size() - threadEventsMap.get(getEvent(id).getThread()).size();
+        return domain.size() - threadEventsMap.get(getEvent(id).getThread()).size();
     }
 
     @Override
@@ -48,7 +48,7 @@ public class GenMCExternalGraph extends StaticGenMCWMMGraph {
     @Override
     public void repopulate() {
         threadEventsMap = trace.getThreadEventsMap();
-        int totalSize = domain.getElements().size();
+        int totalSize = domain.size();
         for (List<EventData> threadEvents : threadEventsMap.values()) {
             int threadSize = threadEvents.size();
             size += (totalSize - threadSize) * threadSize;

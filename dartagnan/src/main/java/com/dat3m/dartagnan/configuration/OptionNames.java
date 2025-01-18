@@ -40,6 +40,7 @@ public class OptionNames {
     public static final String BREAK_SYMMETRY_ON = "encoding.symmetry.breakOn";
     public static final String BREAK_SYMMETRY_BY_SYNC_DEGREE = "encoding.symmetry.orderBySyncDegree";
     public static final String IDL_TO_SAT = "encoding.wmm.idl2sat";
+    public static final String PRINT_ACYCLICITY_ENCODE_GRAPH = "encoding.wmm.acyclicity.printGraph";
 
     // Program Processing Options
     public static final String DETERMINISTIC_REORDERING = "program.processing.detReordering";
