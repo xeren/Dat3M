@@ -401,15 +401,20 @@ public class GenMCExecutionModel {
             while (e != null) {
                 long start = System.currentTimeMillis();
                 List<EventData> threadEvents = trace.getThreadEventsMap().get(thread);
+                Optional<EventData> data;
                 if (threadEvents == null || threadEvents.isEmpty() || threadEvents.get(threadEvents.size() - 1).getEvent() != e) {
                     eventFilterTime += System.currentTimeMillis() - start;
                     lastAdded = e;
-                    return addEvent(e);
+                    EventData event = addEvent(e);
+                    if (event.isMemoryEvent() || event.isJump()) {
+                        return event;
+                    }
+                    data = Optional.of(event);
                 } else {
                     eventFilterTime += System.currentTimeMillis() - start;
+                    data = trace.getData(e);
                 }
 
-                Optional<EventData> data = trace.getData(e);
                 if (e instanceof CondJump jump && data.isPresent() && data.get().wasExecuted()) {
                     e = jump.getLabel();
                 } else {
