@@ -3,6 +3,7 @@ package com.dat3m.dartagnan.utils.logic;
 import com.google.common.collect.Iterables;
 
 import java.util.*;
+import java.util.function.Function;
 
 // A formal minimal(*) disjunction of conjunctions of type T
 // The class is immutable
@@ -250,5 +251,14 @@ public class DNF<T extends Literal<T>> implements PartialOrder<DNF<T>> {
             }
         }
         return new DNF<>(result);
+    }
+
+    public boolean evaluate(Function<T, Boolean> literalEvaluator) {
+        for (Conjunction<T> reason : reasons) {
+            if (reason.evaluate(literalEvaluator)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

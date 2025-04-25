@@ -1,8 +1,14 @@
 package com.dat3m.dartagnan.solver.caat4wmm;
 
+import java.util.Set;
+
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
 
 import com.dat3m.dartagnan.solver.caat.CAATSolver;
+import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.CoreLiteral;
+import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.GenMCCoreReasoner;
+import com.dat3m.dartagnan.utils.logic.Conjunction;
+import com.dat3m.dartagnan.utils.logic.DNF;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.analysis.RelationAnalysis;
@@ -11,10 +17,12 @@ public class GenMCWMMSolver {
     
     private final GenMCExecutionGraph executionGraph;
     private final CAATSolver solver;
+    private final GenMCCoreReasoner reasoner;
 
     private GenMCWMMSolver(Wmm memoryModel, Context analysisContext) {
         final RelationAnalysis ra = analysisContext.requires(RelationAnalysis.class);
         this.executionGraph = new GenMCExecutionGraph(memoryModel, ra);
+        this.reasoner = new GenMCCoreReasoner(analysisContext, executionGraph);
         this.solver = CAATSolver.create();
     }
 
@@ -33,11 +41,18 @@ public class GenMCWMMSolver {
         long extractTime = System.currentTimeMillis() - curTime;
 
         // ============== Run the CAATSolver ==============
-        CAATSolver.Result caatResult = solver.simpleCheck(executionGraph.getCAATModel());
+        CAATSolver.Result caatResult = solver.check(executionGraph.getCAATModel());
         Result result = Result.fromCAATResult(caatResult);
         Statistics stats = result.stats;
         stats.modelExtractionTime = extractTime;
         stats.modelSize = executionGraph.getDomain().size();
+
+        if (result.getStatus() == CAATSolver.Status.INCONSISTENT) {
+            // ============== Compute Core reasons ==============
+            curTime = System.currentTimeMillis();
+            Set<Conjunction<CoreLiteral>> coreReasons = reasoner.toCoreReasons(caatResult.getBaseReasons());
+            result.coreReasons = new DNF<>(coreReasons);
+        }
 
         return result;
     }
@@ -46,13 +61,16 @@ public class GenMCWMMSolver {
 
      public static class Result {
         private CAATSolver.Status status;
+        private DNF<CoreLiteral> coreReasons;
         private Statistics stats;
 
         public CAATSolver.Status getStatus() { return status; }
+        public DNF<CoreLiteral> getCoreReasons() { return coreReasons; }
         public Statistics getStatistics() { return stats; }
 
         Result() {
             status = CAATSolver.Status.INCONCLUSIVE;
+            coreReasons = DNF.FALSE();
         }
 
         static Result fromCAATResult(CAATSolver.Result caatResult) {
@@ -67,6 +85,7 @@ public class GenMCWMMSolver {
         @Override
         public String toString() {
             return status + "\n" +
+                    coreReasons + "\n" +
                     stats;
         }
     }

@@ -15,6 +15,11 @@ import com.dat3m.dartagnan.program.specification.AssertInline;
 import com.dat3m.dartagnan.solver.caat.CAATSolver;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCWMMSolver;
+import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.AddressLiteral;
+import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.CoreLiteral;
+import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.ExecLiteral;
+import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.RelLiteral;
+import com.dat3m.dartagnan.utils.logic.DNF;
 import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.wmm.analysis.RelationAnalysis;
 import com.dat3m.dartagnan.wmm.utils.EventGraph;
@@ -60,6 +65,7 @@ public class GenMCExecutionModel {
     private boolean needsNewConsistencyCheck = true;
     private boolean lastNeedsNewConsistencyCheck = true;
     private boolean needsJumpRevisit = false;
+    private DNF<CoreLiteral> reasons = DNF.FALSE();
 
     private final EncodingContext encodingContext;
     private final GenMCTraceEncoder traceEncoder;
@@ -283,6 +289,9 @@ public class GenMCExecutionModel {
         if ((!needsNewConsistencyCheck && !ignoreLast) || (!lastNeedsNewConsistencyCheck && ignoreLast)) {
             return isConsistent;
         }
+        if (reasons.evaluate(this::evaluate)) {
+            return false;
+        }
 
         logger.debug("Checking consistency");
         EventData ignoredEvent = null;
@@ -308,8 +317,76 @@ public class GenMCExecutionModel {
             }
             isConsistent = false;
             consistencyCheckTime += System.currentTimeMillis() - start;
+            reasons = reasons.or(result.getCoreReasons());
             return false;
         }
+    }
+
+    private boolean evaluate(CoreLiteral literal) {
+        if (literal instanceof ExecLiteral lit) {
+            return evaluateExecLiteral(lit);
+        } else if (literal instanceof AddressLiteral loc) {
+            return evaluateAddressLiteral(loc);
+        } else if (literal instanceof RelLiteral lit) {
+            Optional<String> relName = lit.getRelation().getName();
+            if (relName.isEmpty()) {
+                throw new IllegalArgumentException("Expected base relation as RelLiteral");
+            }
+            if (relName.get().equals(CO)) {
+                return evaluateCoLiteral(lit);
+            } else if (relName.get().equals(RF)) {
+                return evaluateRfLiteral(lit);
+            } else {
+                throw new IllegalArgumentException("Expected " + CO + " or " + RF + " as relation for RelLiteral");
+            }
+        } else {
+            throw new IllegalArgumentException("CoreLiteral " + literal + " is not supported");
+        }
+    }
+
+    private boolean evaluateExecLiteral(ExecLiteral exec) {
+        boolean execValue = trace.getData(exec.getEvent()).isPresent();
+        return exec.isNegative() ? !execValue : execValue;
+    }
+
+    private boolean evaluateAddressLiteral(AddressLiteral address) {
+        Optional<EventData> first = trace.getData(address.getFirst());
+        Optional<EventData> second = trace.getData(address.getSecond());
+        boolean addressValue;
+        if (first.isEmpty() || second.isEmpty()) {
+            addressValue = false;
+        } else {
+            addressValue = first.get().getAccessedAddress().equals(second.get().getAccessedAddress());
+        }
+        return address.isNegative() ? !addressValue : addressValue;
+    }
+
+    private boolean evaluateCoLiteral(RelLiteral co) {
+        Optional<EventData> read = trace.getData(co.getTarget());
+        boolean coValue = false;
+        if (read.isPresent()) {
+            EventData cur = read.get();
+            while (cur != null) {
+                if (cur.getEvent() == co.getSource()) {
+                    coValue = true;
+                    break;
+                }
+                cur = cur.getCoPredecessor();
+            }
+        }
+        return co.isNegative() ? !coValue : coValue;
+    }
+
+    private boolean evaluateRfLiteral(RelLiteral rf) {
+        Optional<EventData> read = trace.getData(rf.getTarget());
+        boolean rfValue;
+        if (read.isPresent()) {
+            EventData readFrom = read.get().getReadFrom();
+            rfValue = readFrom != null && readFrom.getEvent() == rf.getSource();
+        } else {
+            rfValue = false;
+        }
+        return rf.isNegative() ? !rfValue : rfValue;
     }
 
     public boolean checkProperties() throws InterruptedException, SolverException, InvalidConfigurationException {
@@ -333,6 +410,7 @@ public class GenMCExecutionModel {
             copiedEvent.setWasExecuted(event.wasExecuted());
             copiedEvent.setNonDet(event.isNonDet());
             copiedEvent.setAccessedAddress(event.getAccessedAddress());
+            copiedEvent.setId(event.getId());
             copiedEvents.add(copiedEvent);
         });
         for (EventData event : copiedEvents) {

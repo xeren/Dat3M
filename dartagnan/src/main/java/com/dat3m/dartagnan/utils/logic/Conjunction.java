@@ -3,6 +3,7 @@ package com.dat3m.dartagnan.utils.logic;
 import com.google.common.collect.Iterables;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 // A formal minimal conjunction of ground literals of type T
@@ -180,5 +181,12 @@ public class Conjunction<T extends Literal<T>> implements PartialOrder<Conjuncti
         return new ArrayList<>(literals);
     }
 
-
+    public boolean evaluate(Function<T, Boolean> literalEvaluator) {
+        for (T literal : literals) {
+            if (!literalEvaluator.apply(literal)) {
+                return false;
+            }
+        }
+        return true;
+    }
 }
