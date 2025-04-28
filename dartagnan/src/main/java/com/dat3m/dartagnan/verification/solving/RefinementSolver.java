@@ -598,6 +598,12 @@ public class RefinementSolver extends ModelChecker {
                 rf)
             )));
         }
+        if (biases.contains(Baseline.WELL_FORMED)) {
+            // ---- acyclic (po | rf) ----
+            memoryModel.addConstraint(new Acyclicity(memoryModel.addDefinition(new Union(memoryModel.newRelation(),
+                    memoryModel.getOrCreatePredefinedRelation(PO),
+                    rf))));
+        }
         if (biases.contains(Baseline.ATOMIC_RMW)) {
             // ---- empty (rmw & fre;coe) ----
             final Relation amo = wmm.getOrCreatePredefinedRelation(AMO);

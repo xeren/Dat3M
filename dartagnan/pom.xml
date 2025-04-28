@@ -122,6 +122,7 @@
                         <argument>--genmc.numberOfConsistentExecutions=false</argument>
                         <argument>--solver=yices2</argument>
                         <argument>--method=genmc</argument>
+                        <argument>--refinement.baseline=WELL_FORMED</argument>
                     </arguments>
                 </configuration>
              </plugin>
