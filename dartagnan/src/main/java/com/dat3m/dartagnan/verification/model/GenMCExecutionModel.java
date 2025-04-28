@@ -56,6 +56,7 @@ public class GenMCExecutionModel {
     private static int consistencyChecks = 0;
     private static int consistencyCheckTime = 0;
     private static int eventFilterTime = 0;
+    private static DNF<CoreLiteral> reasons = DNF.FALSE();
 
     // ============= Model specific  =============
     private GenMCEventDomain trace;
@@ -65,7 +66,6 @@ public class GenMCExecutionModel {
     private boolean needsNewConsistencyCheck = true;
     private boolean lastNeedsNewConsistencyCheck = true;
     private boolean needsJumpRevisit = false;
-    private DNF<CoreLiteral> reasons = DNF.FALSE();
 
     private final EncodingContext encodingContext;
     private final GenMCTraceEncoder traceEncoder;
@@ -105,6 +105,7 @@ public class GenMCExecutionModel {
         GenMCWMMSolver solver = GenMCWMMSolver.withContext(task.getMemoryModel(), encodingContext.getAnalysisContext());
         ExpressionEvaluator exprEvaluator = ExpressionEvaluator.getInstance(encodingContext, prover, traceEncoder, useSMTSolver);
         GenMCExecutionModel model = new GenMCExecutionModel(encodingContext, traceEncoder, solver, properties, exprEvaluator);
+        reasons = DNF.FALSE();
         return model;
     }
 
