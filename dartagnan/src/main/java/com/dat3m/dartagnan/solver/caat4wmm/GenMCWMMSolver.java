@@ -34,22 +34,21 @@ public class GenMCWMMSolver {
         return executionGraph;
     }
 
-    public Result check(GenMCEventDomain trace) {
+    public Result check(GenMCEventDomain trace, boolean useReasoning) {
         // ============ Extract GenMCEventDomain ==============
         long curTime = System.currentTimeMillis();
         executionGraph.initializeFromDomain(trace);
         long extractTime = System.currentTimeMillis() - curTime;
 
         // ============== Run the CAATSolver ==============
-        CAATSolver.Result caatResult = solver.check(executionGraph.getCAATModel());
+        CAATSolver.Result caatResult = useReasoning ? solver.check(executionGraph.getCAATModel()) : solver.simpleCheck(executionGraph.getCAATModel());
         Result result = Result.fromCAATResult(caatResult);
         Statistics stats = result.stats;
         stats.modelExtractionTime = extractTime;
         stats.modelSize = executionGraph.getDomain().size();
 
-        if (result.getStatus() == CAATSolver.Status.INCONSISTENT) {
+        if (useReasoning && result.getStatus() == CAATSolver.Status.INCONSISTENT) {
             // ============== Compute Core reasons ==============
-            curTime = System.currentTimeMillis();
             Set<Conjunction<CoreLiteral>> coreReasons = reasoner.toCoreReasons(caatResult.getBaseReasons());
             result.coreReasons = new DNF<>(coreReasons);
         }

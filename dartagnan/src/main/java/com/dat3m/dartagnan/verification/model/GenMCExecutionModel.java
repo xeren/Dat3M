@@ -71,6 +71,7 @@ public class GenMCExecutionModel {
     private final GenMCTraceEncoder traceEncoder;
     private final GenMCWMMSolver solver;
     private final BooleanFormula properties;
+    private final boolean useReasoning;
     private final Map<Event, Set<Event>> mayRfInMap;
     private final Map<Event, Set<Event>> mayRfOutMap;
     private final Map<Event, Set<Event>> mayCoInMap;
@@ -81,11 +82,12 @@ public class GenMCExecutionModel {
     private final Map<EventData, List<EventData>> mayRfMap;
 
     private GenMCExecutionModel(EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, GenMCWMMSolver solver, BooleanFormula properties,
-            ExpressionEvaluator exprEvaluator) {
+            ExpressionEvaluator exprEvaluator, boolean useReasoning) {
         this.encodingContext = encodingContext;
         this.traceEncoder = traceEncoder;
         this.solver = solver;
         this.properties = properties;
+        this.useReasoning = useReasoning;
         RelationAnalysis relations = encodingContext.getAnalysisContext().requires(RelationAnalysis.class);
         EventGraph mayRfGraph = relations.getKnowledge(getTask().getMemoryModel().getRelation(RF)).getMaySet();
         EventGraph mayCoGraph = relations.getKnowledge(getTask().getMemoryModel().getRelation(CO)).getMaySet();
@@ -100,17 +102,17 @@ public class GenMCExecutionModel {
     }
 
     public static GenMCExecutionModel withContext(EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, ProverEnvironment prover, BooleanFormula properties,
-            boolean useSMTSolver) throws InvalidConfigurationException {
+            boolean useReasoning, boolean useSMTSolver) throws InvalidConfigurationException {
         VerificationTask task = encodingContext.getTask();
         GenMCWMMSolver solver = GenMCWMMSolver.withContext(task.getMemoryModel(), encodingContext.getAnalysisContext());
         ExpressionEvaluator exprEvaluator = ExpressionEvaluator.getInstance(encodingContext, prover, traceEncoder, useSMTSolver);
-        GenMCExecutionModel model = new GenMCExecutionModel(encodingContext, traceEncoder, solver, properties, exprEvaluator);
+        GenMCExecutionModel model = new GenMCExecutionModel(encodingContext, traceEncoder, solver, properties, exprEvaluator, useReasoning);
         reasons = DNF.FALSE();
         return model;
     }
 
     public GenMCExecutionModel newInstance(List<EventData> startTraceEvents) throws InvalidConfigurationException {
-        GenMCExecutionModel model = new GenMCExecutionModel(encodingContext, traceEncoder, solver, properties, exprEvaluator.newInstance());
+        GenMCExecutionModel model = new GenMCExecutionModel(encodingContext, traceEncoder, solver, properties, exprEvaluator.newInstance(), useReasoning);
         for (EventData startTraceEvent : startTraceEvents) {
             startTraceEvent.setId(startTraceEvents.indexOf(startTraceEvent));
         }
@@ -290,18 +292,21 @@ public class GenMCExecutionModel {
         if ((!needsNewConsistencyCheck && !ignoreLast) || (!lastNeedsNewConsistencyCheck && ignoreLast)) {
             return isConsistent;
         }
-        if (reasons.evaluate(this::evaluate)) {
-            return false;
-        }
-
-        logger.debug("Checking consistency");
         EventData ignoredEvent = null;
         if (ignoreLast) {
             ignoredEvent = trace.removeLast();
         }
+        if (useReasoning && reasons.evaluate(this::evaluate)) {
+            if (ignoredEvent != null) {
+                trace.addEvent(ignoredEvent);
+            }
+            return false;
+        }
+
+        logger.debug("Checking consistency");
         long start = System.currentTimeMillis();
         ++consistencyChecks;
-        GenMCWMMSolver.Result result = solver.check(trace);
+        GenMCWMMSolver.Result result = solver.check(trace, useReasoning);
         if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
             if (ignoredEvent != null) {
                 trace.addEvent(ignoredEvent);
@@ -312,7 +317,7 @@ public class GenMCExecutionModel {
             isConsistent = true;
             consistencyCheckTime += System.currentTimeMillis() - start;
             return true;
-        } else {
+        } else if (result.getStatus() == CAATSolver.Status.INCONSISTENT) {
             if (ignoredEvent != null) {
                 trace.addEvent(ignoredEvent);
             }
@@ -320,6 +325,8 @@ public class GenMCExecutionModel {
             consistencyCheckTime += System.currentTimeMillis() - start;
             reasons = reasons.or(result.getCoreReasons());
             return false;
+        } else {
+            throw new IllegalArgumentException("Inconclusive");
         }
     }
 
@@ -363,10 +370,10 @@ public class GenMCExecutionModel {
     }
 
     private boolean evaluateCoLiteral(RelLiteral co) {
-        Optional<EventData> read = trace.getData(co.getTarget());
+        Optional<EventData> suc = trace.getData(co.getTarget());
         boolean coValue = false;
-        if (read.isPresent()) {
-            EventData cur = read.get();
+        if (suc.isPresent()) {
+            EventData cur = suc.get();
             while (cur != null) {
                 if (cur.getEvent() == co.getSource()) {
                     coValue = true;

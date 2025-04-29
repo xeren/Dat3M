@@ -28,7 +28,9 @@ import org.sosy_lab.common.configuration.Option;
 import org.sosy_lab.common.configuration.Options;
 import org.sosy_lab.java_smt.api.*;
 
+import static com.dat3m.dartagnan.configuration.OptionNames.DELAY_CONSISTENCY_CHECKS;
 import static com.dat3m.dartagnan.configuration.OptionNames.SHOW_CONSISTENT_EXECUTIONS;
+import static com.dat3m.dartagnan.configuration.OptionNames.USE_CAAT_REASONING;
 import static com.dat3m.dartagnan.configuration.OptionNames.USE_SMT_SOLVER;
 import static java.util.function.Predicate.not;
 
@@ -51,10 +53,22 @@ public class GenMCSolver extends ModelChecker {
     private static final Logger logger = LogManager.getLogger(GenMCSolver.class);
     
     @Option(
+            name=DELAY_CONSISTENCY_CHECKS,
+            description = "Delay the consistency checks by skipping them for backward revisits and coherence",
+            secure = true)
+    boolean delayConsistencyChecks = false;
+    
+    @Option(
             name=SHOW_CONSISTENT_EXECUTIONS,
             description = "Check consistency for every complete execution to show the number of consistent executions with GenMC",
             secure = true)
     boolean showConsistentExecutions = false;
+    
+    @Option(
+            name=USE_CAAT_REASONING,
+            description = "Use CAAT reasoning to learn during exploration",
+            secure = true)
+    boolean useCaatReasoning = true;
     
     @Option(
             name=USE_SMT_SOLVER,
@@ -125,7 +139,7 @@ public class GenMCSolver extends ModelChecker {
         } else {
             properties = propertyEncoder.encodeProperties(task.getProperty());
         }
-        final GenMCExecutionModel model = GenMCExecutionModel.withContext(context, traceEncoder, prover, properties, useSMTSolver);
+        final GenMCExecutionModel model = GenMCExecutionModel.withContext(context, traceEncoder, prover, properties, useCaatReasoning, useSMTSolver);
 
         // ------------------------ Solving ------------------------
 
@@ -253,7 +267,7 @@ public class GenMCSolver extends ModelChecker {
             Collection<EventData> writePrefix = getPorfPrefix(model, event);
             Collection<EventData> relevantReads = model.getMayRfSet(event);
             relevantReads.removeIf(writePrefix::contains);
-            if (!relevantReads.isEmpty() && !event.isRMW() && !model.checkConsistency(true)) {
+            if (!delayConsistencyChecks && !relevantReads.isEmpty() && !event.isRMW() && !model.checkConsistency(true)) {
                 ++failedExecutions;
                 logger.debug("Aborting exploration: Inconsistent execution");
                 return true;
@@ -329,7 +343,7 @@ public class GenMCSolver extends ModelChecker {
             model.getTrace().addAddressInit(write);
             return visit(model);
         }
-        if (mayCoSet.size() > 1 && !model.checkConsistency(true)) {
+        if (!delayConsistencyChecks && mayCoSet.size() > 1 && !model.checkConsistency(true)) {
             ++failedExecutions;
             logger.debug("Aborting exploration: Inconsistent execution");
             return true;

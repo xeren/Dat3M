@@ -89,6 +89,9 @@ public abstract class AbstractLitmusTest {
         return Provider.fromSupplier(() -> Configuration.builder()
                 .setOption(INITIALIZE_REGISTERS, "true")
                 .setOption(USE_INTEGERS, "true")
+                .setOption(USE_SMT_SOLVER, "false")
+                .setOption(USE_CAAT_REASONING, "true")
+                .setOption(DELAY_CONSISTENCY_CHECKS, "true")
                 .build());
     }
 
