@@ -55,6 +55,7 @@ public class GenMCExecutionModel {
 
     private static int consistencyChecks = 0;
     private static int consistencyCheckTime = 0;
+    private static int reasonEvaluationTime = 0;
     private static int eventFilterTime = 0;
     private static DNF<CoreLiteral> reasons = DNF.FALSE();
 
@@ -79,7 +80,7 @@ public class GenMCExecutionModel {
     private final ExpressionEvaluator exprEvaluator;
     
     private final List<Thread> relevantThreads;
-    private final Map<EventData, List<EventData>> mayRfMap;
+    private final Map<Event, List<EventData>> mayRfMap;
 
     private GenMCExecutionModel(EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, GenMCWMMSolver solver, BooleanFormula properties,
             ExpressionEvaluator exprEvaluator, boolean useReasoning) {
@@ -113,8 +114,10 @@ public class GenMCExecutionModel {
 
     public GenMCExecutionModel newInstance(List<EventData> startTraceEvents) throws InvalidConfigurationException {
         GenMCExecutionModel model = new GenMCExecutionModel(encodingContext, traceEncoder, solver, properties, exprEvaluator.newInstance(), useReasoning);
+        int i = 0;
         for (EventData startTraceEvent : startTraceEvents) {
-            startTraceEvent.setId(startTraceEvents.indexOf(startTraceEvent));
+            startTraceEvent.setId(i);
+            ++i;
         }
         model.trace = new GenMCEventDomain(startTraceEvents, trace.getThreadEventsMap(), trace.getAddressInits(), trace.getReadWriteMap(), trace.getWriteReadsMap());
         return model;
@@ -131,6 +134,10 @@ public class GenMCExecutionModel {
         return consistencyCheckTime;
     }
 
+    public static int getReasonEvaluationTime() {
+        return reasonEvaluationTime;
+    }
+
     public static int getEventFilterTime() {
         return eventFilterTime;
     }
@@ -142,6 +149,10 @@ public class GenMCExecutionModel {
 
     public int getSolverCheckTime() {
         return exprEvaluator.getSolverCheckTime();
+    }
+
+    public int getEvaluationTime() {
+        return exprEvaluator.getEvaluationTime();
     }
 
     public VerificationTask getTask() {
@@ -179,21 +190,19 @@ public class GenMCExecutionModel {
     }
 
     public Collection<EventData> getMayRfSet(EventData event) {
-        return mayRfMap.get(event);
+        return mayRfMap.get(event.getEvent());
     }
 
     public Collection<EventData> getMayCoSet(EventData write) {
-        List<EventData> writes = trace.getElements().stream()
-                .filter(EventData::isWrite)
-                .toList();
         Event writeEvent = write.getEvent();
         BigInteger writeAddress = write.getAccessedAddress();
         Set<Event> inSet = mayCoInMap.get(writeEvent);
         Set<Event> outSet = mayCoOutMap.get(writeEvent);
         List<EventData> mayCoSet = new ArrayList<>();
         EventData currentCoPredecessor = write.getCoPredecessor();
-        for (EventData otherWrite : writes) {
-            if (writeAddress.equals(otherWrite.getAccessedAddress()) && (otherWrite == currentCoPredecessor || ((inSet != null && inSet.contains(otherWrite.getEvent())) &&
+        for (EventData otherWrite : trace.getElements()) {
+            if (otherWrite.isWrite() && writeAddress.equals(otherWrite.getAccessedAddress()) &&
+                    (otherWrite == currentCoPredecessor || ((inSet != null && inSet.contains(otherWrite.getEvent())) &&
                     (otherWrite.getCoSuccessor() == null || (outSet != null && outSet.contains(otherWrite.getCoSuccessor().getEvent())))))) {
                 mayCoSet.add(otherWrite);
             }
@@ -244,7 +253,7 @@ public class GenMCExecutionModel {
     public void setRf(EventData read, EventData write) {
         trace.setReadFrom(read, write, read.getReadFrom());
         read.setReadFrom(write);
-        List<EventData> mayRfSet = mayRfMap.get(read);
+        List<EventData> mayRfSet = mayRfMap.get(read.getEvent());
         if (mayRfSet == null || mayRfSet.size() > 1) {
             needsNewConsistencyCheck = true;
         }
@@ -296,7 +305,10 @@ public class GenMCExecutionModel {
         if (ignoreLast) {
             ignoredEvent = trace.removeLast();
         }
-        if (useReasoning && reasons.evaluate(this::evaluate)) {
+        long start = System.currentTimeMillis();
+        boolean reasonKnown = useReasoning && reasons.evaluate(this::evaluate);
+        reasonEvaluationTime += System.currentTimeMillis() - start;
+        if (reasonKnown) {
             if (ignoredEvent != null) {
                 trace.addEvent(ignoredEvent);
             }
@@ -304,7 +316,7 @@ public class GenMCExecutionModel {
         }
 
         logger.debug("Checking consistency");
-        long start = System.currentTimeMillis();
+        start = System.currentTimeMillis();
         ++consistencyChecks;
         GenMCWMMSolver.Result result = solver.check(trace, useReasoning);
         if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
@@ -354,7 +366,7 @@ public class GenMCExecutionModel {
 
     private boolean evaluateExecLiteral(ExecLiteral exec) {
         boolean execValue = trace.getData(exec.getEvent()).isPresent();
-        return exec.isNegative() ? !execValue : execValue;
+        return exec.isNegative() != execValue;
     }
 
     private boolean evaluateAddressLiteral(AddressLiteral address) {
@@ -366,7 +378,7 @@ public class GenMCExecutionModel {
         } else {
             addressValue = first.get().getAccessedAddress().equals(second.get().getAccessedAddress());
         }
-        return address.isNegative() ? !addressValue : addressValue;
+        return address.isNegative() != addressValue;
     }
 
     private boolean evaluateCoLiteral(RelLiteral co) {
@@ -382,7 +394,7 @@ public class GenMCExecutionModel {
                 cur = cur.getCoPredecessor();
             }
         }
-        return co.isNegative() ? !coValue : coValue;
+        return co.isNegative() != coValue;
     }
 
     private boolean evaluateRfLiteral(RelLiteral rf) {
@@ -394,7 +406,7 @@ public class GenMCExecutionModel {
         } else {
             rfValue = false;
         }
-        return rf.isNegative() ? !rfValue : rfValue;
+        return rf.isNegative() != rfValue;
     }
 
     public boolean checkProperties() throws InterruptedException, SolverException, InvalidConfigurationException {
@@ -415,6 +427,7 @@ public class GenMCExecutionModel {
             copiedEvent.setReadFrom(event.getReadFrom());
             copiedEvent.setCoPredecessor(event.getCoPredecessor());
             copiedEvent.setCoSuccessor(event.getCoSuccessor());
+            copiedEvent.setPoPredecessor(event.getPoPredecessor());
             copiedEvent.setWasExecuted(event.wasExecuted());
             copiedEvent.setNonDet(event.isNonDet());
             copiedEvent.setAccessedAddress(event.getAccessedAddress());
@@ -450,17 +463,20 @@ public class GenMCExecutionModel {
             if (coSuccessor == null) {
                 event.setCoSuccessor(null);
             }
+            if (event.getPoPredecessor() != null) {
+                EventData newPoPredecessor = eventMap.get(event.getPoPredecessor().getEvent());
+                event.setPoPredecessor(newPoPredecessor);
+            }
         }
         return copiedEvents;
     }
 
-    public Collection<EventData> getPorfPrefix(EventData event) {
-        List<EventData> porfPrefix = new ArrayList<>();
-        porfPrefix.addAll(getPorfPrefixPreviousPo(event));
-        if (event.isRead()) {
+    public List<EventData> getPorfPrefix(EventData event) {
+        List<EventData> porfPrefix = getPorfPrefixPreviousPo(event);
+        if (event.getReadFrom() != null) {
             porfPrefix.addAll(getPorfPrefixPreviousRf(event));
         }
-        if (event.isMemoryEvent()) {
+        if (event.getEvent() instanceof MemoryEvent) {
             porfPrefix.add(event);
         }
         return porfPrefix;
@@ -468,17 +484,18 @@ public class GenMCExecutionModel {
 
     public EventData nextEvent() throws InterruptedException, SolverException, InvalidConfigurationException {
         Event startEvent;
-        try {
-            startEvent = trace.getObjectById(0).getEvent();
-        } catch (NullPointerException e) {
-            startEvent = getProgram().getThreads().get(0).getEntry();
-        }
         int threadIndex = 0;
         boolean initialize = true;
         if (lastAdded != null) {
             startEvent = lastAdded;
             threadIndex = relevantThreads.indexOf(startEvent.getThread());
             initialize = false;
+        } else {
+            try {
+                startEvent = trace.getObjectById(0).getEvent();
+            } catch (NullPointerException e) {
+                startEvent = getProgram().getThreads().get(0).getEntry();
+            }
         }
         while (threadIndex < relevantThreads.size()) {
             Thread thread = relevantThreads.get(threadIndex);
@@ -515,15 +532,20 @@ public class GenMCExecutionModel {
     //========================== Internal methods  =========================
 
     private void initializeFields() {
-        Thread firstThread = trace.getThreadEventsMap().keySet()
-                .stream()
-                .filter(relevantThreads::contains)
-                .min(Comparator.comparingInt(relevantThreads::indexOf))
-                .get();
-        lastAdded = trace.getLastAddedThreadEvent(firstThread);
+        lastAdded = trace.getLastAddedThreadEvent(getFirstThread());
         isConsistent = true;
         needsNewConsistencyCheck = true;
         lastNeedsNewConsistencyCheck = false;
+    }
+
+    private Thread getFirstThread() {
+        Map<Thread, List<EventData>> threadEventsMap = trace.getThreadEventsMap();
+        for (Thread thread : relevantThreads) {
+            if (threadEventsMap.containsKey(thread)) {
+                return thread;
+            }
+        }
+        return null;
     }
 
     private EventData addEvent(Event e) throws InterruptedException, SolverException, InvalidConfigurationException {
@@ -532,7 +554,7 @@ public class GenMCExecutionModel {
         data.setId(trace.size());
 
         data.setWasExecuted(true);
-        if (data.isMemoryEvent()) {
+        if (e instanceof MemoryEvent) {
             // ===== Memory Events =====
             BigInteger address = exprEvaluator.evaluateAddress(data);
             if (address == null || BigInteger.ZERO.equals(address)) {
@@ -549,7 +571,7 @@ public class GenMCExecutionModel {
                 mayRfSet = mayRfSet(data);
                 mayRfSet.removeIf(mayRfEvent -> !address.equals(mayRfEvent.getAccessedAddress()));
             }
-            mayRfMap.put(data, mayRfSet);
+            mayRfMap.put(data.getEvent(), mayRfSet);
             trace.addEvent(data);
             lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
             if (!data.isRead() && !data.isWrite()) {
@@ -580,7 +602,7 @@ public class GenMCExecutionModel {
                         return data;
                     }
                     boolean wasExecuted = !BigInteger.ZERO.equals(result);
-                    logger.debug("Exploring non-deterministic jump " + jump);
+                    logger.debug("Exploring non-deterministic jump {}", jump);
                     data.setWasExecuted(wasExecuted);
                     exprEvaluator.addNonDetCondition(jump, jump.getGuard(), wasExecuted);
                     needsJumpRevisit = true;
@@ -597,8 +619,6 @@ public class GenMCExecutionModel {
                 if (assumption instanceof BoolLiteral bool) {
                     isConsistent = bool.getValue();
                 } else {
-                    List<BooleanFormula> assumptionWrapper = new ArrayList<>();
-                    assumptionWrapper.add(encodingContext.encodeExpressionAsBooleanAt(assumption, assumptionEvent));
                     isConsistent = exprEvaluator.evaluateReachability(assumption, assumptionEvent);
                     if (isConsistent) {
                         exprEvaluator.addNonDetCondition(assumptionEvent, assumption, true);
@@ -618,8 +638,7 @@ public class GenMCExecutionModel {
                 AssertInline assertion = new AssertInline(assertionEvent);
                 hasError = !checkProperties(assertion.encode(encodingContext));
             }
-        }
-        if (!trace.getElements().contains(data)) {
+        } else {
             trace.addEvent(data);
             lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
         }
@@ -653,27 +672,15 @@ public class GenMCExecutionModel {
         }
     }
 
-    private Collection<EventData> getPorfPrefixPreviousPo(EventData event) {
-        Optional<EventData> previousEvent = findPoPredecessor(event);
-        if (previousEvent.isPresent()) {
-            return getPorfPrefix(previousEvent.get());
+    private List<EventData> getPorfPrefixPreviousPo(EventData event) {
+        EventData previousEvent = event.getPoPredecessor();
+        if (previousEvent != null) {
+            return getPorfPrefix(previousEvent);
         }
         return new ArrayList<>();
     }
 
-    private Optional<EventData> findPoPredecessor(EventData event) {
-        List<EventData> threadEvents = trace.getThreadEventsMap().get(event.getEvent().getThread());
-        int eventIndex = threadEvents.indexOf(event);
-        for (int i = eventIndex - 1; i >= 0; --i) {
-            EventData current = threadEvents.get(i);
-            if (current.isMemoryEvent()) {
-                return Optional.of(current);
-            }
-        }
-        return Optional.empty();
-    }
-
-    private Collection<EventData> getPorfPrefixPreviousRf(EventData event) {
+    private List<EventData> getPorfPrefixPreviousRf(EventData event) {
         return getPorfPrefix(event.getReadFrom());
     }
 

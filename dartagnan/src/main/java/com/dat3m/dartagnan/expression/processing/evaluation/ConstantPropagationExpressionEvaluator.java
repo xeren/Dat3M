@@ -42,11 +42,12 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
     private GenMCEventDomain trace;
     private int solverCheckTime = 0;
     private int solverChecks = 0;
+    private static int evaluationTime = 0;
 
+    private static final TypeFactory types = TypeFactory.getInstance();
     private final EncodingContext encodingContext;
     private final ProverEnvironment prover;
     private final GenMCTraceEncoder traceEncoder;
-    private final Map<MemoryObject, BigInteger> staticMemoryLayout;
     private final Map<Event, BooleanFormula> cfContext = new HashMap<>();
     private final ConstantPropagator evaluator = new ConstantPropagator();
 
@@ -54,7 +55,9 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
         this.encodingContext = encodingContext;
         this.prover = prover;
         this.traceEncoder = traceEncoder;
-        this.staticMemoryLayout = traceEncoder.getStaticMemoryLayout();
+        for (Map.Entry<MemoryObject, BigInteger> address : traceEncoder.getStaticMemoryLayout().entrySet()) {
+            address.getKey().setAddress(new IntLiteral((IntegerType) types.getPointerType(), address.getValue()));
+        }
     }
 
     @Override
@@ -67,7 +70,7 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
 
     @Override
     public BigInteger evaluate(Expression expr, Event forEvent) throws SolverException, InterruptedException {
-        Expression result = evaluator.propagate(expr, forEvent);
+        Expression result = evaluator.startPropagation(expr, forEvent);
         if (result instanceof BoolLiteral bool) {
             return bool.getValue() ? BigInteger.ONE : BigInteger.ZERO;
         } else if (result instanceof IntLiteral num) {
@@ -100,7 +103,7 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
 
     @Override
     public boolean evaluateReachability(Expression expr, Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException {
-        Expression result = evaluator.propagate(expr, forEvent);
+        Expression result = evaluator.startPropagation(expr, forEvent);
         if (result instanceof BoolLiteral bool) {
             return bool.getValue();
         }
@@ -157,6 +160,11 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
     }
 
     @Override
+    public int getEvaluationTime() {
+        return evaluationTime;
+    }
+
+    @Override
     public int getSolverCheckTime() {
         return solverCheckTime;
     }
@@ -168,7 +176,6 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
     
     private class ConstantPropagator extends ExprSimplifier {
 
-        private static final TypeFactory types = TypeFactory.getInstance();
         private final Map<Register, Map.Entry<Event, Expression>> registerValues = new HashMap<>();
         private Event currentEvent = null;
 
@@ -194,7 +201,7 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
                 Store store = (Store) lastWriter.getReadFrom().getEvent();
                 result = propagate(store.getMemValue(), store);
             } else if (lastWriterEvent instanceof Alloc alloc) {
-                result = new IntLiteral((IntegerType) types.getPointerType(), staticMemoryLayout.get(alloc.getAllocatedObject()));
+                result = alloc.getAllocatedObject().getAddress();
             } else {
                 throw new UnsupportedOperationException("Cannot handle RegWriter that is neither Local, ThreadArgument, Load nor Alloc (" +
                         lastWriterEvent.getClass().getSimpleName() + ")");
@@ -205,12 +212,19 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
 
         @Override
         public Expression visitMemoryObject(MemoryObject memObj) {
-            return new IntLiteral((IntegerType) types.getPointerType(), staticMemoryLayout.get(memObj));
+            return memObj.getAddress();
         }
 
         @Override
         public Expression visitGEPExpression(GEPExpr gep) {
             throw new UnsupportedOperationException();
+        }
+
+        private Expression startPropagation(Expression expr, Event event) {
+            long time = System.currentTimeMillis();
+            Expression result = propagate(expr, event);
+            evaluationTime += System.currentTimeMillis() - time;
+            return result;
         }
 
         private Expression propagate(Expression expr, Event event) {
@@ -228,7 +242,7 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
             List<Register> valuesToRemove = new ArrayList<>();
             for (Map.Entry<Register, Map.Entry<Event, Expression>> registerValue : registerValues.entrySet()) {
                 Event event = registerValue.getValue().getKey();
-                if (trace.getData(event).isEmpty() || event == changedEvent) {
+                if (event == changedEvent || trace.getData(event).isEmpty()) {
                     valuesToRemove.add(registerValue.getKey());
                 }
             }

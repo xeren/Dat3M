@@ -34,6 +34,8 @@ public class MemoryObject extends LeafExpressionBase<Type> {
 
     private final Map<Integer, Expression> initialValues = new TreeMap<>();
 
+    private Expression address;
+
     MemoryObject(int id, Expression size, Expression alignment, Alloc allocationSite, Type ptrType) {
         super(ptrType);
         final TypeFactory types = TypeFactory.getInstance();
@@ -129,6 +131,14 @@ public class MemoryObject extends LeafExpressionBase<Type> {
         } else {
             throw new UnsupportedOperationException("Unrecognized constant value: " + value);
         }
+    }
+
+    public void setAddress(Expression address) {
+        this.address = address;
+    }
+
+    public Expression getAddress() {
+        return address;
     }
 
     @Override

@@ -2,7 +2,6 @@ package com.dat3m.dartagnan.solver.caat4wmm;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,6 +11,7 @@ import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.program.event.MemoryEvent;
 import com.dat3m.dartagnan.program.event.RegWriter;
 import com.dat3m.dartagnan.program.event.Tag;
 import com.dat3m.dartagnan.program.event.core.Init;
@@ -73,9 +73,7 @@ public class GenMCEventDomain implements Domain<EventData> {
         this.readWriteMap = new HashMap<>();
         for (EventData read : readWriteMap.keySet()) {
             Optional<EventData> readData = getData(read.getEvent());
-            if (readData.isPresent()) {
-                this.readWriteMap.put(readData.get(), readData.get().getReadFrom());
-            }
+            readData.ifPresent(eventData -> this.readWriteMap.put(eventData, eventData.getReadFrom()));
         }
         this.writeReadsMap = new HashMap<>();
         for (Map.Entry<EventData, List<EventData>> writeReads : writeReadsMap.entrySet()) {
@@ -95,7 +93,17 @@ public class GenMCEventDomain implements Domain<EventData> {
         events.add(event);
         eventMap.put(event.getEvent(), event);
         idMap.put(event.getId(), event);
-        threadEventsMap.computeIfAbsent(event.getEvent().getThread(), thread -> new ArrayList<>()).add(event);
+        List<EventData> threadEvents = threadEventsMap.computeIfAbsent(event.getEvent().getThread(), thread -> new ArrayList<>());
+        if (event.getEvent() instanceof MemoryEvent) {
+            for (int i = threadEvents.size() - 1; i >= 0; i--) {
+                EventData threadEvent = threadEvents.get(i);
+                if (threadEvent.getEvent() instanceof MemoryEvent) {
+                    event.setPoPredecessor(threadEvent);
+                    break;
+                }
+            }
+        }
+        threadEvents.add(event);
         if (event.getEvent() instanceof Init) {
             addressInits.add(event);
         }
@@ -172,7 +180,7 @@ public class GenMCEventDomain implements Domain<EventData> {
 
     @Override
     public int getId(Object obj) {
-        if (obj != null && obj instanceof EventData event) {
+        if (obj instanceof EventData event) {
             return event.getId();
         }
         throw new IllegalArgumentException("Excepted non-null object of class EventData");
@@ -239,10 +247,15 @@ public class GenMCEventDomain implements Domain<EventData> {
     }
 
     public EventData getLastRegWriter(Register reg, Event forEvent) {
-         return getElements().stream()
-                    .filter(event -> event.getEvent() instanceof RegWriter writer && writer.getResultRegister() == reg && writer.getGlobalId() < forEvent.getGlobalId())
-                    .max(Comparator.comparingInt(EventData::getId))
-                    .orElse(null);
+        int forEventId = forEvent.getGlobalId();
+        List<EventData> threadEvents = threadEventsMap.get(forEvent.getThread());
+        for (int i = threadEvents.size() - 1; i >= 0; --i) {
+            EventData event = threadEvents.get(i);
+            if (event.getEvent() instanceof RegWriter writer && writer.getResultRegister() == reg && writer.getGlobalId() < forEventId) {
+                return event;
+            }
+        }
+        return null;
     }
 
     @Override

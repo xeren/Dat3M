@@ -22,6 +22,7 @@ public class EventData implements Comparable<EventData> {
     private int coIndex = Integer.MIN_VALUE;
     private EventData coPredecessor;
     private EventData coSuccessor;
+    private EventData poPredecessor = null;
     private boolean wasExecuted;
     private Boolean isNonDet = null;
 
@@ -69,7 +70,6 @@ public class EventData implements Comparable<EventData> {
     }
     void setReadFrom(EventData store) {
         if (store != null) {
-            Preconditions.checkArgument(isRead());
             Preconditions.checkArgument(store.isWrite());
             isNonDet = store.isNonDet;
         }
@@ -99,6 +99,9 @@ public class EventData implements Comparable<EventData> {
     public void setCoPredecessor(EventData predecessor) { coPredecessor = predecessor; }
     public EventData getCoSuccessor() { return coSuccessor; }
     public void setCoSuccessor(EventData successor) { coSuccessor = successor; }
+
+    public EventData getPoPredecessor() { return poPredecessor; }
+    public void setPoPredecessor(EventData predecessor) { poPredecessor = predecessor; }
 
     public List<EventData> getCoPredecessors() {
         List<EventData> events = new ArrayList<>();
@@ -139,17 +142,6 @@ public class EventData implements Comparable<EventData> {
 
     public boolean hasTag(String tag) {
     	return event.hasTag(tag);
-    }
-
-    @Override
-    public int hashCode() {
-        return id;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        // EventData instances are unique per event.
-        return this == obj;
     }
 
     @Override

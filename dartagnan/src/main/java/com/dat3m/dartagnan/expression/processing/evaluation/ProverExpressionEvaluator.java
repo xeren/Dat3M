@@ -153,6 +153,11 @@ public class ProverExpressionEvaluator implements ExpressionEvaluator {
     }
 
     @Override
+    public int getEvaluationTime() {
+        return solverCheckTime;
+    }
+
+    @Override
     public int getSolverCheckTime() {
         return solverCheckTime;
     }

@@ -22,7 +22,7 @@ public class GenMCRMWGraph extends MaterializedGenMCWMMGraph {
         for (List<EventData> events : trace.getThreadEventsMap().values()) {
             EventData lastExclLoad = null;
             for (EventData e : events) {
-                if (e.isRead()) {
+                if (e.getReadFrom() != null) {
                     if (e.isExclusive()) {  // LoadExcl
                         lastExclLoad = e;
                     }

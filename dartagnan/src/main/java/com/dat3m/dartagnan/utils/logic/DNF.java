@@ -24,12 +24,12 @@ public class DNF<T extends Literal<T>> implements PartialOrder<DNF<T>> {
     public static <V extends Literal<V>> DNF<V> FALSE() { return FALSE; }
 
     // Using a sorted list is better (e.g. sorted by size)
-    private final Set<Conjunction<T>> reasons;
+    private final List<Conjunction<T>> reasons;
     private int hashCode;
 
     // This set should never be modified
-    public Set<Conjunction<T>> getCubes() {
-        return Collections.unmodifiableSet(reasons);
+    public List<Conjunction<T>> getCubes() {
+        return Collections.unmodifiableList(reasons);
     }
 
     public int getNumberOfCubes() {
@@ -61,25 +61,26 @@ public class DNF<T extends Literal<T>> implements PartialOrder<DNF<T>> {
             this.reasons = TRUE.reasons;
             this.hashCode = TRUE.hashCode;
         } else {
-            reasons = Collections.singleton(cube);
+            reasons = Collections.singletonList(cube);
             computeHash();
         }
     }
 
     public DNF(Collection<Conjunction<T>> reasons) {
-        this(new HashSet<>(reasons), true);
+        this(new ArrayList<>(reasons), true);
     }
 
     public DNF(Conjunction<T>... reasons) {
         this(Arrays.asList(reasons));
     }
 
-    protected DNF(Set<Conjunction<T>> reasons) {
+    protected DNF(List<Conjunction<T>> reasons) {
         this(reasons, true);
     }
 
-    protected DNF(Set<Conjunction<T>> reasons, boolean reduce) {
+    protected DNF(List<Conjunction<T>> reasons, boolean reduce) {
         this.reasons = reasons;
+        reasons.sort(Comparator.comparing(Conjunction::getSize));
         if (reduce) {
             reduce();
         }
@@ -214,7 +215,7 @@ public class DNF<T extends Literal<T>> implements PartialOrder<DNF<T>> {
             return this;
         }
 
-        Set<Conjunction<T>> result = new HashSet<>(this.reasons);
+        List<Conjunction<T>> result = new ArrayList<>(this.reasons);
         result.removeAll(reasons);
         return new DNF<>(result, false);
 
@@ -230,7 +231,7 @@ public class DNF<T extends Literal<T>> implements PartialOrder<DNF<T>> {
             return this;
         }
 
-        HashSet<Conjunction<T>> result = new HashSet<>(this.reasons);
+        List<Conjunction<T>> result = new ArrayList<>(this.reasons);
         result.addAll(other.reasons);
         return new DNF<>(result);
     }

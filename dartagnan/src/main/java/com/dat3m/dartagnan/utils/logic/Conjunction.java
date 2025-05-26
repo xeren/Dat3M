@@ -1,10 +1,17 @@
 package com.dat3m.dartagnan.utils.logic;
 
+import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.AddressLiteral;
+import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.CoreLiteral;
+import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.ExecLiteral;
+import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.RelLiteral;
 import com.google.common.collect.Iterables;
 
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
+
+import static com.dat3m.dartagnan.wmm.RelationNameRepository.CO;
+import static com.dat3m.dartagnan.wmm.RelationNameRepository.RF;
 
 // A formal minimal conjunction of ground literals of type T
 // The class is immutable
@@ -24,13 +31,13 @@ public class Conjunction<T extends Literal<T>> implements PartialOrder<Conjuncti
     public static <V extends Literal<V>> Conjunction<V> FALSE() { return FALSE; }
 
     // TODO: Using an ordered list for the literals is probably better!
-    protected final Set<T> literals;
+    protected final List<T> literals;
     protected Boolean unsat = false;
     protected int hashCode;
 
     // The returned Set should not be modified!
-    public Set<T> getLiterals() {
-        return Collections.unmodifiableSet(literals);
+    public List<T> getLiterals() {
+        return Collections.unmodifiableList(literals);
     }
 
     public boolean isTrue() {
@@ -46,7 +53,7 @@ public class Conjunction<T extends Literal<T>> implements PartialOrder<Conjuncti
     }
 
     public Conjunction(T literal) {
-        literals = Collections.singleton(literal);
+        literals = Collections.singletonList(literal);
         computeHash();
     }
 
@@ -55,10 +62,14 @@ public class Conjunction<T extends Literal<T>> implements PartialOrder<Conjuncti
     }
 
     public Conjunction(Collection<T> literals) {
-        this(new HashSet<>(literals), true);
+        this(new ArrayList<>(literals), true);
     }
 
-    protected Conjunction(HashSet<T> literals, boolean reduce) {
+    protected Conjunction(List<T> literals) {
+        this(literals, true);
+    }
+
+    protected Conjunction(List<T> literals, boolean reduce) {
         this.literals = literals;
         if (reduce) {
             reduce();
@@ -148,7 +159,7 @@ public class Conjunction<T extends Literal<T>> implements PartialOrder<Conjuncti
             return other;
         }
 
-        HashSet<T> result = new HashSet<>(this.getSize() + other.getSize());
+        ArrayList<T> result = new ArrayList<>(this.getSize() + other.getSize());
         result.addAll(this.getLiterals());
         result.addAll(other.getLiterals());
 
@@ -159,7 +170,7 @@ public class Conjunction<T extends Literal<T>> implements PartialOrder<Conjuncti
         if (this.isFalse() || this.isTrue()) {
             return this;
         }
-        HashSet<T> result = new HashSet<>(this.getSize());
+        ArrayList<T> result = new ArrayList<>(this.getSize());
         literals.stream().filter(Predicate.not(pred)).forEach(result::add);
         return new Conjunction<>(result, false);
     }
@@ -173,7 +184,7 @@ public class Conjunction<T extends Literal<T>> implements PartialOrder<Conjuncti
             b = this;
         }
 
-        Set<T> bLits = b.getLiterals();
+        List<T> bLits = b.getLiterals();
         return a.getLiterals().stream().anyMatch(lit -> bLits.contains(lit.negated()));
     }
 

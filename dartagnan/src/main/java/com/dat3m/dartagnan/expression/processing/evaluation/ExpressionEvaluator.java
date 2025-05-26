@@ -27,6 +27,7 @@ public interface ExpressionEvaluator {
     void setTrace(GenMCEventDomain trace, Event changedEvent);
     void addNonDetCondition(Event event, Expression condition, boolean isTrue);
 
+    int getEvaluationTime();
     int getSolverCheckTime();
     int getSolverChecks();
 
