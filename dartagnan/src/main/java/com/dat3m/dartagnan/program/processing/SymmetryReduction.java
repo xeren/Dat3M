@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.program.processing;
 
+import com.dat3m.dartagnan.program.IRHelper;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.analysis.ThreadSymmetry;
@@ -11,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 import org.sosy_lab.common.configuration.Configuration;
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
 
+import java.util.HashSet;
 import java.util.Set;
 
 
@@ -46,6 +48,7 @@ public class SymmetryReduction implements ProgramProcessor {
             return;
         }
 
+        final var toBeRemoved = new HashSet<Event>();
         for (EquivalenceClass<Thread> c : symmClasses) {
             Thread rep = c.getRepresentative();
             if (rep.getEvents(Assert.class).isEmpty()) {
@@ -56,13 +59,15 @@ public class SymmetryReduction implements ProgramProcessor {
 
             for (Thread t : c.stream().filter(x -> x != rep).toList()) {
                 for (Event e : t.getEvents(Assert.class)) {
-                    e.getSuccessor().tryDelete();
-                    e.tryDelete();
+                    toBeRemoved.add(e.getSuccessor());
+                    toBeRemoved.add(e);
                 }
             }
         }
-
+        final Set<Event> kept = IRHelper.bulkDelete(toBeRemoved);
         logger.info("Reduced symmetry of {} many symmetry classes", symmClasses.size());
-
+        if (!kept.isEmpty()) {
+            logger.warn("Could not remove events {}.", kept);
+        }
     }
 }

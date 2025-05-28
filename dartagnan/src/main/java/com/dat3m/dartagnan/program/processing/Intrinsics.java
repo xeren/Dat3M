@@ -321,24 +321,25 @@ public class Intrinsics {
                     String.format("Intrinsic \"%s\" without replacer", call.getCalledFunction().getName()));
         }
         final List<Event> replacement = replacer.replace(this, call);
+        // Assume replacement.contains(call) => replacement.get(0) == call
         if (replacement.isEmpty()) {
-            call.tryDelete();
+            IRHelper.tryDelete(call);
         } else if (replacement.get(0) != call) {
             if (!call.getUsers().isEmpty() && call.getUsers().stream().allMatch(ExecutionStatus.class::isInstance)) {
                 final Map<Event, Event> updateMapping = Map.of(call, replacement.get(0));
                 ImmutableList.copyOf(call.getUsers()).forEach(user -> user.updateReferences(updateMapping));
             }
-            // NOTE: We deliberately do not use the call markers, because (1) we want to distinguish between
-            // intrinsics and normal calls, and (2) we do not want to have intrinsics in the call stack.
-            // We may want to change this behaviour though.
-            call.insertBefore(EventFactory.newStringAnnotation(
-                    String.format("=== Calling intrinsic %s ===", call.getCalledFunction().getName())
-            ));
-            call.insertAfter(EventFactory.newStringAnnotation(
-                    String.format("=== Returning from intrinsic %s ===", call.getCalledFunction().getName())
-            ));
-            IRHelper.replaceWithMetadata(call, replacement);
+            IRHelper.replaceWithMetadata(call, newMarker(call, false), replacement, newMarker(call, true));
         }
+    }
+
+    private Event newMarker(FunctionCall call, boolean returning) {
+        // NOTE: We deliberately do not use the call markers, because (1) we want to distinguish between
+        // intrinsics and normal calls, and (2) we do not want to have intrinsics in the call stack.
+        // We may want to change this behaviour though.
+        final String type = returning ? "Returning from" : "Calling";
+        final String name = call.getCalledFunction().getName();
+        return EventFactory.newStringAnnotation(String.format("=== %s intrinsic %s ===", type, name));
     }
 
     // --------------------------------------------------------------------------------------------------------

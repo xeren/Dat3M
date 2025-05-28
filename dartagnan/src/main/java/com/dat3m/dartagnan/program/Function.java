@@ -148,6 +148,7 @@ public class Function implements LeafExpression {
         return found;
     }
 
+    @SuppressWarnings("deprecation")
     public void append(Event event) {
         Preconditions.checkNotNull(event);
         if (entry == null) {
@@ -156,7 +157,7 @@ public class Function implements LeafExpression {
             event.setSuccessor(null);
             event.setPredecessor(null);
         } else {
-            exit.insertAfter(event);
+            IRHelper.insertAfter(exit, event);
         }
     }
 
@@ -167,7 +168,25 @@ public class Function implements LeafExpression {
             append(Iterables.getFirst(events, null));
             events = Iterables.skip(events, 1);
         }
-        exit.insertAfter(events);
+        IRHelper.insertAfter(exit, events);
+    }
+
+    @SuppressWarnings("deprecation")
+    public void reorderEvents(List<Event> reorderedEvents) {
+        Preconditions.checkArgument(reorderedEvents.get(0) == entry, "Reordering breaks entry point.");
+        Preconditions.checkArgument(!(this instanceof Thread) || exit == reorderedEvents.get(reorderedEvents.size() - 1),
+                "Reordering breaks exit point.");
+        //TODO Assert reorderedEvents is a permutation of the current list of events.
+        Event pred = null;
+        for (Event next : reorderedEvents) {
+            next.setPredecessor(pred);
+            if (pred != null) {
+                pred.setSuccessor(next);
+            }
+            pred = next;
+        }
+        pred.setSuccessor(null);
+        updateExit(pred);
     }
 
     public void updateExit(Event event) {

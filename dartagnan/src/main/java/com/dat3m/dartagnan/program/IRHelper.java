@@ -3,6 +3,7 @@ package com.dat3m.dartagnan.program;
 import com.dat3m.dartagnan.expression.Expression;
 import com.dat3m.dartagnan.expression.booleans.BoolLiteral;
 import com.dat3m.dartagnan.expression.processing.ExprTransformer;
+import com.dat3m.dartagnan.program.event.AbstractEvent;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.EventUser;
 import com.dat3m.dartagnan.program.event.RegReader;
@@ -14,9 +15,12 @@ import com.dat3m.dartagnan.program.event.functions.Return;
 import com.dat3m.dartagnan.program.event.lang.llvm.LlvmCmpXchg;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Verify;
+import com.google.common.collect.Maps;
 
 import java.util.*;
 import java.util.function.Consumer;
+
+import static com.dat3m.dartagnan.program.event.EventFactory.eventSequence;
 
 public class IRHelper {
 
@@ -40,28 +44,104 @@ public class IRHelper {
                 || e instanceof CondJump jump && jump.isGoto();
     }
 
-    public static Set<Event> bulkDelete(Set<Event> toBeDeleted) {
-        final Set<Event> nonDeleted = new HashSet<>();
-        for (Event e : toBeDeleted) {
-            if (toBeDeleted.containsAll(e.getUsers())) {
-                e.forceDelete();
-            } else {
-                nonDeleted.add(e);
-            }
-        }
-        return nonDeleted;
+    public static void insertAfter(Event position, Event toBeInserted) {
+        insertAround(position, null, eventSequence(position, toBeInserted));
     }
 
-    public static Event replaceWithMetadata(Event event, Event replacement) {
-        event.replaceBy(replacement);
-        replacement.copyAllMetadataFrom(event);
-        return replacement;
+    public static void insertAfter(Event position, Event firstToBeInserted, Event... restToBeInserted) {
+        insertAround(position, null, eventSequence(position, firstToBeInserted, restToBeInserted));
     }
 
-    public static List<Event> replaceWithMetadata(Event event, List<Event> replacement) {
-        event.replaceBy(replacement);
+    public static void insertAfter(Event position, Iterable<? extends Event> toBeInserted) {
+        insertAround(position, null, eventSequence(position, toBeInserted));
+    }
+
+    public static void insertAfter(Event position, Object firstToBeInserted, Object... restToBeInserted) {
+        insertAround(position, null, eventSequence(position, firstToBeInserted, restToBeInserted));
+    }
+
+    public static void insertBefore(Event position, Event toBeInserted) {
+        insertAround(position, eventSequence(toBeInserted, position), null);
+    }
+
+    public static void insertBefore(Event position, Event first, Event... restToBeInserted) {
+        insertAround(position, eventSequence(first, restToBeInserted, position), null);
+    }
+
+    public static void insertBefore(Event position, Iterable<? extends Event> toBeInserted) {
+        insertAround(position, eventSequence(toBeInserted, position), null);
+    }
+
+    public static void insertBefore(Event position, Object firstToBeInserted, Object... restToBeInserted) {
+        insertAround(position, eventSequence(firstToBeInserted, restToBeInserted, position), null);
+    }
+
+    /**
+     *
+     * @param position Event already inside a program.
+     * @param before Nullable, finite sequence of events to be inserted before {@code position} in the specified order.
+     * @param after Nullable, finite sequence of events to be inserted after {@code position} in the specified order.
+     */
+    @SuppressWarnings("deprecation")
+    public static void insertAround(Event position, Iterable<? extends Event> before, Iterable<? extends Event> after) {
+        AbstractEvent.insertAround(position, before, after);
+    }
+
+    public static boolean tryDelete(Event toBeDeleted) {
+        return replace(Map.of(toBeDeleted, List.of()), false).isEmpty();
+    }
+
+    public static <E extends Event> Set<E> bulkDelete(Set<E> toBeDeleted) {
+        return replace(Maps.asMap(toBeDeleted, k -> List.of()), false);
+    }
+
+    public static void replaceWithMetadata(Event event, Event... newEvents) {
+        replaceWithMetadata(event, eventSequence(newEvents));
+    }
+
+    public static void replaceWithMetadata(Event event, Object... newEvents) {
+        replaceWithMetadata(event, eventSequence(newEvents));
+    }
+
+    public static void replaceWithMetadata(Event event, Iterable<? extends Event> replacement) {
+        replace(event, replacement);
         replacement.forEach(ev -> ev.copyAllMetadataFrom(event));
-        return replacement;
+    }
+
+    public static void replace(Event old, Event... newEvents) {
+        replace(Map.of(old, eventSequence(newEvents)), true);
+    }
+
+    public static void replace(Event old, Object... newEvents) {
+        replace(Map.of(old, eventSequence(newEvents)), true);
+    }
+
+    public static void replace(Event old, Iterable<? extends Event> newEvents) {
+        replace(Map.of(old, eventSequence(newEvents)), true);
+    }
+
+    public static <E extends Event> Set<E> replace(Map<E, ? extends List<? extends Event>> map, boolean force) {
+        return replace(map, Map.of(), force);
+    }
+
+    /**
+     * Substitutes each specified event with an associated sequence.
+     * @param map Lists the events to be replaced, as well as the sequences to replace them with.
+     * Values shall be distinct sets and may only intersect with {@code map.keySet()} in the associated key.
+     * @param dependencies Each entry states that an event can only be removed if all specified events are removed.
+     * Missing entries are equivalent to an empty value.
+     * Keys not present in {@code map.keySet()} are ignored.
+     * @param force Throw if at least one event cannot be replaced.
+     * @return All events that could not be replaced.
+     * @throws NullPointerException If {@code map == null || dependencies == null}.
+     * @throws IllegalStateException If {@code force == true} and some event cannot be replaced.
+     */
+    @SuppressWarnings("deprecation")
+    public static <E extends Event> Set<E> replace(
+            Map<E, ? extends List<? extends Event>> map,
+            Map<E, ? extends Collection<? extends E>> dependencies,
+            boolean force) {
+        return AbstractEvent.replace(map, dependencies, force);
     }
 
     public static List<Event> getEventsFromTo(Event from, Event to, boolean endInclusive) {

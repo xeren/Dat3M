@@ -5,6 +5,7 @@ import com.dat3m.dartagnan.expression.ExpressionFactory;
 import com.dat3m.dartagnan.expression.integers.*;
 import com.dat3m.dartagnan.expression.misc.ITEExpr;
 import com.dat3m.dartagnan.program.Function;
+import com.dat3m.dartagnan.program.IRHelper;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.analysis.DominatorAnalysis;
 import com.dat3m.dartagnan.program.analysis.LiveRegistersAnalysis;
@@ -120,7 +121,7 @@ public class NaiveLoopBoundAnnotation implements FunctionProcessor {
                 final Expression boundExpr = computeLoopBound(loopBody, r, counterReg,
                         initValExpr.getValueAsInt(), useDefAnalysis, preDominatorTree);
                 if (boundExpr != null) {
-                    label.insertBefore(EventFactory.Svcomp.newLoopBound(boundExpr));
+                    IRHelper.insertBefore(label, EventFactory.Svcomp.newLoopBound(boundExpr));
                     break;
                 }
             }

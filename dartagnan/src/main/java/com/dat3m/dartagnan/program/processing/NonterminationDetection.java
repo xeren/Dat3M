@@ -3,6 +3,7 @@ package com.dat3m.dartagnan.program.processing;
 import com.dat3m.dartagnan.expression.Expression;
 import com.dat3m.dartagnan.expression.type.BooleanType;
 import com.dat3m.dartagnan.expression.type.TypeFactory;
+import com.dat3m.dartagnan.program.IRHelper;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.analysis.LoopAnalysis;
@@ -111,7 +112,7 @@ public class NonterminationDetection implements ProgramProcessor {
             nonterm.addTags(Tag.NONTERMINATION);
             nonterm.copyMetadataFrom(loopHeader, SourceLocation.class);
 
-            iter.getIterationEnd().insertAfter(nonterm);
+            IRHelper.insertAfter(iter.getIterationEnd(), nonterm);
         }
 
     }

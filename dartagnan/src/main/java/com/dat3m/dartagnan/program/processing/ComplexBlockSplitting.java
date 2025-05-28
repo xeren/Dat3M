@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.program.processing;
 
 import com.dat3m.dartagnan.program.Function;
+import com.dat3m.dartagnan.program.IRHelper;
 import com.dat3m.dartagnan.program.event.EventFactory;
 import com.dat3m.dartagnan.program.event.core.CondJump;
 import com.dat3m.dartagnan.program.event.core.Label;
@@ -56,8 +57,7 @@ public class ComplexBlockSplitting implements FunctionProcessor {
             blockLabel.copyAllMetadataFrom(condJump);
             gotoLabel.copyAllMetadataFrom(condJump);
 
-            condJump.insertAfter(gotoLabel);
-            gotoLabel.insertAfter(blockLabel);
+            IRHelper.insertAfter(condJump, gotoLabel, blockLabel);
             numSplittings++;
         }
 

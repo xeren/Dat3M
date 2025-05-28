@@ -2,6 +2,7 @@ package com.dat3m.dartagnan.program.processing;
 
 import com.dat3m.dartagnan.expression.booleans.BoolLiteral;
 import com.dat3m.dartagnan.program.Function;
+import com.dat3m.dartagnan.program.IRHelper;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Tag;
@@ -37,26 +38,17 @@ public class UnreachableCodeElimination implements FunctionProcessor {
         // When running on threads, we avoid deleting the exit event.
         final Event exit = function instanceof Thread ? function.getExit() : null;
 
-        final Set<Event> reachableEvents = new HashSet<>();
-        collectReachableEvents(entry, reachableEvents);
-
-        function.getEvents().stream()
-                .filter(e -> !reachableEvents.contains(e) && e != exit && !e.hasTag(Tag.NOOPT))
-                .forEach(e -> {
-                    if (e.getUsers().stream().noneMatch(reachableEvents::contains)) {
-                        // We force delete in case there are cyclic references among dead events that prevent
-                        // normal deletion. We also only delete if the event is not referenced by a reachable one.
-                        //TODO: Maybe it is best to declare events as reachable, when they are referenced by
-                        // reachable events?
-                        e.forceDelete();
-                    }
-                });
+        final Set<Event> unreachableEvents = new HashSet<>(function.getEvents());
+        collectUnreachableEvents(entry, unreachableEvents);
+        unreachableEvents.removeIf(e -> e.hasTag(Tag.NOOPT));
+        unreachableEvents.remove(exit);
+        IRHelper.bulkDelete(unreachableEvents);
     }
 
     // Modifies the second parameter
-    private void collectReachableEvents(Event start, Set<Event> reachable) {
+    private void collectUnreachableEvents(Event start, Set<Event> unreachable) {
         Event e = start;
-        while (e != null && reachable.add(e)) {
+        while (e != null && unreachable.remove(e)) {
             if (isTerminator(e)) {
                 break;
             }
@@ -65,7 +57,7 @@ public class UnreachableCodeElimination implements FunctionProcessor {
                 if (jump.isGoto()) {
                     e = jumpTarget;
                 } else {
-                    collectReachableEvents(jumpTarget, reachable);
+                    collectUnreachableEvents(jumpTarget, unreachable);
                     e = e.getSuccessor();
                 }
             } else {

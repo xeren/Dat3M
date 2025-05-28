@@ -61,23 +61,16 @@ public interface Event extends Encoder, Comparable<Event> {
         WARNING: Directly modifying successors/predecessors can lead to inconsistent state.
         Use <insertAfter> and <replaceBy> if possible.
      */
-    void setSuccessor(Event event);
-    void setPredecessor(Event event);
-
-    /*
-        Detaches an event from the control-flow graph, allowing it to be reinserted elsewhere.
-        Use <tryDelete> if the event will not get reinserted.
+    /**
+     * @deprecated Only to be used in {@link Function}.
      */
-    void detach();
-    void forceDelete(); // DANGEROUS: Deletes the event, including all events that reference it.
-    boolean tryDelete(); // Deletes the event only if no other event references it.
-
-    void insertAfter(Event toBeInserted);
-    void insertBefore(Event toBeInserted);
-    void replaceBy(Event replacement);
-    void insertAfter(Iterable<? extends Event> toBeInserted);
-    void insertBefore(Iterable<? extends Event> toBeInserted);
-    void replaceBy(Iterable<? extends Event> replacement);
+    @Deprecated
+    void setSuccessor(Event event);
+    /**
+     * @deprecated Only to be used in {@link Function}.
+     */
+    @Deprecated
+    void setPredecessor(Event event);
 
     // ============================== Misc ==============================
 

@@ -87,7 +87,8 @@ public class Inlining implements ProgramProcessor {
             final long depth = exitToCallMap.values().stream().filter(c -> c.contains(callTarget)).count();
             if (depth > bound) {
                 final Event boundEvent = EventFactory.newTerminator(function, Tag.BOUND, Tag.NONTERMINATION, Tag.NOOPT);
-                event = IRHelper.replaceWithMetadata(call, boundEvent);
+                IRHelper.replaceWithMetadata(call, boundEvent);
+                event = boundEvent;
             } else {
                 if (callTarget instanceof Thread) {
                     throw new MalformedProgramException(
@@ -103,17 +104,13 @@ public class Inlining implements ProgramProcessor {
         // ================================ Add marker events ================================
         final Event callMarker = EventFactory.newFunctionCallMarker(callTarget.name);
         final Event returnMarker = EventFactory.newFunctionReturnMarker(callTarget.name);
-        callMarker.copyAllMetadataFrom(call);
-        returnMarker.copyAllMetadataFrom(call);
-        call.insertBefore(callMarker);
-        call.insertAfter(returnMarker);
+        IRHelper.replaceWithMetadata(call, callMarker, call, returnMarker);
         //  --- SVCOMP-specific code ---
         final boolean isSvcompAtomic = callTarget.name.startsWith("__VERIFIER_atomic");
         if (isSvcompAtomic) {
             final BeginAtomic beginAtomic = EventFactory.Svcomp.newBeginAtomic();
             final EndAtomic endAtomic = EventFactory.Svcomp.newEndAtomic(beginAtomic);
-            call.insertBefore(beginAtomic);
-            call.insertAfter(endAtomic);
+            IRHelper.replaceWithMetadata(call, beginAtomic, call, endAtomic);
         }
         // =================================================================================
 
@@ -145,11 +142,7 @@ public class Inlining implements ProgramProcessor {
                 });
         final List<Event> inlinedBody = IRHelper.copyEvents(callTarget.events, copyUpdater, new HashMap<>());
         final Label returnLabel = newLabel("EXIT_OF_CALL_" + callTarget.name + "_" + scope);
-        call.insertAfter(eventSequence(
-                parameterAssignments,
-                inlinedBody,
-                returnLabel
-        ));
+        IRHelper.insertAfter(call, parameterAssignments, inlinedBody, returnLabel);
 
         // --------- Post process inlined body ---------
         // Replace Return events by (assignment + jump)
@@ -157,15 +150,12 @@ public class Inlining implements ProgramProcessor {
         inlinedBody.stream().filter(Return.class::isInstance).map(Return.class::cast).forEach(returnEvent -> {
             final Expression expression = returnEvent.getValue().orElse(null);
             checkReturnType(resultReg, expression);
-            final List<Event> replacement = eventSequence(
-                    expression != null ? newLocal(resultReg, expression) : null,
-                    newGoto(returnLabel)
-            );
-            IRHelper.replaceWithMetadata(returnEvent, replacement);
+            final Event toResultReg = expression != null ? newLocal(resultReg, expression) : null;
+            IRHelper.replaceWithMetadata(returnEvent, toResultReg, newGoto(returnLabel));
         });
 
         final Event successor = call.getSuccessor();
-        call.tryDelete();
+        IRHelper.tryDelete(call);
         return successor;
     }
 

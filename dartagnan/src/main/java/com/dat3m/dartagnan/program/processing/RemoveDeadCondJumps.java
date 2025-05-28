@@ -3,6 +3,7 @@ package com.dat3m.dartagnan.program.processing;
 import com.dat3m.dartagnan.expression.booleans.BoolUnaryExpr;
 import com.dat3m.dartagnan.expression.integers.IntCmpExpr;
 import com.dat3m.dartagnan.program.Function;
+import com.dat3m.dartagnan.program.IRHelper;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Tag;
 import com.dat3m.dartagnan.program.event.core.CondJump;
@@ -14,8 +15,10 @@ import org.sosy_lab.common.configuration.InvalidConfigurationException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class RemoveDeadCondJumps implements FunctionProcessor {
 
@@ -39,7 +42,7 @@ public class RemoveDeadCondJumps implements FunctionProcessor {
 
     private void eliminateDeadCondJumps(Function function) {
 
-        List<Event> toBeRemoved = new ArrayList<>();
+        final var removalCandidates = new ArrayList<Event>();
         Map<Label, List<Event>> immediateLabelPredecessors = new HashMap<>();
         // We fill the map of predecessors
         Event current = function.getEntry();
@@ -48,7 +51,7 @@ public class RemoveDeadCondJumps implements FunctionProcessor {
             if (current instanceof CondJump jump) {
                 // After constant propagation some jumps have False as condition and are dead
                 if (jump.isDead()) {
-                    toBeRemoved.add(jump);
+                    removalCandidates.add(jump);
                 } else {
                     immediateLabelPredecessors.computeIfAbsent(jump.getLabel(), key -> new ArrayList<>()).add(jump);
                 }
@@ -66,17 +69,14 @@ public class RemoveDeadCondJumps implements FunctionProcessor {
                 continue;
             }
             if (next instanceof CondJump jump && preds.stream().allMatch(e -> mutuallyExclusiveIfs(jump, e))) {
-                toBeRemoved.add(next);
+                removalCandidates.add(jump);
             }
             if (preds.size() == 1 && preds.get(0).getSuccessor().equals(label)) {
-                toBeRemoved.add(label);
+                removalCandidates.add(label);
             }
         }
 
-        // Make sure to not remove "NOOPT" events.
-        toBeRemoved.removeIf(e -> e.hasTag(Tag.NOOPT));
-
-        // Here is the actual removal
+        final var marked = new HashSet<Event>();
         boolean isCurDead = false;
         Event cur = function.getEntry();
         while (cur != null) {
@@ -94,16 +94,12 @@ public class RemoveDeadCondJumps implements FunctionProcessor {
                 // so we remove it as a possible predecessor of the label.
                 immediateLabelPredecessors.get(cur.getSuccessor()).remove(cur);
             }
-            if ((isCurDead || toBeRemoved.contains(cur)) && !cur.hasTag(Tag.NOOPT)) {
+            if ((isCurDead || removalCandidates.contains(cur)) && !cur.hasTag(Tag.NOOPT)) {
                 // If the current event is dead or can be removed for another reason, we try to delete it
                 if (cur instanceof Label label) {
-                    //FIXME: We sometimes mark labels that still have jumps to them for deletion.
-                    // We should make sure to also mark the jumps for deletion, rather than explicitly deleting them here.
-                    label.getJumpSet().forEach(Event::tryDelete);
+                    marked.addAll(label.getJumpSet());
                 }
-                if (!cur.tryDelete()) {
-                    logger.warn("Failed to delete event: {}:   {}", cur.getLocalId(), cur);
-                }
+                marked.add(cur);
             }
             if (cur instanceof CondJump jump && jump.isGoto()) {
                 // The immediate successor of a goto is dead by default
@@ -111,6 +107,12 @@ public class RemoveDeadCondJumps implements FunctionProcessor {
                 isCurDead = true;
             }
             cur = succ;
+        }
+
+        // Here is the actual removal
+        final Set<Event> kept = IRHelper.bulkDelete(marked);
+        if (!kept.isEmpty()) {
+            logger.warn("Could not remove events ");
         }
     }
 

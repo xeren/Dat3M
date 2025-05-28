@@ -113,7 +113,7 @@ public class NormalizeLoops implements FunctionProcessor {
             final Label breakLabel = EventFactory.newLabel("__breakLoop_#" + counter);
             final CondJump gotoBreak = EventFactory.newGoto(breakLabel);
 
-            last.insertAfter(List.of(gotoBreak, forwardLabel, gotoRepeat, breakLabel));
+            IRHelper.insertAfter(last, gotoBreak, forwardLabel, gotoRepeat, breakLabel);
 
             for(CondJump j : backJumps) {
                 j.updateReferences(Map.of(j.getLabel(), forwardLabel));
@@ -151,7 +151,7 @@ public class NormalizeLoops implements FunctionProcessor {
             final Local initEntryPointReg = EventFactory.newLocal(entryPointReg, expressions.makeZero(entryPointType));
             final Local assignForwarderReg = EventFactory.newLocal(forwarderReg, entryPointReg);
             final Local resetEntryPointReg = EventFactory.newLocal(entryPointReg, expressions.makeZero(entryPointType));
-            function.getEntry().insertAfter(initEntryPointReg);
+            IRHelper.insertAfter(function.getEntry(), initEntryPointReg);
 
             final List<Event> forwardingInstrumentation = new ArrayList<>();
             forwardingInstrumentation.add(assignForwarderReg);
@@ -179,7 +179,7 @@ public class NormalizeLoops implements FunctionProcessor {
                                 enteringJump.getLocalId(), enteringJump, SyntacticContextAnalysis.getSourceLocationString(enteringJump));
                         throw new UnsupportedOperationException(error);
                     }
-                    enteringJump.insertBefore(EventFactory.newLocal(entryPointReg, entryPointValue));
+                    IRHelper.insertBefore(enteringJump, EventFactory.newLocal(entryPointReg, entryPointValue));
                     enteringJump.updateReferences(Map.of(entryPoint, loopBegin));
                 }
 
@@ -187,7 +187,7 @@ public class NormalizeLoops implements FunctionProcessor {
                 forwardingInstrumentation.add(forwardingJump);
             }
 
-            loopBegin.insertAfter(forwardingInstrumentation);
+            IRHelper.insertAfter(loopBegin, forwardingInstrumentation);
             loopCounter++;
         }
     }

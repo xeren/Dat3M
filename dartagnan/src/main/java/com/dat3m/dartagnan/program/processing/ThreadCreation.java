@@ -268,7 +268,7 @@ public class ThreadCreation implements ProgramProcessor {
         final Map<Register, Register> registerReplacement = IRHelper.copyOverRegisters(function.getRegisters(), thread,
                 Register::getName, false);
         final List<Event> body = IRHelper.copyEvents(function.getEvents(), IRHelper.makeRegisterReplacer(registerReplacement), new HashMap<>());
-        thread.getEntry().insertAfter(body);
+        IRHelper.insertAfter(thread.getEntry(), body);
 
         // ------------------- Create thread-local variables -------------------
         replaceThreadLocalsWithStackalloc(function.getProgram().getMemory(), thread);
@@ -308,9 +308,11 @@ public class ThreadCreation implements ProgramProcessor {
         if (creator != null) {
             // Arguments
             final List<Register> params = thread.getParameterRegisters();
+            final var arguments = new ArrayList<Event>();
             for (int i = 0; i < params.size(); i++) {
-                thread.getEntry().insertAfter(newThreadArgument(params.get(i), creator, i));
+                arguments.add(newThreadArgument(params.get(i), creator, i));
             }
+            IRHelper.insertAfter(thread.getEntry(), arguments);
 
             // We use accesses to a common memory object to synchronize creator and thread.
             final MemoryObject comAddress = function.getProgram().getMemory().allocate(1);
@@ -319,13 +321,12 @@ public class ThreadCreation implements ProgramProcessor {
 
             // Sync
             final Register startSignal = thread.newRegister("__startT" + tid, types.getBooleanType());
-            thread.getEntry().insertAfter(eventSequence(
-                    newAcquireLoad(startSignal, comAddress),
-                    newAssume(startSignal)
-            ));
+            final List<Event> loadStartSignal = newAcquireLoad(startSignal, comAddress);
+            final Event assumeStartSignal = newAssume(startSignal);
+            IRHelper.insertAfter(thread.getEntry(), loadStartSignal, assumeStartSignal);
 
             // End
-            threadReturnLabel.insertAfter(newReleaseStore(comAddress, expressions.makeFalse()));
+            IRHelper.insertAfter(threadReturnLabel, newReleaseStore(comAddress, expressions.makeFalse()));
 
             creator.setSpawnedThread(thread);
             return new ThreadData(thread, comAddress);
@@ -373,7 +374,7 @@ public class ThreadCreation implements ProgramProcessor {
             }
 
             // Insert new code & update
-            thread.getEntry().insertAfter(eventSequence(localAlloc, initialization));
+            IRHelper.insertAfter(thread.getEntry(), localAlloc, initialization);
             toLocalRegister.put(memoryObject, reg);
         }
 
@@ -467,7 +468,7 @@ public class ThreadCreation implements ProgramProcessor {
         Label endLabel = EventFactory.newLabel("END_OF_T" + thread.getId());
         copyThreadEvents(function, thread, transformer, endLabel);
         for (Return event : thread.getEvents(Return.class)) {
-            event.replaceBy(EventFactory.newGoto(returnLabel));
+            IRHelper.replace(event, EventFactory.newGoto(returnLabel));
         }
         thread.append(returnLabel);
         thread.append(endLabel);
@@ -498,7 +499,7 @@ public class ThreadCreation implements ProgramProcessor {
                 body.set(i, jumpToEnd);
             }
         }
-        thread.getEntry().insertAfter(body);
+        IRHelper.insertAfter(thread.getEntry(), body);
     }
 
     // ==============================================================================================================

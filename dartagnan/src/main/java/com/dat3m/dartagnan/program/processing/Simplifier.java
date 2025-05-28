@@ -1,15 +1,19 @@
 package com.dat3m.dartagnan.program.processing;
 
-import com.dat3m.dartagnan.expression.Expression;
 import com.dat3m.dartagnan.program.Function;
+import com.dat3m.dartagnan.program.IRHelper;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.Tag;
 import com.dat3m.dartagnan.program.event.core.CondJump;
 import com.dat3m.dartagnan.program.event.core.Label;
 import com.dat3m.dartagnan.program.event.core.annotations.FunCallMarker;
 import com.dat3m.dartagnan.program.event.core.annotations.FunReturnMarker;
 import org.sosy_lab.common.configuration.Configuration;
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
+
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Stack;
 
 public class Simplifier implements FunctionProcessor {
 
@@ -31,60 +35,44 @@ public class Simplifier implements FunctionProcessor {
     }
 
     private void simplify(Function func) {
-        Event cur = func.getEntry();
-        Event next;
-        while ((next = cur.getSuccessor()) != null) {
-            // Some simplifications are only applicable after others.
-            // Thus, we apply them iteratively until we reach a fixpoint.
-            if (!simplifyEvent(next)) {
-                // If nothing has changed, we proceed to the next event
-                cur = next;
+        final var replacement = new LinkedHashMap<Event, List<Event>>();
+        final var dependencies = new HashMap<Event, List<Event>>();
+        final var stack = new Stack<Integer>();
+        Event top = null;
+        final List<Event> events = func.getEvents();
+        for (int i = 0; i < events.size(); i++) {
+            final Event event = events.get(i);
+            if (simplifiable(event)) {
+                replacement.put(event, List.of());
+            } else if (simplifiablePair(event, null)) {
+                stack.push(i);
+                top = event;
+            } else if (simplifiablePair(top, event)) {
+                replacement.put(top, List.of());
+                replacement.put(event, List.of());
+                dependencies.put(top, events.subList(stack.peek() + 1, i));
+                dependencies.put(event, List.of(top));
+                stack.pop();
+                top = stack.empty() ? null : events.get(stack.peek());
+            } else {
+                stack.clear();
+                top = null;
             }
         }
+        IRHelper.replace(replacement, dependencies, false);
     }
 
-    private boolean simplifyEvent(Event next) {
-        if (next.hasTag(Tag.NOOPT)) {
-            return false;
-        }
-        boolean changed = false;
-        if (next instanceof CondJump jump) {
-            changed = simplifyJump(jump);
-        } else if (next instanceof Label label) {
-            changed = simplifyLabel(label);
-        } else if (next instanceof FunCallMarker fc) {
-            changed = simplifyFunCallMarkers(fc);
-        }
-        return changed;
+    private boolean simplifiable(Event event) {
+        return event instanceof Label label && label.getJumpSet().isEmpty() && label != label.getFunction().getExit();
     }
 
-    private boolean simplifyJump(CondJump jump) {
-        final Label jumpTarget = jump.getLabel();
-        final Event successor = jump.getSuccessor();
-        final Expression guard = jump.getGuard();
-        if(jumpTarget.equals(successor) && guard.getRegs().isEmpty()) {
-            return jump.tryDelete();
+    private boolean simplifiablePair(Event event, Event successor) {
+        if (event instanceof CondJump jump) {
+            return jump.getGuard().getRegs().isEmpty() && (successor == null || successor == jump.getLabel());
         }
-        return false;
-    }
-
-    private boolean simplifyLabel(Label label) {
-        if (label.getJumpSet().isEmpty() && label != label.getFunction().getExit()) {
-            return label.tryDelete();
-        }
-        return false;
-    }
-
-    private boolean simplifyFunCallMarkers(FunCallMarker call) {
-        // If simplifyEvent returns false, the function is either non-empty or we reached the return statement
-        while (simplifyEvent(call.getSuccessor())) { }
-
-        // Check if we reached the return statement
-        final Event successor = call.getSuccessor();
-        if(successor instanceof FunReturnMarker funRet && funRet.getFunctionName().equals(call.getFunctionName())) {
-            call.tryDelete();
-            successor.tryDelete();
-            return true;
+        if (event instanceof FunCallMarker fc) {
+            return successor == null ||
+                    successor instanceof FunReturnMarker fr && fc.getFunctionName().equals(fr.getFunctionName());
         }
         return false;
     }

@@ -162,8 +162,7 @@ public abstract class AbstractEvent implements Event {
         This does not properly delete the event, and it may be reinserted elsewhere.
         TODO: We should handle the edge-case where a function becomes empty after detaching.
      */
-    @Override
-    public void detach() {
+    private void detach() {
         Preconditions.checkState(function == null || function.getEntry() != function.getExit(),
                 "Cannot detach the only event %s of function %s", this, getFunction());
         if (this.predecessor != null) {
@@ -184,67 +183,105 @@ public abstract class AbstractEvent implements Event {
         this.successor = null;
     }
 
-    @Override
-    public void forceDelete() {
-        if (this instanceof EventUser user) {
-            user.getReferencedEvents().forEach(e -> e.removeUser(user));
+    /**
+     * @deprecated Only to be used directly by {@link com.dat3m.dartagnan.program.IRHelper IRHelper}.
+     */
+    @Deprecated
+    public static <K extends Event, E extends Event, V extends List<E>> Set<K> replace(
+            Map<K, V> map, Map<K, ? extends Collection<? extends K>> dependencies, boolean force) {
+        Preconditions.checkNotNull(map, "Missing substitution map.");
+        Preconditions.checkNotNull(dependencies, "Missing dependency map.");
+        final var toBeRemoved = new HashSet<K>();
+        for (Map.Entry<K, V> entry : map.entrySet()) {
+            if (!entry.getValue().contains(entry.getKey())) {
+                toBeRemoved.add(entry.getKey());
+            }
         }
-        this.detach();
+        // An event can only be removed, if all users can be removed as well.
+        final var failed = new HashSet<K>();
+        while (true) {
+            final List<K> news = toBeRemoved.stream()
+                    .filter(k -> !canDelete(k, dependencies.get(k), toBeRemoved))
+                    .toList();
+            if (news.isEmpty()) {
+                break;
+            }
+            failed.addAll(news);
+            toBeRemoved.removeAll(news);
+        }
+        // Assert that replacement is not blocked.
+        Preconditions.checkState(!force || failed.isEmpty(), "Unable to remove events %s.", failed);
+        // Assume that all values are distinct sets and that no replacements contain other keys.
+        // Remove usages.
+        for (K event : toBeRemoved) {
+            if (event instanceof EventUser user && user instanceof AbstractEvent) {
+                user.getReferencedEvents().forEach(e -> e.removeUser(user));
+            }
+        }
+        // Perform replacement.
+        for (Map.Entry<K, V> entry : map.entrySet()) {
+            if (!(entry.getKey() instanceof AbstractEvent event)) {
+                continue;
+            }
+            List<E> replacement = entry.getValue();
+            // Assume replacement consists of instances of AbstractEvent.
+            final int index = replacement.indexOf(event);
+            assert index != -1 || event.currentUsers.isEmpty();
+            final List<E> before = index == -1 ? replacement : replacement.subList(0, index);
+            event.insertBefore(before);
+            if (index != -1) {
+                event.insertAfter(replacement.subList(index + 1, replacement.size()));
+            } else if (toBeRemoved.contains(event)) {
+                // Assume no referenced event has this user.
+                event.detach();
+            }
+        }
+        return failed;
     }
 
-    @Override
-    public boolean tryDelete() {
-        if (this.currentUsers.isEmpty()) {
-            this.forceDelete();
-            return true;
-        } else {
+    private static boolean canDelete(Event event, Collection<?> dependencies, Collection<?> intention) {
+        // Never try to remove custom events.
+        if (!(event instanceof AbstractEvent e)) {
             return false;
         }
+        // Ignore events that stay.
+        if (!intention.contains(e)) {
+            return true;
+        }
+        // Fail to delete if dependencies remain.
+        if (dependencies != null && !intention.containsAll(dependencies)) {
+            return false;
+        }
+        // Fail to delete if users remain.
+        return intention.containsAll(e.currentUsers);
     }
 
-    @Override
-    public void insertAfter(Event toBeInserted) {
-        Preconditions.checkNotNull(toBeInserted);
-        insertBetween((AbstractEvent) toBeInserted, function, this, this.successor);
+    /**
+     * @deprecated Only to be used directly by {@link com.dat3m.dartagnan.program.IRHelper IRHelper}.
+     */
+    @Deprecated
+    public static void insertAround(Event position, Iterable<? extends Event> before, Iterable<? extends Event> after) {
+        Preconditions.checkArgument(position instanceof AbstractEvent,
+                "Unable to insert at custom event %s.", position);
+        ((AbstractEvent) position).insertBefore(before);
+        ((AbstractEvent) position).insertAfter(after);
     }
 
-    @Override
-    public void insertAfter(Iterable<? extends Event> toBeInserted) {
-        Event cur = this;
+    private void insertAfter(Iterable<? extends Event> toBeInserted) {
+        if (toBeInserted == null) { return; }
+        final AbstractEvent suc = successor;
+        AbstractEvent cur = this;
         for (Event next : toBeInserted) {
-            cur.insertAfter(next);
-            cur = next;
+            insertBetween((AbstractEvent) next, function, cur, suc);
+            cur = (AbstractEvent) next;
         }
     }
 
-    @Override
-    public void insertBefore(Event toBeInserted) {
-        Preconditions.checkNotNull(toBeInserted);
-        insertBetween((AbstractEvent) toBeInserted, function, this.predecessor, this);
-    }
-
-    @Override
-    public void insertBefore(Iterable<? extends Event> toBeInserted) {
+    private void insertBefore(Iterable<? extends Event> toBeInserted) {
+        if (toBeInserted == null) { return;}
         for (Event next : toBeInserted) {
-            this.insertBefore(next);
+            insertBetween((AbstractEvent) next, function, this.predecessor, this);
         }
-    }
-
-    @Override
-    public void replaceBy(Event replacement) {
-        if (replacement == this) {
-            return;
-        }
-        Preconditions.checkState(currentUsers.isEmpty(), "Cannot replace event that is still in use.");
-        this.insertAfter(replacement);
-        this.forceDelete();
-    }
-
-    @Override
-    public void replaceBy(Iterable<? extends Event> replacement) {
-        Preconditions.checkState(currentUsers.isEmpty(), "Cannot replace event that is still in use.");
-        this.insertAfter(replacement);
-        this.forceDelete();
     }
 
     private static void insertBetween(AbstractEvent toBeInserted, Function func, AbstractEvent pred, AbstractEvent succ) {

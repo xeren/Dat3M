@@ -5,6 +5,7 @@ import com.dat3m.dartagnan.expression.ExpressionFactory;
 import com.dat3m.dartagnan.expression.type.AggregateType;
 import com.dat3m.dartagnan.expression.type.TypeFactory;
 import com.dat3m.dartagnan.program.Function;
+import com.dat3m.dartagnan.program.IRHelper;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.analysis.LiveRegistersAnalysis;
@@ -134,48 +135,39 @@ public class DynamicSpinLoopDetection implements ProgramProcessor {
 
         // ---------------- Instrumentation ----------------
         // Init tracking registers
-        loop.getStart().insertAfter(List.of(
-                EventFactory.newLocal(entryLiveStateRegister, liveRegistersVector),
-                EventFactory.newLocal(globalSideEffectReg, expressions.makeFalse())
-        ));
+        final Event assignLiveState = EventFactory.newLocal(entryLiveStateRegister, liveRegistersVector);
+        final Event assignGlobalSideEffect = EventFactory.newLocal(globalSideEffectReg, expressions.makeFalse());
+        IRHelper.insertAfter(loop.getStart(), assignLiveState, assignGlobalSideEffect);
 
         // Track global side effects
+        final Expression useTempReg = expressions.makeOr(globalSideEffectReg, expressions.makeNot(tempReg));
         for (Event sideEffect : loop.globalSideEffects) {
-            final List<Event> updateSideEffect = new ArrayList<>();
-            if (sideEffect.cfImpliesExec()) {
-                updateSideEffect.add(EventFactory.newLocal(globalSideEffectReg, expressions.makeTrue()));
-            } else {
-                updateSideEffect.addAll(List.of(
-                        EventFactory.newExecutionStatus(tempReg, sideEffect),
-                        EventFactory.newLocal(globalSideEffectReg, expressions.makeOr(globalSideEffectReg, expressions.makeNot(tempReg)))
-                ));
-
-            }
-            sideEffect.insertBefore(updateSideEffect);
+            final boolean always = sideEffect.cfImpliesExec();
+            final Event checkStatus = always ? null : EventFactory.newExecutionStatus(tempReg, sideEffect);
+            final Expression globalSideEffect = always ? expressions.makeTrue() : useTempReg;
+            final Event updateGlobalSideEffect = EventFactory.newLocal(globalSideEffectReg, globalSideEffect);
+            IRHelper.insertBefore(sideEffect, checkStatus, updateGlobalSideEffect);
         }
 
         // Check if any local or global side effects occurred. If not, spin!
         final Register localSideEffectReg = func.newRegister("__localSideEffect#" + loopNum, types.getBooleanType());
         final Expression hasSideEffect = expressions.makeOr(localSideEffectReg, globalSideEffectReg);
 
-        final Event assignLocalSideEffectReg = EventFactory.newLocal(localSideEffectReg, expressions.makeNEQ(entryLiveStateRegister, liveRegistersVector));
+        final Expression localSideEffect = expressions.makeNEQ(entryLiveStateRegister, liveRegistersVector);
+        final Event assignLocalSideEffectReg = EventFactory.newLocal(localSideEffectReg, localSideEffect);
         final Event assumeSideEffect = newSpinTerminator(expressions.makeNot(hasSideEffect), loop);
-        loop.getEnd().insertBefore(List.of(
-                assignLocalSideEffectReg,
-                assumeSideEffect
-        ));
+        IRHelper.insertBefore(loop.getEnd(), assignLocalSideEffectReg, assumeSideEffect);
 
         // Special snapshot event for non-termination detection
         if (!loop.writtenLiveOnBackjumpRegisters.isEmpty()) {
-            loop.getEnd().insertBefore(
-                    EventFactory.Special.newStateSnapshot(loop.writtenLiveOnBackjumpRegisters)
-            );
+            final Event snapshot = EventFactory.Special.newStateSnapshot(loop.writtenLiveOnBackjumpRegisters);
+            IRHelper.insertBefore(loop.getEnd(), snapshot);
         }
 
         // Special case: If the loop is fully side-effect-free, we can set its unrolling bound to 1.
         if (loop.isSideEffectFree()) {
             final Event loopBound = EventFactory.Svcomp.newLoopBound(expressions.makeValue(1, types.getArchType()));
-            loop.getStart().insertBefore(loopBound);
+            IRHelper.insertAfter(loop.getStart(), loopBound);
         }
     }
 

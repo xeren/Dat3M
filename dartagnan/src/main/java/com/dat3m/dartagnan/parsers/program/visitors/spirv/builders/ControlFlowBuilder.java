@@ -2,6 +2,7 @@ package com.dat3m.dartagnan.parsers.program.visitors.spirv.builders;
 
 import com.dat3m.dartagnan.exception.ParsingException;
 import com.dat3m.dartagnan.expression.Expression;
+import com.dat3m.dartagnan.program.IRHelper;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.EventFactory;
@@ -41,7 +42,7 @@ public class ControlFlowBuilder {
                     Event event = EventFactory.newLocal(k, expressions.get(v));
                     SourceLocation loc = getPhiLocation(blockId, k);
                     if (loc != null) { event.setMetadata(loc); }
-                    lastBlockEvents.get(blockId).insertBefore(event);
+                    IRHelper.insertBefore(lastBlockEvents.get(blockId), event);
                 }));
     }
 

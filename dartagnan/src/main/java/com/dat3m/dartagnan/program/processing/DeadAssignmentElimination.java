@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.program.processing;
 
 import com.dat3m.dartagnan.program.Function;
+import com.dat3m.dartagnan.program.IRHelper;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
@@ -61,11 +62,7 @@ public class DeadAssignmentElimination implements FunctionProcessor {
                 regReader.getRegisterReads().stream().map(Register.Read::register).forEach(usedRegs::add);
             }
         }
-
-        // Here is the actual removal
-        funcEvents.stream()
-                .filter(toBeRemoved::contains)
-                .forEach(Event::tryDelete);
+        IRHelper.bulkDelete(toBeRemoved);
     }
 
     private boolean isSideEffectFree(Event event) {

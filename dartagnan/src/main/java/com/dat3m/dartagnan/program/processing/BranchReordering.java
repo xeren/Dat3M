@@ -169,22 +169,7 @@ public class BranchReordering implements FunctionProcessor {
             } else {
                 reordering = computeReordering(branches);
             }
-            final List<Event> reorderedEvents = reordering.stream().flatMap(x -> x.events.stream()).toList();
-            assert reorderedEvents.get(0) == function.getEntry();
-            if (this.function instanceof Thread) {
-                assert function.getExit() == reorderedEvents.get(reorderedEvents.size() - 1);
-            }
-
-            Event pred = null;
-            for (Event next : reorderedEvents) {
-                next.setPredecessor(pred);
-                if (pred != null) {
-                    pred.setSuccessor(next);
-                }
-                pred = next;
-            }
-            pred.setSuccessor(null);
-            this.function.updateExit(pred);
+            this.function.reorderEvents(reordering.stream().flatMap(x -> x.events.stream()).toList());
         }
     }
 }

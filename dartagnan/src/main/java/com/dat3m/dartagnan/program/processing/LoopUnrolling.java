@@ -191,7 +191,7 @@ public class LoopUnrolling implements ProgramProcessor {
                 final Label endOfLoopMarker = EventFactory.newLabel(String.format("%s%s%s", loopName, LOOP_INFO_SEPARATOR, LOOP_INFO_BOUND_SUFFIX));
                 endOfLoopMarker.addTags(Tag.NOOPT);
                 endOfLoopMarker.copyAllMetadataFrom(loopBackJump);
-                boundEvent.insertBefore(endOfLoopMarker);
+                IRHelper.insertBefore(boundEvent, endOfLoopMarker);
             } else {
                 final Consumer<Event> copyUpdater = copy -> {
                     if (copy instanceof ControlBarrier copyBar) {
@@ -202,7 +202,7 @@ public class LoopUnrolling implements ProgramProcessor {
                 final List<Event> copies = IRHelper.copyPath(loopBegin, loopBackJump, copyUpdater, copyCtx);
 
                 // Insert copy of the loop
-                loopBegin.insertBefore(copies);
+                IRHelper.insertBefore(loopBegin, copies);
                 if (iterCounter == 1) {
                     // This is the first unrolling; every outside jump to the loop header
                     // gets updated to jump to the first iteration instead.

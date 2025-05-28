@@ -104,7 +104,7 @@ public class ProgramBuilder {
                         }
                         // This comes after the loop to avoid the renaming in the initialization event
                         Event initToZero = EventFactory.newLocal(zr, expressions.makeGeneralZero(zr.getType()));
-                        func.getEntry().insertAfter(initToZero);
+                        IRHelper.insertAfter(func.getEntry(), initToZero);
                     }
                 }
             }

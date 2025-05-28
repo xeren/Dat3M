@@ -8,6 +8,7 @@ import com.dat3m.dartagnan.expression.integers.IntBinaryOp;
 import com.dat3m.dartagnan.expression.integers.IntLiteral;
 import com.dat3m.dartagnan.expression.type.TypeFactory;
 import com.dat3m.dartagnan.program.Function;
+import com.dat3m.dartagnan.program.IRHelper;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.event.core.*;
@@ -74,20 +75,21 @@ public class MemToReg implements FunctionProcessor {
 
     private void promoteAll(Function function, Matcher matcher) {
         final ExpressionFactory expressions = ExpressionFactory.getInstance();
+        final var replacement = new HashMap<Event, List<Event>>();
+        final var dependencies = new HashMap<Event, Set<Event>>();
         // Replace every unmarked address.
-        final HashMap<RegWriter, Map<Integer, Register>> replacingRegisters = new HashMap<>();
+        final var replacingRegisters = new HashMap<RegWriter, Map<Integer, Register>>();
         for (final Alloc allocation : function.getEvents(Alloc.class)) {
             if (matcher.reachabilityGraph.containsKey(allocation)) {
                 final Map<Integer, Type> registerTypes = getPrimitiveReplacementTypes(allocation);
                 if (registerTypes != null) {
                     replacingRegisters.put(allocation, new HashMap<>(Maps.transformValues(registerTypes, function::newRegister)));
-                    boolean deleted = allocation.tryDelete();
-                    assert deleted : "Allocation cannot be removed, probably because it has remaining users.";
+                    replacement.put(allocation, List.of());
+                    dependencies.put(allocation, new HashSet<>());
                 }
             }
         }
 
-        int loadCount = 0, storeCount = 0;
         // Replace all loads and stores to replaceable storage.
         for (final Map.Entry<MemoryEvent, AddressOffset> entry : matcher.accesses.entrySet()) {
             final MemoryEvent event = entry.getKey();
@@ -97,26 +99,35 @@ public class MemToReg implements FunctionProcessor {
                 continue;
             }
 
+            final Event local;
             final Register memreg = registers.get((int)access.offset);
             if (event instanceof Load load) {
                 final Register reg = load.getResultRegister();
-                assert load.getUsers().isEmpty();
-                load.replaceBy(EventFactory.newLocal(reg, expressions.makeCast(memreg, reg.getType())));
-                loadCount++;
+                local = EventFactory.newLocal(reg, expressions.makeCast(memreg, reg.getType()));
             } else if (event instanceof Store store) {
-                assert store.getUsers().isEmpty();
-                store.replaceBy(EventFactory.newLocal(memreg, expressions.makeCast(store.getMemValue(), memreg.getType())));
-                storeCount++;
+                local = EventFactory.newLocal(memreg, expressions.makeCast(store.getMemValue(), memreg.getType()));
+            } else {
+                continue;
             }
+            replacement.put(event, List.of(local));
+            final Set<Event> dependencySet = dependencies.get(access.base);
+            dependencySet.add(event);
+            dependencies.put(event, dependencySet);
         }
         // Remove involved local assignments.
         for (final Map.Entry<Local, AddressOffset> entry : matcher.assignments.entrySet()) {
             if (replacingRegisters.containsKey(entry.getValue().base)) {
-                assert entry.getKey().getUsers().isEmpty();
-                entry.getKey().tryDelete();
+                replacement.put(entry.getKey(), List.of());
             }
         }
-        if (loadCount + storeCount > 0) {
+        final Set<Event> kept = IRHelper.replace(replacement, dependencies, false);
+        if (logger.isDebugEnabled() && !kept.isEmpty()) {
+            final long allocationCount = kept.stream().filter(Alloc.class::isInstance).count();
+            logger.debug("Failed to remove {} allocations.", allocationCount);
+        }
+        if (logger.isDebugEnabled() && !replacement.isEmpty()) {
+            final long loadCount = replacement.keySet().stream().filter(Load.class::isInstance).count();
+            final long storeCount = replacement.keySet().stream().filter(Store.class::isInstance).count();
             logger.debug("Removed {} loads and {} stores in function \"{}\".", loadCount, storeCount, function.getName());
         }
     }

@@ -45,8 +45,10 @@ import com.dat3m.dartagnan.program.event.lang.spirv.*;
 import com.dat3m.dartagnan.program.event.lang.svcomp.*;
 import com.dat3m.dartagnan.program.memory.MemoryObject;
 
+import java.lang.reflect.Array;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static com.dat3m.dartagnan.program.event.FenceNameRepository.*;
 
@@ -82,10 +84,12 @@ public class EventFactory {
             if (obj == null) {
                 continue;
             }
-            if (obj instanceof Event) {
-                collector.add((Event) obj);
+            if (obj instanceof Event event) {
+                collector.add(event);
             } else if (obj instanceof Iterable<?> iter) {
                 eventSequenceInternal(iter, collector);
+            } else if (obj.getClass().isArray()) {
+                eventSequenceInternal(IntStream.range(0, Array.getLength(obj)).mapToObj(i -> Array.get(obj, i)).toList(), collector);
             } else {
                 throw new IllegalArgumentException("Cannot parse " + obj.getClass() + " as event.");
             }
