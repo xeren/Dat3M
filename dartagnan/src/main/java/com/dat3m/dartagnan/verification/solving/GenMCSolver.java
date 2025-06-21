@@ -264,16 +264,17 @@ public class GenMCSolver extends ModelChecker {
             return visitRfs(model, event);
         }
         if (event.isWrite()) {
-            if (!visitCos(model, event)) {
-                return false;
-            }
+            Collection<EventData> mayCoSet = model.getMayCoSet(event);
             Collection<EventData> writePrefix = getPorfPrefix(model, event);
             Collection<EventData> relevantReads = model.getMayRfSet(event);
             relevantReads.removeIf(writePrefix::contains);
-            if (!delayConsistencyChecks && !relevantReads.isEmpty() && !event.isRMW() && !model.checkConsistency(true)) {
+            if (!delayConsistencyChecks && (mayCoSet.size() > 1 || !relevantReads.isEmpty() && !event.isRMW()) && !model.checkConsistency(true)) {
                 ++failedExecutions;
                 logger.debug("Aborting exploration: Inconsistent execution");
                 return true;
+            }
+            if (!visitCos(model, event, mayCoSet)) {
+                return false;
             }
             for (EventData read : relevantReads) {
                 int readId = model.getTrace().getId(read);
@@ -287,7 +288,7 @@ public class GenMCSolver extends ModelChecker {
                     logger.debug("Backward revisiting load {}: {} for store {}: {}", read.getEvent().getGlobalId(),
                             read.getEvent(), event.getEvent().getGlobalId(), event.getEvent());
                     GenMCExecutionModel backwardRevisitModel = getBackwardRevisitModel(model, eventsToDelete, read, event);
-                    if (!visitCos(backwardRevisitModel, backwardRevisitModel.getTrace().getData(event.getEvent()).get())) {
+                    if (!visitCos(backwardRevisitModel, backwardRevisitModel.getTrace().getData(event.getEvent()).get(), null)) {
                         return false;
                     }
                 }
@@ -340,16 +341,13 @@ public class GenMCSolver extends ModelChecker {
         return true;
     }
 
-    private boolean visitCos(GenMCExecutionModel model, EventData write) throws SolverException, InterruptedException, InvalidConfigurationException {
-        Collection<EventData> mayCoSet = model.getMayCoSet(write);
+    private boolean visitCos(GenMCExecutionModel model, EventData write, Collection<EventData> mayCoSet) throws SolverException, InterruptedException, InvalidConfigurationException {
+        if (mayCoSet == null) {
+            mayCoSet = model.getMayCoSet(write);
+        }
         if (mayCoSet.isEmpty()) {
             model.getTrace().addAddressInit(write);
             return visit(model);
-        }
-        if (!delayConsistencyChecks && mayCoSet.size() > 1 && !model.checkConsistency(true)) {
-            ++failedExecutions;
-            logger.debug("Aborting exploration: Inconsistent execution");
-            return true;
         }
         boolean needsNewConsistencyCheck = model.needsNewConsistencyCheck();
         boolean lastNeedsNewConsistencyCheck = model.lastNeedsNewConsistencyCheck();
