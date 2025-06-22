@@ -2,6 +2,10 @@ package com.dat3m.dartagnan.solver.caat4wmm;
 
 import java.util.Set;
 
+import com.dat3m.dartagnan.configuration.GenMCReasoning;
+import com.dat3m.dartagnan.solver.caat.predicates.CAATPredicate;
+import com.dat3m.dartagnan.solver.caat.reasoning.CAATLiteral;
+import com.dat3m.dartagnan.wmm.Relation;
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
 
 import com.dat3m.dartagnan.solver.caat.CAATSolver;
@@ -13,34 +17,56 @@ import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.wmm.Wmm;
 import com.dat3m.dartagnan.wmm.analysis.RelationAnalysis;
 
+import static com.dat3m.dartagnan.wmm.RelationNameRepository.CO;
+import static com.dat3m.dartagnan.wmm.RelationNameRepository.RF;
+
 public class GenMCWMMSolver {
     
     private final GenMCExecutionGraph executionGraph;
     private final CAATSolver solver;
     private final GenMCCoreReasoner reasoner;
+    private Extractor extractor;
+
+    private final Relation rf;
+    private final Relation co;
 
     private GenMCWMMSolver(Wmm memoryModel, Context analysisContext) {
         final RelationAnalysis ra = analysisContext.requires(RelationAnalysis.class);
         this.executionGraph = new GenMCExecutionGraph(memoryModel, ra);
         this.reasoner = new GenMCCoreReasoner(analysisContext, executionGraph);
         this.solver = CAATSolver.create();
+        this.rf = memoryModel.getRelation(RF);
+        this.co = memoryModel.getRelation(CO);
     }
 
     public static GenMCWMMSolver withContext(Wmm memoryModel, Context analysisContext) throws InvalidConfigurationException {
         return new GenMCWMMSolver(memoryModel, analysisContext);
     }
 
+    public void injectExtractor(Extractor extractor) {
+        this.extractor = extractor;
+    }
+
     public GenMCExecutionGraph getExecutionGraph() {
         return executionGraph;
     }
 
-    public Result check(GenMCEventDomain trace, boolean useReasoning) {
+    public Relation getRf() {
+        return rf;
+    }
+
+    public Relation getCo() {
+        return co;
+    }
+
+    public Result check(GenMCEventDomain trace, GenMCReasoning reasoningMethod) {
         // ============ Extract GenMCEventDomain ==============
         long curTime = System.currentTimeMillis();
         executionGraph.initializeFromDomain(trace);
         long extractTime = System.currentTimeMillis() - curTime;
 
         // ============== Run the CAATSolver ==============
+        boolean useReasoning = reasoningMethod != GenMCReasoning.NONE;
         CAATSolver.Result caatResult = useReasoning ? solver.check(executionGraph.getCAATModel()) : solver.simpleCheck(executionGraph.getCAATModel());
         Result result = Result.fromCAATResult(caatResult);
         Statistics stats = result.stats;
@@ -49,11 +75,20 @@ public class GenMCWMMSolver {
 
         if (useReasoning && result.getStatus() == CAATSolver.Status.INCONSISTENT) {
             // ============== Compute Core reasons ==============
-            Set<Conjunction<CoreLiteral>> coreReasons = reasoner.toCoreReasons(caatResult.getBaseReasons());
+            DNF<CAATLiteral> baseReasons = caatResult.getBaseReasons();
+            if (extractor != null && reasoningMethod == GenMCReasoning.PATTERNS) {
+                extractor.extract(baseReasons);
+            }
+            Set<Conjunction<CoreLiteral>> coreReasons = reasoner.toCoreReasons(baseReasons);
             result.coreReasons = new DNF<>(coreReasons);
         }
 
         return result;
+    }
+
+    public void updateBase(GenMCEventDomain trace) {
+        executionGraph.initializeFromDomain(trace);
+        executionGraph.getCAATModel().getHierarchy().getBasePredicates().forEach(CAATPredicate::repopulate);
     }
 
      // ===================== Classes ======================

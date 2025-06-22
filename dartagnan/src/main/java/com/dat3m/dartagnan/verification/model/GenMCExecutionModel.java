@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.verification.model;
 
+import com.dat3m.dartagnan.configuration.GenMCReasoning;
 import com.dat3m.dartagnan.encoding.EncodingContext;
 import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
 import com.dat3m.dartagnan.expression.Expression;
@@ -13,14 +14,17 @@ import com.dat3m.dartagnan.program.event.core.*;
 import com.dat3m.dartagnan.program.event.core.threading.ThreadStart;
 import com.dat3m.dartagnan.program.specification.AssertInline;
 import com.dat3m.dartagnan.solver.caat.CAATSolver;
+import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCWMMSolver;
+import com.dat3m.dartagnan.solver.caat4wmm.PatternManager;
 import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.AddressLiteral;
 import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.CoreLiteral;
 import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.ExecLiteral;
 import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.RelLiteral;
 import com.dat3m.dartagnan.utils.logic.DNF;
 import com.dat3m.dartagnan.verification.VerificationTask;
+import com.dat3m.dartagnan.wmm.Relation;
 import com.dat3m.dartagnan.wmm.analysis.RelationAnalysis;
 import com.dat3m.dartagnan.wmm.utils.EventGraph;
 
@@ -56,6 +60,7 @@ public class GenMCExecutionModel {
     private static int consistencyChecks = 0;
     private static int consistencyCheckTime = 0;
     private static int reasonEvaluationTime = 0;
+    private static int patternEvaluationTime = 0;
     private static int eventFilterTime = 0;
     private static DNF<CoreLiteral> reasons = DNF.FALSE();
 
@@ -71,8 +76,9 @@ public class GenMCExecutionModel {
     private final EncodingContext encodingContext;
     private final GenMCTraceEncoder traceEncoder;
     private final GenMCWMMSolver solver;
+    private final PatternManager patterns;
     private final BooleanFormula properties;
-    private final boolean useReasoning;
+    private final GenMCReasoning reasoningMethod;
     private final Map<Event, Set<Event>> mayRfInMap;
     private final Map<Event, Set<Event>> mayRfOutMap;
     private final Map<Event, Set<Event>> mayCoInMap;
@@ -82,16 +88,17 @@ public class GenMCExecutionModel {
     private final List<Thread> relevantThreads;
     private final Map<Event, List<EventData>> mayRfMap;
 
-    private GenMCExecutionModel(EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, GenMCWMMSolver solver, BooleanFormula properties,
-            ExpressionEvaluator exprEvaluator, boolean useReasoning) {
+    private GenMCExecutionModel(EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, GenMCWMMSolver solver, PatternManager patterns, BooleanFormula properties,
+                                ExpressionEvaluator exprEvaluator, GenMCReasoning reasoningMethod) {
         this.encodingContext = encodingContext;
         this.traceEncoder = traceEncoder;
         this.solver = solver;
+        this.patterns = patterns;
         this.properties = properties;
-        this.useReasoning = useReasoning;
+        this.reasoningMethod = reasoningMethod;
         RelationAnalysis relations = encodingContext.getAnalysisContext().requires(RelationAnalysis.class);
-        EventGraph mayRfGraph = relations.getKnowledge(getTask().getMemoryModel().getRelation(RF)).getMaySet();
-        EventGraph mayCoGraph = relations.getKnowledge(getTask().getMemoryModel().getRelation(CO)).getMaySet();
+        EventGraph mayRfGraph = relations.getKnowledge(solver.getRf()).getMaySet();
+        EventGraph mayCoGraph = relations.getKnowledge(solver.getCo()).getMaySet();
         this.mayRfInMap = mayRfGraph.getInMap();
         this.mayRfOutMap = mayRfGraph.getOutMap();
         this.mayCoInMap = mayCoGraph.getInMap();
@@ -103,17 +110,19 @@ public class GenMCExecutionModel {
     }
 
     public static GenMCExecutionModel withContext(EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, ProverEnvironment prover, BooleanFormula properties,
-            boolean useReasoning, boolean useSMTSolver) throws InvalidConfigurationException {
+                                                  GenMCReasoning useReasoning, boolean useSMTSolver) throws InvalidConfigurationException {
         VerificationTask task = encodingContext.getTask();
         GenMCWMMSolver solver = GenMCWMMSolver.withContext(task.getMemoryModel(), encodingContext.getAnalysisContext());
+        PatternManager patterns = new PatternManager(solver.getExecutionGraph());
+        solver.injectExtractor(patterns);
         ExpressionEvaluator exprEvaluator = ExpressionEvaluator.getInstance(encodingContext, prover, traceEncoder, useSMTSolver);
-        GenMCExecutionModel model = new GenMCExecutionModel(encodingContext, traceEncoder, solver, properties, exprEvaluator, useReasoning);
+        GenMCExecutionModel model = new GenMCExecutionModel(encodingContext, traceEncoder, solver, patterns, properties, exprEvaluator, useReasoning);
         reasons = DNF.FALSE();
         return model;
     }
 
     public GenMCExecutionModel newInstance(List<EventData> startTraceEvents) throws InvalidConfigurationException {
-        GenMCExecutionModel model = new GenMCExecutionModel(encodingContext, traceEncoder, solver, properties, exprEvaluator.newInstance(), useReasoning);
+        GenMCExecutionModel model = new GenMCExecutionModel(encodingContext, traceEncoder, solver, patterns, properties, exprEvaluator.newInstance(), reasoningMethod);
         int i = 0;
         for (EventData startTraceEvent : startTraceEvents) {
             startTraceEvent.setId(i);
@@ -136,6 +145,10 @@ public class GenMCExecutionModel {
 
     public static int getReasonEvaluationTime() {
         return reasonEvaluationTime;
+    }
+
+    public static int getPatternEvaluationTime() {
+        return patternEvaluationTime;
     }
 
     public static int getEventFilterTime() {
@@ -306,7 +319,7 @@ public class GenMCExecutionModel {
             ignoredEvent = trace.removeLast();
         }
         long start = System.currentTimeMillis();
-        boolean reasonKnown = useReasoning && reasons.evaluate(this::evaluate);
+        boolean reasonKnown = reasoningMethod != GenMCReasoning.NONE && reasons.evaluate(this::evaluate);
         reasonEvaluationTime += System.currentTimeMillis() - start;
         if (reasonKnown) {
             if (ignoredEvent != null) {
@@ -315,10 +328,23 @@ public class GenMCExecutionModel {
             return false;
         }
 
+        if (reasoningMethod == GenMCReasoning.PATTERNS) {
+            start = System.currentTimeMillis();
+            solver.updateBase(trace);
+            boolean patternKnown = hasPattern();
+            patternEvaluationTime += System.currentTimeMillis() - start;
+            if (patternKnown) {
+                if (ignoredEvent != null) {
+                    trace.addEvent(ignoredEvent);
+                }
+                return false;
+            }
+        }
+
         logger.debug("Checking consistency");
         start = System.currentTimeMillis();
         ++consistencyChecks;
-        GenMCWMMSolver.Result result = solver.check(trace, useReasoning);
+        GenMCWMMSolver.Result result = solver.check(trace, reasoningMethod);
         if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
             if (ignoredEvent != null) {
                 trace.addEvent(ignoredEvent);
@@ -407,6 +433,30 @@ public class GenMCExecutionModel {
             rfValue = false;
         }
         return rf.isNegative() != rfValue;
+    }
+
+    private boolean hasPattern() {
+        Relation rf = solver.getRf();
+        for (Map.Entry<EventData, EventData> rfEntry : trace.getReadWriteMap().entrySet()) {
+            Edge rfEdge = new Edge(rfEntry.getKey().getId(), rfEntry.getValue().getId());
+            if (patterns.isViolated(rfEdge, rf)) {
+                return true;
+            }
+        }
+        Relation co = solver.getCo();
+        for (EventData addressInit : trace.getAddressInits()) {
+            int initId = addressInit.getId();
+            EventData firstOverride = addressInit.getCoSuccessor();
+            if (firstOverride != null) {
+                for (EventData coSuccessor : firstOverride.getCoSuccessors()) {
+                    Edge coEdge = new Edge(initId, coSuccessor.getId());
+                    if (patterns.isViolated(coEdge, co)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     public boolean checkProperties() throws InterruptedException, SolverException, InvalidConfigurationException {

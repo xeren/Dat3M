@@ -112,6 +112,8 @@ public class GenMCExecutionGraph {
 
     public GenMCEventDomain getDomain() { return domain; }
 
+    public Wmm getMemoryModel() { return memoryModel; }
+
     public BiMap<Relation, RelationGraph> getRelationGraphMap() {
         return Maps.unmodifiableBiMap(relationGraphMap);
     }

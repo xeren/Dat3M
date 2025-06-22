@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.litmus;
 
 import com.dat3m.dartagnan.configuration.Arch;
+import com.dat3m.dartagnan.configuration.GenMCReasoning;
 import com.dat3m.dartagnan.configuration.ProgressModel;
 import com.dat3m.dartagnan.configuration.Property;
 import com.dat3m.dartagnan.encoding.ProverWithTracker;
@@ -90,7 +91,7 @@ public abstract class AbstractLitmusTest {
                 .setOption(INITIALIZE_REGISTERS, "true")
                 .setOption(USE_INTEGERS, "true")
                 .setOption(USE_SMT_SOLVER, "false")
-                .setOption(USE_CAAT_REASONING, "true")
+                .setOption(REASONING, GenMCReasoning.PATTERNS.asStringOption())
                 .setOption(DELAY_CONSISTENCY_CHECKS, "true")
                 .build());
     }

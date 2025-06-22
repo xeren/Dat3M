@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.llvm;
 
 import com.dat3m.dartagnan.configuration.Arch;
+import com.dat3m.dartagnan.configuration.GenMCReasoning;
 import com.dat3m.dartagnan.configuration.OptionNames;
 import com.dat3m.dartagnan.configuration.ProgressModel;
 import com.dat3m.dartagnan.configuration.Property;
@@ -45,7 +46,7 @@ public abstract class AbstractCTest {
         return Configuration.builder()
                 .setOption(OptionNames.USE_INTEGERS, "true")
                 .setOption(OptionNames.USE_SMT_SOLVER, "false")
-                .setOption(OptionNames.USE_CAAT_REASONING, "true")
+                .setOption(OptionNames.REASONING, GenMCReasoning.PATTERNS.asStringOption())
                 .setOption(OptionNames.DELAY_CONSISTENCY_CHECKS, "true")
                 .build();
     }

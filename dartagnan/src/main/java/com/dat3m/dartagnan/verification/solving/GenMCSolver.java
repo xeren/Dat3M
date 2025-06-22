@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.verification.solving;
 
+import com.dat3m.dartagnan.configuration.GenMCReasoning;
 import com.dat3m.dartagnan.configuration.Property;
 import com.dat3m.dartagnan.encoding.EncodingContext;
 import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
@@ -31,7 +32,7 @@ import org.sosy_lab.java_smt.api.*;
 
 import static com.dat3m.dartagnan.configuration.OptionNames.DELAY_CONSISTENCY_CHECKS;
 import static com.dat3m.dartagnan.configuration.OptionNames.SHOW_CONSISTENT_EXECUTIONS;
-import static com.dat3m.dartagnan.configuration.OptionNames.USE_CAAT_REASONING;
+import static com.dat3m.dartagnan.configuration.OptionNames.REASONING;
 import static com.dat3m.dartagnan.configuration.OptionNames.USE_SMT_SOLVER;
 import static java.util.function.Predicate.not;
 
@@ -66,10 +67,10 @@ public class GenMCSolver extends ModelChecker {
     boolean showConsistentExecutions = false;
     
     @Option(
-            name=USE_CAAT_REASONING,
-            description = "Use CAAT reasoning to learn during exploration",
+            name=REASONING,
+            description = "Reasoning method to learn during exploration",
             secure = true)
-    boolean useCaatReasoning = true;
+    GenMCReasoning reasoningMethod = GenMCReasoning.getDefault();
     
     @Option(
             name=USE_SMT_SOLVER,
@@ -140,7 +141,7 @@ public class GenMCSolver extends ModelChecker {
         } else {
             properties = propertyEncoder.encodeProperties(task.getProperty());
         }
-        final GenMCExecutionModel model = GenMCExecutionModel.withContext(context, traceEncoder, prover, properties, useCaatReasoning, useSMTSolver);
+        final GenMCExecutionModel model = GenMCExecutionModel.withContext(context, traceEncoder, prover, properties, reasoningMethod, useSMTSolver);
 
         // ------------------------ Solving ------------------------
 
@@ -191,7 +192,12 @@ public class GenMCSolver extends ModelChecker {
             logger.info("Total consistency check time: {}", Utils.toTimeString(consistencyCheckTime));
             logger.info("Average consistency check time: {}", Utils.toTimeString((consistencyCheckTime + consistencyChecks / 2) / consistencyChecks));
         }
-        logger.info("Total reason evaluation time: {}", Utils.toTimeString(GenMCExecutionModel.getReasonEvaluationTime()));
+        if (reasoningMethod != GenMCReasoning.NONE) {
+            logger.info("Total reason evaluation time: {}", Utils.toTimeString(GenMCExecutionModel.getReasonEvaluationTime()));
+            if (reasoningMethod == GenMCReasoning.PATTERNS) {
+                logger.info("Total pattern evaluation time: {}", Utils.toTimeString(GenMCExecutionModel.getPatternEvaluationTime()));
+            }
+        }
 
         logger.info("Total encoding time: {}", Utils.toTimeString(traceEncoder.getEncodingTime()));
         logger.info("Total porf-prefix calculation time: {}", Utils.toTimeString(porfPrefixTime));
