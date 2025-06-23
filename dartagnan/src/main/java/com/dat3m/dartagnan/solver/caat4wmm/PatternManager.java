@@ -7,10 +7,7 @@ import com.dat3m.dartagnan.utils.logic.Conjunction;
 import com.dat3m.dartagnan.utils.logic.DNF;
 import com.dat3m.dartagnan.wmm.Relation;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class PatternManager implements Extractor {
 
@@ -23,6 +20,7 @@ public class PatternManager implements Extractor {
 
     @Override
     public void extract(DNF<CAATLiteral> inconsistencyReasons) {
+        List<ViolationPattern> newPatterns = new ArrayList<>();
         REASON_LOOP:
         for (Conjunction<CAATLiteral> reason : inconsistencyReasons.getCubes()) {
             ViolationPattern pattern = new ViolationPattern();
@@ -50,8 +48,29 @@ public class PatternManager implements Extractor {
                     pattern.addEdge(rel, firstNode, secondNode, false);
                 } else continue REASON_LOOP;
             }
-            patterns.add(pattern);
+            if (!existsPattern(newPatterns, pattern)) {
+                newPatterns.add(pattern);
+            }
         }
+        patterns.addAll(newPatterns);
+    }
+
+    private boolean existsPattern(List<ViolationPattern> patterns, ViolationPattern pattern) {
+        PATTERN_LOOP:
+        for (ViolationPattern otherPattern : patterns) {
+            if (pattern.edges.size() == otherPattern.edges.size()) {
+                for (int i = 0; i < pattern.edges.size(); ++i) {
+                    ViolationPattern.Edge thisEdge = pattern.edges.get(i);
+                    ViolationPattern.Edge otherEdge = otherPattern.edges.get(i);
+                    if (thisEdge.relation() != otherEdge.relation() || thisEdge.isNegated() != otherEdge.isNegated()
+                            || thisEdge.from().id() != otherEdge.from().id() || thisEdge.to().id() != otherEdge.to().id()) {
+                        continue PATTERN_LOOP;
+                    }
+                }
+                return true;
+            }
+        }
+        return false;
     }
 
     public boolean isViolated(Edge edge, Relation relation) {

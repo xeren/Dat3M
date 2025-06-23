@@ -438,7 +438,7 @@ public class GenMCExecutionModel {
     private boolean hasPattern() {
         Relation rf = solver.getRf();
         for (Map.Entry<EventData, EventData> rfEntry : trace.getReadWriteMap().entrySet()) {
-            Edge rfEdge = new Edge(rfEntry.getKey().getId(), rfEntry.getValue().getId());
+            Edge rfEdge = new Edge(rfEntry.getValue().getId(), rfEntry.getKey().getId());
             if (patterns.isViolated(rfEdge, rf)) {
                 return true;
             }
