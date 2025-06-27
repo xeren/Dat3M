@@ -29,7 +29,7 @@ public class GenMCReadFromGraph extends StaticGenMCWMMGraph {
 
     @Override
     public void repopulate() {
-        if (!isRepopulateAllowed()) return;
+        if (isRepopulateForbidden()) return;
         size = trace.getReadWriteMap().size();
     }
 
@@ -39,7 +39,7 @@ public class GenMCReadFromGraph extends StaticGenMCWMMGraph {
 
     @Override
     public List<EventData> inEvents(EventData event) {
-        if (event.isRead() && event.getReadFrom() != null) {
+        if (event.getReadFrom() != null) {
             return Collections.singletonList(event.getReadFrom());
         } else {
             return Collections.emptyList();
@@ -67,7 +67,7 @@ public class GenMCReadFromGraph extends StaticGenMCWMMGraph {
         if (e.isWrite()) {
             return dir == EdgeDirection.INGOING ? Stream.empty() :
                     trace.getWriteReadsMap().getOrDefault(e, new ArrayList<>()).stream().map(read -> makeEdge(id, read.getId()));
-        } else if (e.isRead() && e.getReadFrom() != null) {
+        } else if (e.getReadFrom() != null) {
             return dir == EdgeDirection.INGOING ?
                     Stream.of(new Edge(e.getReadFrom().getId(), id)) : Stream.empty();
         } else {

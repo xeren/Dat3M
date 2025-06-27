@@ -131,7 +131,7 @@ public class GenMCExecutionModel {
             ++i;
         }
         model.trace = new GenMCEventDomain(startTraceEvents, trace.getThreadEventsMap(), trace.getAddressInits(), trace.getReadWriteMap(),
-                trace.getWriteReadsMap(), reasoningMethod == GenMCReasoning.PATTERNS);
+                trace.getWriteReadsMap());
         List<EventData> newAddedEvents = addedEvents.stream()
                 .map(EventData::getEvent)
                 .map(model.trace::getData)
@@ -238,7 +238,7 @@ public class GenMCExecutionModel {
 
     public void initialize() throws InterruptedException, SolverException, InvalidConfigurationException {
         List<Init> inits = getProgram().getThreadEvents(Init.class);
-        setTrace(new GenMCEventDomain(reasoningMethod == GenMCReasoning.PATTERNS), null);
+        setTrace(new GenMCEventDomain(), null);
         for (Init init : inits) {
             Thread initThread = init.getThread();
             relevantThreads.remove(initThread);
@@ -349,7 +349,7 @@ public class GenMCExecutionModel {
 
         if (reasoningMethod == GenMCReasoning.PATTERNS) {
             start = System.currentTimeMillis();
-            solver.updateBase(trace);
+            solver.updateBasePredicates(trace);
             List<EventData> checkedEvents = hasPattern();
             boolean patternKnown = checkedEvents.size() != addedEvents.size();
             patternEvaluationTime += System.currentTimeMillis() - start;
@@ -545,6 +545,7 @@ public class GenMCExecutionModel {
             copiedEvent.setNonDet(event.isNonDet());
             copiedEvent.setAccessedAddress(event.getAccessedAddress());
             copiedEvent.setId(event.getId());
+            copiedEvent.setLocalId(event.getLocalId());
             copiedEvents.add(copiedEvent);
         });
         for (EventData event : copiedEvents) {

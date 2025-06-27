@@ -43,6 +43,7 @@ public abstract class MaterializedGenMCWMMGraph extends AbstractGenMCWMMGraph {
 
     @Override
     public void initializeToDomain(Domain<?> domain) {
+        if (isDomainInitForbidden()) return;
         super.initializeToDomain(domain);
         simpleGraph.initializeToDomain(domain);
     }

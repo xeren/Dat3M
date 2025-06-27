@@ -36,6 +36,7 @@ public abstract class StaticGenMCWMMGraph extends AbstractGenMCWMMGraph {
 
     @Override
     public void initializeToDomain(Domain<?> domain) {
+        if (isDomainInitForbidden()) return;
         super.initializeToDomain(domain);
         size = 0;
     }

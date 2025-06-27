@@ -34,9 +34,8 @@ public class GenMCEventDomain implements Domain<EventData> {
     private final List<EventData> addressInits;
     private final Map<EventData, EventData> readWriteMap;
     private final Map<EventData, List<EventData>> writeReadsMap;
-    private final boolean usesPatterns;
 
-    public GenMCEventDomain(boolean usesPatterns) {
+    public GenMCEventDomain() {
         this.events = new ArrayList<>();
         this.eventMap = new HashMap<>();
         this.idMap = new HashMap<>();
@@ -44,11 +43,10 @@ public class GenMCEventDomain implements Domain<EventData> {
         this.addressInits = new ArrayList<>();
         this.readWriteMap = new HashMap<>();
         this.writeReadsMap = new HashMap<>();
-        this.usesPatterns = usesPatterns;
     }
 
     public GenMCEventDomain(Collection<EventData> events, Map<Thread, List<EventData>> threadEventsMap, List<EventData> addressInits, Map<EventData, EventData> readWriteMap,
-                            Map<EventData, List<EventData>> writeReadsMap, boolean usesPatterns) {
+                            Map<EventData, List<EventData>> writeReadsMap) {
         this.events = new ArrayList<>(events);
         this.eventMap = new HashMap<>();
         this.idMap = new HashMap<>();
@@ -62,7 +60,7 @@ public class GenMCEventDomain implements Domain<EventData> {
                     .map(e -> getData(e.getEvent()))
                     .filter(Optional::isPresent)
                     .map(Optional::get)
-                    .collect(toList());;
+                    .collect(toList());
             if (!newThreadEvents.isEmpty()) {
                 this.threadEventsMap.put(threadEvents.getKey(), newThreadEvents);
             }
@@ -89,11 +87,6 @@ public class GenMCEventDomain implements Domain<EventData> {
                 this.writeReadsMap.put(writeData.get(), newWriteReads);
             }
         }
-        this.usesPatterns = usesPatterns;
-    }
-
-    public boolean usesPatterns() {
-        return usesPatterns;
     }
 
     public void addEvent(EventData event) {
@@ -101,6 +94,7 @@ public class GenMCEventDomain implements Domain<EventData> {
         eventMap.put(event.getEvent(), event);
         idMap.put(event.getId(), event);
         List<EventData> threadEvents = threadEventsMap.computeIfAbsent(event.getEvent().getThread(), thread -> new ArrayList<>());
+        event.setLocalId(threadEvents.size());
         if (event.getEvent() instanceof MemoryEvent) {
             for (int i = threadEvents.size() - 1; i >= 0; i--) {
                 EventData threadEvent = threadEvents.get(i);
@@ -198,10 +192,6 @@ public class GenMCEventDomain implements Domain<EventData> {
     @Override
     public EventData getObjectById(int id) {
         return idMap.get(id);
-    }
-
-    public int getLocalId(EventData event) {
-        return threadEventsMap.get(event.getEvent().getThread()).indexOf(event);
     }
 
     public EventData getLast() {

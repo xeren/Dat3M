@@ -20,13 +20,17 @@ public class GenMCCoherenceGraph extends StaticGenMCWMMGraph {
     @Override
     public int size(int id, EdgeDirection dir) {
         EventData e = getEvent(id);
-        if (!e.isWrite()) {
-            return 0;
+        if (dir == EdgeDirection.INGOING) {
+            if (e.getCoPredecessor() == null) {
+                return 0;
+            }
+            return e.getCoPredecessors().size() - 1;
+        } else {
+            if (e.getCoSuccessor() == null) {
+                return 0;
+            }
+            return e.getCoSuccessors().size() - 1;
         }
-        int coPredecessors = e.getCoPredecessors().size();
-        int sameAddrWrites = coPredecessors + e.getCoSuccessors().size() - 1;
-        int index = coPredecessors - 1;
-        return dir == EdgeDirection.INGOING ? (index - 1) : (sameAddrWrites - index - 1);
     }
 
     @Override
@@ -54,10 +58,19 @@ public class GenMCCoherenceGraph extends StaticGenMCWMMGraph {
 
     @Override
     public void repopulate() {
-        if (!isRepopulateAllowed()) return;
+        if (isRepopulateForbidden()) return;
         coMap = new ArrayList<>(trace.getAddressInits());
         coMap.removeIf(firstWrite -> firstWrite.getCoSuccessor() == null);
-        autoComputeSize();
+        computeSize();
+    }
+
+    private void computeSize() {
+        size = 0;
+        for (EventData addressInit : coMap) {
+            int sameAddressWrites = addressInit.getCoSuccessors().size();
+            size += (sameAddressWrites * (sameAddressWrites - 1));
+        }
+        size >>= 1;
     }
 
     @Override

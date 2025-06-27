@@ -10,7 +10,7 @@ import com.google.common.base.Preconditions;
 public abstract class AbstractGenMCWMMPredicate extends AbstractPredicate {
 
     protected GenMCEventDomain trace;
-    private boolean allowRepopulate;
+    private static boolean allowInit = true;
 
     @Override
     public GenMCEventDomain getDomain() {
@@ -23,23 +23,26 @@ public abstract class AbstractGenMCWMMPredicate extends AbstractPredicate {
                 "Incompatible domain. Expected " + GenMCEventDomain.class.getSimpleName());
         super.initializeToDomain(domain);
         trace = (GenMCEventDomain) domain;
-        allowRepopulate = !trace.usesPatterns();
     }
 
     protected EventData getEvent(int id) {
         return trace.getObjectById(id);
     }
 
-    public void allowRepopulate() {
-        allowRepopulate = true;
+    public static void allowInit() {
+        allowInit = true;
     }
 
-    public void forbidRepopulate() {
-        allowRepopulate = false;
+    public static void forbidInit() {
+        allowInit = false;
     }
 
-    protected boolean isRepopulateAllowed() {
-        return allowRepopulate;
+    protected boolean isDomainInitForbidden() {
+        return !allowInit;
+    }
+
+    protected boolean isRepopulateForbidden() {
+        return !allowInit;
     }
 
 }

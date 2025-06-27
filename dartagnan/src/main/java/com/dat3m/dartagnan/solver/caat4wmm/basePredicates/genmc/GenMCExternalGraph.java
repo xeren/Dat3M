@@ -68,7 +68,7 @@ public class GenMCExternalGraph extends StaticGenMCWMMGraph {
 
     @Override
     public void repopulate() {
-        if (!isRepopulateAllowed()) return;
+        if (isRepopulateForbidden()) return;
         threadEventsMap = trace.getThreadEventsMap();
         int totalSize = domain.size();
         for (List<EventData> threadEvents : threadEventsMap.values()) {

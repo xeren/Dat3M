@@ -30,7 +30,7 @@ public class GenMCLocationGraph extends StaticGenMCWMMGraph {
 
     @Override
     public void repopulate() {
-        if (!isRepopulateAllowed()) return;
+        if (isRepopulateForbidden()) return;
         addrEventsMap = trace.getElements().stream()
                 .filter(EventData::isMemoryEvent)
                 .collect(groupingBy(EventData::getAccessedAddress));

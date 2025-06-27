@@ -56,7 +56,7 @@ public class GenMCInternalGraph extends StaticGenMCWMMGraph {
 
     @Override
     public void repopulate() {
-        if (!isRepopulateAllowed()) return;
+        if (isRepopulateForbidden()) return;
         threadEventsMap = trace.getThreadEventsMap();
         size = threadEventsMap.values().stream().mapToInt(x -> x.size() * x.size()).sum();
     }

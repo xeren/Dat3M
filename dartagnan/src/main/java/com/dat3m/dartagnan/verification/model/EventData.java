@@ -47,7 +47,7 @@ public class EventData implements Comparable<EventData> {
     public int getLocalId() {
     	return localId;
     }
-    void setLocalId(int newId) {
+    public void setLocalId(int newId) {
     	localId = newId;
     }
 

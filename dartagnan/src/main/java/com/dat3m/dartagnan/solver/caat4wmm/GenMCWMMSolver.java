@@ -63,9 +63,7 @@ public class GenMCWMMSolver {
     public Result check(GenMCEventDomain trace, GenMCReasoning reasoningMethod) {
         // ============ Extract GenMCEventDomain ==============
         long curTime = System.currentTimeMillis();
-        if (reasoningMethod != GenMCReasoning.PATTERNS) {
-            executionGraph.initializeFromDomain(trace);
-        }
+        executionGraph.initializeFromDomain(trace);
         long extractTime = System.currentTimeMillis() - curTime;
 
         // ============== Run the CAATSolver ==============
@@ -89,14 +87,13 @@ public class GenMCWMMSolver {
         return result;
     }
 
-    public void updateBase(GenMCEventDomain trace) {
-        executionGraph.initializeFromDomain(trace);
+    public void updateBasePredicates(GenMCEventDomain trace) {
+        AbstractGenMCWMMPredicate.allowInit();
         for (CAATPredicate basePredicate : executionGraph.getCAATModel().getHierarchy().getBasePredicates()) {
-            AbstractGenMCWMMPredicate genMCBasePredicate = (AbstractGenMCWMMPredicate) basePredicate;
-            genMCBasePredicate.allowRepopulate();
-            genMCBasePredicate.repopulate();
-            genMCBasePredicate.forbidRepopulate();
+            basePredicate.initializeToDomain(trace);
+            basePredicate.repopulate();
         }
+        AbstractGenMCWMMPredicate.forbidInit();
     }
 
      // ===================== Classes ======================

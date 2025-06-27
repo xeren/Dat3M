@@ -6,12 +6,9 @@ import com.dat3m.dartagnan.solver.caat.predicates.Derivable;
 import com.dat3m.dartagnan.solver.caat.predicates.misc.PredicateVisitor;
 import com.dat3m.dartagnan.solver.caat.predicates.sets.Element;
 import com.dat3m.dartagnan.solver.caat.predicates.sets.SetPredicate;
+import com.dat3m.dartagnan.verification.model.EventData;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.*;
 import java.util.stream.Stream;
 
 public class StaticGenMCWMMSet extends AbstractGenMCWMMPredicate implements SetPredicate {
@@ -30,10 +27,13 @@ public class StaticGenMCWMMSet extends AbstractGenMCWMMPredicate implements SetP
 
     @Override
     public void repopulate() {
-        if (!isRepopulateAllowed()) return;
-        events = trace.getElements().stream()
-                .filter(e -> filter.apply(e.getEvent()))
-                .map(e -> new Element(e.getId())).collect(Collectors.toList());
+        if (isRepopulateForbidden()) return;
+        events = new ArrayList<>();
+        for (EventData event : trace.getElements()) {
+            if (filter.apply(event.getEvent())) {
+                events.add(new Element(event.getId()));
+            }
+        }
     }
 
     @Override

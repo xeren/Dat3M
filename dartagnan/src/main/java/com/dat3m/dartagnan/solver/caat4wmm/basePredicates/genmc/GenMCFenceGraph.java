@@ -25,18 +25,18 @@ public class GenMCFenceGraph extends StaticGenMCWMMGraph {
         EventData b = getEvent(id2);
         int localId1;
         int localId2;
-        if (a.getThread() != b.getThread() || (localId1 = trace.getLocalId(a)) >= (localId2 = trace.getLocalId(b)) || !a.isMemoryEvent() || !b.isMemoryEvent()) {
+        if (a.getThread() != b.getThread() || (localId1 = a.getLocalId()) >= (localId2 = b.getLocalId()) || !a.isMemoryEvent() || !b.isMemoryEvent()) {
             return false;
         }
 
         //TODO: We might want to employ binary search instead of linear search
         return threadFencesMap.get(a.getThread()).stream()
-                .anyMatch(fence -> localId1 < trace.getLocalId(fence) && trace.getLocalId(fence) < localId2);
+                .anyMatch(fence -> localId1 < fence.getLocalId() && fence.getLocalId() < localId2);
     }
 
     @Override
     public void repopulate() {
-        if (!isRepopulateAllowed()) return;
+        if (isRepopulateForbidden()) return;
         threadFencesMap = new HashMap<>();
         for (Thread t : trace.getThreads()) {
             threadFencesMap.put(t, new ArrayList<>());
@@ -46,7 +46,7 @@ public class GenMCFenceGraph extends StaticGenMCWMMGraph {
                 .forEach(fence -> threadFencesMap.get(fence.getThread()).add(fence));
 
         for (List<EventData> fenceList : threadFencesMap.values()) {
-            fenceList.sort(Comparator.comparingInt(trace::getLocalId));
+            fenceList.sort(Comparator.comparingInt(EventData::getLocalId));
         }
         super.autoComputeSize();
     }
@@ -59,7 +59,7 @@ public class GenMCFenceGraph extends StaticGenMCWMMGraph {
                     if (fences.isEmpty()) {
                         return Stream.empty();
                     }
-                    int lastId = trace.getLocalId(fences.get(fences.size() - 1));
+                    int lastId = fences.get(fences.size() - 1).getLocalId();
                     return x.getValue().subList(0, lastId).stream().filter(EventData::isMemoryEvent);
                 })
                 .flatMap(x -> edgeStream(x.getId(), EdgeDirection.OUTGOING));
@@ -75,12 +75,12 @@ public class GenMCFenceGraph extends StaticGenMCWMMGraph {
         if (dir == EdgeDirection.OUTGOING) {
             EventData fence = getNextFence(e);
             return fence == null ? Stream.empty() :
-                    threadEvents.subList(trace.getLocalId(fence) + 1, threadEvents.size()).stream()
+                    threadEvents.subList(fence.getLocalId() + 1, threadEvents.size()).stream()
                             .filter(EventData::isMemoryEvent).map(x -> new Edge(id, x.getId()));
         } else {
             EventData fence = getPreviousFence(e);
             return fence == null ? Stream.empty() :
-                    threadEvents.subList(0, trace.getLocalId(fence)).stream()
+                    threadEvents.subList(0, fence.getLocalId()).stream()
                             .filter(EventData::isMemoryEvent).map(x -> new Edge(x.getId(), id));
         }
     }
@@ -98,7 +98,7 @@ public class GenMCFenceGraph extends StaticGenMCWMMGraph {
                 return 0;
             }
             List<EventData> eventsAfterFence = trace.getThreadEventsMap().get(e.getThread());
-            eventsAfterFence = eventsAfterFence.subList(trace.getLocalId(closestFence) + 1, eventsAfterFence.size());
+            eventsAfterFence = eventsAfterFence.subList(closestFence.getLocalId() + 1, eventsAfterFence.size());
             return (int)eventsAfterFence.stream().filter(EventData::isMemoryEvent).count();
         } else if (dir == EdgeDirection.INGOING) {
             EventData closestFence = getPreviousFence(e);
@@ -106,7 +106,7 @@ public class GenMCFenceGraph extends StaticGenMCWMMGraph {
                 return 0;
             }
             List<EventData> eventsBeforeFence = trace.getThreadEventsMap().get(e.getThread());
-            eventsBeforeFence = eventsBeforeFence.subList(0, trace.getLocalId(closestFence));
+            eventsBeforeFence = eventsBeforeFence.subList(0, closestFence.getLocalId());
             return (int) eventsBeforeFence.stream().filter(EventData::isMemoryEvent).count();
         }
         return size;
@@ -121,7 +121,7 @@ public class GenMCFenceGraph extends StaticGenMCWMMGraph {
         EventData closestFence = null;
         for (int i = fences.size() - 1; i >= 0; i--) {
             EventData fence = fences.get(i);
-            if (trace.getLocalId(fence) > trace.getLocalId(e)) {
+            if (fence.getLocalId() > e.getLocalId()) {
                 closestFence = fence;
             } else {
                 break;
@@ -139,7 +139,7 @@ public class GenMCFenceGraph extends StaticGenMCWMMGraph {
 
         EventData closestFence = null;
         for (EventData fence : fences) {
-            if (trace.getLocalId(fence) < trace.getLocalId(e)) {
+            if (fence.getLocalId() < e.getLocalId()) {
                 closestFence = fence;
             } else {
                 break;
