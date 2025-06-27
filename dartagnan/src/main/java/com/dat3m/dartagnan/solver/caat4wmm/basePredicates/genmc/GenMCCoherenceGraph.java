@@ -36,15 +36,40 @@ public class GenMCCoherenceGraph extends StaticGenMCWMMGraph {
         if (aOverride == null) {
             return false;
         }
+        if (aOverride.getId() == id2) {
+            return true;
+        }
         EventData b = getEvent(id2);
         return aOverride.getCoSuccessors().contains(b);
     }
 
     @Override
+    public boolean contains(EventData first, EventData second) {
+        EventData aOverride = first.getCoSuccessor();
+        if (aOverride == null) {
+            return false;
+        }
+        return aOverride.getCoSuccessors().contains(second);
+    }
+
+    @Override
     public void repopulate() {
+        if (!isRepopulateAllowed()) return;
         coMap = new ArrayList<>(trace.getAddressInits());
         coMap.removeIf(firstWrite -> firstWrite.getCoSuccessor() == null);
         autoComputeSize();
+    }
+
+    @Override
+    public List<EventData> inEvents(EventData event) {
+        EventData pre = event.getCoPredecessor();
+        return pre == null ? Collections.emptyList() : pre.getCoPredecessors();
+    }
+
+    @Override
+    public List<EventData> outEvents(EventData event) {
+        EventData override = event.getCoSuccessor();
+        return override == null ? Collections.emptyList() : override.getCoSuccessors();
     }
 
     @Override

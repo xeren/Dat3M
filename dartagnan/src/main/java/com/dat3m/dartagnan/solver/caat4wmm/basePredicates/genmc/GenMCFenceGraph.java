@@ -36,6 +36,7 @@ public class GenMCFenceGraph extends StaticGenMCWMMGraph {
 
     @Override
     public void repopulate() {
+        if (!isRepopulateAllowed()) return;
         threadFencesMap = new HashMap<>();
         for (Thread t : trace.getThreads()) {
             threadFencesMap.put(t, new ArrayList<>());

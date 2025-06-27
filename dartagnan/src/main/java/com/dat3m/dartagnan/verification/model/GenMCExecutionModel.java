@@ -14,7 +14,6 @@ import com.dat3m.dartagnan.program.event.core.*;
 import com.dat3m.dartagnan.program.event.core.threading.ThreadStart;
 import com.dat3m.dartagnan.program.specification.AssertInline;
 import com.dat3m.dartagnan.solver.caat.CAATSolver;
-import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCWMMSolver;
 import com.dat3m.dartagnan.solver.caat4wmm.PatternManager;
@@ -131,7 +130,8 @@ public class GenMCExecutionModel {
             startTraceEvent.setId(i);
             ++i;
         }
-        model.trace = new GenMCEventDomain(startTraceEvents, trace.getThreadEventsMap(), trace.getAddressInits(), trace.getReadWriteMap(), trace.getWriteReadsMap());
+        model.trace = new GenMCEventDomain(startTraceEvents, trace.getThreadEventsMap(), trace.getAddressInits(), trace.getReadWriteMap(),
+                trace.getWriteReadsMap(), reasoningMethod == GenMCReasoning.PATTERNS);
         List<EventData> newAddedEvents = addedEvents.stream()
                 .map(EventData::getEvent)
                 .map(model.trace::getData)
@@ -238,7 +238,7 @@ public class GenMCExecutionModel {
 
     public void initialize() throws InterruptedException, SolverException, InvalidConfigurationException {
         List<Init> inits = getProgram().getThreadEvents(Init.class);
-        setTrace(new GenMCEventDomain(), null);
+        setTrace(new GenMCEventDomain(reasoningMethod == GenMCReasoning.PATTERNS), null);
         for (Init init : inits) {
             Thread initThread = init.getThread();
             relevantThreads.remove(initThread);
@@ -466,18 +466,15 @@ public class GenMCExecutionModel {
         Relation co = solver.getCo();
         if (!initiallyPropagated) {
             for (Map.Entry<EventData, EventData> rfEntry : trace.getReadWriteMap().entrySet()) {
-                Edge rfEdge = new Edge(rfEntry.getValue().getId(), rfEntry.getKey().getId());
-                if (patterns.isViolated(rfEdge, rf)) {
+                if (patterns.isViolated(rfEntry.getValue(), rfEntry.getKey(), rf)) {
                     return Collections.emptyList();
                 }
             }
             for (EventData addressInit : trace.getAddressInits()) {
-                int initId = addressInit.getId();
                 EventData firstOverride = addressInit.getCoSuccessor();
                 if (firstOverride != null) {
                     for (EventData coSuccessor : firstOverride.getCoSuccessors()) {
-                        Edge coEdge = new Edge(initId, coSuccessor.getId());
-                        if (patterns.isViolated(coEdge, co)) {
+                        if (patterns.isViolated(addressInit, coSuccessor, co)) {
                             return Collections.emptyList();
                         }
                     }
@@ -489,8 +486,7 @@ public class GenMCExecutionModel {
             for (EventData event : addedEvents) {
                 EventData readFrom = event.getReadFrom();
                 if (readFrom != null) {
-                    Edge rfEdge = new Edge(readFrom.getId(), event.getId());
-                    if (patterns.isViolated(rfEdge, rf)) {
+                    if (patterns.isViolated(readFrom, event, rf)) {
                         return checkedEvents;
                     }
                 } else {
@@ -502,10 +498,8 @@ public class GenMCExecutionModel {
                         alreadyCheckedIds.add(eventId);
                         if (coPredecessor != null) {
                             for (EventData anyCoPredecessor : coPredecessor.getCoPredecessors()) {
-                                int otherId = anyCoPredecessor.getId();
-                                if (!alreadyCheckedIds.contains(otherId)) {
-                                    Edge coEdge = new Edge(otherId, eventId);
-                                    if (patterns.isViolated(coEdge, co)) {
+                                if (!alreadyCheckedIds.contains(anyCoPredecessor.getId())) {
+                                    if (patterns.isViolated(anyCoPredecessor, event, co)) {
                                         return checkedEvents;
                                     }
                                 }
@@ -513,10 +507,8 @@ public class GenMCExecutionModel {
                         }
                         if (coSuccessor != null) {
                             for (EventData anyCoSuccessor : coSuccessor.getCoSuccessors()) {
-                                int otherId = anyCoSuccessor.getId();
-                                if (!alreadyCheckedIds.contains(otherId)) {
-                                    Edge coEdge = new Edge(eventId, otherId);
-                                    if (patterns.isViolated(coEdge, co)) {
+                                if (!alreadyCheckedIds.contains(anyCoSuccessor.getId())) {
+                                    if (patterns.isViolated(event, anyCoSuccessor, co)) {
                                         return checkedEvents;
                                     }
                                 }

@@ -17,6 +17,7 @@ public class StaticDefaultGenMCWMMGraph extends MaterializedGenMCWMMGraph {
 
     @Override
     public void repopulate() {
+        if (!isRepopulateAllowed()) return;
         ra.getKnowledge(relation).getMaySet().apply((e1, e2) -> {
             EventData d1 = trace.getData(e1).orElse(null);
             EventData d2 = trace.getData(e2).orElse(null);

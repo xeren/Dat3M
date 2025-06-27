@@ -6,14 +6,15 @@ import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.verification.model.EventData;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.stream.Stream;
 
 public class GenMCReadFromGraph extends StaticGenMCWMMGraph {
 
     @Override
-    public boolean containsById(int id1, int id2) {
-        EventData e = getEvent(id2).getReadFrom();
-        return e != null && e.getId() == id1;
+    public boolean contains(EventData first, EventData second) {
+        return first == second.getReadFrom();
     }
 
     @Override
@@ -28,11 +29,30 @@ public class GenMCReadFromGraph extends StaticGenMCWMMGraph {
 
     @Override
     public void repopulate() {
+        if (!isRepopulateAllowed()) return;
         size = trace.getReadWriteMap().size();
     }
 
     private Edge makeEdge(int a, int b) {
         return new Edge(a, b);
+    }
+
+    @Override
+    public List<EventData> inEvents(EventData event) {
+        if (event.isRead() && event.getReadFrom() != null) {
+            return Collections.singletonList(event.getReadFrom());
+        } else {
+            return Collections.emptyList();
+        }
+    }
+
+    @Override
+    public List<EventData> outEvents(EventData event) {
+        if (event.isWrite()) {
+            return trace.getWriteReadsMap().getOrDefault(event, new ArrayList<>());
+        } else {
+            return Collections.emptyList();
+        }
     }
 
     @Override

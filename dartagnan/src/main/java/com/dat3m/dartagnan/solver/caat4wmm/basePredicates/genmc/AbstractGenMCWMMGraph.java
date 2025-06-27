@@ -5,6 +5,7 @@ import com.dat3m.dartagnan.solver.caat.predicates.Derivable;
 import com.dat3m.dartagnan.solver.caat.predicates.misc.PredicateVisitor;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.RelationGraph;
+import com.dat3m.dartagnan.verification.model.EventData;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -25,5 +26,22 @@ public abstract class AbstractGenMCWMMGraph extends AbstractGenMCWMMPredicate im
     @Override
     public Collection<Edge> forwardPropagate(CAATPredicate changedSource, Collection<? extends Derivable> added) {
         return Collections.emptyList();
+    }
+
+    public boolean contains(EventData first, EventData second) {
+        return containsById(first.getId(), second.getId());
+    }
+
+    public List<EventData> inEvents(EventData event) {
+        return inEdgeStream(event.getId())
+                .map(Edge::getFirst)
+                .map(this::getEvent)
+                .toList();
+    }
+    public List<EventData> outEvents(EventData event) {
+        return outEdgeStream(event.getId())
+                .map(Edge::getSecond)
+                .map(this::getEvent)
+                .toList();
     }
 }

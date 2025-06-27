@@ -5,6 +5,7 @@ import java.util.Set;
 import com.dat3m.dartagnan.configuration.GenMCReasoning;
 import com.dat3m.dartagnan.solver.caat.predicates.CAATPredicate;
 import com.dat3m.dartagnan.solver.caat.reasoning.CAATLiteral;
+import com.dat3m.dartagnan.solver.caat4wmm.basePredicates.genmc.AbstractGenMCWMMPredicate;
 import com.dat3m.dartagnan.wmm.Relation;
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
 
@@ -62,7 +63,9 @@ public class GenMCWMMSolver {
     public Result check(GenMCEventDomain trace, GenMCReasoning reasoningMethod) {
         // ============ Extract GenMCEventDomain ==============
         long curTime = System.currentTimeMillis();
-        executionGraph.initializeFromDomain(trace);
+        if (reasoningMethod != GenMCReasoning.PATTERNS) {
+            executionGraph.initializeFromDomain(trace);
+        }
         long extractTime = System.currentTimeMillis() - curTime;
 
         // ============== Run the CAATSolver ==============
@@ -88,7 +91,12 @@ public class GenMCWMMSolver {
 
     public void updateBase(GenMCEventDomain trace) {
         executionGraph.initializeFromDomain(trace);
-        executionGraph.getCAATModel().getHierarchy().getBasePredicates().forEach(CAATPredicate::repopulate);
+        for (CAATPredicate basePredicate : executionGraph.getCAATModel().getHierarchy().getBasePredicates()) {
+            AbstractGenMCWMMPredicate genMCBasePredicate = (AbstractGenMCWMMPredicate) basePredicate;
+            genMCBasePredicate.allowRepopulate();
+            genMCBasePredicate.repopulate();
+            genMCBasePredicate.forbidRepopulate();
+        }
     }
 
      // ===================== Classes ======================

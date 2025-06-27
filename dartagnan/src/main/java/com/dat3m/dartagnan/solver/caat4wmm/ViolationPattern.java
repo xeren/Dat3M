@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.solver.caat4wmm;
 
-import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.RelationGraph;
+import com.dat3m.dartagnan.solver.caat4wmm.basePredicates.genmc.AbstractGenMCWMMGraph;
+import com.dat3m.dartagnan.verification.model.EventData;
 import com.dat3m.dartagnan.wmm.Relation;
 
 import java.util.*;
@@ -8,7 +9,7 @@ import java.util.stream.Collectors;
 
 public class ViolationPattern {
 
-    final Map<Relation, RelationGraph> rel2Graph = new HashMap<>();
+    final Map<Relation, AbstractGenMCWMMGraph> rel2Graph = new HashMap<>();
     final List<Node> nodes = new ArrayList<>();
     final List<Edge> edges = new ArrayList<>();
 
@@ -22,14 +23,14 @@ public class ViolationPattern {
     }
 
     public Edge addEdge(Relation relation, Node from, Node to, boolean isStatic) {
-        final RelationGraph graph = rel2Graph.get(relation);
+        final AbstractGenMCWMMGraph graph = rel2Graph.get(relation);
         assert graph != null;
         final Edge edge = new Edge(relation, graph, from, to, false, isStatic);
         this.edges.add(edge);
         return edge;
     }
 
-    public void addRelationGraph(Relation rel, RelationGraph graph) {
+    public void addRelationGraph(Relation rel, AbstractGenMCWMMGraph graph) {
         rel2Graph.put(rel, graph);
     }
 
@@ -46,7 +47,7 @@ public class ViolationPattern {
         return matches;
     }
 
-    public List<Match> findMatches(Edge edge, int from, int to) {
+    public List<Match> findMatches(Edge edge, EventData from, EventData to) {
         final NodeSet visited = new NodeSet();
         visited.add(edge.from);
         visited.add(edge.to);
@@ -74,8 +75,8 @@ public class ViolationPattern {
                 final Node unmatchedNode = joinAtSource ? nextEdgeToJoin.to : nextEdgeToJoin.from;
                 List<Match> nextMatches = new ArrayList<>();
                 for (Match match : curMatches) {
-                    final List<Integer> joinedNodeIds = joinAlong(match, matchedNode, nextEdgeToJoin);
-                    for (Integer nodeId : joinedNodeIds) {
+                    final List<EventData> joinedNodeIds = joinAlong(match, matchedNode, nextEdgeToJoin);
+                    for (EventData nodeId : joinedNodeIds) {
                         nextMatches.add(match.with(unmatchedNode, nodeId));
                     }
                 }
@@ -91,30 +92,24 @@ public class ViolationPattern {
         return curMatches;
     }
 
-    private List<Integer> joinAlong(Match partialMatch, Node node, Edge edge) {
+    private List<EventData> joinAlong(Match partialMatch, Node node, Edge edge) {
         final boolean outgoing = edge.from == node;
         final Node target = outgoing ? edge.to : edge.from;
-        final int nodeMatch = partialMatch.atNode(node);
+        final EventData nodeMatch = partialMatch.atNode(node);
 
-        assert nodeMatch != -1;
-        assert partialMatch.atNode(target) == -1;
+        assert nodeMatch != null;
+        assert partialMatch.atNode(target) == null;
 
-        final RelationGraph relationGraph = edge.graph;
-        final var edges = outgoing ? relationGraph.outEdges(nodeMatch) : relationGraph.inEdges(nodeMatch);
-        final List<Integer> matches = new ArrayList<>();
-        for (var e : edges) {
-            matches.add(outgoing ? e.getSecond() : e.getFirst());
-        }
-
-        return matches;
+        final AbstractGenMCWMMGraph relationGraph = edge.graph;
+        return outgoing ? relationGraph.outEvents(nodeMatch) : relationGraph.inEvents(nodeMatch);
     }
 
     private void prune(List<Match> matches, Edge edge) {
-        final RelationGraph relationGraph = edge.graph;
+        final AbstractGenMCWMMGraph relationGraph = edge.graph;
         matches.removeIf(m -> {
-            final int source = m.atNode(edge.from);
-            final int target = m.atNode(edge.to);
-            return !relationGraph.containsById(source, target);
+            final EventData source = m.atNode(edge.from);
+            final EventData target = m.atNode(edge.to);
+            return !relationGraph.contains(source, target);
         });
     }
 
@@ -182,7 +177,7 @@ public class ViolationPattern {
         public boolean equals(Object obj) { return this == obj; }
     }
 
-    public record Edge(Relation relation, RelationGraph graph, Node from, Node to, boolean isNegated, boolean isStatic) {
+    public record Edge(Relation relation, AbstractGenMCWMMGraph graph, Node from, Node to, boolean isNegated, boolean isStatic) {
         @Override
         public String toString() {
             return String.format("%s-%s->%s", from, relation.getNameOrTerm(), to);
@@ -193,29 +188,29 @@ public class ViolationPattern {
 
     public static class Match {
         private final ViolationPattern pattern;
-        private final int[] nodeId2EventId;
+        private final EventData[] nodeId2EventId;
 
-        public int atNode(Node node) { return nodeId2EventId[node.id]; }
-        private void setMatch(Node node, int id) { nodeId2EventId[node.id] = id; }
+        public EventData atNode(Node node) { return nodeId2EventId[node.id]; }
+        private void setMatch(Node node, EventData id) { nodeId2EventId[node.id] = id; }
 
-        private Match(ViolationPattern pattern, int[] mapping) {
+        private Match(ViolationPattern pattern, EventData[] mapping) {
             this.pattern = pattern;
             this.nodeId2EventId = mapping;
         }
 
         public Match(ViolationPattern pattern) {
-            this(pattern, new int[pattern.nodes.size()]);
-            Arrays.fill(nodeId2EventId, -1);
+            this(pattern, new EventData[pattern.nodes.size()]);
+            Arrays.fill(nodeId2EventId, null);
         }
 
-        public Match with(Node node, int match) {
-            assert atNode(node) == -1;
-            int[] updatedMatching = Arrays.copyOf(this.nodeId2EventId, this.nodeId2EventId.length);
+        public Match with(Node node, EventData match) {
+            assert atNode(node) == null;
+            EventData[] updatedMatching = Arrays.copyOf(this.nodeId2EventId, this.nodeId2EventId.length);
             updatedMatching[node.id] = match;
             return new Match(pattern, updatedMatching);
         }
 
-        public int[] toArray() { return nodeId2EventId; }
+        public EventData[] toArray() { return nodeId2EventId; }
 
         @Override
         public String toString() {

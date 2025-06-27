@@ -5,6 +5,8 @@ import com.dat3m.dartagnan.solver.caat.misc.EdgeDirection;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.verification.model.EventData;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -15,15 +17,34 @@ public class GenMCExternalGraph extends StaticGenMCWMMGraph {
     private Map<Thread, List<EventData>> threadEventsMap;
 
     @Override
-    public boolean containsById(int id1, int id2) {
-        EventData a = getEvent(id1);
-        EventData b = getEvent(id2);
-        return a.getThread() != b.getThread();
+    public boolean contains(EventData first, EventData second) {
+        return first.getThread() != second.getThread();
     }
 
     @Override
     public int size(int id, EdgeDirection dir) {
         return domain.size() - threadEventsMap.get(getEvent(id).getThread()).size();
+    }
+
+    @Override
+    public List<EventData> inEvents(EventData event) {
+        return getEvents(event);
+    }
+
+    @Override
+    public List<EventData> outEvents(EventData event) {
+        return getEvents(event);
+    }
+
+    public List<EventData> getEvents(EventData event) {
+        List<EventData> events = new ArrayList<>();
+        Thread eventThread = event.getThread();
+        for (Map.Entry<Thread, List<EventData>> entry : threadEventsMap.entrySet()) {
+            if (entry.getKey() != eventThread) {
+                events.addAll(entry.getValue());
+            }
+        }
+        return events;
     }
 
     @Override
@@ -47,6 +68,7 @@ public class GenMCExternalGraph extends StaticGenMCWMMGraph {
 
     @Override
     public void repopulate() {
+        if (!isRepopulateAllowed()) return;
         threadEventsMap = trace.getThreadEventsMap();
         int totalSize = domain.size();
         for (List<EventData> threadEvents : threadEventsMap.values()) {

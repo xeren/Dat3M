@@ -3,8 +3,10 @@ package com.dat3m.dartagnan.solver.caat4wmm;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.RelationGraph;
 import com.dat3m.dartagnan.solver.caat.reasoning.CAATLiteral;
+import com.dat3m.dartagnan.solver.caat4wmm.basePredicates.genmc.AbstractGenMCWMMGraph;
 import com.dat3m.dartagnan.utils.logic.Conjunction;
 import com.dat3m.dartagnan.utils.logic.DNF;
+import com.dat3m.dartagnan.verification.model.EventData;
 import com.dat3m.dartagnan.wmm.Relation;
 
 import java.util.*;
@@ -42,7 +44,7 @@ public class PatternManager implements Extractor {
                         secondNode = pattern.addNode();
                         nodes.put(secondId, secondNode);
                     }
-                    RelationGraph graph = (RelationGraph) literal.getPredicate();
+                    AbstractGenMCWMMGraph graph = (AbstractGenMCWMMGraph) literal.getPredicate();
                     Relation rel = graphs.getRelationGraphMap().inverse().get(graph);
                     pattern.addRelationGraph(rel, graph);
                     pattern.addEdge(rel, firstNode, secondNode, false);
@@ -73,10 +75,10 @@ public class PatternManager implements Extractor {
         return false;
     }
 
-    public boolean isViolated(Edge edge, Relation relation) {
+    public boolean isViolated(EventData first, EventData second, Relation relation) {
         for (ViolationPattern pattern : patterns) {
             for (ViolationPattern.Edge patternEdge : pattern.findEdgesByRelation(relation)) {
-                if (!pattern.findMatches(patternEdge, edge.getFirst(), edge.getSecond()).isEmpty()) {
+                if (!pattern.findMatches(patternEdge, first, second).isEmpty()) {
                     return true;
                 }
             }

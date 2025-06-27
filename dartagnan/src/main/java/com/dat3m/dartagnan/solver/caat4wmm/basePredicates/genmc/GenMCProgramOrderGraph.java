@@ -5,6 +5,7 @@ import com.dat3m.dartagnan.solver.caat.misc.EdgeDirection;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.verification.model.EventData;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
@@ -25,19 +26,30 @@ public class GenMCProgramOrderGraph extends StaticGenMCWMMGraph {
     }
 
     @Override
-    public boolean containsById(int id1, int id2) {
-        EventData a = getEvent(id1);
-        EventData b = getEvent(id2);
-        return a.getThread() == b.getThread() && trace.getLocalId(b) > trace.getLocalId(a);
+    public boolean contains(EventData first, EventData second) {
+        return first.getThread() == second.getThread() && trace.getLocalId(second) > trace.getLocalId(first);
     }
 
     @Override
     public void repopulate() {
+        if (!isRepopulateAllowed()) return;
         this.threadEventsMap = trace.getThreadEventsMap();
         size = 0;
         for (List<EventData> threadEvents : threadEventsMap.values()) {
             size += ((threadEvents.size() - 1) * threadEvents.size()) >> 1;
         }
+    }
+
+    @Override
+    public List<EventData> inEvents(EventData event) {
+        List<EventData> threadEvents = trace.getThreadEventsMap().get(event.getThread());
+        return threadEvents.subList(0, trace.getLocalId(event));
+    }
+
+    @Override
+    public List<EventData> outEvents(EventData event) {
+        List<EventData> threadEvents = trace.getThreadEventsMap().get(event.getThread());
+        return threadEvents.subList(trace.getLocalId(event) + 1, threadEvents.size());
     }
 
     @Override

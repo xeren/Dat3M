@@ -19,6 +19,7 @@ public class GenMCRMWGraph extends MaterializedGenMCWMMGraph {
     */
     @Override
     public void repopulate() {
+        if (!isRepopulateAllowed()) return;
         for (List<EventData> events : trace.getThreadEventsMap().values()) {
             EventData lastExclLoad = null;
             for (EventData e : events) {

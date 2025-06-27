@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.solver.caat4wmm.basePredicates.genmc;
 
+import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.solver.caat.misc.EdgeDirection;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.verification.model.EventData;
@@ -17,10 +18,8 @@ public class GenMCLocationGraph extends StaticGenMCWMMGraph {
     private Map<BigInteger, List<EventData>> addrEventsMap;
 
     @Override
-    public boolean containsById(int id1, int id2) {
-        EventData a = getEvent(id1);
-        EventData b = getEvent(id2);
-        return a.isMemoryEvent() && b.isMemoryEvent() && a.getAccessedAddress().equals(b.getAccessedAddress());
+    public boolean contains(EventData first, EventData second) {
+        return first.isMemoryEvent() && second.isMemoryEvent() && first.getAccessedAddress().equals(second.getAccessedAddress());
     }
 
     @Override
@@ -31,6 +30,7 @@ public class GenMCLocationGraph extends StaticGenMCWMMGraph {
 
     @Override
     public void repopulate() {
+        if (!isRepopulateAllowed()) return;
         addrEventsMap = trace.getElements().stream()
                 .filter(EventData::isMemoryEvent)
                 .collect(groupingBy(EventData::getAccessedAddress));
@@ -39,6 +39,20 @@ public class GenMCLocationGraph extends StaticGenMCWMMGraph {
         }
     }
 
+
+    @Override
+    public List<EventData> inEvents(EventData event) {
+        return getEvents(event);
+    }
+
+    @Override
+    public List<EventData> outEvents(EventData event) {
+        return getEvents(event);
+    }
+
+    public List<EventData> getEvents(EventData event) {
+        return addrEventsMap.get(event.getAccessedAddress());
+    }
 
     @Override
     public Stream<Edge> edgeStream() {

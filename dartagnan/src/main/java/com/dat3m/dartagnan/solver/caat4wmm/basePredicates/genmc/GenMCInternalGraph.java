@@ -5,6 +5,7 @@ import com.dat3m.dartagnan.solver.caat.misc.EdgeDirection;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.verification.model.EventData;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -15,13 +16,27 @@ public class GenMCInternalGraph extends StaticGenMCWMMGraph {
     private Map<Thread, List<EventData>> threadEventsMap;
 
     @Override
-    public boolean containsById(int id1, int id2) {
-        return getEvent(id1).getThread() == getEvent(id2).getThread();
+    public boolean contains(EventData first, EventData second) {
+        return first.getThread() == second.getThread();
     }
 
     @Override
     public int size(int id, EdgeDirection dir) {
         return threadEventsMap.get(getEvent(id).getThread()).size();
+    }
+
+    @Override
+    public List<EventData> inEvents(EventData event) {
+        return getEvents(event);
+    }
+
+    @Override
+    public List<EventData> outEvents(EventData event) {
+        return getEvents(event);
+    }
+
+    public List<EventData> getEvents(EventData event) {
+        return threadEventsMap.get(event.getThread());
     }
 
     @Override
@@ -41,6 +56,7 @@ public class GenMCInternalGraph extends StaticGenMCWMMGraph {
 
     @Override
     public void repopulate() {
+        if (!isRepopulateAllowed()) return;
         threadEventsMap = trace.getThreadEventsMap();
         size = threadEventsMap.values().stream().mapToInt(x -> x.size() * x.size()).sum();
     }

@@ -30,6 +30,7 @@ public class StaticGenMCWMMSet extends AbstractGenMCWMMPredicate implements SetP
 
     @Override
     public void repopulate() {
+        if (!isRepopulateAllowed()) return;
         events = trace.getElements().stream()
                 .filter(e -> filter.apply(e.getEvent()))
                 .map(e -> new Element(e.getId())).collect(Collectors.toList());

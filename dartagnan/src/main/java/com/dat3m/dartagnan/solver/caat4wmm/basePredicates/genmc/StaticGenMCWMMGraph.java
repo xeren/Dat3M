@@ -19,6 +19,11 @@ public abstract class StaticGenMCWMMGraph extends AbstractGenMCWMMGraph {
     }
 
     @Override
+    public boolean containsById(int id1, int id2) {
+        return contains(getEvent(id1), getEvent(id2));
+    }
+
+    @Override
     public int size() {
         return size;
     }
