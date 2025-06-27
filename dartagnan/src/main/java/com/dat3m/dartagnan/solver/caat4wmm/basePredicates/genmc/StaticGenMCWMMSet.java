@@ -57,7 +57,11 @@ public class StaticGenMCWMMSet extends AbstractGenMCWMMPredicate implements SetP
 
     @Override
     public boolean containsById(int id) {
-        return filter.apply(getEvent(id).getEvent());
+        return contains(getEvent(id));
+    }
+
+    public boolean contains(EventData event) {
+        return filter.apply(event.getEvent());
     }
 
     @Override

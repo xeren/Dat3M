@@ -1,9 +1,12 @@
 package com.dat3m.dartagnan.solver.caat4wmm;
 
+import com.dat3m.dartagnan.solver.caat.predicates.Derivable;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.RelationGraph;
+import com.dat3m.dartagnan.solver.caat.predicates.sets.Element;
 import com.dat3m.dartagnan.solver.caat.reasoning.CAATLiteral;
 import com.dat3m.dartagnan.solver.caat4wmm.basePredicates.genmc.AbstractGenMCWMMGraph;
+import com.dat3m.dartagnan.solver.caat4wmm.basePredicates.genmc.StaticGenMCWMMSet;
 import com.dat3m.dartagnan.utils.logic.Conjunction;
 import com.dat3m.dartagnan.utils.logic.DNF;
 import com.dat3m.dartagnan.verification.model.EventData;
@@ -13,11 +16,13 @@ import java.util.*;
 
 public class PatternManager implements Extractor {
 
-    private final GenMCExecutionGraph graphs;
+    private static final boolean USE_SETS = false;
+
+    private final Map<RelationGraph, Relation> graphs;
     private final List<ViolationPattern> patterns = new ArrayList<>();
 
     public PatternManager(GenMCExecutionGraph graph) {
-        this.graphs = graph;
+        this.graphs = graph.getRelationGraphMap().inverse();
     }
 
     @Override
@@ -27,28 +32,42 @@ public class PatternManager implements Extractor {
         for (Conjunction<CAATLiteral> reason : inconsistencyReasons.getCubes()) {
             ViolationPattern pattern = new ViolationPattern();
             Map<Integer, ViolationPattern.Node> nodes = new HashMap<>();
+            List<Map.Entry<Edge, AbstractGenMCWMMGraph>> edges = new ArrayList<>(reason.getSize());
             for (CAATLiteral literal : reason.getLiterals()) {
-                if (literal.isPositive() && literal.getData() instanceof Edge edge) {
-                    int firstId = edge.getFirst();
-                    int secondId = edge.getSecond();
-                    ViolationPattern.Node firstNode = nodes.get(firstId);
-                    ViolationPattern.Node secondNode = firstId == secondId ? firstNode : nodes.get(secondId);
-                    if (firstNode == null) {
-                        firstNode = pattern.addNode();
-                        nodes.put(firstId, firstNode);
-                        if (firstId == secondId) {
-                            secondNode = firstNode;
-                        }
+                Derivable derivable = literal.getData();
+                if (USE_SETS && derivable instanceof Element condition) {
+                    int id = condition.getId();
+                    ViolationPattern.Node node = nodes.get(id);
+                    if (node == null) {
+                        node = pattern.addNode(new ArrayList<>(), new ArrayList<>());
+                        nodes.put(id, node);
                     }
-                    if (secondNode == null) {
-                        secondNode = pattern.addNode();
-                        nodes.put(secondId, secondNode);
-                    }
-                    AbstractGenMCWMMGraph graph = (AbstractGenMCWMMGraph) literal.getPredicate();
-                    Relation rel = graphs.getRelationGraphMap().inverse().get(graph);
-                    pattern.addRelationGraph(rel, graph);
-                    pattern.addEdge(rel, firstNode, secondNode, false);
+                    (literal.isPositive() ? node.positiveConditions() : node.negativeConditions()).add((StaticGenMCWMMSet) literal.getPredicate());
+                } else if (literal.isPositive() && derivable instanceof Edge edge) {
+                    edges.add(Map.entry(edge, (AbstractGenMCWMMGraph) literal.getPredicate()));
                 } else continue REASON_LOOP;
+            }
+            for (Map.Entry<Edge, AbstractGenMCWMMGraph> literal : edges) {
+                Edge edge = literal.getKey();
+                int firstId = edge.getFirst();
+                int secondId = edge.getSecond();
+                ViolationPattern.Node firstNode = nodes.get(firstId);
+                ViolationPattern.Node secondNode = firstId == secondId ? firstNode : nodes.get(secondId);
+                if (firstNode == null) {
+                    firstNode = pattern.addNode();
+                    nodes.put(firstId, firstNode);
+                    if (firstId == secondId) {
+                        secondNode = firstNode;
+                    }
+                }
+                if (secondNode == null) {
+                    secondNode = pattern.addNode();
+                    nodes.put(secondId, secondNode);
+                }
+                AbstractGenMCWMMGraph graph = literal.getValue();
+                Relation rel = graphs.get(graph);
+                pattern.addRelationGraph(rel, graph);
+                pattern.addEdge(rel, firstNode, secondNode, false);
             }
             if (!existsPattern(newPatterns, pattern)) {
                 newPatterns.add(pattern);

@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.solver.caat4wmm;
 
 import com.dat3m.dartagnan.solver.caat4wmm.basePredicates.genmc.AbstractGenMCWMMGraph;
+import com.dat3m.dartagnan.solver.caat4wmm.basePredicates.genmc.StaticGenMCWMMSet;
 import com.dat3m.dartagnan.verification.model.EventData;
 import com.dat3m.dartagnan.wmm.Relation;
 
@@ -17,7 +18,11 @@ public class ViolationPattern {
     // Construction
 
     public Node addNode() {
-        final Node node = new Node(nodes.size());
+        return addNode(Collections.emptyList(), Collections.emptyList());
+    }
+
+    public Node addNode(List<StaticGenMCWMMSet> positiveConditions,  List<StaticGenMCWMMSet> negativeConditions) {
+        final Node node = new Node(nodes.size(), positiveConditions, negativeConditions);
         nodes.add(node);
         return node;
     }
@@ -48,6 +53,10 @@ public class ViolationPattern {
     }
 
     public List<Match> findMatches(Edge edge, EventData from, EventData to) {
+        if (!edge.from.check(from) || !edge.to.check(to)) {
+            return Collections.emptyList();
+        }
+
         final NodeSet visited = new NodeSet();
         visited.add(edge.from);
         visited.add(edge.to);
@@ -77,7 +86,9 @@ public class ViolationPattern {
                 for (Match match : curMatches) {
                     final List<EventData> joinedNodeIds = joinAlong(match, matchedNode, nextEdgeToJoin);
                     for (EventData nodeId : joinedNodeIds) {
-                        nextMatches.add(match.with(unmatchedNode, nodeId));
+                        if (unmatchedNode.check(nodeId)) {
+                            nextMatches.add(match.with(unmatchedNode, nodeId));
+                        }
                     }
                 }
                 curMatches = nextMatches;
@@ -169,12 +180,26 @@ public class ViolationPattern {
         }
     }
 
-    public record Node(int id) {
+    public record Node(int id, List<StaticGenMCWMMSet> positiveConditions, List<StaticGenMCWMMSet> negativeConditions) {
         @Override
         public String toString() { return "n#" + id; }
 
         @Override
         public boolean equals(Object obj) { return this == obj; }
+
+        private boolean check(EventData event) {
+            for (StaticGenMCWMMSet condition : positiveConditions) {
+                if (!condition.contains(event)) {
+                    return false;
+                }
+            }
+            for (StaticGenMCWMMSet condition : negativeConditions) {
+                if (condition.contains(event)) {
+                    return false;
+                }
+            }
+            return true;
+        }
     }
 
     public record Edge(Relation relation, AbstractGenMCWMMGraph graph, Node from, Node to, boolean isNegated, boolean isStatic) {
