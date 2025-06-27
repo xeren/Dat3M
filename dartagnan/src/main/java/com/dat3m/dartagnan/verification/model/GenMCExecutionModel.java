@@ -72,6 +72,7 @@ public class GenMCExecutionModel {
     private boolean needsNewConsistencyCheck = true;
     private boolean lastNeedsNewConsistencyCheck = true;
     private boolean needsJumpRevisit = false;
+    private boolean initiallyPropagated = false;
 
     private final EncodingContext encodingContext;
     private final GenMCTraceEncoder traceEncoder;
@@ -87,6 +88,7 @@ public class GenMCExecutionModel {
     
     private final List<Thread> relevantThreads;
     private final Map<Event, List<EventData>> mayRfMap;
+    private final List<EventData> addedEvents;
 
     private GenMCExecutionModel(EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, GenMCWMMSolver solver, PatternManager patterns, BooleanFormula properties,
                                 ExpressionEvaluator exprEvaluator, GenMCReasoning reasoningMethod) {
@@ -107,6 +109,7 @@ public class GenMCExecutionModel {
 
         this.relevantThreads = new ArrayList<>(getProgram().getThreads());
         this.mayRfMap = new HashMap<>();
+        this.addedEvents = new ArrayList<>();
     }
 
     public static GenMCExecutionModel withContext(EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, ProverEnvironment prover, BooleanFormula properties,
@@ -129,6 +132,14 @@ public class GenMCExecutionModel {
             ++i;
         }
         model.trace = new GenMCEventDomain(startTraceEvents, trace.getThreadEventsMap(), trace.getAddressInits(), trace.getReadWriteMap(), trace.getWriteReadsMap());
+        List<EventData> newAddedEvents = addedEvents.stream()
+                .map(EventData::getEvent)
+                .map(model.trace::getData)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .toList();
+        model.addedEvents.addAll(newAddedEvents);
+        model.initiallyPropagated = initiallyPropagated;
         return model;
     }
 
@@ -289,13 +300,19 @@ public class GenMCExecutionModel {
 
     public void rollback(EventData backtrackingPoint) {
         lastAdded = backtrackingPoint.getEvent();
-        trace.rollback(backtrackingPoint);
+        addedEvents.removeAll(trace.rollback(backtrackingPoint));
+        if (!addedEvents.contains(backtrackingPoint)) {
+            addedEvents.add(backtrackingPoint);
+        }
         setTrace(trace, null);
     }
 
     public void rollbackCo(EventData coPredecessor, EventData backtrackingPoint) {
         lastAdded = backtrackingPoint.getEvent();
-        trace.rollback(backtrackingPoint);
+        addedEvents.removeAll(trace.rollback(backtrackingPoint));
+        if (!addedEvents.contains(backtrackingPoint)) {
+            addedEvents.add(backtrackingPoint);
+        }
         coPredecessor.setCoSuccessor(backtrackingPoint.getCoSuccessor());
         if (coPredecessor.getCoSuccessor() != null) {
             coPredecessor.getCoSuccessor().setCoPredecessor(coPredecessor);
@@ -317,6 +334,7 @@ public class GenMCExecutionModel {
         EventData ignoredEvent = null;
         if (ignoreLast) {
             ignoredEvent = trace.removeLast();
+            addedEvents.remove(ignoredEvent);
         }
         long start = System.currentTimeMillis();
         boolean reasonKnown = reasoningMethod != GenMCReasoning.NONE && reasons.evaluate(this::evaluate);
@@ -324,6 +342,7 @@ public class GenMCExecutionModel {
         if (reasonKnown) {
             if (ignoredEvent != null) {
                 trace.addEvent(ignoredEvent);
+                addedEvents.add(ignoredEvent);
             }
             return false;
         }
@@ -331,11 +350,14 @@ public class GenMCExecutionModel {
         if (reasoningMethod == GenMCReasoning.PATTERNS) {
             start = System.currentTimeMillis();
             solver.updateBase(trace);
-            boolean patternKnown = hasPattern();
+            List<EventData> checkedEvents = hasPattern();
+            boolean patternKnown = checkedEvents.size() != addedEvents.size();
             patternEvaluationTime += System.currentTimeMillis() - start;
             if (patternKnown) {
+                addedEvents.removeAll(checkedEvents);
                 if (ignoredEvent != null) {
                     trace.addEvent(ignoredEvent);
+                    addedEvents.add(ignoredEvent);
                 }
                 return false;
             }
@@ -345,9 +367,12 @@ public class GenMCExecutionModel {
         start = System.currentTimeMillis();
         ++consistencyChecks;
         GenMCWMMSolver.Result result = solver.check(trace, reasoningMethod);
+        addedEvents.clear();
+        initiallyPropagated = true;
         if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
             if (ignoredEvent != null) {
                 trace.addEvent(ignoredEvent);
+                addedEvents.add(ignoredEvent);
                 lastNeedsNewConsistencyCheck = false;
             } else {
                 needsNewConsistencyCheck = false;
@@ -358,6 +383,7 @@ public class GenMCExecutionModel {
         } else if (result.getStatus() == CAATSolver.Status.INCONSISTENT) {
             if (ignoredEvent != null) {
                 trace.addEvent(ignoredEvent);
+                addedEvents.add(ignoredEvent);
             }
             isConsistent = false;
             consistencyCheckTime += System.currentTimeMillis() - start;
@@ -435,28 +461,73 @@ public class GenMCExecutionModel {
         return rf.isNegative() != rfValue;
     }
 
-    private boolean hasPattern() {
+    private List<EventData> hasPattern() {
         Relation rf = solver.getRf();
-        for (Map.Entry<EventData, EventData> rfEntry : trace.getReadWriteMap().entrySet()) {
-            Edge rfEdge = new Edge(rfEntry.getValue().getId(), rfEntry.getKey().getId());
-            if (patterns.isViolated(rfEdge, rf)) {
-                return true;
-            }
-        }
         Relation co = solver.getCo();
-        for (EventData addressInit : trace.getAddressInits()) {
-            int initId = addressInit.getId();
-            EventData firstOverride = addressInit.getCoSuccessor();
-            if (firstOverride != null) {
-                for (EventData coSuccessor : firstOverride.getCoSuccessors()) {
-                    Edge coEdge = new Edge(initId, coSuccessor.getId());
-                    if (patterns.isViolated(coEdge, co)) {
-                        return true;
+        if (!initiallyPropagated) {
+            for (Map.Entry<EventData, EventData> rfEntry : trace.getReadWriteMap().entrySet()) {
+                Edge rfEdge = new Edge(rfEntry.getValue().getId(), rfEntry.getKey().getId());
+                if (patterns.isViolated(rfEdge, rf)) {
+                    return Collections.emptyList();
+                }
+            }
+            for (EventData addressInit : trace.getAddressInits()) {
+                int initId = addressInit.getId();
+                EventData firstOverride = addressInit.getCoSuccessor();
+                if (firstOverride != null) {
+                    for (EventData coSuccessor : firstOverride.getCoSuccessors()) {
+                        Edge coEdge = new Edge(initId, coSuccessor.getId());
+                        if (patterns.isViolated(coEdge, co)) {
+                            return Collections.emptyList();
+                        }
                     }
                 }
             }
+            return addedEvents;
+        } else {
+            List<EventData> checkedEvents = new ArrayList<>(addedEvents.size());
+            for (EventData event : addedEvents) {
+                EventData readFrom = event.getReadFrom();
+                if (readFrom != null) {
+                    Edge rfEdge = new Edge(readFrom.getId(), event.getId());
+                    if (patterns.isViolated(rfEdge, rf)) {
+                        return checkedEvents;
+                    }
+                } else {
+                    List<Integer> alreadyCheckedIds = new ArrayList<>();
+                    EventData coPredecessor = event.getCoPredecessor();
+                    EventData coSuccessor = event.getCoSuccessor();
+                    if (coPredecessor != null || coSuccessor != null) {
+                        int eventId = event.getId();
+                        alreadyCheckedIds.add(eventId);
+                        if (coPredecessor != null) {
+                            for (EventData anyCoPredecessor : coPredecessor.getCoPredecessors()) {
+                                int otherId = anyCoPredecessor.getId();
+                                if (!alreadyCheckedIds.contains(otherId)) {
+                                    Edge coEdge = new Edge(otherId, eventId);
+                                    if (patterns.isViolated(coEdge, co)) {
+                                        return checkedEvents;
+                                    }
+                                }
+                            }
+                        }
+                        if (coSuccessor != null) {
+                            for (EventData anyCoSuccessor : coSuccessor.getCoSuccessors()) {
+                                int otherId = anyCoSuccessor.getId();
+                                if (!alreadyCheckedIds.contains(otherId)) {
+                                    Edge coEdge = new Edge(eventId, otherId);
+                                    if (patterns.isViolated(coEdge, co)) {
+                                        return checkedEvents;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                checkedEvents.add(event);
+            }
+            return checkedEvents;
         }
-        return false;
     }
 
     public boolean checkProperties() throws InterruptedException, SolverException, InvalidConfigurationException {
@@ -692,6 +763,7 @@ public class GenMCExecutionModel {
             trace.addEvent(data);
             lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
         }
+        addedEvents.add(data);
         return data;
     }
 

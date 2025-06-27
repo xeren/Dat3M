@@ -122,7 +122,7 @@ public class GenMCEventDomain implements Domain<EventData> {
         addressInits.add(addressWrite);
     }
 
-    public void rollback(EventData backtrackingPoint) {
+    public List<EventData> rollback(EventData backtrackingPoint) {
         int backtrackingIndex = backtrackingPoint.getId();
         List<EventData> eventsToRemove = events.subList(backtrackingIndex + 1, events.size());
         for (EventData eventToRemove : eventsToRemove) {
@@ -140,7 +140,9 @@ public class GenMCEventDomain implements Domain<EventData> {
         }
         eventsToRemove.forEach(event -> eventMap.remove(event.getEvent()));
         eventsToRemove.forEach(event -> idMap.remove(event.getId()));
+        List<EventData> removedEvents = new ArrayList<>(eventsToRemove);
         eventsToRemove.clear();
+        return removedEvents;
     }
 
     public void setReadFrom(EventData read, EventData newWrite, EventData oldWrite) {
