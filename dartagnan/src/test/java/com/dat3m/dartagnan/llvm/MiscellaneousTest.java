@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.llvm;
 
 import com.dat3m.dartagnan.configuration.Arch;
+import com.dat3m.dartagnan.configuration.GenMCReasoning;
 import com.dat3m.dartagnan.configuration.OptionNames;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.utils.rules.Provider;
@@ -56,6 +57,9 @@ public class MiscellaneousTest extends AbstractCTest {
             if (name.equals("recursion")) {
                 builder.setOption(OptionNames.RECURSION_BOUND, String.valueOf(bound));
             }
+            builder.setOption(OptionNames.USE_SMT_SOLVER, "false");
+            builder.setOption(OptionNames.REASONING, GenMCReasoning.BOTH.asStringOption());
+            builder.setOption(OptionNames.DELAY_CONSISTENCY_CHECKS, "true");
             return builder.build();
         });
     }

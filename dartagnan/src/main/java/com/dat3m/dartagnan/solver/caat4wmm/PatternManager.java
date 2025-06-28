@@ -16,7 +16,7 @@ import java.util.*;
 
 public class PatternManager implements Extractor {
 
-    private static final boolean USE_SETS = false;
+    private static final boolean USE_SETS = true;
 
     private final Map<RelationGraph, Relation> graphs;
     private final List<ViolationPattern> patterns = new ArrayList<>();

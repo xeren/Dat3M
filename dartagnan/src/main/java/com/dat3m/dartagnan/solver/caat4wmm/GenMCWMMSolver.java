@@ -77,11 +77,13 @@ public class GenMCWMMSolver {
         if (useReasoning && result.getStatus() == CAATSolver.Status.INCONSISTENT) {
             // ============== Compute Core reasons ==============
             DNF<CAATLiteral> baseReasons = caatResult.getBaseReasons();
-            if (extractor != null && reasoningMethod == GenMCReasoning.PATTERNS) {
+            if (reasoningMethod.usesPatterns()) {
                 extractor.extract(baseReasons);
             }
-            Set<Conjunction<CoreLiteral>> coreReasons = reasoner.toCoreReasons(baseReasons);
-            result.coreReasons = new DNF<>(coreReasons);
+            if (reasoningMethod.usesReasons()) {
+                Set<Conjunction<CoreLiteral>> coreReasons = reasoner.toCoreReasons(baseReasons);
+                result.coreReasons = new DNF<>(coreReasons);
+            }
         }
 
         return result;

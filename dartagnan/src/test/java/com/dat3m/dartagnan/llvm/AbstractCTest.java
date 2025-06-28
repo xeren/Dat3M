@@ -46,7 +46,7 @@ public abstract class AbstractCTest {
         return Configuration.builder()
                 .setOption(OptionNames.USE_INTEGERS, "true")
                 .setOption(OptionNames.USE_SMT_SOLVER, "false")
-                .setOption(OptionNames.REASONING, GenMCReasoning.PATTERNS.asStringOption())
+                .setOption(OptionNames.REASONING, GenMCReasoning.BOTH.asStringOption())
                 .setOption(OptionNames.DELAY_CONSISTENCY_CHECKS, "true")
                 .build();
     }

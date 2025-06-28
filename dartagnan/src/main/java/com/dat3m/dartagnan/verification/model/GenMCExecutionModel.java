@@ -337,7 +337,7 @@ public class GenMCExecutionModel {
             addedEvents.remove(ignoredEvent);
         }
         long start = System.currentTimeMillis();
-        boolean reasonKnown = reasoningMethod != GenMCReasoning.NONE && reasons.evaluate(this::evaluate);
+        boolean reasonKnown = reasoningMethod.usesReasons() && reasons.evaluate(this::evaluate);
         reasonEvaluationTime += System.currentTimeMillis() - start;
         if (reasonKnown) {
             if (ignoredEvent != null) {
@@ -347,7 +347,7 @@ public class GenMCExecutionModel {
             return false;
         }
 
-        if (reasoningMethod == GenMCReasoning.PATTERNS) {
+        if (reasoningMethod.usesPatterns()) {
             start = System.currentTimeMillis();
             solver.updateBasePredicates(trace);
             List<EventData> checkedEvents = hasPattern();

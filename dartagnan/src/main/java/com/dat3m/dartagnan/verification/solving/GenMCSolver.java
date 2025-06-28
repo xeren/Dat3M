@@ -192,11 +192,11 @@ public class GenMCSolver extends ModelChecker {
             logger.info("Total consistency check time: {}", Utils.toTimeString(consistencyCheckTime));
             logger.info("Average consistency check time: {}", Utils.toTimeString((consistencyCheckTime + consistencyChecks / 2) / consistencyChecks));
         }
-        if (reasoningMethod != GenMCReasoning.NONE) {
+        if (reasoningMethod.usesReasons()) {
             logger.info("Total reason evaluation time: {}", Utils.toTimeString(GenMCExecutionModel.getReasonEvaluationTime()));
-            if (reasoningMethod == GenMCReasoning.PATTERNS) {
-                logger.info("Total pattern evaluation time: {}", Utils.toTimeString(GenMCExecutionModel.getPatternEvaluationTime()));
-            }
+        }
+        if (reasoningMethod.usesPatterns()) {
+            logger.info("Total pattern evaluation time: {}", Utils.toTimeString(GenMCExecutionModel.getPatternEvaluationTime()));
         }
 
         logger.info("Total encoding time: {}", Utils.toTimeString(traceEncoder.getEncodingTime()));

@@ -91,7 +91,7 @@ public abstract class AbstractLitmusTest {
                 .setOption(INITIALIZE_REGISTERS, "true")
                 .setOption(USE_INTEGERS, "true")
                 .setOption(USE_SMT_SOLVER, "false")
-                .setOption(REASONING, GenMCReasoning.PATTERNS.asStringOption())
+                .setOption(REASONING, GenMCReasoning.BOTH.asStringOption())
                 .setOption(DELAY_CONSISTENCY_CHECKS, "true")
                 .build());
     }
