@@ -292,7 +292,7 @@ public class GenMCSolver extends ModelChecker {
                         .filter(e -> readId < trace.getId(e) &&
                                 !(writePrefix.contains(e) || (!(e.getEvent() instanceof MemoryEvent) && prefixLimits.get(e.getEvent().getThread()) > e.getEvent().getGlobalId())))
                         .toList();
-                if (shouldRevisit(model, eventsToDelete, read, event, writePrefix)) {
+                if (shouldRevisit(model, eventsToDelete, read, writePrefix)) {
                     logger.debug("Backward revisiting load {}: {} for store {}: {}", read.getEvent().getGlobalId(),
                             read.getEvent(), event.getEvent().getGlobalId(), event.getEvent());
                     GenMCExecutionModel backwardRevisitModel = getBackwardRevisitModel(model, eventsToDelete, read, event);
@@ -398,16 +398,16 @@ public class GenMCSolver extends ModelChecker {
         return prefixLimits;
     }
 
-    private boolean shouldRevisit(GenMCExecutionModel model, List<EventData> eventsToDelete, EventData read, EventData write, Collection<EventData> writePrefix) {
+    private boolean shouldRevisit(GenMCExecutionModel model, List<EventData> eventsToDelete, EventData read, Collection<EventData> writePrefix) {
         for (EventData event : eventsToDelete) {
-            if (!isMaximallyAdded(model, event, write, writePrefix)) {
+            if (!isMaximallyAdded(model, event, writePrefix)) {
                 return false;
             }
         }
-        return isMaximallyAdded(model, read, write, writePrefix);
+        return isMaximallyAdded(model, read, writePrefix);
     }
 
-    private boolean isMaximallyAdded(GenMCExecutionModel model, EventData event, EventData write, Collection<EventData> writePrefix) {
+    private boolean isMaximallyAdded(GenMCExecutionModel model, EventData event, Collection<EventData> writePrefix) {
         EventData maximalEvent;
         if (event.isWrite()) {
             for (EventData e : writePrefix) {

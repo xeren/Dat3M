@@ -64,6 +64,7 @@ public class GenMCExecutionModel {
     private static Map<Event, Set<Event>> mayRfOutMap;
     private static Map<Event, Set<Event>> mayCoInMap;
     private static Map<Event, Set<Event>> mayCoOutMap;
+    private static List<Thread> relevantThreads;
 
     // ============= Model specific  =============
     private GenMCEventDomain trace;
@@ -84,8 +85,7 @@ public class GenMCExecutionModel {
     private final GenMCReasoning reasoningMethod;
     private final boolean underApproximateWmm;
     private final ExpressionEvaluator exprEvaluator;
-    
-    private final List<Thread> relevantThreads;
+
     private final Map<Event, List<EventData>> mayRfMap;
     private final List<EventData> addedEvents;
 
@@ -100,7 +100,6 @@ public class GenMCExecutionModel {
         this.underApproximateWmm = underApproximateWmm;
         this.exprEvaluator = exprEvaluator;
 
-        this.relevantThreads = new ArrayList<>(getProgram().getThreads());
         this.mayRfMap = new HashMap<>();
         this.addedEvents = new ArrayList<>();
     }
@@ -121,6 +120,7 @@ public class GenMCExecutionModel {
         mayRfOutMap = mayRfGraph.getOutMap();
         mayCoInMap = mayCoGraph.getInMap();
         mayCoOutMap = mayCoGraph.getOutMap();
+        relevantThreads = new ArrayList<>(task.getProgram().getThreads());
         return model;
     }
 
@@ -326,74 +326,8 @@ public class GenMCExecutionModel {
         initializeFields();
     }
 
-    private void backtrackTrace(EventData backtrackingPoint) {
-        List<EventData> removedEvents = trace.rollback(backtrackingPoint);
-        if (reasoningMethod.usesPatterns()) {
-            addedEvents.removeAll(removedEvents);
-            if (!addedEvents.contains(backtrackingPoint)) {
-                addedEvents.add(backtrackingPoint);
-            }
-        }
-    }
-
     public void resetConsistencyStatus() {
         isConsistent = true;
-    }
-
-    private boolean checkFullConsistency(boolean ignoreLast) throws InterruptedException, SolverException {
-        if ((!needsNewConsistencyCheck && !ignoreLast) || (!lastNeedsNewConsistencyCheck && ignoreLast)) {
-            return isConsistent;
-        }
-        EventData ignoredEvent = null;
-        if (ignoreLast) {
-            ignoredEvent = trace.removeLast();
-            if (reasoningMethod.usesPatterns()) {
-                addedEvents.remove(ignoredEvent);
-            }
-        }
-        if (reasonKnown() || hasPattern()) {
-            if (ignoredEvent != null) {
-                trace.addEvent(ignoredEvent);
-                if (reasoningMethod.usesPatterns()) {
-                    addedEvents.add(ignoredEvent);
-                }
-            }
-            return false;
-        }
-
-        logger.debug("Checking consistency");
-        long start = System.currentTimeMillis();
-        ++consistencyChecks;
-        GenMCWMMSolver.Result result = solver.check(trace, reasoningMethod);
-        addedEvents.clear();
-        initiallyPropagated = true;
-        if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
-            if (ignoredEvent != null) {
-                trace.addEvent(ignoredEvent);
-                if (reasoningMethod.usesPatterns()) {
-                    addedEvents.add(ignoredEvent);
-                }
-                lastNeedsNewConsistencyCheck = false;
-            } else {
-                needsNewConsistencyCheck = false;
-            }
-            isConsistent = true;
-            consistencyCheckTime += System.currentTimeMillis() - start;
-            return true;
-        } else if (result.getStatus() == CAATSolver.Status.INCONSISTENT) {
-            if (ignoredEvent != null) {
-                trace.addEvent(ignoredEvent);
-                if (reasoningMethod.usesPatterns()) {
-                    addedEvents.add(ignoredEvent);
-                }
-            }
-            isConsistent = false;
-            consistencyCheckTime += System.currentTimeMillis() - start;
-            reasons = reasons.or(result.getCoreReasons());
-            return false;
-        } else {
-            throw new IllegalArgumentException("Inconclusive");
-        }
     }
 
     public boolean checkConsistency(boolean ignoreLast) throws InterruptedException, SolverException {
@@ -418,153 +352,6 @@ public class GenMCExecutionModel {
             }
         }
         return consistent;
-    }
-
-    private boolean reasonKnown() {
-        long start = System.currentTimeMillis();
-        boolean reasonKnown = reasoningMethod.usesReasons() && reasons.evaluate(this::evaluate);
-        reasonEvaluationTime += System.currentTimeMillis() - start;
-        return reasonKnown;
-    }
-
-    private boolean evaluate(CoreLiteral literal) {
-        if (literal instanceof ExecLiteral lit) {
-            return evaluateExecLiteral(lit);
-        } else if (literal instanceof AddressLiteral loc) {
-            return evaluateAddressLiteral(loc);
-        } else if (literal instanceof RelLiteral lit) {
-            Optional<String> relName = lit.getRelation().getName();
-            if (relName.isEmpty()) {
-                throw new IllegalArgumentException("Expected base relation as RelLiteral");
-            }
-            if (relName.get().equals(CO)) {
-                return evaluateCoLiteral(lit);
-            } else if (relName.get().equals(RF)) {
-                return evaluateRfLiteral(lit);
-            } else {
-                throw new IllegalArgumentException("Expected " + CO + " or " + RF + " as relation for RelLiteral");
-            }
-        } else {
-            throw new IllegalArgumentException("CoreLiteral " + literal + " is not supported");
-        }
-    }
-
-    private boolean evaluateExecLiteral(ExecLiteral exec) {
-        boolean execValue = trace.getData(exec.getEvent()).isPresent();
-        return exec.isNegative() != execValue;
-    }
-
-    private boolean evaluateAddressLiteral(AddressLiteral address) {
-        Optional<EventData> first = trace.getData(address.getFirst());
-        Optional<EventData> second = trace.getData(address.getSecond());
-        boolean addressValue;
-        if (first.isEmpty() || second.isEmpty()) {
-            addressValue = false;
-        } else {
-            addressValue = first.get().getAccessedAddress().equals(second.get().getAccessedAddress());
-        }
-        return address.isNegative() != addressValue;
-    }
-
-    private boolean evaluateCoLiteral(RelLiteral co) {
-        Optional<EventData> suc = trace.getData(co.getTarget());
-        boolean coValue = false;
-        if (suc.isPresent()) {
-            EventData cur = suc.get();
-            while (cur != null) {
-                if (cur.getEvent() == co.getSource()) {
-                    coValue = true;
-                    break;
-                }
-                cur = cur.getCoPredecessor();
-            }
-        }
-        return co.isNegative() != coValue;
-    }
-
-    private boolean evaluateRfLiteral(RelLiteral rf) {
-        Optional<EventData> read = trace.getData(rf.getTarget());
-        boolean rfValue;
-        if (read.isPresent()) {
-            EventData readFrom = read.get().getReadFrom();
-            rfValue = readFrom != null && readFrom.getEvent() == rf.getSource();
-        } else {
-            rfValue = false;
-        }
-        return rf.isNegative() != rfValue;
-    }
-
-    private boolean hasPattern() {
-        if (reasoningMethod.usesPatterns()) {
-            long start = System.currentTimeMillis();
-            solver.updateBasePredicates(trace);
-            List<EventData> checkedEvents = evaluatePatterns();
-            boolean patternKnown = checkedEvents.size() != addedEvents.size();
-            patternEvaluationTime += System.currentTimeMillis() - start;
-            return patternKnown;
-        }
-        return false;
-    }
-
-    private List<EventData> evaluatePatterns() {
-        Relation rf = solver.getRf();
-        Relation co = solver.getCo();
-        if (!initiallyPropagated) {
-            for (Map.Entry<EventData, EventData> rfEntry : trace.getReadWriteMap().entrySet()) {
-                if (patterns.isViolated(rfEntry.getValue(), rfEntry.getKey(), rf)) {
-                    return Collections.emptyList();
-                }
-            }
-            for (EventData addressInit : trace.getAddressInits()) {
-                EventData firstOverride = addressInit.getCoSuccessor();
-                if (firstOverride != null) {
-                    for (EventData coSuccessor : firstOverride.getCoSuccessors()) {
-                        if (patterns.isViolated(addressInit, coSuccessor, co)) {
-                            return Collections.emptyList();
-                        }
-                    }
-                }
-            }
-            return addedEvents;
-        } else {
-            List<EventData> checkedEvents = new ArrayList<>(addedEvents.size());
-            for (EventData event : addedEvents) {
-                EventData readFrom = event.getReadFrom();
-                if (readFrom != null) {
-                    if (patterns.isViolated(readFrom, event, rf)) {
-                        return checkedEvents;
-                    }
-                } else {
-                    List<Integer> alreadyCheckedIds = new ArrayList<>();
-                    EventData coPredecessor = event.getCoPredecessor();
-                    EventData coSuccessor = event.getCoSuccessor();
-                    if (coPredecessor != null || coSuccessor != null) {
-                        int eventId = event.getId();
-                        alreadyCheckedIds.add(eventId);
-                        if (coPredecessor != null) {
-                            for (EventData anyCoPredecessor : coPredecessor.getCoPredecessors()) {
-                                if (!alreadyCheckedIds.contains(anyCoPredecessor.getId())) {
-                                    if (patterns.isViolated(anyCoPredecessor, event, co)) {
-                                        return checkedEvents;
-                                    }
-                                }
-                            }
-                        }
-                        if (coSuccessor != null) {
-                            for (EventData anyCoSuccessor : coSuccessor.getCoSuccessors()) {
-                                if (!alreadyCheckedIds.contains(anyCoSuccessor.getId())) {
-                                    if (patterns.isViolated(event, anyCoSuccessor, co)) {
-                                        return checkedEvents;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                checkedEvents.add(event);
-            }
-            return checkedEvents;
-        }
     }
 
     public boolean checkProperties() throws InterruptedException, SolverException, InvalidConfigurationException {
@@ -816,6 +603,16 @@ public class GenMCExecutionModel {
         }
     }
 
+    private void backtrackTrace(EventData backtrackingPoint) {
+        List<EventData> removedEvents = trace.rollback(backtrackingPoint);
+        if (reasoningMethod.usesPatterns()) {
+            addedEvents.removeAll(removedEvents);
+            if (!addedEvents.contains(backtrackingPoint)) {
+                addedEvents.add(backtrackingPoint);
+            }
+        }
+    }
+
     private List<EventData> getPorfPrefixPreviousPo(EventData event) {
         EventData previousEvent = event.getPoPredecessor();
         if (previousEvent != null) {
@@ -826,6 +623,209 @@ public class GenMCExecutionModel {
 
     private List<EventData> getPorfPrefixPreviousRf(EventData event) {
         return getPorfPrefix(event.getReadFrom());
+    }
+
+    private boolean checkFullConsistency(boolean ignoreLast) throws InterruptedException, SolverException {
+        if ((!needsNewConsistencyCheck && !ignoreLast) || (!lastNeedsNewConsistencyCheck && ignoreLast)) {
+            return isConsistent;
+        }
+        EventData ignoredEvent = null;
+        if (ignoreLast) {
+            ignoredEvent = trace.removeLast();
+            if (reasoningMethod.usesPatterns()) {
+                addedEvents.remove(ignoredEvent);
+            }
+        }
+        if (reasonKnown() || hasPattern()) {
+            if (ignoredEvent != null) {
+                trace.addEvent(ignoredEvent);
+                if (reasoningMethod.usesPatterns()) {
+                    addedEvents.add(ignoredEvent);
+                }
+            }
+            return false;
+        }
+
+        logger.debug("Checking consistency");
+        long start = System.currentTimeMillis();
+        ++consistencyChecks;
+        GenMCWMMSolver.Result result = solver.check(trace, reasoningMethod);
+        addedEvents.clear();
+        initiallyPropagated = true;
+        if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
+            if (ignoredEvent != null) {
+                trace.addEvent(ignoredEvent);
+                if (reasoningMethod.usesPatterns()) {
+                    addedEvents.add(ignoredEvent);
+                }
+                lastNeedsNewConsistencyCheck = false;
+            } else {
+                needsNewConsistencyCheck = false;
+            }
+            isConsistent = true;
+            consistencyCheckTime += System.currentTimeMillis() - start;
+            return true;
+        } else if (result.getStatus() == CAATSolver.Status.INCONSISTENT) {
+            if (ignoredEvent != null) {
+                trace.addEvent(ignoredEvent);
+                if (reasoningMethod.usesPatterns()) {
+                    addedEvents.add(ignoredEvent);
+                }
+            }
+            isConsistent = false;
+            consistencyCheckTime += System.currentTimeMillis() - start;
+            reasons = reasons.or(result.getCoreReasons());
+            return false;
+        } else {
+            throw new IllegalArgumentException("Inconclusive");
+        }
+    }
+
+    private boolean reasonKnown() {
+        long start = System.currentTimeMillis();
+        boolean reasonKnown = reasoningMethod.usesReasons() && reasons.evaluate(this::evaluate);
+        reasonEvaluationTime += System.currentTimeMillis() - start;
+        return reasonKnown;
+    }
+
+    private boolean evaluate(CoreLiteral literal) {
+        if (literal instanceof ExecLiteral lit) {
+            return evaluateExecLiteral(lit);
+        } else if (literal instanceof AddressLiteral loc) {
+            return evaluateAddressLiteral(loc);
+        } else if (literal instanceof RelLiteral lit) {
+            Optional<String> relName = lit.getRelation().getName();
+            if (relName.isEmpty()) {
+                throw new IllegalArgumentException("Expected base relation as RelLiteral");
+            }
+            if (relName.get().equals(CO)) {
+                return evaluateCoLiteral(lit);
+            } else if (relName.get().equals(RF)) {
+                return evaluateRfLiteral(lit);
+            } else {
+                throw new IllegalArgumentException("Expected " + CO + " or " + RF + " as relation for RelLiteral");
+            }
+        } else {
+            throw new IllegalArgumentException("CoreLiteral " + literal + " is not supported");
+        }
+    }
+
+    private boolean evaluateExecLiteral(ExecLiteral exec) {
+        boolean execValue = trace.getData(exec.getEvent()).isPresent();
+        return exec.isNegative() != execValue;
+    }
+
+    private boolean evaluateAddressLiteral(AddressLiteral address) {
+        Optional<EventData> first = trace.getData(address.getFirst());
+        Optional<EventData> second = trace.getData(address.getSecond());
+        boolean addressValue;
+        if (first.isEmpty() || second.isEmpty()) {
+            addressValue = false;
+        } else {
+            addressValue = first.get().getAccessedAddress().equals(second.get().getAccessedAddress());
+        }
+        return address.isNegative() != addressValue;
+    }
+
+    private boolean evaluateCoLiteral(RelLiteral co) {
+        Optional<EventData> suc = trace.getData(co.getTarget());
+        boolean coValue = false;
+        if (suc.isPresent()) {
+            EventData cur = suc.get();
+            while (cur != null) {
+                if (cur.getEvent() == co.getSource()) {
+                    coValue = true;
+                    break;
+                }
+                cur = cur.getCoPredecessor();
+            }
+        }
+        return co.isNegative() != coValue;
+    }
+
+    private boolean evaluateRfLiteral(RelLiteral rf) {
+        Optional<EventData> read = trace.getData(rf.getTarget());
+        boolean rfValue;
+        if (read.isPresent()) {
+            EventData readFrom = read.get().getReadFrom();
+            rfValue = readFrom != null && readFrom.getEvent() == rf.getSource();
+        } else {
+            rfValue = false;
+        }
+        return rf.isNegative() != rfValue;
+    }
+
+    private boolean hasPattern() {
+        if (reasoningMethod.usesPatterns()) {
+            long start = System.currentTimeMillis();
+            solver.updateBasePredicates(trace);
+            List<EventData> checkedEvents = evaluatePatterns();
+            boolean patternKnown = checkedEvents.size() != addedEvents.size();
+            patternEvaluationTime += System.currentTimeMillis() - start;
+            return patternKnown;
+        }
+        return false;
+    }
+
+    private List<EventData> evaluatePatterns() {
+        Relation rf = solver.getRf();
+        Relation co = solver.getCo();
+        if (!initiallyPropagated) {
+            for (Map.Entry<EventData, EventData> rfEntry : trace.getReadWriteMap().entrySet()) {
+                if (patterns.isViolated(rfEntry.getValue(), rfEntry.getKey(), rf)) {
+                    return Collections.emptyList();
+                }
+            }
+            for (EventData addressInit : trace.getAddressInits()) {
+                EventData firstOverride = addressInit.getCoSuccessor();
+                if (firstOverride != null) {
+                    for (EventData coSuccessor : firstOverride.getCoSuccessors()) {
+                        if (patterns.isViolated(addressInit, coSuccessor, co)) {
+                            return Collections.emptyList();
+                        }
+                    }
+                }
+            }
+            return addedEvents;
+        } else {
+            List<EventData> checkedEvents = new ArrayList<>(addedEvents.size());
+            for (EventData event : addedEvents) {
+                EventData readFrom = event.getReadFrom();
+                if (readFrom != null) {
+                    if (patterns.isViolated(readFrom, event, rf)) {
+                        return checkedEvents;
+                    }
+                } else {
+                    List<Integer> alreadyCheckedIds = new ArrayList<>();
+                    EventData coPredecessor = event.getCoPredecessor();
+                    EventData coSuccessor = event.getCoSuccessor();
+                    if (coPredecessor != null || coSuccessor != null) {
+                        int eventId = event.getId();
+                        alreadyCheckedIds.add(eventId);
+                        if (coPredecessor != null) {
+                            for (EventData anyCoPredecessor : coPredecessor.getCoPredecessors()) {
+                                if (!alreadyCheckedIds.contains(anyCoPredecessor.getId())) {
+                                    if (patterns.isViolated(anyCoPredecessor, event, co)) {
+                                        return checkedEvents;
+                                    }
+                                }
+                            }
+                        }
+                        if (coSuccessor != null) {
+                            for (EventData anyCoSuccessor : coSuccessor.getCoSuccessors()) {
+                                if (!alreadyCheckedIds.contains(anyCoSuccessor.getId())) {
+                                    if (patterns.isViolated(event, anyCoSuccessor, co)) {
+                                        return checkedEvents;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                checkedEvents.add(event);
+            }
+            return checkedEvents;
+        }
     }
 
     private boolean checkProperties(BooleanFormula properties) throws InterruptedException, SolverException, InvalidConfigurationException {
