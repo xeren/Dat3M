@@ -54,7 +54,7 @@ public abstract class AbstractEvent implements Event {
 
     @Override
     public Thread getThread() {
-        return getFunction() instanceof Thread ? (Thread) getFunction() : null;
+        return getFunction() instanceof Thread thread ? thread : null;
     }
 
     // ============================================ Users ============================================

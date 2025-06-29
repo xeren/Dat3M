@@ -120,8 +120,9 @@
                         <argument>--program.processing.spinloops=true</argument>
                         <argument>--genmc.useSmtSolver=false</argument>
                         <argument>--genmc.numberOfConsistentExecutions=false</argument>
-                        <argument>--genmc.reasoning=both</argument>
-                        <argument>--genmc.delayConsistencyChecks=true</argument>
+                        <argument>--genmc.reasoning=reasons</argument>
+                        <argument>--genmc.underapproximateWmm=true</argument>
+                        <argument>--genmc.delayConsistencyChecks=false</argument>
                         <argument>--solver=yices2</argument>
                         <argument>--method=genmc</argument>
                         <argument>--refinement.baseline=WELL_FORMED</argument>

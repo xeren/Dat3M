@@ -49,11 +49,14 @@ public class GenMCCoherenceGraph extends StaticGenMCWMMGraph {
 
     @Override
     public boolean contains(EventData first, EventData second) {
-        EventData aOverride = first.getCoSuccessor();
-        if (aOverride == null) {
-            return false;
+        EventData iter = first.getCoSuccessor();
+        while (iter != null) {
+            if (iter == second) {
+                return true;
+            }
+            iter = iter.getCoSuccessor();
         }
-        return aOverride.getCoSuccessors().contains(second);
+        return false;
     }
 
     @Override

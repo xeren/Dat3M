@@ -4,8 +4,11 @@ import com.dat3m.dartagnan.solver.caat.domain.Domain;
 import com.dat3m.dartagnan.solver.caat.misc.EdgeDirection;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.base.SimpleGraph;
+import com.dat3m.dartagnan.verification.model.EventData;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.stream.Stream;
 
 /*
@@ -109,6 +112,23 @@ public abstract class MaterializedGenMCWMMGraph extends AbstractGenMCWMMGraph {
     @Override
     public boolean isEmpty() {
         return simpleGraph.isEmpty();
+    }
+
+    @Override
+    public List<EventData> inEvents(EventData event) {
+        List<EventData> inEvents = new ArrayList<>();
+        for (Edge edge : simpleGraph.getEdges(event.getId(), EdgeDirection.INGOING)) {
+            inEvents.add(getEvent(edge.getFirst()));
+        }
+        return inEvents;
+    }
+    @Override
+    public List<EventData> outEvents(EventData event) {
+        List<EventData> outEvents = new ArrayList<>();
+        for (Edge edge : simpleGraph.getEdges(event.getId(), EdgeDirection.OUTGOING)) {
+            outEvents.add(getEvent(edge.getSecond()));
+        }
+        return outEvents;
     }
 
 }

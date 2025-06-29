@@ -79,6 +79,7 @@ public class GenMCExecutionModel {
     private final PatternManager patterns;
     private final BooleanFormula properties;
     private final GenMCReasoning reasoningMethod;
+    private final boolean underApproximateWmm;
     private final Map<Event, Set<Event>> mayRfInMap;
     private final Map<Event, Set<Event>> mayRfOutMap;
     private final Map<Event, Set<Event>> mayCoInMap;
@@ -90,13 +91,14 @@ public class GenMCExecutionModel {
     private final List<EventData> addedEvents;
 
     private GenMCExecutionModel(EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, GenMCWMMSolver solver, PatternManager patterns, BooleanFormula properties,
-                                ExpressionEvaluator exprEvaluator, GenMCReasoning reasoningMethod) {
+                                ExpressionEvaluator exprEvaluator, GenMCReasoning reasoningMethod, boolean underApproximateWmm) {
         this.encodingContext = encodingContext;
         this.traceEncoder = traceEncoder;
         this.solver = solver;
         this.patterns = patterns;
         this.properties = properties;
         this.reasoningMethod = reasoningMethod;
+        this.underApproximateWmm = underApproximateWmm;
         RelationAnalysis relations = encodingContext.getAnalysisContext().requires(RelationAnalysis.class);
         EventGraph mayRfGraph = relations.getKnowledge(solver.getRf()).getMaySet();
         EventGraph mayCoGraph = relations.getKnowledge(solver.getCo()).getMaySet();
@@ -112,19 +114,20 @@ public class GenMCExecutionModel {
     }
 
     public static GenMCExecutionModel withContext(EncodingContext encodingContext, GenMCTraceEncoder traceEncoder, ProverEnvironment prover, BooleanFormula properties,
-                                                  GenMCReasoning useReasoning, boolean useSMTSolver) throws InvalidConfigurationException {
+                                                  GenMCReasoning useReasoning, boolean underApproximateWmm, boolean useSMTSolver) throws InvalidConfigurationException {
         VerificationTask task = encodingContext.getTask();
         GenMCWMMSolver solver = GenMCWMMSolver.withContext(task.getMemoryModel(), encodingContext.getAnalysisContext());
         PatternManager patterns = new PatternManager(solver.getExecutionGraph());
         solver.injectExtractor(patterns);
         ExpressionEvaluator exprEvaluator = ExpressionEvaluator.getInstance(encodingContext, prover, traceEncoder, useSMTSolver);
-        GenMCExecutionModel model = new GenMCExecutionModel(encodingContext, traceEncoder, solver, patterns, properties, exprEvaluator, useReasoning);
+        GenMCExecutionModel model = new GenMCExecutionModel(encodingContext, traceEncoder, solver, patterns, properties, exprEvaluator, useReasoning, underApproximateWmm);
         reasons = DNF.FALSE();
         return model;
     }
 
     public GenMCExecutionModel newInstance(List<EventData> startTraceEvents) throws InvalidConfigurationException {
-        GenMCExecutionModel model = new GenMCExecutionModel(encodingContext, traceEncoder, solver, patterns, properties, exprEvaluator.newInstance(), reasoningMethod);
+        GenMCExecutionModel model = new GenMCExecutionModel(encodingContext, traceEncoder, solver, patterns, properties, exprEvaluator.newInstance(), reasoningMethod,
+                underApproximateWmm);
         int i = 0;
         for (EventData startTraceEvent : startTraceEvents) {
             startTraceEvent.setId(i);
@@ -327,7 +330,7 @@ public class GenMCExecutionModel {
         isConsistent = true;
     }
 
-    public boolean checkConsistency(boolean ignoreLast) throws InterruptedException, SolverException {
+    private boolean checkFullConsistency(boolean ignoreLast) throws InterruptedException, SolverException {
         if ((!needsNewConsistencyCheck && !ignoreLast) || (!lastNeedsNewConsistencyCheck && ignoreLast)) {
             return isConsistent;
         }
@@ -336,10 +339,7 @@ public class GenMCExecutionModel {
             ignoredEvent = trace.removeLast();
             addedEvents.remove(ignoredEvent);
         }
-        long start = System.currentTimeMillis();
-        boolean reasonKnown = reasoningMethod.usesReasons() && reasons.evaluate(this::evaluate);
-        reasonEvaluationTime += System.currentTimeMillis() - start;
-        if (reasonKnown) {
+        if (reasonKnown() || hasPattern()) {
             if (ignoredEvent != null) {
                 trace.addEvent(ignoredEvent);
                 addedEvents.add(ignoredEvent);
@@ -347,24 +347,8 @@ public class GenMCExecutionModel {
             return false;
         }
 
-        if (reasoningMethod.usesPatterns()) {
-            start = System.currentTimeMillis();
-            solver.updateBasePredicates(trace);
-            List<EventData> checkedEvents = hasPattern();
-            boolean patternKnown = checkedEvents.size() != addedEvents.size();
-            patternEvaluationTime += System.currentTimeMillis() - start;
-            if (patternKnown) {
-                addedEvents.removeAll(checkedEvents);
-                if (ignoredEvent != null) {
-                    trace.addEvent(ignoredEvent);
-                    addedEvents.add(ignoredEvent);
-                }
-                return false;
-            }
-        }
-
         logger.debug("Checking consistency");
-        start = System.currentTimeMillis();
+        long start = System.currentTimeMillis();
         ++consistencyChecks;
         GenMCWMMSolver.Result result = solver.check(trace, reasoningMethod);
         addedEvents.clear();
@@ -392,6 +376,33 @@ public class GenMCExecutionModel {
         } else {
             throw new IllegalArgumentException("Inconclusive");
         }
+    }
+
+    public boolean checkConsistency(boolean ignoreLast) throws InterruptedException, SolverException {
+        if (!underApproximateWmm) {
+            return checkFullConsistency(ignoreLast);
+        }
+        if ((!needsNewConsistencyCheck && !ignoreLast) || (!lastNeedsNewConsistencyCheck && ignoreLast)) {
+            return isConsistent;
+        }
+        EventData ignoredEvent = null;
+        if (ignoreLast) {
+            ignoredEvent = trace.removeLast();
+            addedEvents.remove(ignoredEvent);
+        }
+        boolean consistent = !reasonKnown() && !hasPattern();
+        if (ignoredEvent != null) {
+            trace.addEvent(ignoredEvent);
+            addedEvents.add(ignoredEvent);
+        }
+        return consistent;
+    }
+
+    private boolean reasonKnown() {
+        long start = System.currentTimeMillis();
+        boolean reasonKnown = reasoningMethod.usesReasons() && reasons.evaluate(this::evaluate);
+        reasonEvaluationTime += System.currentTimeMillis() - start;
+        return reasonKnown;
     }
 
     private boolean evaluate(CoreLiteral literal) {
@@ -461,7 +472,19 @@ public class GenMCExecutionModel {
         return rf.isNegative() != rfValue;
     }
 
-    private List<EventData> hasPattern() {
+    private boolean hasPattern() {
+        if (reasoningMethod.usesPatterns()) {
+            long start = System.currentTimeMillis();
+            solver.updateBasePredicates(trace);
+            List<EventData> checkedEvents = evaluatePatterns();
+            boolean patternKnown = checkedEvents.size() != addedEvents.size();
+            patternEvaluationTime += System.currentTimeMillis() - start;
+            return patternKnown;
+        }
+        return false;
+    }
+
+    private List<EventData> evaluatePatterns() {
         Relation rf = solver.getRf();
         Relation co = solver.getCo();
         if (!initiallyPropagated) {
@@ -745,10 +768,10 @@ public class GenMCExecutionModel {
             lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
             if (assertionEvent.getExpression() instanceof BoolLiteral bool) {
                 boolean failure = !bool.getValue();
-                if (failure && checkConsistency(false)) {
+                if (failure && checkFullConsistency(false)) {
                     hasError = true;
                 }
-            } else if (checkConsistency(false)) {
+            } else if (checkFullConsistency(false)) {
                 AssertInline assertion = new AssertInline(assertionEvent);
                 hasError = !checkProperties(assertion.encode(encodingContext));
             }
@@ -804,7 +827,7 @@ public class GenMCExecutionModel {
         if (!exprEvaluator.evaluateReachability(properties)) {
             return false;
         }
-        return checkConsistency(false);
+        return checkFullConsistency(false);
     }
 
     private void setTrace(GenMCEventDomain trace, Event changedEvent) {

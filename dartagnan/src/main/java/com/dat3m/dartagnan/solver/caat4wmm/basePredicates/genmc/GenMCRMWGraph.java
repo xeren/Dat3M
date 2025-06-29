@@ -4,6 +4,7 @@ import com.dat3m.dartagnan.program.event.core.RMWStore;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.verification.model.EventData;
 
+import java.util.Collections;
 import java.util.List;
 
 public class GenMCRMWGraph extends MaterializedGenMCWMMGraph {
@@ -41,5 +42,21 @@ public class GenMCRMWGraph extends MaterializedGenMCWMMGraph {
                 }
             }
         }
+    }
+
+    @Override
+    public List<EventData> inEvents(EventData event) {
+        if (!(event.getEvent() instanceof RMWStore rmwStore)) {
+            return Collections.emptyList();
+        } else {
+            return Collections.singletonList(trace.getData(rmwStore.getLoadEvent()).get());
+        }
+    }
+    @Override
+    public List<EventData> outEvents(EventData event) {
+        if (event.getReadFrom() == null) {
+            return Collections.emptyList();
+        }
+        return super.outEvents(event);
     }
 }

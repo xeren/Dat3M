@@ -6,7 +6,6 @@ import com.dat3m.dartagnan.verification.model.EventData;
 import com.dat3m.dartagnan.wmm.Relation;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class ViolationPattern {
 
@@ -61,7 +60,7 @@ public class ViolationPattern {
         visited.add(edge.from);
         visited.add(edge.to);
 
-        final Match firstMatch = new Match(this);
+        final Match firstMatch = new Match(nodes.size());
         firstMatch.setMatch(edge.from, from);
         firstMatch.setMatch(edge.to, to);
 
@@ -212,19 +211,17 @@ public class ViolationPattern {
     }
 
     public static class Match {
-        private final ViolationPattern pattern;
         private final EventData[] nodeId2EventId;
 
         public EventData atNode(Node node) { return nodeId2EventId[node.id]; }
         private void setMatch(Node node, EventData id) { nodeId2EventId[node.id] = id; }
 
-        private Match(ViolationPattern pattern, EventData[] mapping) {
-            this.pattern = pattern;
+        private Match(EventData[] mapping) {
             this.nodeId2EventId = mapping;
         }
 
-        public Match(ViolationPattern pattern) {
-            this(pattern, new EventData[pattern.nodes.size()]);
+        public Match(int size) {
+            this(new EventData[size]);
             Arrays.fill(nodeId2EventId, null);
         }
 
@@ -232,16 +229,24 @@ public class ViolationPattern {
             assert atNode(node) == null;
             EventData[] updatedMatching = Arrays.copyOf(this.nodeId2EventId, this.nodeId2EventId.length);
             updatedMatching[node.id] = match;
-            return new Match(pattern, updatedMatching);
+            return new Match(updatedMatching);
         }
 
         public EventData[] toArray() { return nodeId2EventId; }
 
         @Override
         public String toString() {
-            return pattern.nodes.stream().map(n -> n + "->" + atNode(n)).collect(Collectors.joining(
-                    ", ", "[ ", " ]"
-            ));
+            StringBuilder builder = new StringBuilder();
+            for (int i = 0; i < nodeId2EventId.length; i++) {
+                builder.append("[n")
+                        .append(i)
+                        .append("->")
+                        .append(nodeId2EventId[i])
+                        .append(']')
+                        .append(", ");
+            }
+            builder.delete(builder.length() - 2, builder.length());
+            return builder.toString();
         }
     }
 }

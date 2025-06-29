@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.solver.caat4wmm.basePredicates.genmc;
 
 
+import com.dat3m.dartagnan.program.event.core.Store;
 import com.dat3m.dartagnan.solver.caat.misc.EdgeDirection;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.verification.model.EventData;
@@ -48,7 +49,7 @@ public class GenMCReadFromGraph extends StaticGenMCWMMGraph {
 
     @Override
     public List<EventData> outEvents(EventData event) {
-        if (event.isWrite()) {
+        if (event.getEvent() instanceof Store) {
             return trace.getWriteReadsMap().getOrDefault(event, new ArrayList<>());
         } else {
             return Collections.emptyList();

@@ -5,6 +5,7 @@ import com.dat3m.dartagnan.solver.caat.misc.EdgeDirection;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.verification.model.EventData;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
@@ -42,13 +43,13 @@ public class GenMCProgramOrderGraph extends StaticGenMCWMMGraph {
     @Override
     public List<EventData> inEvents(EventData event) {
         List<EventData> threadEvents = trace.getThreadEventsMap().get(event.getThread());
-        return threadEvents.subList(0, event.getLocalId());
+        return new ArrayList<>(threadEvents.subList(0, event.getLocalId()));
     }
 
     @Override
     public List<EventData> outEvents(EventData event) {
         List<EventData> threadEvents = trace.getThreadEventsMap().get(event.getThread());
-        return threadEvents.subList(event.getLocalId() + 1, threadEvents.size());
+        return new ArrayList<>(threadEvents.subList(event.getLocalId() + 1, threadEvents.size()));
     }
 
     @Override

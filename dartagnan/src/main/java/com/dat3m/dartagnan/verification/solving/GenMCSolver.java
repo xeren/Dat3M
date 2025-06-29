@@ -30,10 +30,7 @@ import org.sosy_lab.common.configuration.Option;
 import org.sosy_lab.common.configuration.Options;
 import org.sosy_lab.java_smt.api.*;
 
-import static com.dat3m.dartagnan.configuration.OptionNames.DELAY_CONSISTENCY_CHECKS;
-import static com.dat3m.dartagnan.configuration.OptionNames.SHOW_CONSISTENT_EXECUTIONS;
-import static com.dat3m.dartagnan.configuration.OptionNames.REASONING;
-import static com.dat3m.dartagnan.configuration.OptionNames.USE_SMT_SOLVER;
+import static com.dat3m.dartagnan.configuration.OptionNames.*;
 import static java.util.function.Predicate.not;
 
 import java.util.*;
@@ -71,6 +68,12 @@ public class GenMCSolver extends ModelChecker {
             description = "Reasoning method to learn during exploration",
             secure = true)
     GenMCReasoning reasoningMethod = GenMCReasoning.getDefault();
+
+    @Option(
+            name=UNDERAPPROXIMATE_WMM,
+            description = "Only check full consistency when property needs to be checked",
+            secure = true)
+    boolean underapproximateWmm = false;
     
     @Option(
             name=USE_SMT_SOLVER,
@@ -141,7 +144,7 @@ public class GenMCSolver extends ModelChecker {
         } else {
             properties = propertyEncoder.encodeProperties(task.getProperty());
         }
-        final GenMCExecutionModel model = GenMCExecutionModel.withContext(context, traceEncoder, prover, properties, reasoningMethod, useSMTSolver);
+        final GenMCExecutionModel model = GenMCExecutionModel.withContext(context, traceEncoder, prover, properties, reasoningMethod, underapproximateWmm, useSMTSolver);
 
         // ------------------------ Solving ------------------------
 
