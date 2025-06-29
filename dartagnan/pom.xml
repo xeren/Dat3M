@@ -115,7 +115,7 @@
                         <argument>--target=c11</argument>
                         <argument>../benchmarks/eval/treiber3.c</argument>
                         <argument>--property=program_spec</argument>
-                        <argument>--bound=1</argument>
+                        <argument>--bound=2</argument>
                         <argument>--encoding.mergeCFVars=false</argument>
                         <argument>--program.processing.spinloops=true</argument>
                         <argument>--genmc.useSmtSolver=false</argument>

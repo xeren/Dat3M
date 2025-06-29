@@ -56,7 +56,10 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
         this.prover = prover;
         this.traceEncoder = traceEncoder;
         for (Map.Entry<MemoryObject, BigInteger> address : traceEncoder.getStaticMemoryLayout().entrySet()) {
-            address.getKey().setAddress(new IntLiteral((IntegerType) types.getPointerType(), address.getValue()));
+            MemoryObject addressObject = address.getKey();
+            if (addressObject.getAddress() == null) {
+                addressObject.setAddress(new IntLiteral((IntegerType) types.getPointerType(), address.getValue()));
+            }
         }
     }
 

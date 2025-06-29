@@ -23,8 +23,6 @@ import com.dat3m.dartagnan.program.filter.Filter;
 import com.dat3m.dartagnan.solver.caat.domain.Domain;
 import com.dat3m.dartagnan.verification.model.EventData;
 
-import static java.util.stream.Collectors.toList;
-
 public class GenMCEventDomain implements Domain<EventData> {
 
     private final List<EventData> events;
@@ -48,28 +46,26 @@ public class GenMCEventDomain implements Domain<EventData> {
     public GenMCEventDomain(Collection<EventData> events, Map<Thread, List<EventData>> threadEventsMap, List<EventData> addressInits, Map<EventData, EventData> readWriteMap,
                             Map<EventData, List<EventData>> writeReadsMap) {
         this.events = new ArrayList<>(events);
-        this.eventMap = new HashMap<>();
-        this.idMap = new HashMap<>();
+        this.eventMap = new HashMap<>(events.size() * 4 / 3);
+        this.idMap = new HashMap<>(events.size() * 4 / 3);
         for (EventData event : events) {
             eventMap.put(event.getEvent(), event);
             idMap.put(event.getId(), event);
         }
         this.threadEventsMap = new HashMap<>();
         for (Map.Entry<Thread, List<EventData>> threadEvents : threadEventsMap.entrySet()) {
-            List<EventData> newThreadEvents = threadEvents.getValue().stream()
-                    .map(e -> getData(e.getEvent()))
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
-                    .collect(toList());
+            List<EventData> newThreadEvents = new ArrayList<>();
+            for (EventData threadEvent : threadEvents.getValue()) {
+                Optional<EventData> newThreadEvent = getData(threadEvent.getEvent());
+                if (newThreadEvent.isPresent()) {
+                    newThreadEvents.add(newThreadEvent.get());
+                } else break;
+            }
             if (!newThreadEvents.isEmpty()) {
                 this.threadEventsMap.put(threadEvents.getKey(), newThreadEvents);
             }
         }
-        this.addressInits = addressInits.stream()
-                .map(e -> getData(e.getEvent()))
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .collect(toList());
+        this.addressInits = newList(addressInits);
         this.readWriteMap = new HashMap<>();
         for (EventData read : readWriteMap.keySet()) {
             Optional<EventData> readData = getData(read.getEvent());
@@ -79,14 +75,19 @@ public class GenMCEventDomain implements Domain<EventData> {
         for (Map.Entry<EventData, List<EventData>> writeReads : writeReadsMap.entrySet()) {
             Optional<EventData> writeData = getData(writeReads.getKey().getEvent());
             if (writeData.isPresent()) {
-                List<EventData> newWriteReads = writeReads.getValue().stream()
-                        .map(e -> getData(e.getEvent()))
-                        .filter(Optional::isPresent)
-                        .map(Optional::get)
-                        .collect(toList());
+                List<EventData> newWriteReads = newList(writeReads.getValue());
                 this.writeReadsMap.put(writeData.get(), newWriteReads);
             }
         }
+    }
+
+    private List<EventData> newList(List<EventData> oldList) {
+        List<EventData> newList = new ArrayList<>();
+        for (EventData threadEvent : oldList) {
+            Optional<EventData> newThreadEvent = getData(threadEvent.getEvent());
+            newThreadEvent.ifPresent(newList::add);
+        }
+        return newList;
     }
 
     public void addEvent(EventData event) {

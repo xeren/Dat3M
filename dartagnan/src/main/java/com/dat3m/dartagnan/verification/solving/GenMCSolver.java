@@ -204,7 +204,6 @@ public class GenMCSolver extends ModelChecker {
 
         logger.info("Total encoding time: {}", Utils.toTimeString(traceEncoder.getEncodingTime()));
         logger.info("Total porf-prefix calculation time: {}", Utils.toTimeString(porfPrefixTime));
-        logger.info("Total event filter time: {}", Utils.toTimeString(GenMCExecutionModel.getEventFilterTime()));
         logger.info("Total expression evaluation time: {}", Utils.toTimeString(model.getEvaluationTime()));
     }
 
@@ -351,7 +350,9 @@ public class GenMCSolver extends ModelChecker {
     }
 
     private boolean visitCos(GenMCExecutionModel model, EventData write, Collection<EventData> mayCoSet) throws SolverException, InterruptedException, InvalidConfigurationException {
+        boolean forBackwardRevisit = false;
         if (mayCoSet == null) {
+            forBackwardRevisit = true;
             mayCoSet = model.getMayCoSet(write);
         }
         if (mayCoSet.isEmpty()) {
@@ -367,7 +368,7 @@ public class GenMCSolver extends ModelChecker {
             if (!visit(model)) {
                 return false;
             }
-            model.rollbackCo(otherWrite, write);
+            model.rollbackCo(otherWrite, write, forBackwardRevisit);
         }
         model.needsNewConsistencyCheck(needsNewConsistencyCheck);
         model.lastNeedsNewConsistencyCheck(lastNeedsNewConsistencyCheck);
