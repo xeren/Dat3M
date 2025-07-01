@@ -1,10 +1,6 @@
 #include "dglm.h"
 #include <pthread.h>
 
-#ifndef NTHREADS
-#define NTHREADS 2
-#endif
-
 void *worker(void *arg)
 {
 
@@ -20,15 +16,15 @@ void *worker(void *arg)
 
 int main()
 {
-    pthread_t t[NTHREADS];
+    pthread_t t[2];
 
     init();
 
-    for (int i = 0; i < NTHREADS; i++)
-        pthread_create(&t[i], 0, worker, (void *)(size_t)i);
+    pthread_create(&t[0], 0, worker, (void *)(size_t)0);
+    pthread_create(&t[1], 0, worker, (void *)(size_t)1);
 
-    for (int i = 0; i < NTHREADS; i++)
-        pthread_join(t[i], 0);
+    pthread_join(t[0], 0);
+    pthread_join(t[1], 0);
 
     int r = dequeue();
     assert(r == EMPTY);
