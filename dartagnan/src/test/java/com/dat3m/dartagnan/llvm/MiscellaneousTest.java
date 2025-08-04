@@ -58,7 +58,7 @@ public class MiscellaneousTest extends AbstractCTest {
                 builder.setOption(OptionNames.RECURSION_BOUND, String.valueOf(bound));
             }
             builder.setOption(OptionNames.USE_SMT_SOLVER, "false");
-            builder.setOption(OptionNames.REASONING, GenMCReasoning.REASONS.asStringOption());
+            builder.setOption(OptionNames.REASONING, GenMCReasoning.BOTH.asStringOption());
             builder.setOption(OptionNames.UNDERAPPROXIMATE_WMM, "true");
             builder.setOption(OptionNames.DELAY_CONSISTENCY_CHECKS, "true");
             return builder.build();

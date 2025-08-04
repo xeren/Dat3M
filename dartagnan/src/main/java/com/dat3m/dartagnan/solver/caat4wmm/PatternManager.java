@@ -94,14 +94,28 @@ public class PatternManager implements Extractor {
         return false;
     }
 
-    public boolean isViolated(EventData first, EventData second, Relation relation) {
+    public EventData isViolated(EventData first, EventData second, Relation relation) {
         for (ViolationPattern pattern : patterns) {
             for (ViolationPattern.Edge patternEdge : pattern.findEdgesByRelation(relation)) {
-                if (!pattern.findMatches(patternEdge, first, second).isEmpty()) {
-                    return true;
+                List<ViolationPattern.Match> matches;
+                if (!(matches = pattern.findMatches(patternEdge, first, second)).isEmpty()) {
+                    EventData backtrackingPoint = null;
+                    for (ViolationPattern.Match match : matches) {
+                        EventData[] matchEvents = match.toArray();
+                        EventData cycleEvent = null;
+                        for (EventData event : matchEvents) {
+                            if (cycleEvent == null || event.getId() > cycleEvent.getId()) {
+                                cycleEvent = event;
+                            }
+                        }
+                        if (backtrackingPoint == null || backtrackingPoint.getId() > cycleEvent.getId()) {
+                            backtrackingPoint = cycleEvent;
+                        }
+                    }
+                    return backtrackingPoint;
                 }
             }
         }
-        return false;
+        return null;
     }
 }

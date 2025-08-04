@@ -302,6 +302,7 @@ public class GenMCSolver extends ModelChecker {
                     if (!visitCos(backwardRevisitModel, backwardRevisitModel.getTrace().getData(event.getEvent()).get(), null)) {
                         return false;
                     }
+                    model.updatePatternBacktrackingPoint(backwardRevisitModel);
                 }
             }
             return true;
