@@ -100,7 +100,10 @@ public class GenMCSolver extends ModelChecker {
             throws InterruptedException, SolverException, InvalidConfigurationException {
         GenMCSolver solver = new GenMCSolver();
         task.getConfig().inject(solver);
+        logger.info("{}: {}", DELAY_CONSISTENCY_CHECKS, solver.delayConsistencyChecks);
         logger.info("{}: {}", SHOW_CONSISTENT_EXECUTIONS, solver.showConsistentExecutions);
+        logger.info("{}: {}", REASONING, solver.reasoningMethod);
+        logger.info("{}: {}", UNDERAPPROXIMATE_WMM, solver.underapproximateWmm);
         logger.info("{}: {}", USE_SMT_SOLVER, solver.useSMTSolver);
         solver.runInternal(ctx, prover, task);
         return solver;

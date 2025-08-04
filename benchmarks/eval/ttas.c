@@ -2,10 +2,6 @@
 #include "ttas.h"
 #include <assert.h>
 
-#ifndef NTHREADS
-#define NTHREADS 3
-#endif
-
 int shared;
 ttaslock_t lock;
 int sum = 0;
@@ -25,17 +21,19 @@ void *thread_n(void *arg)
 
 int main()
 {
-    pthread_t t[NTHREADS];
+    pthread_t t[3];
 
     ttaslock_init(&lock);
 
-    for (int i = 0; i < NTHREADS; i++)
-        pthread_create(&t[i], 0, thread_n, (void *)(size_t)i);
+    pthread_create(&t[0], 0, thread_n, (void *)(size_t)0);
+    pthread_create(&t[1], 0, thread_n, (void *)(size_t)1);
+    pthread_create(&t[2], 0, thread_n, (void *)(size_t)2);
 
-    for (int i = 0; i < NTHREADS; i++)
-        pthread_join(t[i], 0);
+    pthread_join(t[0], 0);
+    pthread_join(t[1], 0);
+    pthread_join(t[2], 0);
 
-    assert(sum == NTHREADS);
+    assert(sum == 3);
 
     return 0;
 }
