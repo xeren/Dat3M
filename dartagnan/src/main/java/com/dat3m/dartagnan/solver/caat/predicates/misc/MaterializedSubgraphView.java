@@ -30,7 +30,7 @@ public class MaterializedSubgraphView extends MaterializedGraph {
         for (Integer e : elements) {
             sourceGraph.outEdgeStream(e)
                     .filter(edge -> elements.contains(edge.getSecond()))
-                    .forEach(simpleGraph::add);
+                    .forEach(simpleGraph::addDisjoint);
         }
     }
 

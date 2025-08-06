@@ -21,7 +21,7 @@ public class StaticDefaultWMMGraph extends MaterializedWMMGraph {
             EventData d1 = model.getData(e1).orElse(null);
             EventData d2 = model.getData(e2).orElse(null);
             if (d1 != null && d2 != null) {
-                simpleGraph.add(new Edge(d1.getId(), d2.getId()));
+                simpleGraph.addDisjoint(new Edge(d1.getId(), d2.getId()));
             }
         });
     }

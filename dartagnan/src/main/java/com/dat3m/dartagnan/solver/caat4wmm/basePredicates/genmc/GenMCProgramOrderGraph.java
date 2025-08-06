@@ -42,13 +42,13 @@ public class GenMCProgramOrderGraph extends StaticGenMCWMMGraph {
 
     @Override
     public List<EventData> inEvents(EventData event) {
-        List<EventData> threadEvents = trace.getThreadEventsMap().get(event.getThread());
+        List<EventData> threadEvents = threadEventsMap.get(event.getThread());
         return new ArrayList<>(threadEvents.subList(0, event.getLocalId()));
     }
 
     @Override
     public List<EventData> outEvents(EventData event) {
-        List<EventData> threadEvents = trace.getThreadEventsMap().get(event.getThread());
+        List<EventData> threadEvents = threadEventsMap.get(event.getThread());
         return new ArrayList<>(threadEvents.subList(event.getLocalId() + 1, threadEvents.size()));
     }
 
@@ -62,7 +62,7 @@ public class GenMCProgramOrderGraph extends StaticGenMCWMMGraph {
     @Override
     public Stream<Edge> edgeStream(int id, EdgeDirection dir) {
         EventData e = getEvent(id);
-        List<EventData> threadEvents = trace.getThreadEventsMap().get(e.getThread());
+        List<EventData> threadEvents = threadEventsMap.get(e.getThread());
         if (dir == EdgeDirection.OUTGOING) {
             return threadEvents.subList(e.getLocalId() + 1, threadEvents.size())
                     .stream().map(x -> new Edge(id, x.getId()));

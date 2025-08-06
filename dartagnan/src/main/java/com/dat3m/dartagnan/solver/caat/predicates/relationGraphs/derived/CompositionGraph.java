@@ -7,9 +7,11 @@ import com.dat3m.dartagnan.solver.caat.predicates.misc.PredicateVisitor;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.MaterializedGraph;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.RelationGraph;
-import com.dat3m.dartagnan.utils.collections.SetUtil;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 
 public class CompositionGraph extends MaterializedGraph {
 
@@ -37,14 +39,51 @@ public class CompositionGraph extends MaterializedGraph {
 
     @Override
     public void repopulate() {
-        Set<Edge> fakeSet = SetUtil.fakeSet();
         if (first.getEstimatedSize() <= second.getEstimatedSize()) {
-            for (Edge a : first.edges()) {
-                updateFirst(a, fakeSet);
-            }
+            setFirst();
         } else {
-            for (Edge a : second.edges()) {
-                updateSecond(a, fakeSet);
+            setSecond();
+        }
+    }
+
+    private void setFirst () {
+        boolean[] firstIds = new boolean[domain.size()];
+        for (Edge e : first.edges()) {
+            int firstId = e.getFirst();
+            if (!firstIds[firstId]) {
+                firstIds[firstId] = true;
+                boolean[] secondIds = new boolean[domain.size()];
+                for (Edge firstEdge : first.outEdges(firstId)) {
+                    for (Edge secondEdge : second.outEdges(firstEdge.getSecond())) {
+                        int secondId = secondEdge.getSecond();
+                        if (!secondIds[secondId]) {
+                            secondIds[secondId] = true;
+                            Edge newEdge = combine(firstEdge, secondEdge, firstEdge.getTime());
+                            simpleGraph.addDisjoint(newEdge);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void setSecond () {
+        boolean[] secondIds = new boolean[domain.size()];
+        for (Edge e : second.edges()) {
+            int secondId = e.getSecond();
+            if (!secondIds[secondId]) {
+                secondIds[secondId] = true;
+                boolean[] firstIds = new boolean[domain.size()];
+                for (Edge secondEdge : second.inEdges(secondId)) {
+                    for (Edge firstEdge : first.inEdges(secondEdge.getFirst())) {
+                        int firstId = firstEdge.getFirst();
+                        if (!firstIds[firstId]) {
+                            firstIds[firstId] = true;
+                            Edge newEdge = combine(firstEdge, secondEdge, firstEdge.getTime());
+                            simpleGraph.addDisjoint(newEdge);
+                        }
+                    }
+                }
             }
         }
     }

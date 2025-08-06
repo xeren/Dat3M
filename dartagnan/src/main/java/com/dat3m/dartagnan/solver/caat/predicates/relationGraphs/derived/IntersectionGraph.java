@@ -35,7 +35,7 @@ public class IntersectionGraph extends MaterializedGraph {
         for (Edge e1 : first.edges()) {
             Edge e = derive(e1, others);
             if (e != null) {
-                simpleGraph.add(e);
+                simpleGraph.addDisjoint(e);
             }
         }
     }

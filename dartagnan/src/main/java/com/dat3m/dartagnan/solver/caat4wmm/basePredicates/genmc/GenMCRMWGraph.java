@@ -33,11 +33,11 @@ public class GenMCRMWGraph extends MaterializedGenMCWMMGraph {
                         if (lastExclLoad == null) {
                             throw new IllegalStateException("Exclusive store was executed without preceding exclusive load.");
                         }
-                        simpleGraph.add(new Edge(lastExclLoad.getId(), e.getId()));
+                        simpleGraph.addDisjoint(new Edge(lastExclLoad.getId(), e.getId()));
                         lastExclLoad = null;
                     } else if (e.getEvent() instanceof RMWStore rmwStore) { // RMWStore
                         EventData load = trace.getData(rmwStore.getLoadEvent()).get();
-                        simpleGraph.add(new Edge(load.getId(), e.getId()));
+                        simpleGraph.addDisjoint(new Edge(load.getId(), e.getId()));
                     }
                 }
             }

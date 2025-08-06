@@ -21,8 +21,7 @@ public final class SimpleGraph extends AbstractBaseGraph {
     private DataItem[] ingoing = new DataItem[0];
     private int maxTime = 0;
     private int numEvents = 0;
-
-    private final HashMap<Edge, Edge> edgeMap = new HashMap<>(100);
+    private int size = 0;
 
     @Override
     public List<RelationGraph> getDependencies() {
@@ -82,12 +81,23 @@ public final class SimpleGraph extends AbstractBaseGraph {
     }
 
     public Edge get(Edge edge) {
-        return edgeMap.get(edge);
+        DataItem item1 = outgoing[edge.getFirst()];
+        DataItem item2 = ingoing[edge.getSecond()];
+        if (item1 != null && item2 != null) {
+            DataItem parallelEdges = item1.size() <= item2.size() ? item1 : item2;
+            for (Edge e : parallelEdges.edgeList) {
+                if (e.equals(edge)) {
+                    return e;
+                }
+            }
+            return null;
+        }
+        return null;
     }
 
     @Override
     public int size() {
-        return edgeMap.size();
+        return size;
     }
 
     @Override
@@ -97,25 +107,46 @@ public final class SimpleGraph extends AbstractBaseGraph {
     }
 
     public boolean contains(Edge e) {
-        return edgeMap.containsKey(e);
+        return contains(e, outgoing[e.getFirst()], ingoing[e.getSecond()]);
+    }
+
+    private boolean contains(Edge e, DataItem outgoing, DataItem ingoing) {
+        if (outgoing != null && ingoing != null) {
+            if (outgoing.size() <= ingoing.size()) {
+                return outgoing.contains(e);
+            } else {
+                return ingoing.contains(e);
+            }
+        }
+        return false;
     }
 
     public boolean add(Edge e) {
-        if (edgeMap.putIfAbsent(e, e) != null) {
-            return false;
-        }
+        return add(e, false);
+    }
+
+    public void addDisjoint(Edge e) {
+        add(e, true);
+    }
+
+    public boolean add(Edge e, boolean disjoint) {
         int firstId = e.getFirst();
         int secondId = e.getSecond();
-        maxTime = Math.max(maxTime, e.getTime());
         DataItem item1 = outgoing[firstId];
+        DataItem item2 = ingoing[secondId];
+        if (!disjoint && contains(e, item1, item2)) {
+            return false;
+        }
+        ++size;
+        maxTime = Math.max(maxTime, e.getTime());
+
         if (item1 == null) {
-            outgoing[firstId] = item1 = new DataItem(true);
+            outgoing[firstId] = item1 = new DataItem(true, false);
         }
         item1.add(e);
 
-        DataItem item2 = ingoing[secondId];
         if (item2 == null) {
-            ingoing[secondId] = item2 = new DataItem( false);
+            ingoing[secondId] = item2 = new DataItem( false, true);
         }
         item2.add(e);
 
@@ -132,7 +163,7 @@ public final class SimpleGraph extends AbstractBaseGraph {
 
     public void clear() {
         maxTime = 0;
-        edgeMap.clear();
+        size = 0;
 
         final int bound = Math.min(numEvents, outgoing.length);
         for (int i = 0; i < bound; i++) {
@@ -195,28 +226,52 @@ public final class SimpleGraph extends AbstractBaseGraph {
 
     private final class DataItem implements Iterable<Edge> {
         final List<Edge> edgeList;
-        final boolean deleteFromMap;
+        final boolean isOutgoing;
+        final boolean isIngoing;
         int maxTime;
+        int size = 0;
 
-        public DataItem(boolean deleteFromMap) {
+        public DataItem(boolean isOutgoing, boolean isIngoing) {
             edgeList = new EdgeList(20);
-            this.deleteFromMap = deleteFromMap;
+            this.isOutgoing = isOutgoing;
+            this.isIngoing = isIngoing;
             maxTime = 0;
         }
 
         public int size() {
-            return edgeList.size();
+            return size;
         }
         public boolean isEmpty() {
-            return edgeList.isEmpty();
+            return size == 0;
         }
 
         public boolean add(Edge e) {
             edgeList.add(e);
             maxTime = Math.max(maxTime, e.getTime());
+            ++size;
             return true;
         }
 
+        public boolean contains(Edge e) {
+            if (isOutgoing) {
+                int second = e.getSecond();
+                for (Edge item : edgeList) {
+                    if (item.getSecond() == second) {
+                        return true;
+                    }
+                }
+            } else if (isIngoing) {
+                int first = e.getFirst();
+                for (Edge item : edgeList) {
+                    if (item.getFirst() == first) {
+                        return true;
+                    }
+                }
+            } else {
+                return edgeList.contains(e);
+            }
+            return false;
+        }
 
         public Iterator<Edge> iterator() {
             return edgeList.iterator();
@@ -228,6 +283,7 @@ public final class SimpleGraph extends AbstractBaseGraph {
         public void clear() {
             edgeList.clear();
             maxTime = 0;
+            size = 0;
         }
 
         public void backtrackTo(int time) {
@@ -235,15 +291,15 @@ public final class SimpleGraph extends AbstractBaseGraph {
             // should be sorted by timestamp (since edges with higher timestamp get added later)
             if (maxTime > time) {
                 final List<Edge> edgeList = this.edgeList;
-                final Map<Edge, Edge> edgeMap = SimpleGraph.this.edgeMap;
                 int i = edgeList.size();
                 while (--i >= 0) {
                     Edge e = edgeList.get(i);
                     if (e.getTime() > time) {
                         edgeList.remove(i);
-                        if (deleteFromMap) {
-                            edgeMap.remove(e);
+                        if (isOutgoing) {
+                            --SimpleGraph.this.size;
                         }
+                        --size;
                     } else {
                         maxTime = e.getTime();
                         return;

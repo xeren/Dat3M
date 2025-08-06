@@ -26,7 +26,7 @@ public class RMWGraph extends MaterializedWMMGraph {
                 block -> {
                     for (int i = 0; i < block.size(); i++) {
                         for (int j = i + 1; j < block.size(); j++) {
-                            simpleGraph.add(new Edge(block.get(i).getId(), block.get(j).getId()));
+                            simpleGraph.addDisjoint(new Edge(block.get(i).getId(), block.get(j).getId()));
                         }
                     }
                 }
@@ -44,11 +44,11 @@ public class RMWGraph extends MaterializedWMMGraph {
                         if (lastExclLoad == null) {
                             throw new IllegalStateException("Exclusive store was executed without preceding exclusive load.");
                         }
-                        simpleGraph.add(new Edge(lastExclLoad.getId(), e.getId()));
+                        simpleGraph.addDisjoint(new Edge(lastExclLoad.getId(), e.getId()));
                         lastExclLoad = null;
                     } else if (e.getEvent() instanceof RMWStore rmwStore) { // RMWStore
                         EventData load = model.getData(rmwStore.getLoadEvent()).get();
-                        simpleGraph.add(new Edge(load.getId(), e.getId()));
+                        simpleGraph.addDisjoint(new Edge(load.getId(), e.getId()));
                     }
                 }
             }

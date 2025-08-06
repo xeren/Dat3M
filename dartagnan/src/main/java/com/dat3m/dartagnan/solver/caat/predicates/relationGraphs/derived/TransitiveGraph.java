@@ -6,9 +6,11 @@ import com.dat3m.dartagnan.solver.caat.predicates.misc.PredicateVisitor;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.MaterializedGraph;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.RelationGraph;
-import com.dat3m.dartagnan.utils.collections.SetUtil;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
 public class TransitiveGraph extends MaterializedGraph {
 
@@ -34,15 +36,63 @@ public class TransitiveGraph extends MaterializedGraph {
 
     @Override
     public void repopulate() {
-        //TODO: This is inefficient for many edges (the likely default case!)
-        // Initially, we can probably use some non-incremental approach
-        Set<Edge> fakeSet = SetUtil.fakeSet();
-        for (Edge e : inner.edges()) {
-            updateEdge(derive(e), fakeSet);
+        boolean[][] adjacencyMatrix = new boolean[domain.size()][domain.size()];
+        for (Edge edge : inner.edges()) {
+            edge = derive(edge);
+            int firstId = edge.getFirst();
+            int secondId = edge.getSecond();
+            if (!adjacencyMatrix[firstId][secondId]) {
+                simpleGraph.addDisjoint(edge);
+                adjacencyMatrix[firstId][secondId] = true;
+                final int time = edge.getTime();
+
+                for (Edge inEdge : inEdges(firstId)) {
+                    Edge newEdge = combine(inEdge, edge, time);
+                    int newFirst = newEdge.getFirst();
+                    int newSecond = newEdge.getSecond();
+                    if (!adjacencyMatrix[newFirst][newSecond]) {
+                        simpleGraph.addDisjoint(newEdge);
+                        adjacencyMatrix[newFirst][newSecond] = true;
+                        for (Edge outEdge : outEdges(secondId)) {
+                            Edge combined = combine(newEdge, outEdge, time);
+                            int combinedFirst = combined.getFirst();
+                            int combinedSecond = combined.getSecond();
+                            if (!adjacencyMatrix[combinedFirst][combinedSecond]) {
+                                simpleGraph.addDisjoint(combined);
+                                adjacencyMatrix[combinedFirst][combinedSecond] = true;
+                            }
+                        }
+                    }
+                }
+
+                for (Edge outEdge : outEdges(secondId)) {
+                    Edge newEdge = combine(edge, outEdge, time);
+                    int newFirst = newEdge.getFirst();
+                    int newSecond = newEdge.getSecond();
+                    if (!adjacencyMatrix[newFirst][newSecond]) {
+                        simpleGraph.addDisjoint(newEdge);
+                        adjacencyMatrix[newFirst][newSecond] = true;
+                    }
+                }
+            }
         }
     }
 
-    // Every (transitive) edge that gets added by adding <edge> is collected into <addedEdged>
+    @Override
+    @SuppressWarnings("unchecked")
+    public Collection<Edge> forwardPropagate(CAATPredicate changedSource, Collection<? extends Derivable> added) {
+        if (changedSource == inner) {
+            List<Edge> newEdges = new ArrayList<>();
+            for (Edge e : (Collection<Edge>)added) {
+                updateEdge(derive(e), newEdges);
+            }
+            return newEdges;
+        } else {
+            return Collections.emptyList();
+        }
+    }
+
+    // Every (transitive) edge that gets added by adding <edge> is collected into <addedEdges>
     private void updateEdge(Edge edge, Collection<Edge> addedEdges) {
         if (!simpleGraph.add(edge)) {
             return;
@@ -68,20 +118,6 @@ public class TransitiveGraph extends MaterializedGraph {
             if (simpleGraph.add(newEdge)) {
                 addedEdges.add(newEdge);
             }
-        }
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public Collection<Edge> forwardPropagate(CAATPredicate changedSource, Collection<? extends Derivable> added) {
-        if (changedSource == inner) {
-            List<Edge> newEdges = new ArrayList<>();
-            for (Edge e : (Collection<Edge>)added) {
-                updateEdge(derive(e), newEdges);
-            }
-            return newEdges;
-        } else {
-            return Collections.emptyList();
         }
     }
 

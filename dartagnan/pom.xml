@@ -113,16 +113,16 @@
                     <arguments>
                         <argument>../cat/rc11.cat</argument>
                         <argument>--target=c11</argument>
-                        <argument>../benchmarks/eval/harris.c</argument>
+                        <argument>../benchmarks/eval/treiber3.c</argument>
                         <argument>--property=program_spec</argument>
-                        <argument>--bound=2</argument>
+                        <argument>--bound=1</argument>
                         <argument>--encoding.mergeCFVars=false</argument>
                         <argument>--program.processing.spinloops=true</argument>
                         <argument>--genmc.useSmtSolver=false</argument>
                         <argument>--genmc.numberOfConsistentExecutions=false</argument>
-                        <argument>--genmc.reasoning=both</argument>
-                        <argument>--genmc.underapproximateWmm=true</argument>
-                        <argument>--genmc.delayConsistencyChecks=true</argument>
+                        <argument>--genmc.reasoning=none</argument>
+                        <argument>--genmc.underapproximateWmm=false</argument>
+                        <argument>--genmc.delayConsistencyChecks=false</argument>
                         <argument>--solver=yices2</argument>
                         <argument>--method=genmc</argument>
                         <argument>--refinement.baseline=WELL_FORMED</argument>

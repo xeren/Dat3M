@@ -32,9 +32,16 @@ public class UnionGraph extends MaterializedGraph {
     @Override
     public void repopulate() {
         //TODO: Maybe try to minimize the derivation length initially
+        boolean[][] adjacencyMatrix = new boolean[domain.size() + 1][domain.size() + 1];
         for (RelationGraph o : operands) {
             for (Edge e : o.edges()) {
-                simpleGraph.add(derive(e));
+                e =  derive(e);
+                int firstId = e.getFirst();
+                int secondId = e.getSecond();
+                if (!adjacencyMatrix[firstId][secondId]) {
+                    simpleGraph.addDisjoint(e);
+                    adjacencyMatrix[firstId][secondId] = true;
+                }
             }
         }
     }

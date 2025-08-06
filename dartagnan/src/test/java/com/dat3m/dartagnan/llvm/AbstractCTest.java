@@ -46,9 +46,9 @@ public abstract class AbstractCTest {
         return Configuration.builder()
                 .setOption(OptionNames.USE_INTEGERS, "true")
                 .setOption(OptionNames.USE_SMT_SOLVER, "false")
-                .setOption(OptionNames.REASONING, GenMCReasoning.BOTH.asStringOption())
-                .setOption(OptionNames.UNDERAPPROXIMATE_WMM, "true")
-                .setOption(OptionNames.DELAY_CONSISTENCY_CHECKS, "true")
+                .setOption(OptionNames.REASONING, GenMCReasoning.NONE.asStringOption())
+                .setOption(OptionNames.UNDERAPPROXIMATE_WMM, "false")
+                .setOption(OptionNames.DELAY_CONSISTENCY_CHECKS, "false")
                 .build();
     }
 
