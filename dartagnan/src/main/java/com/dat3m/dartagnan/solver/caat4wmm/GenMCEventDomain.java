@@ -186,7 +186,11 @@ public class GenMCEventDomain implements Domain<EventData> {
 
     @Override
     public EventData getObjectById(int id) {
-        return events.get(id);
+        try {
+            return events.get(id);
+        } catch (IndexOutOfBoundsException ignored) {
+            return null;
+        }
     }
 
     public EventData getLast() {
