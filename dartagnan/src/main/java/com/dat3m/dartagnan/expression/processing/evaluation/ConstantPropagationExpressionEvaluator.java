@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.dat3m.dartagnan.program.event.core.threading.ThreadCreate;
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
 import org.sosy_lab.java_smt.api.BooleanFormula;
 import org.sosy_lab.java_smt.api.Model;
@@ -190,6 +191,11 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
         public Expression visitRegister(Register register) {
             EventData lastWriter = trace.getLastRegWriter(register, currentEvent);
             Event lastWriterEvent = lastWriter.getEvent();
+            int argIndex = -1;
+            if (lastWriterEvent instanceof ThreadArgument arg) {
+                argIndex = arg.getIndex();
+                lastWriterEvent = arg.getCreator();
+            }
             Map.Entry<Event, Expression> registerValue = registerValues.get(register);
             if (registerValue != null && registerValue.getKey() == lastWriterEvent) {
                 return registerValue.getValue();
@@ -197,9 +203,9 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
             Expression result;
             if (lastWriterEvent instanceof Local local) {
                 result = propagate(local.getExpr(), local);
-            } else if (lastWriterEvent instanceof ThreadArgument arg) {
-                Expression argExpr = arg.getCreator().getArguments().get(arg.getIndex());
-                result = propagate(argExpr, arg);
+            } else if (lastWriterEvent instanceof ThreadCreate creator) {
+                Expression argExpr = creator.getArguments().get(argIndex);
+                result = propagate(argExpr, creator);
             } else if (lastWriterEvent instanceof Load) {
                 Store store = (Store) lastWriter.getReadFrom().getEvent();
                 result = propagate(store.getMemValue(), store);
