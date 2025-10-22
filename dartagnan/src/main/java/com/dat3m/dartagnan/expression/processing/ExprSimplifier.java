@@ -9,9 +9,15 @@ import com.dat3m.dartagnan.expression.aggregates.AggregateCmpExpr;
 import com.dat3m.dartagnan.expression.aggregates.AggregateCmpOp;
 import com.dat3m.dartagnan.expression.aggregates.ConstructExpr;
 import com.dat3m.dartagnan.expression.aggregates.ExtractExpr;
+import com.dat3m.dartagnan.expression.base.BinaryExpressionBase;
+import com.dat3m.dartagnan.expression.base.LeafExpressionBase;
+import com.dat3m.dartagnan.expression.base.LiteralExpressionBase;
 import com.dat3m.dartagnan.expression.booleans.*;
+import com.dat3m.dartagnan.expression.floats.FloatCmpExpr;
+import com.dat3m.dartagnan.expression.floats.FloatCmpOp;
 import com.dat3m.dartagnan.expression.integers.*;
 import com.dat3m.dartagnan.expression.misc.ITEExpr;
+import com.dat3m.dartagnan.expression.type.BooleanType;
 import com.dat3m.dartagnan.expression.utils.IntegerHelper;
 import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
@@ -114,9 +120,65 @@ public class ExprSimplifier extends ExprTransformer {
             }
         }
 
+        if (aggressive && (isNegation(left, right) || isNegation(right, left))) {
+            return expressions.makeValue(op == BoolBinaryOp.OR);
+        }
+
         // TODO: Simplifications of nested expressions like "b && !b => false".
 
+        if (aggressive && op == BoolBinaryOp.AND) {
+            Expression insertionExpr = checkForInsertOfEQ(left, right, false);
+            if (insertionExpr == null) {
+                insertionExpr = checkForInsertOfEQ(right, left, false);
+            }
+            if (insertionExpr != null) {
+                return insertionExpr;
+            }
+        }
+
         return expressions.makeBoolBinary(left, expr.getKind(), right);
+    }
+
+    private boolean isNegation(final Expression negCandidate, final Expression expr) {
+        return negCandidate instanceof final BoolUnaryExpr neg && neg.getKind() == BoolUnaryOp.NOT && neg.getOperand().equals(expr);
+    }
+
+    public Expression checkForInsertOfEQ(final Expression eq, final Expression expr, final boolean ignoreEQInResult) {
+        final Expression result;
+        if (eq instanceof final IntCmpExpr intCmpExpr && intCmpExpr.getKind() == IntCmpOp.EQ) {
+            result = insertEQExpression(intCmpExpr, expr);
+        } else if (eq instanceof final FloatCmpExpr floatCmpExpr && floatCmpExpr.getKind() == FloatCmpOp.OEQ) {
+            result = insertEQExpression(floatCmpExpr, expr);
+        } else if (eq.getType() instanceof BooleanType) {
+            if (eq instanceof final LeafExpressionBase<?> boolValue) {
+                result = boolValue.replaceIn(expr, expressions.makeTrue());
+            } else if (eq instanceof final BoolUnaryExpr neg && neg.getKind() == BoolUnaryOp.NOT && neg.getOperand() instanceof final LeafExpressionBase<?> boolValue) {
+                result = boolValue.replaceIn(expr, expressions. makeFalse());
+            } else if (eq instanceof final BoolBinaryExpr iffExpr && iffExpr.getKind() == BoolBinaryOp.IFF) {
+                result = insertEQExpression(iffExpr, expr);
+            } else {
+                return null;
+            }
+        } else {
+            return null;
+        }
+        if (ignoreEQInResult) {
+            return result;
+        } else {
+            return expressions.makeBoolBinary(eq, BoolBinaryOp.AND, result);
+        }
+    }
+
+    private Expression insertEQExpression(final BinaryExpressionBase<?, ?> cmpExpr, final Expression exprToInsertIn) {
+        final Expression firstCmpExpr = cmpExpr.getLeft();
+        final Expression secondCmpExpr = cmpExpr.getRight();
+        if (firstCmpExpr instanceof final LeafExpressionBase<?> exprToReplace && secondCmpExpr instanceof final LiteralExpressionBase<?> replacement) {
+            return exprToReplace.replaceIn(exprToInsertIn, replacement);
+        } else if (secondCmpExpr instanceof final LeafExpressionBase<?> exprToReplace && firstCmpExpr instanceof final LiteralExpressionBase<?> replacement) {
+            return exprToReplace.replaceIn(exprToInsertIn, replacement);
+        } else {
+            return exprToInsertIn;
+        }
     }
 
     @Override
@@ -368,6 +430,20 @@ public class ExprSimplifier extends ExprTransformer {
         // ------- Identical cases -------
         if (aggressive && trueCase.equals(falseCase)) {
             return trueCase;
+        }
+
+        if (trueCase instanceof final BoolLiteral tLit) {
+            if (tLit.getValue()) {
+                return expressions.makeOr(cond, falseCase).accept(this);
+            } else {
+                return expressions.makeAnd(expressions.makeNot(cond), falseCase).accept(this);
+            }
+        } else if (falseCase instanceof final BoolLiteral fLit) {
+            if (fLit.getValue()) {
+                return expressions.makeOr(expressions.makeNot(cond), trueCase).accept(this);
+            } else {
+                return expressions.makeAnd(cond, trueCase).accept(this);
+            }
         }
 
         return expressions.makeITE(cond, trueCase, falseCase);

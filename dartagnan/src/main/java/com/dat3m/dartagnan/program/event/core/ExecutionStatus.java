@@ -3,6 +3,7 @@ package com.dat3m.dartagnan.program.event.core;
 import com.dat3m.dartagnan.encoding.EncodingContext;
 import com.dat3m.dartagnan.encoding.ExpressionEncoder;
 import com.dat3m.dartagnan.expression.Expression;
+import com.dat3m.dartagnan.expression.ExpressionFactory;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.*;
 import org.sosy_lab.java_smt.api.BooleanFormula;
@@ -93,6 +94,11 @@ public class ExecutionStatus extends AbstractEvent implements RegWriter, EventUs
     @Override
     public <T> T accept(EventVisitor<T> visitor) {
         return visitor.visitExecutionStatus(this);
+    }
+
+    @Override
+    public Expression pre(final Expression post, final ExpressionFactory expressions) {
+        throw new UnsupportedOperationException("pre operation not yet supported for event of class ExecutionStatus");
     }
 
 }

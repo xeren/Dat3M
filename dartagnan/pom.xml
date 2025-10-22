@@ -123,6 +123,7 @@
                         <argument>--genmc.reasoning=none</argument>
                         <argument>--genmc.underapproximateWmm=false</argument>
                         <argument>--genmc.delayConsistencyChecks=false</argument>
+                        <argument>--genmc.assertionGuidance=true</argument>
                         <argument>--solver=yices2</argument>
                         <argument>--method=genmc</argument>
                         <argument>--refinement.baseline=WELL_FORMED</argument>

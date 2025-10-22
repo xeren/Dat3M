@@ -61,6 +61,7 @@ public class MiscellaneousTest extends AbstractCTest {
             builder.setOption(OptionNames.REASONING, GenMCReasoning.NONE.asStringOption());
             builder.setOption(OptionNames.UNDERAPPROXIMATE_WMM, "false");
             builder.setOption(OptionNames.DELAY_CONSISTENCY_CHECKS, "false");
+            builder.setOption(OptionNames.ASSERTION_GUIDANCE, "true");
             return builder.build();
         });
     }

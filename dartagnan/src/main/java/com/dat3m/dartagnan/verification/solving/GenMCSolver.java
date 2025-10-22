@@ -2,12 +2,18 @@ package com.dat3m.dartagnan.verification.solving;
 
 import com.dat3m.dartagnan.configuration.GenMCReasoning;
 import com.dat3m.dartagnan.configuration.Property;
+import com.dat3m.dartagnan.expression.booleans.BoolLiteral;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
+import com.dat3m.dartagnan.program.analysis.BranchEquivalence;
 import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.program.event.core.Init;
 import com.dat3m.dartagnan.program.event.core.Store;
+import com.dat3m.dartagnan.program.event.core.annotations.FunCallMarker;
+import com.dat3m.dartagnan.program.event.core.threading.ThreadCreate;
 import com.dat3m.dartagnan.program.processing.ConsecutiveGotoSimplification;
 import com.dat3m.dartagnan.program.processing.IdReassignment;
+import com.dat3m.dartagnan.program.processing.Intrinsics;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.utils.Timer;
@@ -16,8 +22,10 @@ import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.verification.model.EventData;
 import com.dat3m.dartagnan.verification.model.GenMCExecutionModel;
 import com.dat3m.dartagnan.wmm.Wmm;
+import com.dat3m.dartagnan.wmm.analysis.RelationAnalysis;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
 
+import com.dat3m.dartagnan.wmm.utils.graph.mutable.MutableEventGraph;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sosy_lab.common.configuration.Configuration;
@@ -30,25 +38,22 @@ import static com.dat3m.dartagnan.configuration.OptionNames.*;
 import static com.dat3m.dartagnan.expression.processing.evaluation.ExpressionEvaluator.ExprEvaluationContext;
 import static com.dat3m.dartagnan.verification.model.GenMCExecutionModel.*;
 import static com.dat3m.dartagnan.utils.Timer.formatTime;
+import static com.dat3m.dartagnan.wmm.RelationNameRepository.RF;
 
 import java.util.*;
 
 
-/*
-    Refinement is a custom solving procedure that starts from a weak memory model (possibly the empty model)
-    and iteratively refines it to perform a verification task.
-    It can be understood as a lazy offline-SMT solver.
-    More concretely, it iteratively
-        - finds some assertion-violating execution w.r.t. to some (very weak) baseline memory model
-        - checks the consistency of this execution using a custom theory solver (CAAT-Solver)
-        - refines the used memory model if the found execution was inconsistent, using the explanations
-          provided by the theory solver.
- */
 @Options
 public final class GenMCSolver extends ModelChecker {
 
     private static final Logger logger = LogManager.getLogger(GenMCSolver.class);
-    
+
+    @Option(
+            name=ASSERTION_GUIDANCE,
+            description = "Use assertions to skip executions",
+            secure = true)
+    boolean assertionGuidance = false;
+
     @Option(
             name=DELAY_CONSISTENCY_CHECKS,
             description = "Delay the consistency checks by skipping them for backward revisits and coherence",
@@ -83,6 +88,8 @@ public final class GenMCSolver extends ModelChecker {
     private int completeExecutions = 0;
     private int failedExecutions = 0;
     private int blockedExecutions = 0;
+    private int assertionReasonings = 0;
+    private final Timer assertionReasoningTimer = new Timer();
 
     // ================================================================================================================
     // GenMC solver
@@ -98,6 +105,7 @@ public final class GenMCSolver extends ModelChecker {
             throws InterruptedException, SolverException, InvalidConfigurationException {
         final GenMCSolver solver = new GenMCSolver(task);
         task.getConfig().inject(solver);
+        logger.info("{}: {}", ASSERTION_GUIDANCE, solver.assertionGuidance);
         logger.info("{}: {}", DELAY_CONSISTENCY_CHECKS, solver.delayConsistencyChecks);
         logger.info("{}: {}", SHOW_CONSISTENT_EXECUTIONS, solver.showConsistentExecutions);
         logger.info("{}: {}", REASONING, solver.reasoningMethod);
@@ -130,12 +138,16 @@ public final class GenMCSolver extends ModelChecker {
         performStaticProgramAnalyses(task, analysisContext, config);
         performStaticWmmAnalyses(task, analysisContext, config);
 
+        RelationAnalysis.Knowledge rfKnowledge = analysisContext.get(RelationAnalysis.class).getKnowledge(memoryModel.getRelation(RF));
+        rfKnowledge = removeImpossibleInitReads(program, rfKnowledge, analysisContext.get(BranchEquivalence.class));
+        rfKnowledge = removeImpossibleAfterJoinReads(program, rfKnowledge);
+
         removePorfAcyclicityAxiom(task);
 
         // ------------------------ Model ------------------------
 
         final ExprEvaluationContext evalContext = new ExprEvaluationContext(task, analysisContext, ctx, prover, useSMTSolver);
-        final GenMCExecutionModel model = GenMCExecutionModel.withTask(task, analysisContext, evalContext, reasoningMethod, underapproximateWmm);
+        final GenMCExecutionModel model = GenMCExecutionModel.withTask(task, analysisContext, evalContext, rfKnowledge, reasoningMethod, underapproximateWmm, assertionGuidance);
 
         // ------------------------ Solving ------------------------
 
@@ -197,6 +209,15 @@ public final class GenMCSolver extends ModelChecker {
             logger.info("Total pattern evaluation time: {}", getPatternEvaluationTimer().getFormattedTime());
         }
 
+        if (assertionGuidance) {
+            logger.info("Assertion reasonings: {}", assertionReasonings);
+            if (assertionReasonings != 0) {
+                logger.info("Total assertion reasoning time: {}", assertionReasoningTimer.getFormattedTime());
+                logger.info("Average assertion reasoning time: {}", formatTime((assertionReasoningTimer.getTime() + assertionReasonings / 2) / assertionReasonings));
+            }
+            logger.info("Total assertion reason evaluation time: {}", GenMCExecutionModel.getAssertionReasonEvaluationTimer().getFormattedTime());
+        }
+
         if (evalContext.neededSMTSolver()) {
             logger.info("Total encoding time: {}", evalContext.getTraceEncoder().getEncodingTimer().getFormattedTime());
         }
@@ -232,6 +253,99 @@ public final class GenMCSolver extends ModelChecker {
         return false;
     }
 
+    private RelationAnalysis.Knowledge removeImpossibleInitReads(final Program program, final RelationAnalysis.Knowledge rfKnowledge, final BranchEquivalence branchEquivalence) {
+        final MutableEventGraph mustRfGraph = MutableEventGraph.from(rfKnowledge.getMustSet());
+        final MutableEventGraph mayRfGraph = MutableEventGraph.from(rfKnowledge.getMaySet());
+        final Map<Event, Set<Event>> mayRfOutMap = mayRfGraph.getOutMap();
+        final Map<Event, Set<Event>> mayRfInMap = mayRfGraph.getInMap();
+        for (final Init init : program.getThreadEvents(Init.class)) {
+            final Collection<Event> mayReadsFromInit = mayRfOutMap.get(init);
+            if (mayReadsFromInit != null) {
+                final List<Event> mayReadsToRemove = new ArrayList<>();
+                for (final Event mayRead : mayReadsFromInit) {
+                    final int mayReadGid = mayRead.getGlobalId();
+                    final Thread currentThread = mayRead.getThread();
+                    final List<Thread> joinedThreadsBeforeThisRead = new ArrayList<>();
+                    for (final FunCallMarker threadJoinStart : currentThread.getEvents(FunCallMarker.class)) {
+                        if (threadJoinStart.getGlobalId() < mayReadGid - 1 && Intrinsics.Info.P_THREAD_JOIN.matches(threadJoinStart.getFunctionName())) {
+                            joinedThreadsBeforeThisRead.add(getJoinedThread(threadJoinStart, mayRfInMap));
+                        }
+                    }
+                    boolean hasMayWriteInJoinedThread = false;
+                    LOOK_FOR_MAY_WRITE:
+                    for (final Event mayWrite : mayRfInMap.get(mayRead)) {
+                        if (!(mayWrite instanceof Init) && branchEquivalence.isImplied(init, mayWrite)) {
+                            for (final Thread joinedThread : joinedThreadsBeforeThisRead) {
+                                if (joinedThread.getEvents().contains(mayWrite)) {
+                                    hasMayWriteInJoinedThread = true;
+                                    break LOOK_FOR_MAY_WRITE;
+                                }
+                            }
+                        }
+                    }
+                    if (hasMayWriteInJoinedThread) {
+                        mayReadsToRemove.add(mayRead);
+                    }
+                }
+                for (final Event mayReadToRemove : mayReadsToRemove) {
+                    mayRfGraph.remove(init, mayReadToRemove);
+                    final Collection<Event> mayRfSetForRead;
+                    if ((mayRfSetForRead = mayRfInMap.get(mayReadToRemove)).size() == 2) {
+                        for (final Event mustRead : mayRfSetForRead) {
+                            if (!(mustRead instanceof Init)) {
+                                mustRfGraph.add(mustRead, mayReadToRemove);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return new RelationAnalysis.Knowledge(mayRfGraph, mustRfGraph);
+    }
+
+    private RelationAnalysis.Knowledge removeImpossibleAfterJoinReads(final Program program, final RelationAnalysis.Knowledge rfKnowledge) {
+        final MutableEventGraph mustRfGraph = MutableEventGraph.from(rfKnowledge.getMustSet());
+        final MutableEventGraph mayRfGraph = MutableEventGraph.from(rfKnowledge.getMaySet());
+        final Map<Event, Set<Event>> mayRfInMap = mayRfGraph.getInMap();
+        for (final FunCallMarker threadJoinStart : program.getThreadEvents(FunCallMarker.class)) {
+            if (Intrinsics.Info.P_THREAD_JOIN.matches(threadJoinStart.getFunctionName())) {
+                final Thread currentThread = threadJoinStart.getThread();
+                final Thread joinedThread = getJoinedThread(threadJoinStart, mayRfInMap);
+                if (joinedThread != null) {
+                    final int joinId = threadJoinStart.getGlobalId();
+                    mayRfGraph.removeIf((w,r) -> w.getThread() == currentThread && w.getGlobalId() > joinId && r.getThread() == joinedThread);
+                }
+            }
+        }
+        for (final Map.Entry<Event, Set<Event>> mayRfSetForRead : mayRfGraph.getInMap().entrySet()) {
+            final Set<Event> mayRfSet = mayRfSetForRead.getValue();
+            if (mayRfSet.size() == 1) {
+                mustRfGraph.add(mayRfSet.iterator().next(), mayRfSetForRead.getKey());
+            }
+        }
+        return new RelationAnalysis.Knowledge(mayRfGraph, mustRfGraph);
+    }
+
+    private Thread getJoinedThread(final FunCallMarker threadJoinStart, final Map<Event, Set<Event>> mayRfInMap) {
+        final Thread currentThread = threadJoinStart.getThread();
+        final Set<Event> mayJoinSet = mayRfInMap.get(threadJoinStart.getSuccessor());
+        if (mayJoinSet == null) {
+            final Set<Event> mayThreadSet = mayRfInMap.get(threadJoinStart.getPredecessor());
+            if (mayThreadSet != null) {
+                final ThreadCreate threadCreator = (ThreadCreate) mayThreadSet.iterator().next().getPredecessor().getPredecessor();
+                return threadCreator.getSpawnedThread();
+            }
+        } else {
+            for (final Event joinOption : mayJoinSet) {
+                if (joinOption.getThread() != currentThread && joinOption instanceof final Store joinStoreOption
+                        && joinStoreOption.getMemValue() instanceof final BoolLiteral bool && !bool.getValue()) {
+                    return joinOption.getThread();
+                }
+            }
+        }
+        return null;
+    }
+
     private boolean trust(final GenMCExecutionModel model) throws SolverException, InterruptedException, InvalidConfigurationException {
         model.initialize();
         return visit(model);
@@ -249,6 +363,12 @@ public final class GenMCSolver extends ModelChecker {
         if (event == null) {
             if (model.isFinished()) {
                 ++completeExecutions;
+                if (assertionGuidance) {
+                    ++assertionReasonings;
+                    assertionReasoningTimer.start();
+                    model.assertionReasoning();
+                    assertionReasoningTimer.stop();
+                }
                 if (showConsistentExecutions && model.checkFullConsistency()) {
                     ++consistentExecutions;
                 }
@@ -466,7 +586,7 @@ public final class GenMCSolver extends ModelChecker {
         return true;
     }
 
-    private static boolean inPorfPrefix(final Map<Thread, Integer> porfPrefix, final Thread currentThread, final EventData event) {
+    public static boolean inPorfPrefix(final Map<Thread, Integer> porfPrefix, final Thread currentThread, final EventData event) {
         final Thread eventThread = event.getThread();
         if (eventThread == currentThread) {
             return true;

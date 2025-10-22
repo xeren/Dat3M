@@ -4,6 +4,8 @@ import com.dat3m.dartagnan.configuration.Arch;
 import com.dat3m.dartagnan.exception.MalformedProgramException;
 import com.dat3m.dartagnan.expression.*;
 import com.dat3m.dartagnan.expression.base.LeafExpressionBase;
+import com.dat3m.dartagnan.expression.booleans.BoolLiteral;
+import com.dat3m.dartagnan.expression.floats.FloatLiteral;
 import com.dat3m.dartagnan.expression.integers.IntLiteral;
 import com.dat3m.dartagnan.expression.processing.ExprTransformer;
 import com.dat3m.dartagnan.expression.type.AggregateType;
@@ -311,7 +313,12 @@ public class ThreadCreation implements ProgramProcessor {
             // Arguments
             final List<Register> params = thread.getParameterRegisters();
             for (int i = 0; i < params.size(); i++) {
-                thread.getEntry().insertAfter(newThreadArgument(params.get(i), creator, i));
+                final Expression arg = creator.getArguments().get(i);
+                if (arg instanceof BoolLiteral || arg instanceof IntLiteral || arg instanceof FloatLiteral) {
+                    thread.getEntry().insertAfter(newLocal(params.get(i), creator.getArguments().get(i)));
+                } else {
+                    thread.getEntry().insertAfter(newThreadArgument(params.get(i), creator, i));
+                }
             }
 
             // We use accesses to a common memory object to synchronize creator and thread.

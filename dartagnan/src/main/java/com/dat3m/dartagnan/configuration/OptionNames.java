@@ -75,6 +75,7 @@ public class OptionNames {
     public static final String SYMMETRIC_LEARNING = "refinement.symmetricLearning";
 
     // GenMC Options
+    public static final String ASSERTION_GUIDANCE = "genmc.assertionGuidance";
     public static final String DELAY_CONSISTENCY_CHECKS = "genmc.delayConsistencyChecks";
     public static final String SHOW_CONSISTENT_EXECUTIONS = "genmc.numberOfConsistentExecutions";
     public static final String REASONING = "genmc.reasoning";

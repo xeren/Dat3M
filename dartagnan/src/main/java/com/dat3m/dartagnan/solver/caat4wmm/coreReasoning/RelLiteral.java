@@ -5,7 +5,7 @@ import com.dat3m.dartagnan.wmm.Relation;
 
 import java.util.Objects;
 
-public final class RelLiteral implements CoreLiteral {
+public class RelLiteral implements CoreLiteral {
 
     private final Relation relation;
     private final Event e1;

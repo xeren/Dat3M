@@ -1,6 +1,8 @@
 package com.dat3m.dartagnan.program.event;
 
 import com.dat3m.dartagnan.encoding.EncodingContext;
+import com.dat3m.dartagnan.expression.Expression;
+import com.dat3m.dartagnan.expression.ExpressionFactory;
 import com.dat3m.dartagnan.program.Function;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
@@ -319,5 +321,10 @@ public abstract class AbstractEvent implements Event {
     @Override
     public BooleanFormula encodeExec(EncodingContext ctx) {
         return ctx.getBooleanFormulaManager().makeTrue();
+    }
+
+    @Override
+    public Expression pre(final Expression post, final ExpressionFactory expressions) {
+        return post;
     }
 }

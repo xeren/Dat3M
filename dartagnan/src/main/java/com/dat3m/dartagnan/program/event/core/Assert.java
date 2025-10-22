@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.program.event.core;
 
 import com.dat3m.dartagnan.expression.Expression;
+import com.dat3m.dartagnan.expression.ExpressionFactory;
 import com.dat3m.dartagnan.expression.ExpressionVisitor;
 import com.dat3m.dartagnan.expression.type.BooleanType;
 import com.dat3m.dartagnan.program.Register;
@@ -59,5 +60,10 @@ public class Assert extends AbstractEvent implements RegReader {
     @Override
     public <T> T accept(EventVisitor<T> visitor) {
         return visitor.visitAssert(this);
+    }
+
+    @Override
+    public Expression pre(final Expression post, final ExpressionFactory expressions) {
+        return expressions.makeAnd(post, expr);
     }
 }

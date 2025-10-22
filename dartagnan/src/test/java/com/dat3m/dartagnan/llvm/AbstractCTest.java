@@ -49,6 +49,7 @@ public abstract class AbstractCTest {
                 .setOption(OptionNames.REASONING, GenMCReasoning.NONE.asStringOption())
                 .setOption(OptionNames.UNDERAPPROXIMATE_WMM, "false")
                 .setOption(OptionNames.DELAY_CONSISTENCY_CHECKS, "false")
+                .setOption(OptionNames.ASSERTION_GUIDANCE, "true")
                 .build();
     }
 

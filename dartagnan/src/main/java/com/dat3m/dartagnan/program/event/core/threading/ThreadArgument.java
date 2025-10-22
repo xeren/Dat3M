@@ -2,6 +2,7 @@ package com.dat3m.dartagnan.program.event.core.threading;
 
 import com.dat3m.dartagnan.encoding.EncodingContext;
 import com.dat3m.dartagnan.expression.Expression;
+import com.dat3m.dartagnan.expression.ExpressionFactory;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.AbstractEvent;
 import com.dat3m.dartagnan.program.event.Event;
@@ -79,5 +80,10 @@ public class ThreadArgument extends AbstractEvent implements RegWriter, EventUse
     @Override
     public void updateReferences(Map<Event, Event> updateMapping) {
         creator = (ThreadCreate) EventUser.moveUserReference(this, creator, updateMapping);
+    }
+
+    @Override
+    public Expression pre(final Expression post, final ExpressionFactory expressions) {
+        return register.replaceIn(post, creator.getArguments().get(argIndex));
     }
 }

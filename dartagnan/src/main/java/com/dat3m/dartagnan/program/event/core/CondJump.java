@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.program.event.core;
 
 import com.dat3m.dartagnan.expression.Expression;
+import com.dat3m.dartagnan.expression.ExpressionFactory;
 import com.dat3m.dartagnan.expression.ExpressionVisitor;
 import com.dat3m.dartagnan.expression.booleans.BoolLiteral;
 import com.dat3m.dartagnan.expression.type.BooleanType;
@@ -96,5 +97,11 @@ public class CondJump extends AbstractEvent implements RegReader, EventUser {
     @Override
     public <T> T accept(EventVisitor<T> visitor) {
         return visitor.visitCondJump(this);
+    }
+
+    @Override
+    public Expression pre(final Expression post, final ExpressionFactory expressions) {
+        final Expression labelCondition = label.getPost() == null ? expressions.makeTrue() : label.getPost();
+        return isGoto() ? labelCondition : expressions.makeITE(guard, labelCondition, post);
     }
 }

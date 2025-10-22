@@ -285,7 +285,7 @@ public class Intrinsics {
             return isEarly;
         }
 
-        private boolean matches(String funcName) {
+        public boolean matches(String funcName) {
             boolean isPrefix = switch(this) {
                 case LLVM, LLVM_ASSUME, LLVM_META, LLVM_MEMCPY, LLVM_MEMSET, LLVM_EXPECT, LLVM_OBJECTSIZE -> true;
                 default -> false;

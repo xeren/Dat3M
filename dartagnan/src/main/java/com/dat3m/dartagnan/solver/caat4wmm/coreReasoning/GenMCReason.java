@@ -3,6 +3,7 @@ package com.dat3m.dartagnan.solver.caat4wmm.coreReasoning;
 import com.dat3m.dartagnan.utils.logic.Conjunction;
 
 import java.util.List;
+import java.util.function.Predicate;
 
 public class GenMCReason extends Conjunction<CoreLiteral> {
 
@@ -15,5 +16,15 @@ public class GenMCReason extends Conjunction<CoreLiteral> {
 
     public CoreLiteral[] getLiteralsToIterateOver() {
         return literals;
+    }
+
+    @Override
+    public boolean evaluate(final Predicate<CoreLiteral> literalEvaluator) {
+        for (final CoreLiteral literal : literals) {
+            if (!literalEvaluator.test(literal)) {
+                return false;
+            }
+        }
+        return true;
     }
 }

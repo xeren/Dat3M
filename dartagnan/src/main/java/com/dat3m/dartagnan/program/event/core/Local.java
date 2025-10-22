@@ -2,6 +2,7 @@ package com.dat3m.dartagnan.program.event.core;
 
 import com.dat3m.dartagnan.encoding.EncodingContext;
 import com.dat3m.dartagnan.expression.Expression;
+import com.dat3m.dartagnan.expression.ExpressionFactory;
 import com.dat3m.dartagnan.expression.ExpressionVisitor;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.AbstractEvent;
@@ -80,5 +81,10 @@ public class Local extends AbstractEvent implements RegWriter, RegReader {
     @Override
     public <T> T accept(EventVisitor<T> visitor) {
         return visitor.visitLocal(this);
+    }
+
+    @Override
+    public Expression pre(final Expression post, final ExpressionFactory expressions) {
+        return register.replaceIn(post, expr);
     }
 }
