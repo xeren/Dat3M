@@ -25,12 +25,11 @@ public class AssumeSolver extends ModelChecker {
 
     private final SolverContext ctx;
     private final ProverWithTracker prover;
-    private final VerificationTask task;
 
     private AssumeSolver(SolverContext c, ProverWithTracker p, VerificationTask t) {
+        super(t);
         ctx = c;
         prover = p;
-        task = t;
     }
 
     public static AssumeSolver run(SolverContext ctx, ProverWithTracker prover, VerificationTask task)

@@ -1,11 +1,9 @@
 package com.dat3m.dartagnan.solver.caat4wmm.basePredicates.genmc;
 
-import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.solver.caat.misc.EdgeDirection;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.verification.model.EventData;
 
-import java.math.BigInteger;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -15,7 +13,7 @@ import static java.util.stream.Collectors.groupingBy;
 // NOTE: Unlike RelLoc, this graph is reflexive!
 public class GenMCLocationGraph extends StaticGenMCWMMGraph {
 
-    private Map<BigInteger, List<EventData>> addrEventsMap;
+    private Map<Object, List<EventData>> addrEventsMap;
 
     @Override
     public boolean contains(EventData first, EventData second) {

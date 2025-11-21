@@ -2,9 +2,6 @@ package com.dat3m.dartagnan.verification.solving;
 
 import com.dat3m.dartagnan.configuration.GenMCReasoning;
 import com.dat3m.dartagnan.configuration.Property;
-import com.dat3m.dartagnan.encoding.EncodingContext;
-import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
-import com.dat3m.dartagnan.encoding.PropertyEncoder;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Event;
@@ -31,6 +28,7 @@ import org.sosy_lab.common.configuration.Options;
 import org.sosy_lab.java_smt.api.*;
 
 import static com.dat3m.dartagnan.configuration.OptionNames.*;
+import static com.dat3m.dartagnan.expression.processing.evaluation.ExpressionEvaluator.ExprEvaluationContext;
 import static java.util.function.Predicate.not;
 
 import java.util.*;
@@ -90,7 +88,8 @@ public class GenMCSolver extends ModelChecker {
     // ================================================================================================================
     // GenMC solver
 
-    private GenMCSolver() {
+    private GenMCSolver(VerificationTask task) {
+        super(task);
     }
 
     //TODO: We do not yet use Witness information. The problem is that WitnessGraph.encode() generates
@@ -98,19 +97,20 @@ public class GenMCSolver extends ModelChecker {
     //TODO (2): Add possibility for Refinement to handle CAT-properties (it ignores them for now).
     public static GenMCSolver run(SolverContext ctx, ProverEnvironment prover, VerificationTask task)
             throws InterruptedException, SolverException, InvalidConfigurationException {
-        GenMCSolver solver = new GenMCSolver();
+        GenMCSolver solver = new GenMCSolver(task);
         task.getConfig().inject(solver);
         logger.info("{}: {}", DELAY_CONSISTENCY_CHECKS, solver.delayConsistencyChecks);
         logger.info("{}: {}", SHOW_CONSISTENT_EXECUTIONS, solver.showConsistentExecutions);
         logger.info("{}: {}", REASONING, solver.reasoningMethod);
         logger.info("{}: {}", UNDERAPPROXIMATE_WMM, solver.underapproximateWmm);
         logger.info("{}: {}", USE_SMT_SOLVER, solver.useSMTSolver);
-        solver.runInternal(ctx, prover, task);
+        solver.runInternal(ctx, prover);
         return solver;
     }
 
-    private void runInternal(SolverContext ctx, ProverEnvironment prover, VerificationTask task)
+    private void runInternal(SolverContext ctx, ProverEnvironment prover)
             throws InterruptedException, SolverException, InvalidConfigurationException {
+        final Program program = task.getProgram();
         final Wmm memoryModel = task.getMemoryModel();
         final Context analysisContext = Context.create();
         final Configuration config = task.getConfig();
@@ -124,9 +124,9 @@ public class GenMCSolver extends ModelChecker {
         
         memoryModel.configureAll(config);
         preprocessProgram(task, config);
-        ConsecutiveGotoSimplification.newInstance().run(task.getProgram());
-        AssertionTransformer.newInstance().run(task.getProgram());
-        IdReassignment.newInstance().run(task.getProgram());
+        ConsecutiveGotoSimplification.newInstance().run(program);
+        AssertionTransformer.newInstance().run(program);
+        IdReassignment.newInstance().run(program);
         preprocessMemoryModel(task, config);
 
         performStaticProgramAnalyses(task, analysisContext, config);
@@ -134,20 +134,10 @@ public class GenMCSolver extends ModelChecker {
 
         removePorfAcyclicityAxiom(task);
 
-        // ------------------------ Encoding ------------------------
+        // ------------------------ Model ------------------------
 
-        context = EncodingContext.of(task, analysisContext, ctx.getFormulaManager());
-        logger.info("Used SMT solver: {}", ctx.getVersion());
-        final GenMCTraceEncoder traceEncoder = GenMCTraceEncoder.withContext(context, prover);
-        final PropertyEncoder propertyEncoder = PropertyEncoder.withContext(context);
-
-        final BooleanFormula properties;
-        if (task.getProgram().getFormat() != Program.SourceLanguage.LITMUS) {
-            properties = null;
-        } else {
-            properties = propertyEncoder.encodeProperties(task.getProperty());
-        }
-        final GenMCExecutionModel model = GenMCExecutionModel.withContext(context, traceEncoder, prover, properties, reasoningMethod, underapproximateWmm, useSMTSolver);
+        final ExprEvaluationContext evalContext = new ExprEvaluationContext(task, analysisContext, ctx, prover, useSMTSolver);
+        final GenMCExecutionModel model = GenMCExecutionModel.withTask(task, analysisContext, evalContext, reasoningMethod, underapproximateWmm);
 
         // ------------------------ Solving ------------------------
 
@@ -157,6 +147,10 @@ public class GenMCSolver extends ModelChecker {
         long endTime = System.currentTimeMillis();
         long genmcTime = endTime - startTime;
         logger.info("TruSt took {}", Utils.toTimeString(genmcTime));
+
+        if (evalContext.neededSMTSolver()) {
+            context = evalContext.getTraceEncoder().getEncodingContext();
+        }
 
         final Property.Type propertyType = Property.getCombinedType(task.getProperty(), task);
         if (logger.isInfoEnabled()) {
@@ -205,7 +199,9 @@ public class GenMCSolver extends ModelChecker {
             logger.info("Total pattern evaluation time: {}", Utils.toTimeString(GenMCExecutionModel.getPatternEvaluationTime()));
         }
 
-        logger.info("Total encoding time: {}", Utils.toTimeString(traceEncoder.getEncodingTime()));
+        if (evalContext.neededSMTSolver()) {
+            logger.info("Total encoding time: {}", Utils.toTimeString(evalContext.getTraceEncoder().getEncodingTime()));
+        }
         logger.info("Total porf-prefix calculation time: {}", Utils.toTimeString(porfPrefixTime));
         logger.info("Total expression evaluation time: {}", Utils.toTimeString(model.getEvaluationTime()));
     }
@@ -279,7 +275,7 @@ public class GenMCSolver extends ModelChecker {
             Collection<EventData> writePrefix = getPorfPrefix(model, event);
             Collection<EventData> relevantReads = model.getMayRfSet(event);
             relevantReads.removeIf(writePrefix::contains);
-            if (!delayConsistencyChecks && (mayCoSet.size() > 1 || !relevantReads.isEmpty() && !event.isRMW()) && !model.checkConsistency(true)) {
+            if (!delayConsistencyChecks && (mayCoSet.size() > 1 || !relevantReads.isEmpty()) && !model.checkConsistency(true)) {
                 ++failedExecutions;
                 logger.debug("Aborting exploration: Inconsistent execution");
                 return true;

@@ -7,13 +7,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.dat3m.dartagnan.program.event.core.threading.ThreadCreate;
-import org.sosy_lab.common.configuration.InvalidConfigurationException;
-import org.sosy_lab.java_smt.api.BooleanFormula;
-import org.sosy_lab.java_smt.api.Model;
-import org.sosy_lab.java_smt.api.ProverEnvironment;
-import org.sosy_lab.java_smt.api.SolverException;
-
 import com.dat3m.dartagnan.encoding.EncodingContext;
 import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
 import com.dat3m.dartagnan.expression.Expression;
@@ -22,8 +15,6 @@ import com.dat3m.dartagnan.expression.booleans.BoolLiteral;
 import com.dat3m.dartagnan.expression.integers.IntLiteral;
 import com.dat3m.dartagnan.expression.misc.GEPExpr;
 import com.dat3m.dartagnan.expression.processing.ExprSimplifier;
-import com.dat3m.dartagnan.expression.type.IntegerType;
-import com.dat3m.dartagnan.expression.type.TypeFactory;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.core.Alloc;
@@ -32,9 +23,18 @@ import com.dat3m.dartagnan.program.event.core.Local;
 import com.dat3m.dartagnan.program.event.core.MemoryCoreEvent;
 import com.dat3m.dartagnan.program.event.core.Store;
 import com.dat3m.dartagnan.program.event.core.threading.ThreadArgument;
+import com.dat3m.dartagnan.program.event.core.threading.ThreadCreate;
+import com.dat3m.dartagnan.program.event.core.threading.ThreadJoin;
+import com.dat3m.dartagnan.program.event.core.threading.ThreadReturn;
 import com.dat3m.dartagnan.program.memory.MemoryObject;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
 import com.dat3m.dartagnan.verification.model.EventData;
+
+import org.sosy_lab.common.configuration.InvalidConfigurationException;
+import org.sosy_lab.java_smt.api.BooleanFormula;
+import org.sosy_lab.java_smt.api.Model;
+import org.sosy_lab.java_smt.api.ProverEnvironment;
+import org.sosy_lab.java_smt.api.SolverException;
 
 import static com.dat3m.dartagnan.expression.processing.evaluation.ExpressionEvaluator.getValue;
 
@@ -45,31 +45,38 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
     private int solverChecks = 0;
     private static int evaluationTime = 0;
 
-    private static final TypeFactory types = TypeFactory.getInstance();
-    private final EncodingContext encodingContext;
-    private final ProverEnvironment prover;
-    private final GenMCTraceEncoder traceEncoder;
+    private final ExprEvaluationContext evalContext;
     private final Map<Event, BooleanFormula> cfContext = new HashMap<>();
     private final ConstantPropagator evaluator = new ConstantPropagator();
 
-    ConstantPropagationExpressionEvaluator(EncodingContext encodingContext, ProverEnvironment prover, GenMCTraceEncoder traceEncoder) {
-        this.encodingContext = encodingContext;
-        this.prover = prover;
-        this.traceEncoder = traceEncoder;
-        for (Map.Entry<MemoryObject, BigInteger> address : traceEncoder.getStaticMemoryLayout().entrySet()) {
+    ConstantPropagationExpressionEvaluator(ExprEvaluationContext evalContext) {
+        this.evalContext = evalContext;
+        for (Map.Entry<MemoryObject, Expression> address : evalContext.getMemoryLayout().entrySet()) {
             MemoryObject addressObject = address.getKey();
             if (addressObject.getAddress() == null) {
-                addressObject.setAddress(new IntLiteral((IntegerType) types.getPointerType(), address.getValue()));
+                addressObject.setAddress(evaluator.startPropagation(address.getValue(), null));
             }
         }
     }
 
     @Override
     public ConstantPropagationExpressionEvaluator newInstance() {
-        ConstantPropagationExpressionEvaluator newEvaluator = new ConstantPropagationExpressionEvaluator(encodingContext, prover, traceEncoder);
+        ConstantPropagationExpressionEvaluator newEvaluator = new ConstantPropagationExpressionEvaluator(evalContext);
         newEvaluator.cfContext.putAll(cfContext);
         newEvaluator.evaluator.registerValues.putAll(evaluator.registerValues);
         return newEvaluator;
+    }
+
+    private GenMCTraceEncoder getTraceEncoder() throws InvalidConfigurationException {
+        return evalContext.getTraceEncoder();
+    }
+
+    private EncodingContext getEncodingContext() throws InvalidConfigurationException {
+        return getTraceEncoder().getEncodingContext();
+    }
+
+    private ProverEnvironment getProver() {
+        return evalContext.getProver();
     }
 
     @Override
@@ -89,7 +96,7 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
         if (model == null) {
             return null;
         }
-        return getValue(model.evaluate(encodingContext.encodeExpressionAt(expr, forEvent)));
+        return getValue(model.evaluate(getEncodingContext().getExpressionEncoder().encodeAt(expr, forEvent).formula()));
     }
 
     @Override
@@ -123,17 +130,17 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
     }
 
     private Model calculateModel(Expression assumption) throws SolverException, InterruptedException, InvalidConfigurationException {
-        return calculateModel(encodingContext.encodeExpressionAsBooleanAt(assumption, trace.getLast().getEvent()));
+        return calculateModel(getEncodingContext().getExpressionEncoder().encodeBooleanAt(assumption, trace.getLast().getEvent()).formula());
     }
 
     private Model calculateModel(BooleanFormula assumption) throws SolverException, InterruptedException, InvalidConfigurationException {
         Collection<BooleanFormula> assumptions = new ArrayList<>(cfContext.values());
         assumptions.add(assumption);
-        assumptions.add(traceEncoder.encodeFullTrace(trace));
+        assumptions.add(getTraceEncoder().encodeFullTrace(trace));
         Model model = null;
         long start = System.currentTimeMillis();
-        if (!prover.isUnsatWithAssumptions(assumptions)) {
-            model = prover.getModel();
+        if (!getProver().isUnsatWithAssumptions(assumptions)) {
+            model = getProver().getModel();
         }
         solverCheckTime += System.currentTimeMillis() - start;
         ++solverChecks;
@@ -154,11 +161,11 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
     }
 
     @Override
-    public void addNonDetCondition(Event event, Expression condition, boolean isTrue) {
-        BooleanFormula encodedCondition = encodingContext.encodeExpressionAsBooleanAt(condition, event);
+    public void addNonDetCondition(Event event, Expression condition, boolean isTrue) throws InvalidConfigurationException {
+        BooleanFormula encodedCondition = getEncodingContext().getExpressionEncoder().encodeBooleanAt(condition, event).formula();
         BooleanFormula newCfContext = encodedCondition;
         if (!isTrue) {
-            newCfContext = encodingContext.getBooleanFormulaManager().not(encodedCondition);
+            newCfContext = getEncodingContext().getBooleanFormulaManager().not(encodedCondition);
         }
         cfContext.put(event, newCfContext);
     }
@@ -189,6 +196,9 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
 
         @Override
         public Expression visitRegister(Register register) {
+            if (currentEvent == null) {
+                return register;
+            }
             EventData lastWriter = trace.getLastRegWriter(register, currentEvent);
             Event lastWriterEvent = lastWriter.getEvent();
             int argIndex = -1;
@@ -210,7 +220,10 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
                 Store store = (Store) lastWriter.getReadFrom().getEvent();
                 result = propagate(store.getMemValue(), store);
             } else if (lastWriterEvent instanceof Alloc alloc) {
-                result = alloc.getAllocatedObject().getAddress();
+                result = propagate(alloc.getAllocatedObject().getAddress(), currentEvent);
+            } else if (lastWriterEvent instanceof ThreadJoin join) {
+                ThreadReturn threadReturn = join.getJoinThread().getEvents(ThreadReturn.class).get(0);
+                result = propagate(threadReturn.getValue().get(), threadReturn);
             } else {
                 throw new UnsupportedOperationException("Cannot handle RegWriter that is neither Local, ThreadArgument, Load nor Alloc (" +
                         lastWriterEvent.getClass().getSimpleName() + ")");
@@ -221,7 +234,7 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
 
         @Override
         public Expression visitMemoryObject(MemoryObject memObj) {
-            return memObj.getAddress();
+            return propagate(memObj.getAddress(), currentEvent);
         }
 
         @Override

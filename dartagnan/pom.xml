@@ -70,7 +70,6 @@
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
             <version>${mockito.version}</version>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -117,6 +116,7 @@
                         <argument>--property=program_spec</argument>
                         <argument>--bound=1</argument>
                         <argument>--encoding.mergeCFVars=false</argument>
+                        <argument>--program.processing.nonTermination=only_spinloops</argument>
                         <argument>--program.processing.spinloops=true</argument>
                         <argument>--genmc.useSmtSolver=false</argument>
                         <argument>--genmc.numberOfConsistentExecutions=false</argument>

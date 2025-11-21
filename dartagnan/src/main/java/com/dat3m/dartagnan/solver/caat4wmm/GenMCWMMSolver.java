@@ -14,12 +14,11 @@ import com.dat3m.dartagnan.utils.logic.Conjunction;
 import com.dat3m.dartagnan.utils.logic.DNF;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.wmm.Wmm;
-import com.dat3m.dartagnan.wmm.analysis.RelationAnalysis;
 
+import org.sosy_lab.common.configuration.Configuration;
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
 
-import static com.dat3m.dartagnan.wmm.RelationNameRepository.CO;
-import static com.dat3m.dartagnan.wmm.RelationNameRepository.RF;
+import static com.dat3m.dartagnan.wmm.RelationNameRepository.*;
 
 public class GenMCWMMSolver {
     
@@ -30,18 +29,19 @@ public class GenMCWMMSolver {
 
     private final Relation rf;
     private final Relation co;
+    private final Relation lxsx;
 
-    private GenMCWMMSolver(Wmm memoryModel, Context analysisContext) {
-        final RelationAnalysis ra = analysisContext.requires(RelationAnalysis.class);
-        this.executionGraph = new GenMCExecutionGraph(memoryModel, ra);
-        this.reasoner = new GenMCCoreReasoner(analysisContext, executionGraph);
+    private GenMCWMMSolver(Configuration config, Wmm memoryModel, Context analysisContext) throws InvalidConfigurationException {
+        this.executionGraph = new GenMCExecutionGraph(memoryModel);
+        this.reasoner = GenMCCoreReasoner.fromConfig(config, analysisContext, executionGraph);
         this.solver = CAATSolver.create();
         this.rf = memoryModel.getRelation(RF);
         this.co = memoryModel.getRelation(CO);
+        this.lxsx = memoryModel.getRelation(LXSX);
     }
 
-    public static GenMCWMMSolver withContext(Wmm memoryModel, Context analysisContext) throws InvalidConfigurationException {
-        return new GenMCWMMSolver(memoryModel, analysisContext);
+    public static GenMCWMMSolver fromConfig(Configuration config, Wmm memoryModel, Context analysisContext) throws InvalidConfigurationException {
+        return new GenMCWMMSolver(config, memoryModel, analysisContext);
     }
 
     public void injectExtractor(Extractor extractor) {
@@ -58,6 +58,10 @@ public class GenMCWMMSolver {
 
     public Relation getCo() {
         return co;
+    }
+
+    public Relation getLxsx() {
+        return lxsx;
     }
 
     public Result check(GenMCEventDomain trace, GenMCReasoning reasoningMethod) {

@@ -8,6 +8,7 @@ import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.utils.Result;
 import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.verification.solving.AssumeSolver;
+import com.dat3m.dartagnan.verification.solving.GenMCSolver;
 import com.dat3m.dartagnan.verification.solving.ModelChecker;
 import com.dat3m.dartagnan.verification.solving.RefinementSolver;
 import com.dat3m.dartagnan.witness.WitnessType;
@@ -98,6 +99,7 @@ public class ReachabilityResult {
                 final ModelChecker modelChecker; modelChecker = switch (options.method()) {
                     case EAGER -> AssumeSolver.run(ctx, prover, task);
                     case LAZY -> RefinementSolver.run(ctx, prover, task);
+                    case GENMC -> GenMCSolver.run(ctx, prover, task);
                 };
                 // Verification ended, we can interrupt the timeout Thread
                 t.interrupt();

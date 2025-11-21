@@ -6,6 +6,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.dat3m.dartagnan.expression.Expression;
+import com.dat3m.dartagnan.expression.ExpressionFactory;
 import com.dat3m.dartagnan.expression.base.ExpressionBase;
 import com.dat3m.dartagnan.expression.booleans.BoolBinaryExpr;
 import com.dat3m.dartagnan.expression.booleans.BoolBinaryOp;
@@ -24,6 +25,8 @@ import com.dat3m.dartagnan.program.event.core.Label;
 // TODO: also for normal assertions
 // TODO: Check that loads are not moved over barriers
 public class AssertionTransformer implements ProgramProcessor {
+
+    private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
 
     private AssertionTransformer() { }
 
@@ -68,7 +71,7 @@ public class AssertionTransformer implements ProgramProcessor {
     }
 
     private void transformAndAssertions(Assert originalAssert, List<ExpressionBase<BooleanType>> assertions, Event eventToAppendTo, Event eventToPrependBefore) {
-        BoolLiteral falseLiteral = new BoolLiteral(null, false);
+        BoolLiteral falseLiteral = expressions.makeFalse();
         if (assertions.contains(falseLiteral)) {
             Assert newAssert = new Assert(falseLiteral, originalAssert.getErrorMessage());
             newAssert.setFunction(originalAssert.getFunction());
@@ -81,7 +84,7 @@ public class AssertionTransformer implements ProgramProcessor {
 
         BiFunction<Event, Expression, Event> assertAppender = (lastEvent, assertion) -> {
             Assert lastAssert = (Assert) lastEvent;
-            Assert newAssert = new Assert(new BoolBinaryExpr(lastAssert.getExpression(), BoolBinaryOp.AND, assertion), originalAssert.getErrorMessage());
+            Assert newAssert = new Assert(expressions.makeBoolBinary(lastAssert.getExpression(), BoolBinaryOp.AND, assertion), originalAssert.getErrorMessage());
             newAssert.setFunction(originalAssert.getFunction());
             newAssert.setPredecessor(lastAssert.getPredecessor());
             newAssert.getPredecessor().setSuccessor(newAssert);
@@ -93,7 +96,7 @@ public class AssertionTransformer implements ProgramProcessor {
     }
 
     private void transformOrAssertions(Assert originalAssert, List<ExpressionBase<BooleanType>> assertions, Event eventToAppendTo, Event eventToPrependBefore) {
-        if (assertions.contains(new BoolLiteral(null, true))) {
+        if (assertions.contains(expressions.makeTrue())) {
             eventToAppendTo.setSuccessor(eventToPrependBefore);
             eventToPrependBefore.setPredecessor(eventToAppendTo);
         }
@@ -104,7 +107,7 @@ public class AssertionTransformer implements ProgramProcessor {
         skipAssertLabel.setSuccessor(eventToPrependBefore);
         eventToPrependBefore = skipAssertLabel;
 
-        Assert realAssert = new Assert(new BoolLiteral(null, false), originalAssert.getErrorMessage());
+        Assert realAssert = new Assert(expressions.makeFalse(), originalAssert.getErrorMessage());
         realAssert.setFunction(originalAssert.getFunction());
         eventToPrependBefore.setPredecessor(realAssert);
         realAssert.setSuccessor(eventToPrependBefore);
@@ -112,7 +115,7 @@ public class AssertionTransformer implements ProgramProcessor {
 
         BiFunction<Event, Expression, Event> assertAppender = (lastEvent, assertion) -> {
             CondJump lastAssert = (CondJump) lastEvent;
-            lastAssert.setGuard(new BoolBinaryExpr(lastAssert.getGuard(), BoolBinaryOp.OR, assertion));
+            lastAssert.setGuard(expressions.makeBoolBinary(lastAssert.getGuard(), BoolBinaryOp.OR, assertion));
             return lastAssert;
         };
         Function<Expression, Event> assertCreator = (assertion) -> new CondJump(assertion, skipAssertLabel);

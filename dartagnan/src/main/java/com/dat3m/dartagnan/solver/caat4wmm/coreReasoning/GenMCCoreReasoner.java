@@ -9,7 +9,6 @@ import com.dat3m.dartagnan.solver.caat.reasoning.EdgeLiteral;
 import com.dat3m.dartagnan.solver.caat.reasoning.ElementLiteral;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCExecutionGraph;
-import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.CoreReasoner.SymmetricLearning;
 import com.dat3m.dartagnan.utils.equivalence.EquivalenceClass;
 import com.dat3m.dartagnan.utils.logic.Conjunction;
 import com.dat3m.dartagnan.utils.logic.DNF;
@@ -18,20 +17,37 @@ import com.dat3m.dartagnan.wmm.Relation;
 import com.dat3m.dartagnan.wmm.analysis.RelationAnalysis;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.sosy_lab.common.configuration.Configuration;
+import org.sosy_lab.common.configuration.InvalidConfigurationException;
+import org.sosy_lab.common.configuration.Option;
+import org.sosy_lab.common.configuration.Options;
 
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static com.dat3m.dartagnan.GlobalSettings.REFINEMENT_SYMMETRIC_LEARNING;
+import static com.dat3m.dartagnan.configuration.OptionNames.*;
 import static com.dat3m.dartagnan.wmm.RelationNameRepository.*;
 
 // The CoreReasoner transforms base reasons of the CAATSolver to core reasons of the WMMSolver.
+@Options
 public class GenMCCoreReasoner {
 
+    private static final Logger logger = LogManager.getLogger(GenMCCoreReasoner.class);
     // An upper bound on the number of reasons computed per iteration,
     // This is mostly used to limit "reason explosion" for highly symmetric benchmarks.
     private final static int MAX_NUM_COMPUTED_REASONS = 1000;
+
+    @Option(name = SYMMETRIC_LEARNING,
+            description = "Sets the kind of clauses learned in each refinement step. Effective only in lazy methods." +
+                    " If NONE, only learns the reasons for inconsistency of the currently modelled execution."+
+                    " If FULL, additionally learns all clauses symmetric to reasons.",
+            secure = true)
+    private SymmetricLearning symmetricLearning = SymmetricLearning.FULL;
+
+    public enum SymmetricLearning { NONE, FULL }
 
     private final GenMCExecutionGraph executionGraph;
     private final ExecutionAnalysis exec;
@@ -42,8 +58,14 @@ public class GenMCCoreReasoner {
         this.executionGraph = executionGraph;
         this.exec = analysisContext.requires(ExecutionAnalysis.class);
         this.ra = analysisContext.requires(RelationAnalysis.class);
-        this.symmGenerators = computeSymmetryGenerators(
-                analysisContext.requires(ThreadSymmetry.class), REFINEMENT_SYMMETRIC_LEARNING);
+        this.symmGenerators = computeSymmetryGenerators(analysisContext.requires(ThreadSymmetry.class));
+    }
+
+    public static GenMCCoreReasoner fromConfig(Configuration config, Context analysisContext, GenMCExecutionGraph executionGraph) throws InvalidConfigurationException {
+        GenMCCoreReasoner reasoner = new GenMCCoreReasoner(analysisContext, executionGraph);
+        config.inject(reasoner);
+        logger.info("{}: {}", SYMMETRIC_LEARNING, reasoner.symmetricLearning);
+        return reasoner;
     }
 
     /*
@@ -183,8 +205,20 @@ public class GenMCCoreReasoner {
                     }
                 } else {
                     final String name = rel.getName().orElse(null);
-                    if (RF.equals(name) || CO.equals(name)) {
-                        simplified.add(lit);
+                    if (RF.equals(name) || LXSX.equals(name)) {
+                        if (k.getMaySet().getInMap().get(e2).size() == 1) {
+                            addExecReason(e1, e2, simplified);
+                        } else {
+                            simplified.add(lit);
+                        }
+                    } else if (CO.equals(name)) {
+                        if (!k.getMaySet().contains(e2, e1)) {
+                            addExecReason(e1, e2, simplified);
+                        } else {
+                            simplified.add(lit);
+                        }
+                    } else if (AMO.equals(name)) {
+                        simplified.add(new ExecLiteral(e2, lit.isPositive()));
                     } else if (LOC.equals(name)) {
                         simplified.add(new AddressLiteral(e1, e2, lit.isPositive()));
                     } else {
@@ -235,17 +269,16 @@ public class GenMCCoreReasoner {
 
     // Computes a list of generators for the symmetry group of threads.
     // NOTE We always add the identity as generator, although it is unnecessary.
-    private List<Function<Event, Event>> computeSymmetryGenerators(
-            ThreadSymmetry symm, SymmetricLearning learningOption) {
+    private List<Function<Event, Event>> computeSymmetryGenerators(ThreadSymmetry symm) {
         final Set<? extends EquivalenceClass<Thread>> symmClasses = symm.getNonTrivialClasses();
         final List<Function<Event, Event>> perms = new ArrayList<>();
         perms.add(Function.identity());
 
-        if (learningOption == SymmetricLearning.NONE) {
+        if (symmetricLearning == SymmetricLearning.NONE) {
             return perms;
         }
 
-        assert learningOption == SymmetricLearning.FULL;
+        assert symmetricLearning == SymmetricLearning.FULL;
 
         for (EquivalenceClass<Thread> c : symmClasses) {
             final List<Thread> threads = new ArrayList<>(c);

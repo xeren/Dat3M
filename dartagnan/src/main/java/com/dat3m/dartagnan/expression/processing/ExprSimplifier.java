@@ -4,6 +4,7 @@ package com.dat3m.dartagnan.expression.processing;
 import com.dat3m.dartagnan.expression.BinaryExpression;
 import com.dat3m.dartagnan.expression.Expression;
 import com.dat3m.dartagnan.expression.ExpressionKind;
+import com.dat3m.dartagnan.expression.Type;
 import com.dat3m.dartagnan.expression.aggregates.AggregateCmpExpr;
 import com.dat3m.dartagnan.expression.aggregates.AggregateCmpOp;
 import com.dat3m.dartagnan.expression.aggregates.ConstructExpr;
@@ -17,6 +18,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 public class ExprSimplifier extends ExprTransformer {
 
@@ -166,6 +170,56 @@ public class ExprSimplifier extends ExprTransformer {
         }
 
         return expressions.makeIntCmp(left, op, right);
+    }
+
+    @Override
+    public Expression visitIntConcat(IntConcat expr) {
+        List<Expression> operands = new ArrayList<>();
+        boolean allLiterals = true;
+        for (Expression operand : expr.getOperands()) {
+            operand = operand.accept(this);
+            if (!(operand instanceof IntLiteral)) {
+                allLiterals = false;
+            }
+            operands.add(operand);
+        }
+
+        if (allLiterals) {
+            IntLiteral firstLit = (IntLiteral) operands.get(0);
+            BigInteger result = firstLit.getValue();
+            int offset = firstLit.getType().getBitWidth();
+            for (Expression subExpr : operands.subList(1, operands.size())) {
+                IntLiteral lit = (IntLiteral) subExpr;
+                BigInteger op = lit.getValue();
+                final BigInteger offsetValue = BigInteger.TWO.pow(offset - 1);
+                result = result.add(op.multiply(offsetValue));
+                offset += lit.getType().getBitWidth();
+            }
+            return expressions.makeValue(result, expr.getType());
+        }
+
+        if (operands.size() == 1) {
+            return operands.get(0);
+        }
+        return expressions.makeIntConcat(operands);
+    }
+
+    @Override
+    public Expression visitIntExtract(IntExtract expr) {
+        Expression operand = expr.getOperand().accept(this);
+        if (operand instanceof IntLiteral lit) {
+            BigInteger op = lit.getValue();
+            final BigInteger highBitValue = BigInteger.TWO.pow(expr.getHighBit() + 1);
+            final BigInteger lowBitValue = BigInteger.TWO.pow(expr.getLowBit());
+            final BigInteger extracted = expr.isExtractingHighBits() ? op : op.mod(highBitValue);
+            final BigInteger result = expr.isExtractingLowBits() ? extracted : extracted.divide(lowBitValue);
+            return expressions.makeValue(result, expr.getType());
+        }
+
+        if (expr.isExtractingHighBits() && expr.isExtractingLowBits()) {
+            return operand;
+        }
+        return expressions.makeIntExtract(operand, expr.getLowBit(), expr.getHighBit());
     }
 
     @Override
@@ -341,18 +395,60 @@ public class ExprSimplifier extends ExprTransformer {
         assert expr.getKind() == AggregateCmpOp.EQ || expr.getKind() == AggregateCmpOp.NEQ;
         final boolean isEq = expr.getKind() == AggregateCmpOp.EQ;
         if (left instanceof ConstructExpr l && right instanceof ConstructExpr r) {
-            if (l.getOperands().size() == r.getOperands().size()) {
-                if (l.getOperands().isEmpty()) {
+            List<Expression> leftOperands = l.getOperands();
+            List<Expression> rightOperands = r.getOperands();
+            int size = leftOperands.size();
+            if (size == rightOperands.size()) {
+                if (leftOperands.isEmpty()) {
                     return expressions.makeValue(isEq);
-                } else if (l.getOperands().size() == 1) {
-                    final Expression lOp = l.getOperands().get(0);
-                    final Expression rOp = r.getOperands().get(0);
+                } else if (size == 1) {
+                    final Expression lOp = leftOperands.get(0);
+                    final Expression rOp = rightOperands.get(0);
                     return (isEq ? expressions.makeEQ(lOp, rOp) : expressions.makeNEQ(lOp, rOp)).accept(this);
+                } else {
+                    List<Map.Entry<Type, BigInteger>> leftValues = new ArrayList<>();
+                    for (Expression leftOperand : leftOperands) {
+                        if (leftOperand instanceof BoolLiteral bool) {
+                            leftValues.add(Map.entry(leftOperand.getType(), bool.getValue() ? BigInteger.ONE : BigInteger.ZERO));
+                        } else if (leftOperand instanceof IntLiteral integer) {
+                            leftValues.add(Map.entry(leftOperand.getType(), integer.getValue()));
+                        } else break;
+                    }
+                    if (leftValues.size() == size) {
+                        boolean cmpResult = true;
+                        int i = 0;
+                        for (Expression rightOperand : rightOperands) {
+                            Map.Entry<Type, BigInteger> leftValue = leftValues.get(i);
+                            boolean eq = leftValue.getKey().equals(rightOperand.getType());
+                            if (rightOperand instanceof BoolLiteral bool) {
+                                eq &= (BigInteger.ONE.equals(leftValue.getValue())) == bool.getValue();
+                            } else if (rightOperand instanceof IntLiteral integer) {
+                                eq &= leftValue.getValue().equals(integer.getValue());
+                            } else {
+                                break;
+                            }
+                            cmpResult &= (isEq && eq) || (!isEq && !eq);
+                            ++i;
+                        }
+                        if (i == size) {
+                            return expressions.makeValue(cmpResult);
+                        }
+                    }
                 }
             }
         }
 
         return expressions.makeAggregateCmp(left, expr.getKind(), right);
+    }
+
+    @Override
+    public Expression visitConstructExpression(ConstructExpr expr) {
+        List<Expression> simplifiedOperands = new ArrayList<>();
+        for (Expression operand : expr.getOperands()) {
+            simplifiedOperands.add(operand.accept(this));
+        }
+
+        return expressions.makeConstruct(expr.getType(), simplifiedOperands);
     }
 
     // =================================== Helper methods ===================================

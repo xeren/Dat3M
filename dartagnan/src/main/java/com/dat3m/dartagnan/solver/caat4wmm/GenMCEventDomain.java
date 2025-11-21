@@ -16,6 +16,7 @@ import com.dat3m.dartagnan.program.event.RegWriter;
 import com.dat3m.dartagnan.program.event.Tag;
 import com.dat3m.dartagnan.program.event.core.Init;
 import com.dat3m.dartagnan.program.event.core.Label;
+import com.dat3m.dartagnan.program.event.core.RMWStoreExclusive;
 import com.dat3m.dartagnan.program.event.core.Store;
 import com.dat3m.dartagnan.program.event.core.threading.ThreadCreate;
 import com.dat3m.dartagnan.program.event.core.threading.ThreadStart;
@@ -31,6 +32,7 @@ public class GenMCEventDomain implements Domain<EventData> {
     private final List<EventData> addressInits;
     private final Map<EventData, EventData> readWriteMap;
     private final Map<EventData, List<EventData>> writeReadsMap;
+    private final Map<EventData, EventData> lxsxPairs;
 
     public GenMCEventDomain() {
         this.events = new ArrayList<>();
@@ -39,10 +41,11 @@ public class GenMCEventDomain implements Domain<EventData> {
         this.addressInits = new ArrayList<>();
         this.readWriteMap = new HashMap<>();
         this.writeReadsMap = new HashMap<>();
+        this.lxsxPairs = new HashMap<>();
     }
 
     public GenMCEventDomain(Collection<EventData> events, Map<Thread, List<EventData>> threadEventsMap, List<EventData> addressInits, Map<EventData, EventData> readWriteMap,
-                            Map<EventData, List<EventData>> writeReadsMap) {
+                            Map<EventData, List<EventData>> writeReadsMap, Map<EventData, EventData> lxsxPairs) {
         this.events = new ArrayList<>(events);
         this.eventMap = new HashMap<>(events.size() * 4 / 3);
         for (EventData event : events) {
@@ -74,6 +77,11 @@ public class GenMCEventDomain implements Domain<EventData> {
                 List<EventData> newWriteReads = newList(writeReads.getValue());
                 this.writeReadsMap.put(writeData.get(), newWriteReads);
             }
+        }
+        this.lxsxPairs = new HashMap<>();
+        for (Map.Entry<EventData, EventData> lxsxPair : lxsxPairs.entrySet()) {
+            Optional<EventData> store = getData(lxsxPair.getKey().getEvent());
+            store.ifPresent(eventData -> this.lxsxPairs.put(eventData, getData(lxsxPair.getValue().getEvent()).get()));
         }
     }
 
@@ -123,7 +131,8 @@ public class GenMCEventDomain implements Domain<EventData> {
         int backtrackingIndex = backtrackingPoint.getId();
         List<EventData> eventsToRemove = events.subList(backtrackingIndex + 1, events.size());
         for (EventData eventToRemove : eventsToRemove) {
-            threadEventsMap.get(eventToRemove.getEvent().getThread()).remove(eventToRemove);
+            Event eventToRemoveEvent = eventToRemove.getEvent();
+            threadEventsMap.get(eventToRemoveEvent.getThread()).remove(eventToRemove);
             addressInits.remove(eventToRemove);
             if (eventToRemove.isRead()) {
                 readWriteMap.remove(eventToRemove);
@@ -133,6 +142,9 @@ public class GenMCEventDomain implements Domain<EventData> {
                 }
             } else if (eventToRemove.isWrite()) {
                 writeReadsMap.remove(eventToRemove);
+                if (eventToRemoveEvent instanceof RMWStoreExclusive) {
+                    lxsxPairs.remove(eventToRemove);
+                }
             }
         }
         eventsToRemove.forEach(event -> eventMap.remove(event.getEvent()));
@@ -147,6 +159,10 @@ public class GenMCEventDomain implements Domain<EventData> {
         }
         writeReadsMap.computeIfAbsent(newWrite, write -> new ArrayList<>()).add(read);
         readWriteMap.put(read, newWrite);
+    }
+
+    public void addLxsxPair(EventData store, EventData load) {
+        lxsxPairs.put(store, load);
     }
 
     public Optional<EventData> getLastAddedThreadEventData(Thread thread) {
@@ -199,9 +215,10 @@ public class GenMCEventDomain implements Domain<EventData> {
 
     public EventData removeLast() {
         EventData last = getLast();
+        Event lastEvent = last.getEvent();
         events.remove(last);
-        eventMap.remove(last.getEvent());
-        threadEventsMap.get(last.getEvent().getThread()).remove(last);
+        eventMap.remove(lastEvent);
+        threadEventsMap.get(lastEvent.getThread()).remove(last);
         if (last.getReadFrom() != null) {
             readWriteMap.remove(last);
             writeReadsMap.get(last.getReadFrom()).remove(last);
@@ -209,6 +226,9 @@ public class GenMCEventDomain implements Domain<EventData> {
         EventData coPredecessor = last.getCoPredecessor();
         if (coPredecessor != null) {
             coPredecessor.setCoSuccessor(last.getCoSuccessor());
+        }
+        if (lastEvent instanceof RMWStoreExclusive) {
+            lxsxPairs.remove(last);
         }
         return last;
     }
@@ -231,6 +251,10 @@ public class GenMCEventDomain implements Domain<EventData> {
 
     public Map<EventData, List<EventData>> getWriteReadsMap() {
         return writeReadsMap;
+    }
+
+    public Map<EventData, EventData> getLxsxPairs() {
+        return lxsxPairs;
     }
 
     public Optional<EventData> getData(Event e) {

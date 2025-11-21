@@ -13,7 +13,6 @@ import com.dat3m.dartagnan.program.event.core.Load;
 import com.dat3m.dartagnan.program.event.core.Local;
 import com.dat3m.dartagnan.program.event.core.Store;
 import com.dat3m.dartagnan.program.event.core.threading.ThreadArgument;
-import com.dat3m.dartagnan.program.memory.Location;
 import com.dat3m.dartagnan.program.memory.MemoryObject;
 import com.dat3m.dartagnan.program.misc.NonDetValue;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
@@ -79,9 +78,6 @@ public class NonDetCollector implements ExpressionVisitor<Boolean> {
 
     @Override
     public Boolean visitMemoryObject(MemoryObject memObj) { return false; }
-
-    @Override
-    public Boolean visitLocation(Location loc) { return false; }
 
     @Override
     public Boolean visitNonDetValue(NonDetValue nonDet) {

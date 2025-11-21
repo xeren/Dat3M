@@ -37,9 +37,14 @@ public abstract class ModelChecker {
 
     private static final Logger logger = LogManager.getLogger(ModelChecker.class);
 
+    protected final VerificationTask task;
     protected Result res = Result.UNKNOWN;
     protected EncodingContext context;
     private String flaggedPairsOutput = "";
+
+    protected ModelChecker(VerificationTask task) {
+        this.task = task;
+    }
 
     public final Result getResult() {
         return res;
@@ -52,7 +57,7 @@ public abstract class ModelChecker {
     }
 
     public boolean hasModel() {
-        final Property.Type propType = Property.getCombinedType(context.getTask().getProperty(), context.getTask());
+        final Property.Type propType = Property.getCombinedType(task.getProperty(), task);
         final boolean hasViolationWitnesses = res == FAIL && propType == Property.Type.SAFETY;
         final boolean hasPositiveWitnesses = res == PASS && propType == Property.Type.REACHABILITY;
         final boolean hasReachedBounds = res == UNKNOWN && propType == Property.Type.SAFETY;

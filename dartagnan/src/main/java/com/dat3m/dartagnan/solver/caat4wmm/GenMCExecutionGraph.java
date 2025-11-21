@@ -10,11 +10,11 @@ import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.RelationGraph;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.base.EmptyGraph;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.derived.*;
 import com.dat3m.dartagnan.solver.caat.predicates.sets.SetPredicate;
+import com.dat3m.dartagnan.solver.caat4wmm.basePredicates.*;
 import com.dat3m.dartagnan.solver.caat4wmm.basePredicates.genmc.*;
 import com.dat3m.dartagnan.utils.dependable.DependencyGraph;
 import com.dat3m.dartagnan.wmm.Relation;
 import com.dat3m.dartagnan.wmm.Wmm;
-import com.dat3m.dartagnan.wmm.analysis.RelationAnalysis;
 import com.dat3m.dartagnan.wmm.axiom.Axiom;
 import com.dat3m.dartagnan.wmm.axiom.ForceEncodeAxiom;
 import com.dat3m.dartagnan.wmm.definition.*;
@@ -36,7 +36,6 @@ public class GenMCExecutionGraph {
     // assigned during construction.
 
     private final Wmm memoryModel;
-    private final RelationAnalysis ra;
     private final BiMap<Relation, RelationGraph> relationGraphMap;
     private final BiMap<Filter, SetPredicate> filterSetMap;
     private final BiMap<Axiom, Constraint> constraintMap;
@@ -48,9 +47,8 @@ public class GenMCExecutionGraph {
 
     // ============= Construction & Init ===============
 
-    public GenMCExecutionGraph(Wmm memoryModel, RelationAnalysis ra) {
+    public GenMCExecutionGraph(Wmm memoryModel) {
         this.memoryModel = memoryModel;
-        this.ra = ra;
         relationGraphMap = HashBiMap.create();
         filterSetMap = HashBiMap.create();
         constraintMap = HashBiMap.create();
@@ -111,8 +109,6 @@ public class GenMCExecutionGraph {
     public CAATModel getCAATModel() { return caatModel; }
 
     public GenMCEventDomain getDomain() { return domain; }
-
-    public Wmm getMemoryModel() { return memoryModel; }
 
     public BiMap<Relation, RelationGraph> getRelationGraphMap() {
         return Maps.unmodifiableBiMap(relationGraphMap);
@@ -201,11 +197,15 @@ public class GenMCExecutionGraph {
             graph = new GenMCProgramOrderGraph();
         } else if (relClass == Coherence.class) {
             graph = new GenMCCoherenceGraph();
-        } else if (relClass == Inverse.class || relClass == TransitiveClosure.class || relClass == RangeIdentity.class) {
+        } else if (relClass == RangeIdentity.class || relClass == DomainIdentity.class) {
             RelationGraph g = getOrCreateGraphFromRelation(dependencies.get(0));
-            graph = relClass == Inverse.class ? new InverseGraph(g) :
-                    relClass == TransitiveClosure.class ? new TransitiveGraph(g) :
-                            new RangeIdentityGraph(g);
+            ProjectionIdentityGraph.Dimension dim = relClass == RangeIdentity.class ?
+                    ProjectionIdentityGraph.Dimension.RANGE :
+                    ProjectionIdentityGraph.Dimension.DOMAIN;
+            graph = new ProjectionIdentityGraph(g, dim);
+        } else if (relClass == Inverse.class || relClass == TransitiveClosure.class) {
+            RelationGraph g = getOrCreateGraphFromRelation(dependencies.get(0));
+            graph = relClass == Inverse.class ? new InverseGraph(g) : new TransitiveGraph(g);
         } else if (relClass == Union.class || relClass == Intersection.class) {
             RelationGraph[] graphs = new RelationGraph[dependencies.size()];
             for (int i = 0; i < graphs.length; i++) {
@@ -223,22 +223,23 @@ public class GenMCExecutionGraph {
             SetPredicate lhs = getOrCreateSetFromFilter(cartRel.getFirstFilter());
             SetPredicate rhs = getOrCreateSetFromFilter(cartRel.getSecondFilter());
             graph = new CartesianGraph(lhs, rhs);
-        } else if (relClass == ReadModifyWrites.class) {
-            graph = new GenMCRMWGraph();
+        } else if (relClass == AMOPairs.class) {
+            graph = new GenMCAMOGraph();
+        } else if (relClass == LXSXPairs.class) {
+            graph = new GenMCLXSXGraph();
         } else if (relClass == External.class) {
             graph = new GenMCExternalGraph();
         } else if (relClass == Internal.class) {
             graph = new GenMCInternalGraph();
-        } else if (relClass == Fences.class) {
-            throw new UnsupportedOperationException("fencerel is not supported in CAAT.");
         } else if (relClass == SetIdentity.class) {
             SetPredicate set = getOrCreateSetFromFilter(((SetIdentity) rel.getDefinition()).getFilter());
             graph = new SetIdentityGraph(set);
         } else if (relClass == Empty.class) {
             graph = new EmptyGraph();
         } else {
-            // This is a fallback for all unimplemented static graphs
-            graph = new StaticDefaultGenMCWMMGraph(rel, ra);
+            final String error = String.format("Cannot handle relation %s with definition of type %s.",
+                    rel, relClass.getSimpleName());
+            throw new UnsupportedOperationException(error);
         }
 
         graph.setName(rel.getNameOrTerm());

@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.sosy_lab.common.configuration.InvalidConfigurationException;
 import org.sosy_lab.java_smt.api.BooleanFormula;
 import org.sosy_lab.java_smt.api.Model;
 import org.sosy_lab.java_smt.api.ProverEnvironment;
@@ -24,6 +23,7 @@ import com.dat3m.dartagnan.program.memory.MemoryObject;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
 import com.dat3m.dartagnan.verification.model.EventData;
 
+import static com.dat3m.dartagnan.encoding.GenMCTraceEncoder.getMemoryLayout;
 import static com.dat3m.dartagnan.expression.processing.evaluation.ExpressionEvaluator.getValue;
 
 public class ProverExpressionEvaluator implements ExpressionEvaluator {
@@ -36,25 +36,25 @@ public class ProverExpressionEvaluator implements ExpressionEvaluator {
     private final EncodingContext encodingContext;
     private final ProverEnvironment prover;
     private final GenMCTraceEncoder traceEncoder;
-    private final Map<MemoryObject, BigInteger> staticMemoryLayout;
+    private final Map<MemoryObject, Expression> memoryLayout;
     private final Map<Event, BooleanFormula> cfContext = new HashMap<>();
 
-    public ProverExpressionEvaluator(EncodingContext encodingContext, ProverEnvironment prover, GenMCTraceEncoder traceEncoder) {
-        this.encodingContext = encodingContext;
+    public ProverExpressionEvaluator(ProverEnvironment prover, GenMCTraceEncoder traceEncoder) {
+        this.encodingContext = traceEncoder.getEncodingContext();
         this.prover = prover;
         this.traceEncoder = traceEncoder;
-        this.staticMemoryLayout = traceEncoder.getStaticMemoryLayout();
+        this.memoryLayout = getMemoryLayout(encodingContext.getTask().getProgram().getMemory());
     }
 
     @Override
     public ProverExpressionEvaluator newInstance() {
-        ProverExpressionEvaluator newEvaluator = new ProverExpressionEvaluator(encodingContext, prover, traceEncoder);
+        ProverExpressionEvaluator newEvaluator = new ProverExpressionEvaluator(prover, traceEncoder);
         newEvaluator.cfContext.putAll(cfContext);
         return newEvaluator;
     }
 
     @Override
-    public BigInteger evaluate(Expression expr, Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException {
+    public BigInteger evaluate(Expression expr, Event forEvent) throws SolverException, InterruptedException {
         NonDetCollector nonDetCollector = new NonDetCollector(trace, forEvent);
         if (expr.accept(nonDetCollector)) {
             return null;
@@ -63,15 +63,15 @@ public class ProverExpressionEvaluator implements ExpressionEvaluator {
     }
 
     @Override
-    public BigInteger evaluateNonDet(Expression expr, Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException {
+    public BigInteger evaluateNonDet(Expression expr, Event forEvent) throws SolverException, InterruptedException {
         return evaluate(exprToFormula(expr, forEvent), new ArrayList<>());
     }
 
     @Override
-    public BigInteger evaluateAddress(EventData event) throws SolverException, InterruptedException, InvalidConfigurationException {
+    public BigInteger evaluateAddress(EventData event) throws SolverException, InterruptedException {
         if (event.getEvent() instanceof MemoryCoreEvent memEvent) {
             if (memEvent.getAddress() instanceof MemoryObject memObj) {
-                return staticMemoryLayout.get(memObj);
+                return evaluate(memoryLayout.get(memObj), memEvent);
             } else {
                 trace.addEvent(event);
                 BigInteger ret = evaluate(memEvent.getAddress(), event.getEvent());
@@ -83,17 +83,17 @@ public class ProverExpressionEvaluator implements ExpressionEvaluator {
     }
 
     @Override
-    public boolean evaluateReachability(BooleanFormula formula) throws SolverException, InterruptedException, InvalidConfigurationException {
+    public boolean evaluateReachability(BooleanFormula formula) throws SolverException, InterruptedException {
         List<BooleanFormula> assumptionWrapper = new ArrayList<>();
         assumptionWrapper.add(formula);
         return calculateModel(assumptionWrapper) != null;
     }
 
-    public BigInteger evaluate(Expression expr, Collection<Expression> assumptions, Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException {
+    public BigInteger evaluate(Expression expr, Collection<Expression> assumptions, Event forEvent) throws SolverException, InterruptedException {
         return evaluate(exprToFormula(expr, forEvent), exprsToBoolFormula(assumptions, forEvent));
     }
 
-    public BigInteger evaluate(Formula formula, List<BooleanFormula> assumptions) throws SolverException, InterruptedException, InvalidConfigurationException {
+    public BigInteger evaluate(Formula formula, List<BooleanFormula> assumptions) throws SolverException, InterruptedException {
         Model model = calculateModel(assumptions);
         if (model == null) {
             return null;
@@ -102,17 +102,17 @@ public class ProverExpressionEvaluator implements ExpressionEvaluator {
     }
 
     @Override
-    public boolean evaluateReachability(Expression expr, Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException {
+    public boolean evaluateReachability(Expression expr, Event forEvent) throws SolverException, InterruptedException {
         List<BooleanFormula> exprWrapper = new ArrayList<>();
-        exprWrapper.add(encodingContext.encodeExpressionAsBooleanAt(expr, forEvent));
+        exprWrapper.add(exprToBoolFormula(expr, forEvent));
         return calculateModel(exprWrapper) != null;
     }
 
-    public Model calculateModel() throws SolverException, InterruptedException, InvalidConfigurationException {
+    public Model calculateModel() throws SolverException, InterruptedException {
         return calculateModel(new ArrayList<>());
     }
 
-    public Model calculateModel(Collection<BooleanFormula> assumptions) throws SolverException, InterruptedException, InvalidConfigurationException {
+    public Model calculateModel(Collection<BooleanFormula> assumptions) throws SolverException, InterruptedException {
         assumptions.addAll(cfContext.values());
         assumptions.add(traceEncoder.encodeFullTrace(trace));
         Model model = null;
@@ -144,7 +144,7 @@ public class ProverExpressionEvaluator implements ExpressionEvaluator {
 
     @Override
     public void addNonDetCondition(Event event, Expression condition, boolean isTrue) {
-        BooleanFormula encodedCondition = encodingContext.encodeExpressionAsBooleanAt(condition, event);
+        BooleanFormula encodedCondition = exprToBoolFormula(condition, event);
         BooleanFormula newCfContext = encodedCondition;
         if (!isTrue) {
             newCfContext = encodingContext.getBooleanFormulaManager().not(encodedCondition);
@@ -169,11 +169,15 @@ public class ProverExpressionEvaluator implements ExpressionEvaluator {
     
     private List<BooleanFormula> exprsToBoolFormula(Collection<Expression> exprs, Event forEvent) {
         return new ArrayList<>(exprs.stream()
-                .map(expr -> encodingContext.encodeExpressionAsBooleanAt(expr, forEvent))
+                .map(expr -> exprToBoolFormula(expr, forEvent))
                 .toList());
     }
     
     private Formula exprToFormula(Expression expr, Event forEvent) {
-        return encodingContext.encodeExpressionAt(expr, forEvent);
+        return encodingContext.getExpressionEncoder().encodeAt(expr, forEvent).formula();
+    }
+
+    private BooleanFormula exprToBoolFormula(Expression expr, Event forEvent) {
+        return encodingContext.getExpressionEncoder().encodeBooleanAt(expr, forEvent).formula();
     }
 }

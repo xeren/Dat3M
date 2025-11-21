@@ -169,7 +169,8 @@ public class RefinementSolver extends ModelChecker {
     // ================================================================================================================
     // Refinement solver
 
-    private RefinementSolver() {
+    private RefinementSolver(VerificationTask task) {
+        super(task);
     }
 
     public EncodingContext getContextWithFullWmm() {
@@ -181,7 +182,7 @@ public class RefinementSolver extends ModelChecker {
     //TODO (2): Add possibility for Refinement to handle CAT-properties (it ignores them for now).
     public static RefinementSolver run(SolverContext ctx, ProverWithTracker prover, VerificationTask task)
             throws InterruptedException, SolverException, InvalidConfigurationException {
-        RefinementSolver solver = new RefinementSolver();
+        RefinementSolver solver = new RefinementSolver(task);
         task.getConfig().inject(solver);
         logger.info("{}: {}", BASELINE, solver.baselines);
         solver.runInternal(ctx, prover, task);
@@ -600,8 +601,8 @@ public class RefinementSolver extends ModelChecker {
         }
         if (biases.contains(Baseline.WELL_FORMED)) {
             // ---- acyclic (po | rf) ----
-            memoryModel.addConstraint(new Acyclicity(memoryModel.addDefinition(new Union(memoryModel.newRelation(),
-                    memoryModel.getOrCreatePredefinedRelation(PO),
+            wmm.addConstraint(new Acyclicity(wmm.addDefinition(new Union(wmm.newRelation(),
+                    wmm.getOrCreatePredefinedRelation(PO),
                     rf))));
         }
         if (biases.contains(Baseline.ATOMIC_RMW)) {
