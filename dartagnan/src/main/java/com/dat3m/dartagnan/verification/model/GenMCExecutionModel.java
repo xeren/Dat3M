@@ -10,7 +10,6 @@ import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.event.core.*;
-import com.dat3m.dartagnan.program.event.core.threading.ThreadCreate;
 import com.dat3m.dartagnan.program.event.core.threading.ThreadJoin;
 import com.dat3m.dartagnan.program.event.core.threading.ThreadStart;
 import com.dat3m.dartagnan.solver.caat.CAATSolver;
@@ -21,6 +20,7 @@ import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.AddressLiteral;
 import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.CoreLiteral;
 import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.ExecLiteral;
 import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.RelLiteral;
+import com.dat3m.dartagnan.utils.Timer;
 import com.dat3m.dartagnan.utils.logic.DNF;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.verification.VerificationTask;
@@ -55,11 +55,11 @@ public class GenMCExecutionModel {
 
     private static final Logger logger = LogManager.getLogger(GenMCExecutionModel.class);
     private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private static final Timer consistencyCheckTimer = new Timer();
+    private static final Timer reasonEvaluationTimer = new Timer();
+    private static final Timer patternEvaluationTimer = new Timer();
 
     private static int consistencyChecks = 0;
-    private static int consistencyCheckTime = 0;
-    private static int reasonEvaluationTime = 0;
-    private static int patternEvaluationTime = 0;
     private static DNF<CoreLiteral> reasons = DNF.FALSE();
     private static Map<Event, Set<Event>> mayRfInMap;
     private static Map<Event, Set<Event>> mayRfOutMap;
@@ -160,16 +160,16 @@ public class GenMCExecutionModel {
         return consistencyChecks;
     }
 
-    public static int getConsistencyCheckTime() {
-        return consistencyCheckTime;
+    public static Timer getConsistencyCheckTimer() {
+        return consistencyCheckTimer;
     }
 
-    public static int getReasonEvaluationTime() {
-        return reasonEvaluationTime;
+    public static Timer getReasonEvaluationTimer() {
+        return reasonEvaluationTimer;
     }
 
-    public static int getPatternEvaluationTime() {
-        return patternEvaluationTime;
+    public static Timer getPatternEvaluationTimer() {
+        return patternEvaluationTimer;
     }
 
     // General data
@@ -177,11 +177,11 @@ public class GenMCExecutionModel {
         return exprEvaluator.getSolverChecks();
     }
 
-    public int getSolverCheckTime() {
+    public Timer getSolverCheckTimer() {
         return exprEvaluator.getSolverCheckTime();
     }
 
-    public int getEvaluationTime() {
+    public Timer getEvaluationTimer() {
         return exprEvaluator.getEvaluationTime();
     }
 
@@ -348,9 +348,6 @@ public class GenMCExecutionModel {
         } else if (patternBacktrackingPoint != null) {
             patternBacktrackingPoint = null;
         }
-        if (!underApproximateWmm) {
-            return checkFullConsistency(ignoreLast);
-        }
         if ((!needsNewConsistencyCheck && !ignoreLast) || (!lastNeedsNewConsistencyCheck && ignoreLast)) {
             return isConsistent;
         }
@@ -361,17 +358,26 @@ public class GenMCExecutionModel {
                 addedEvents.remove(ignoredEvent);
             }
         }
-        boolean consistent = !reasonKnown() && !hasPattern();
+        if (!underApproximateWmm) {
+            isConsistent &= checkFullConsistency();
+        } else {
+            isConsistent &= !reasonKnown() && !hasPattern();
+        }
+        if (isConsistent) {
+            if (ignoredEvent != null) {
+                lastNeedsNewConsistencyCheck = false;
+            } else {
+                needsNewConsistencyCheck = false;
+            }
+        }
         if (ignoredEvent != null) {
             trace.addEvent(ignoredEvent);
-            if (ignoredEvent.getEvent() instanceof RMWStoreExclusive lxsxStore) {
-                trace.addLxsxPair(ignoredEvent, trace.getData(mayLxsxMap.get(lxsxStore)).get());
-            }
+            checkForExclusiveLoad(ignoredEvent);
             if (reasoningMethod.usesPatterns()) {
                 addedEvents.add(ignoredEvent);
             }
         }
-        return consistent;
+        return isConsistent;
     }
 
     public boolean checkProperties() throws InterruptedException, SolverException, InvalidConfigurationException {
@@ -533,16 +539,20 @@ public class GenMCExecutionModel {
             List<EventData> mayRfSet;
             if (trace.getLast().getEvent() instanceof ThreadStart start && start.isSpawned()) {
                 mayRfSet = new ArrayList<>();
-                mayRfSet.add(getThreadStartStore(e.getThread()));
+                Thread currentThread = e.getThread();
+                Optional<EventData> threadStartStore = getThreadStartStore(currentThread);
+                if (threadStartStore.isPresent()) {
+                    mayRfSet.add(threadStartStore.get());
+                } else {
+                    return endThread(currentThread);
+                }
             } else {
                 mayRfSet = mayRfSet(data);
                 mayRfSet.removeIf(mayRfEvent -> !address.equals(mayRfEvent.getAccessedAddress()));
             }
             mayRfMap.put(data.getEvent(), mayRfSet);
             trace.addEvent(data);
-            if (e instanceof RMWStoreExclusive) {
-                trace.addLxsxPair(data, trace.getData(mayLxsxMap.get(e)).get());
-            }
+            checkForExclusiveLoad(data);
             lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
         } else if (data.isJump()) {
             // ===== Jumps =====
@@ -600,7 +610,7 @@ public class GenMCExecutionModel {
             lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
             if (assertionEvent.getExpression() instanceof BoolLiteral bool) {
                 boolean failure = !bool.getValue();
-                if (failure && checkFullConsistency(false)) {
+                if (failure && checkFullConsistency()) {
                     hasError = true;
                 }
             } else {
@@ -634,17 +644,9 @@ public class GenMCExecutionModel {
         return mayRfSetData;
     }
 
-    private EventData getThreadStartStore(Thread thread) {
-        try {
-            return trace.getObjectById(trace.getId(trace.getData(thread.getEntry().getCreator()).get()) - 1);
-        } catch (NoSuchElementException e) {
-            isConsistent = false;
-            return null;
-        }
-    }
-
-    private boolean isThreadStartStore(EventData event) {
-        return event.getEvent().getSuccessor() instanceof ThreadCreate;
+    private Optional<EventData> getThreadStartStore(Thread thread) {
+        Optional<EventData> threadCreator = trace.getData(thread.getEntry().getCreator());
+        return threadCreator.map(creator -> trace.getObjectById(trace.getId(creator) - 1));
     }
 
     private EventData endThread(Thread thread) {
@@ -653,6 +655,14 @@ public class GenMCExecutionModel {
         trace.addEvent(threadExit);
         lastAdded = threadExit;
         return threadExit;
+    }
+
+    private void checkForExclusiveLoad(EventData event) {
+        if (event.getEvent() instanceof RMWStoreExclusive exStore) {
+            EventData exLoad = trace.getData(mayLxsxMap.get(exStore))
+                    .orElseThrow(() -> new IllegalArgumentException("Exclusive load for event " + exStore + " is not in trace yet"));
+            trace.addLxsxPair(event, exLoad);
+        }
     }
 
     private void backtrackTrace(EventData backtrackingPoint) {
@@ -677,64 +687,20 @@ public class GenMCExecutionModel {
         return getPorfPrefix(event.getReadFrom());
     }
 
-    private boolean checkFullConsistency(boolean ignoreLast) {
-        if ((!needsNewConsistencyCheck && !ignoreLast) || (!lastNeedsNewConsistencyCheck && ignoreLast)) {
-            return isConsistent;
-        }
-        EventData ignoredEvent = null;
-        if (ignoreLast) {
-            ignoredEvent = trace.removeLast();
-            if (reasoningMethod.usesPatterns()) {
-                addedEvents.remove(ignoredEvent);
-            }
-        }
+    private boolean checkFullConsistency() {
         if (reasonKnown() || hasPattern()) {
-            if (ignoredEvent != null) {
-                trace.addEvent(ignoredEvent);
-                if (ignoredEvent.getEvent() instanceof RMWStoreExclusive lxsxStore) {
-                    trace.addLxsxPair(ignoredEvent, trace.getData(mayLxsxMap.get(lxsxStore)).get());
-                }
-                if (reasoningMethod.usesPatterns()) {
-                    addedEvents.add(ignoredEvent);
-                }
-            }
             return false;
         }
 
         logger.debug("Checking consistency");
-        long start = System.currentTimeMillis();
         ++consistencyChecks;
-        GenMCWMMSolver.Result result = solver.check(trace, reasoningMethod);
+        GenMCWMMSolver.Result result = consistencyCheckTimer.measure(() -> solver.check(trace, reasoningMethod));
         addedEvents.clear();
         initiallyPropagated = true;
         if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
-            if (ignoredEvent != null) {
-                trace.addEvent(ignoredEvent);
-                if (ignoredEvent.getEvent() instanceof RMWStoreExclusive lxsxStore) {
-                    trace.addLxsxPair(ignoredEvent, trace.getData(mayLxsxMap.get(lxsxStore)).get());
-                }
-                if (reasoningMethod.usesPatterns()) {
-                    addedEvents.add(ignoredEvent);
-                }
-                lastNeedsNewConsistencyCheck = false;
-            } else {
-                needsNewConsistencyCheck = false;
-            }
-            isConsistent = true;
-            consistencyCheckTime += System.currentTimeMillis() - start;
             return true;
         } else if (result.getStatus() == CAATSolver.Status.INCONSISTENT) {
-            if (ignoredEvent != null) {
-                trace.addEvent(ignoredEvent);
-                if (ignoredEvent.getEvent() instanceof RMWStoreExclusive lxsxStore) {
-                    trace.addLxsxPair(ignoredEvent, trace.getData(mayLxsxMap.get(lxsxStore)).get());
-                }
-                if (reasoningMethod.usesPatterns()) {
-                    addedEvents.add(ignoredEvent);
-                }
-            }
             isConsistent = false;
-            consistencyCheckTime += System.currentTimeMillis() - start;
             reasons = reasons.or(result.getCoreReasons());
             return false;
         } else {
@@ -743,10 +709,7 @@ public class GenMCExecutionModel {
     }
 
     private boolean reasonKnown() {
-        long start = System.currentTimeMillis();
-        boolean reasonKnown = reasoningMethod.usesReasons() && reasons.evaluate(this::evaluate);
-        reasonEvaluationTime += System.currentTimeMillis() - start;
-        return reasonKnown;
+        return reasoningMethod.usesReasons() && reasonEvaluationTimer.measure(() -> reasons.evaluate(this::evaluate));
     }
 
     private boolean evaluate(CoreLiteral literal) {
@@ -826,12 +789,11 @@ public class GenMCExecutionModel {
 
     private boolean hasPattern() {
         if (reasoningMethod.usesPatterns()) {
-            long start = System.currentTimeMillis();
-            solver.updateBasePredicates(trace);
-            List<EventData> checkedEvents = evaluatePatterns();
-            boolean patternKnown = checkedEvents.size() != addedEvents.size();
-            patternEvaluationTime += System.currentTimeMillis() - start;
-            return patternKnown;
+            return patternEvaluationTimer.measure(() -> {
+                solver.updateBasePredicates(trace);
+                List<EventData> checkedEvents = evaluatePatterns();
+                return checkedEvents.size() != addedEvents.size();
+            });
         }
         return false;
     }
@@ -908,20 +870,26 @@ public class GenMCExecutionModel {
         }
     }
 
+    @FunctionalInterface
+    private interface PropertyChecker<T> {
+        boolean check(T properties) throws InterruptedException, SolverException, InvalidConfigurationException;
+    }
+
     private boolean checkProperties(Assert assertion) throws InterruptedException, SolverException, InvalidConfigurationException {
-        logger.debug("Checking properties");
-        if (!exprEvaluator.evaluateReachability(expressions.makeNot(assertion.getExpression()), assertion)) {
-            return false;
-        }
-        return checkFullConsistency(false);
+        return checkProperties(expressions.makeNot(assertion.getExpression()),
+                properties -> exprEvaluator.evaluateReachability(properties, assertion));
     }
 
     private boolean checkProperties(BooleanFormula properties) throws InterruptedException, SolverException, InvalidConfigurationException {
+        return checkProperties(properties, exprEvaluator::evaluateReachability);
+    }
+
+    private <T> boolean checkProperties(T properties, PropertyChecker<T> propertyChecker) throws InterruptedException, SolverException, InvalidConfigurationException {
         logger.debug("Checking properties");
-        if (!exprEvaluator.evaluateReachability(properties)) {
+        if (!propertyChecker.check(properties)) {
             return false;
         }
-        return checkFullConsistency(false);
+        return checkFullConsistency();
     }
 
     private void setTrace(GenMCEventDomain trace, Event changedEvent) {

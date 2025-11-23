@@ -3,7 +3,7 @@
 #include <assert.h>
 
 #ifndef NTHREADS
-#define NTHREADS 3
+#define NTHREADS 2
 #endif
 
 void *worker(void *arg)
@@ -26,16 +26,13 @@ int main()
 	exit(0);
     }
 
-    for (int i = 0; i < NTHREADS; i++) {
-        if (i == 0) {
-            pthread_create(&t[i], 0, worker, (void *)(size_t)n);
-        } else {
-            pthread_create(&t[i], 0, worker, (void *)(size_t)i);
-        }
-    }
+    pthread_create(&t[0], 0, worker, (void *)(size_t)n);
+    pthread_create(&t[1], 0, worker, (void *)(size_t)1);
+    pthread_create(&t[2], 0, worker, (void *)(size_t)2);
 
-    for (int i = 0; i < NTHREADS; i++)
-        pthread_join(t[i], 0);
+    pthread_join(t[0], 0);
+    pthread_join(t[1], 0);
+    pthread_join(t[2], 0);
 
     int r = pop();
 

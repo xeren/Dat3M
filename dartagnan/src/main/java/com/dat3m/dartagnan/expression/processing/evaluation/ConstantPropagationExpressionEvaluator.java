@@ -36,27 +36,13 @@ import org.sosy_lab.java_smt.api.Model;
 import org.sosy_lab.java_smt.api.ProverEnvironment;
 import org.sosy_lab.java_smt.api.SolverException;
 
-import static com.dat3m.dartagnan.expression.processing.evaluation.ExpressionEvaluator.getValue;
-
-public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluator {
-
-    private GenMCEventDomain trace;
-    private int solverCheckTime = 0;
-    private int solverChecks = 0;
-    private static int evaluationTime = 0;
+public class ConstantPropagationExpressionEvaluator extends ExpressionEvaluator {
 
     private final ExprEvaluationContext evalContext;
-    private final Map<Event, BooleanFormula> cfContext = new HashMap<>();
     private final ConstantPropagator evaluator = new ConstantPropagator();
 
     ConstantPropagationExpressionEvaluator(ExprEvaluationContext evalContext) {
         this.evalContext = evalContext;
-        for (Map.Entry<MemoryObject, Expression> address : evalContext.getMemoryLayout().entrySet()) {
-            MemoryObject addressObject = address.getKey();
-            if (addressObject.getAddress() == null) {
-                addressObject.setAddress(evaluator.startPropagation(address.getValue(), null));
-            }
-        }
     }
 
     @Override
@@ -138,25 +124,18 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
         assumptions.add(assumption);
         assumptions.add(getTraceEncoder().encodeFullTrace(trace));
         Model model = null;
-        long start = System.currentTimeMillis();
+        solverCheckTimer.start();
         if (!getProver().isUnsatWithAssumptions(assumptions)) {
             model = getProver().getModel();
         }
-        solverCheckTime += System.currentTimeMillis() - start;
+        solverCheckTimer.stop();
         ++solverChecks;
         return model;
     }
 
     @Override
     public void setTrace(GenMCEventDomain trace, Event changedEvent) {
-        this.trace = trace;
-        List<Event> cfEventsToRemove = new ArrayList<>();
-        for (Event cfEvent : cfContext.keySet()) {
-            if (trace.getData(cfEvent).isEmpty()) {
-                cfEventsToRemove.add(cfEvent);
-            }
-        }
-        cfEventsToRemove.forEach(cfContext::remove);
+        super.setTrace(trace, changedEvent);
         evaluator.clear(changedEvent);
     }
 
@@ -168,21 +147,6 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
             newCfContext = getEncodingContext().getBooleanFormulaManager().not(encodedCondition);
         }
         cfContext.put(event, newCfContext);
-    }
-
-    @Override
-    public int getEvaluationTime() {
-        return evaluationTime;
-    }
-
-    @Override
-    public int getSolverCheckTime() {
-        return solverCheckTime;
-    }
-
-    @Override
-    public int getSolverChecks() {
-        return solverChecks;
     }
     
     private class ConstantPropagator extends ExprSimplifier {
@@ -223,7 +187,9 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
                 result = propagate(alloc.getAllocatedObject().getAddress(), currentEvent);
             } else if (lastWriterEvent instanceof ThreadJoin join) {
                 ThreadReturn threadReturn = join.getJoinThread().getEvents(ThreadReturn.class).get(0);
-                result = propagate(threadReturn.getValue().get(), threadReturn);
+                Expression returnValue = threadReturn.getValue().orElseThrow(() ->
+                        new IllegalStateException("Return value of thread " + threadReturn.getThread().getName() + " is referenced but does not return anything"));
+                result = propagate(returnValue, threadReturn);
             } else {
                 throw new UnsupportedOperationException("Cannot handle RegWriter that is neither Local, ThreadArgument, Load nor Alloc (" +
                         lastWriterEvent.getClass().getSimpleName() + ")");
@@ -243,10 +209,7 @@ public class ConstantPropagationExpressionEvaluator implements ExpressionEvaluat
         }
 
         private Expression startPropagation(Expression expr, Event event) {
-            long time = System.currentTimeMillis();
-            Expression result = propagate(expr, event);
-            evaluationTime += System.currentTimeMillis() - time;
-            return result;
+            return evaluationTimer.measure(() -> propagate(expr, event));
         }
 
         private Expression propagate(Expression expr, Event event) {

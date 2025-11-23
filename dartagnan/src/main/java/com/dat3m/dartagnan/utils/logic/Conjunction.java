@@ -15,7 +15,7 @@ import static com.dat3m.dartagnan.wmm.RelationNameRepository.RF;
 
 // A formal minimal conjunction of ground literals of type T
 // The class is immutable
-// The ordering is based on set inclusion. TRUE is the least element, FALSE is th4 largest element
+// The ordering is based on set inclusion. TRUE is the least element, FALSE is the largest element
 public class Conjunction<T extends Literal<T>> implements PartialOrder<Conjunction<T>>
 {
     private static final Conjunction TRUE;

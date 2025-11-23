@@ -3,9 +3,7 @@ package com.dat3m.dartagnan.expression.processing.evaluation;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.sosy_lab.java_smt.api.BooleanFormula;
 import org.sosy_lab.java_smt.api.Model;
@@ -20,30 +18,18 @@ import com.dat3m.dartagnan.expression.processing.NonDetCollector;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.core.MemoryCoreEvent;
 import com.dat3m.dartagnan.program.memory.MemoryObject;
-import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
 import com.dat3m.dartagnan.verification.model.EventData;
 
-import static com.dat3m.dartagnan.encoding.GenMCTraceEncoder.getMemoryLayout;
-import static com.dat3m.dartagnan.expression.processing.evaluation.ExpressionEvaluator.getValue;
-
-public class ProverExpressionEvaluator implements ExpressionEvaluator {
-
-    private GenMCEventDomain trace;
-    private Model model;
-    private int solverCheckTime = 0;
-    private int solverChecks = 0;
+public class ProverExpressionEvaluator extends ExpressionEvaluator {
 
     private final EncodingContext encodingContext;
     private final ProverEnvironment prover;
     private final GenMCTraceEncoder traceEncoder;
-    private final Map<MemoryObject, Expression> memoryLayout;
-    private final Map<Event, BooleanFormula> cfContext = new HashMap<>();
 
     public ProverExpressionEvaluator(ProverEnvironment prover, GenMCTraceEncoder traceEncoder) {
         this.encodingContext = traceEncoder.getEncodingContext();
         this.prover = prover;
         this.traceEncoder = traceEncoder;
-        this.memoryLayout = getMemoryLayout(encodingContext.getTask().getProgram().getMemory());
     }
 
     @Override
@@ -71,7 +57,7 @@ public class ProverExpressionEvaluator implements ExpressionEvaluator {
     public BigInteger evaluateAddress(EventData event) throws SolverException, InterruptedException {
         if (event.getEvent() instanceof MemoryCoreEvent memEvent) {
             if (memEvent.getAddress() instanceof MemoryObject memObj) {
-                return evaluate(memoryLayout.get(memObj), memEvent);
+                return evaluate(memObj.getAddress(), memEvent);
             } else {
                 trace.addEvent(event);
                 BigInteger ret = evaluate(memEvent.getAddress(), event.getEvent());
@@ -108,38 +94,17 @@ public class ProverExpressionEvaluator implements ExpressionEvaluator {
         return calculateModel(exprWrapper) != null;
     }
 
-    public Model calculateModel() throws SolverException, InterruptedException {
-        return calculateModel(new ArrayList<>());
-    }
-
     public Model calculateModel(Collection<BooleanFormula> assumptions) throws SolverException, InterruptedException {
         assumptions.addAll(cfContext.values());
         assumptions.add(traceEncoder.encodeFullTrace(trace));
         Model model = null;
-        long start = System.currentTimeMillis();
+        solverCheckTimer.start();
         if (!prover.isUnsatWithAssumptions(assumptions)) {
             model = prover.getModel();
         }
-        solverCheckTime += System.currentTimeMillis() - start;
+        solverCheckTimer.stop();
         ++solverChecks;
-        this.model = model;
         return model;
-    }
-
-    public Model getModel() {
-        return model;
-    }
-
-    @Override
-    public void setTrace(GenMCEventDomain trace, Event changedEvent) {
-        this.trace = trace;
-        List<Event> cfEventsToRemove = new ArrayList<>();
-        for (Event cfEvent : cfContext.keySet()) {
-            if (trace.getData(cfEvent).isEmpty()) {
-                cfEventsToRemove.add(cfEvent);
-            }
-        }
-        cfEventsToRemove.forEach(cfContext::remove);
     }
 
     @Override
@@ -150,21 +115,6 @@ public class ProverExpressionEvaluator implements ExpressionEvaluator {
             newCfContext = encodingContext.getBooleanFormulaManager().not(encodedCondition);
         }
         cfContext.put(event, newCfContext);
-    }
-
-    @Override
-    public int getEvaluationTime() {
-        return solverCheckTime;
-    }
-
-    @Override
-    public int getSolverCheckTime() {
-        return solverCheckTime;
-    }
-
-    @Override
-    public int getSolverChecks() {
-        return solverChecks;
     }
     
     private List<BooleanFormula> exprsToBoolFormula(Collection<Expression> exprs, Event forEvent) {

@@ -80,8 +80,11 @@ public class GenMCEventDomain implements Domain<EventData> {
         }
         this.lxsxPairs = new HashMap<>();
         for (Map.Entry<EventData, EventData> lxsxPair : lxsxPairs.entrySet()) {
-            Optional<EventData> store = getData(lxsxPair.getKey().getEvent());
-            store.ifPresent(eventData -> this.lxsxPairs.put(eventData, getData(lxsxPair.getValue().getEvent()).get()));
+            Event storeEvent = lxsxPair.getKey().getEvent();
+            Optional<EventData> store = getData(storeEvent);
+            store.ifPresent(eventData -> this.lxsxPairs.put(eventData, getData(lxsxPair.getValue().getEvent())
+                    .orElseThrow(() -> new IllegalArgumentException("Exclusive store " + storeEvent.getGlobalId() + ": " + storeEvent + " has not its exclusive load "
+                            + lxsxPair.getValue().getEvent().getGlobalId() + ": " + lxsxPair.getValue().getEvent() + " in the new trace"))));
         }
     }
 
@@ -171,11 +174,6 @@ public class GenMCEventDomain implements Domain<EventData> {
             return Optional.empty();
         }
         return Optional.of(threadEvents.get(threadEvents.size() - 1));
-    }
-
-    public Event getLastAddedThreadEvent(Thread thread) {
-        Optional<EventData> lastAdded = getLastAddedThreadEventData(thread);
-        return lastAdded.isPresent() ? lastAdded.get().getEvent() : thread.getEntry();
     }
 
     @Override

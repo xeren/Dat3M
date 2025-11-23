@@ -1,6 +1,9 @@
 package com.dat3m.dartagnan.expression.processing.evaluation;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.dat3m.dartagnan.encoding.EncodingContext;
@@ -11,6 +14,7 @@ import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.memory.MemoryObject;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
+import com.dat3m.dartagnan.utils.Timer;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.verification.model.EventData;
@@ -22,24 +26,48 @@ import org.sosy_lab.java_smt.api.ProverEnvironment;
 import org.sosy_lab.java_smt.api.SolverContext;
 import org.sosy_lab.java_smt.api.SolverException;
 
-public interface ExpressionEvaluator {
+public abstract class ExpressionEvaluator {
 
-    ExpressionEvaluator newInstance();
-    
-    BigInteger evaluate(Expression expr, Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException;
-    BigInteger evaluateNonDet(Expression expr, Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException;
-    BigInteger evaluateAddress(EventData e) throws SolverException, InterruptedException, InvalidConfigurationException;
-    boolean evaluateReachability(BooleanFormula formula) throws SolverException, InterruptedException, InvalidConfigurationException;
-    boolean evaluateReachability(Expression target, Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException;
+    protected static final Timer evaluationTimer = new Timer();
+    protected static final Timer solverCheckTimer = new Timer();
+    protected static int solverChecks = 0;
+    protected GenMCEventDomain trace;
 
-    void setTrace(GenMCEventDomain trace, Event changedEvent);
-    void addNonDetCondition(Event event, Expression condition, boolean isTrue) throws InvalidConfigurationException;
+    protected final Map<Event, BooleanFormula> cfContext = new HashMap<>();
 
-    int getEvaluationTime();
-    int getSolverCheckTime();
-    int getSolverChecks();
+    public abstract ExpressionEvaluator newInstance();
 
-    static BigInteger getValue(Object value) {
+    public abstract BigInteger evaluate(Expression expr, Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException;
+    public abstract BigInteger evaluateNonDet(Expression expr, Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException;
+    public abstract BigInteger evaluateAddress(EventData e) throws SolverException, InterruptedException, InvalidConfigurationException;
+    public abstract boolean evaluateReachability(BooleanFormula formula) throws SolverException, InterruptedException, InvalidConfigurationException;
+    public abstract boolean evaluateReachability(Expression target, Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException;
+
+    public void setTrace(GenMCEventDomain trace, Event changedEvent) {
+        this.trace = trace;
+        List<Event> cfEventsToRemove = new ArrayList<>();
+        for (Event cfEvent : cfContext.keySet()) {
+            if (trace.getData(cfEvent).isEmpty()) {
+                cfEventsToRemove.add(cfEvent);
+            }
+        }
+        cfEventsToRemove.forEach(cfContext::remove);
+    }
+    public abstract void addNonDetCondition(Event event, Expression condition, boolean isTrue) throws InvalidConfigurationException;
+
+    public Timer getEvaluationTime() {
+        return Timer.add(solverCheckTimer, evaluationTimer);
+    }
+
+    public Timer getSolverCheckTime() {
+        return solverCheckTimer;
+    }
+
+    public int getSolverChecks() {
+        return solverChecks;
+    }
+
+    public static BigInteger getValue(Object value) {
         String valueString = String.valueOf(value);
         return switch(valueString) {
             // NULL case can happen if the solver optimized away a variable.
@@ -50,7 +78,8 @@ public interface ExpressionEvaluator {
         };
     }
 
-    static ExpressionEvaluator withContext(ExprEvaluationContext evalContext) throws InvalidConfigurationException {
+    public static ExpressionEvaluator withContext(ExprEvaluationContext evalContext) throws InvalidConfigurationException {
+        initMemoryLayout(evalContext);
         if (evalContext.usesSMTSolver()) {
             return new ProverExpressionEvaluator(evalContext.getProver(), evalContext.getTraceEncoder());
         } else {
@@ -58,7 +87,16 @@ public interface ExpressionEvaluator {
         }
     }
 
-    class ExprEvaluationContext {
+    private static void initMemoryLayout(ExprEvaluationContext evalContext) {
+        for (Map.Entry<MemoryObject, Expression> address : evalContext.getMemoryLayout().entrySet()) {
+            MemoryObject addressObject = address.getKey();
+            if (addressObject.getAddress() == null) {
+                addressObject.setAddress(address.getValue());
+            }
+        }
+    }
+
+    public static class ExprEvaluationContext {
         private static final Logger logger = LogManager.getLogger(ExprEvaluationContext.class);
 
         private final VerificationTask task;

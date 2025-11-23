@@ -11,7 +11,7 @@ import com.dat3m.dartagnan.program.processing.ConsecutiveGotoSimplification;
 import com.dat3m.dartagnan.program.processing.IdReassignment;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
 import com.dat3m.dartagnan.utils.Result;
-import com.dat3m.dartagnan.utils.Utils;
+import com.dat3m.dartagnan.utils.Timer;
 import com.dat3m.dartagnan.verification.Context;
 import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.verification.model.EventData;
@@ -29,6 +29,8 @@ import org.sosy_lab.java_smt.api.*;
 
 import static com.dat3m.dartagnan.configuration.OptionNames.*;
 import static com.dat3m.dartagnan.expression.processing.evaluation.ExpressionEvaluator.ExprEvaluationContext;
+import static com.dat3m.dartagnan.verification.model.GenMCExecutionModel.*;
+import static com.dat3m.dartagnan.utils.Timer.formatTime;
 import static java.util.function.Predicate.not;
 
 import java.util.*;
@@ -79,11 +81,11 @@ public class GenMCSolver extends ModelChecker {
             secure = true)
     boolean useSMTSolver = false;
 
+    private final Timer porfPrefixTimer = new Timer();
     private int consistentExecutions = 0;
     private int completeExecutions = 0;
     private int failedExecutions = 0;
     private int blockedExecutions = 0;
-    private int porfPrefixTime = 0;
 
     // ================================================================================================================
     // GenMC solver
@@ -142,11 +144,11 @@ public class GenMCSolver extends ModelChecker {
         // ------------------------ Solving ------------------------
 
         logger.info("TruSt algorithm started.");
-        long startTime = System.currentTimeMillis();
+        Timer genmcTimer = new Timer();
+        genmcTimer.start();
         boolean result = trust(model);
-        long endTime = System.currentTimeMillis();
-        long genmcTime = endTime - startTime;
-        logger.info("TruSt took {}", Utils.toTimeString(genmcTime));
+        genmcTimer.stop();
+        logger.info("TruSt took {}", genmcTimer.getFormattedTime());
 
         if (evalContext.neededSMTSolver()) {
             context = evalContext.getTraceEncoder().getEncodingContext();
@@ -172,38 +174,38 @@ public class GenMCSolver extends ModelChecker {
         logger.info("Number of blocked executions found: {}", blockedExecutions);
         logger.info("Number of inconsistent executions found: {}", failedExecutions);
         int incompleteExecutions = failedExecutions + blockedExecutions;
-        logger.info("Time per execution estimation: {}", Utils.toTimeString(
-                (genmcTime + (completeExecutions + (incompleteExecutions + 1) / 2) / 2) / (completeExecutions + (incompleteExecutions + 1) / 2)));
+        logger.info("Time per execution estimation: {}", formatTime(
+                (genmcTimer.getTime() + (completeExecutions + (incompleteExecutions + 1) / 2) / 2) / (completeExecutions + (incompleteExecutions + 1) / 2)));
 
         int solverChecks = model.getSolverChecks();
-        int solverCheckTime = model.getSolverCheckTime();
+        Timer solverCheckTimer = model.getSolverCheckTimer();
 
         logger.info("Solver checks: {}", solverChecks);
         if (solverChecks != 0) {
-            logger.info("Total solver check time: {}", Utils.toTimeString(solverCheckTime));
-            logger.info("Average solver check time: {}", Utils.toTimeString((solverCheckTime + solverChecks / 2) / solverChecks));
+            logger.info("Total solver check time: {}", solverCheckTimer.getFormattedTime());
+            logger.info("Average solver check time: {}", formatTime((solverCheckTimer.getTime() + solverChecks / 2) / solverChecks));
         }
         
-        int consistencyChecks = GenMCExecutionModel.getConsistencyChecks();
-        int consistencyCheckTime = GenMCExecutionModel.getConsistencyCheckTime();
+        int consistencyChecks = getConsistencyChecks();
+        Timer consistencyCheckTimer = getConsistencyCheckTimer();
 
         logger.info("Consistency checks: {}", consistencyChecks);
         if (consistencyChecks != 0) {
-            logger.info("Total consistency check time: {}", Utils.toTimeString(consistencyCheckTime));
-            logger.info("Average consistency check time: {}", Utils.toTimeString((consistencyCheckTime + consistencyChecks / 2) / consistencyChecks));
+            logger.info("Total consistency check time: {}", consistencyCheckTimer.getFormattedTime());
+            logger.info("Average consistency check time: {}", formatTime((consistencyCheckTimer.getTime() + consistencyChecks / 2) / consistencyChecks));
         }
         if (reasoningMethod.usesReasons()) {
-            logger.info("Total reason evaluation time: {}", Utils.toTimeString(GenMCExecutionModel.getReasonEvaluationTime()));
+            logger.info("Total reason evaluation time: {}", getReasonEvaluationTimer().getFormattedTime());
         }
         if (reasoningMethod.usesPatterns()) {
-            logger.info("Total pattern evaluation time: {}", Utils.toTimeString(GenMCExecutionModel.getPatternEvaluationTime()));
+            logger.info("Total pattern evaluation time: {}", getPatternEvaluationTimer().getFormattedTime());
         }
 
         if (evalContext.neededSMTSolver()) {
-            logger.info("Total encoding time: {}", Utils.toTimeString(evalContext.getTraceEncoder().getEncodingTime()));
+            logger.info("Total encoding time: {}", evalContext.getTraceEncoder().getEncodingTimer().getFormattedTime());
         }
-        logger.info("Total porf-prefix calculation time: {}", Utils.toTimeString(porfPrefixTime));
-        logger.info("Total expression evaluation time: {}", Utils.toTimeString(model.getEvaluationTime()));
+        logger.info("Total porf-prefix calculation time: {}", porfPrefixTimer.getFormattedTime());
+        logger.info("Total expression evaluation time: {}", model.getEvaluationTimer().getFormattedTime());
     }
 
     @Override
@@ -244,9 +246,7 @@ public class GenMCSolver extends ModelChecker {
         model.resetConsistencyStatus();
         EventData event = model.nextEvent();
         if (!model.isConsistent()) {
-            ++failedExecutions;
-            logger.debug("Aborting exploration: Inconsistent execution");
-            return true;
+            return inconsistentExecution();
         }
         if (model.hasError()) {
             return false;
@@ -276,9 +276,7 @@ public class GenMCSolver extends ModelChecker {
             Collection<EventData> relevantReads = model.getMayRfSet(event);
             relevantReads.removeIf(writePrefix::contains);
             if (!delayConsistencyChecks && (mayCoSet.size() > 1 || !relevantReads.isEmpty()) && !model.checkConsistency(true)) {
-                ++failedExecutions;
-                logger.debug("Aborting exploration: Inconsistent execution");
-                return true;
+                return inconsistentExecution();
             }
             if (!visitCos(model, event, mayCoSet)) {
                 return false;
@@ -292,10 +290,13 @@ public class GenMCSolver extends ModelChecker {
                                 !(writePrefix.contains(e) || (!(e.getEvent() instanceof MemoryEvent) && prefixLimits.get(e.getEvent().getThread()) > e.getEvent().getGlobalId())))
                         .toList();
                 if (shouldRevisit(model, eventsToDelete, read, writePrefix)) {
+                    Event write = event.getEvent();
                     logger.debug("Backward revisiting load {}: {} for store {}: {}", read.getEvent().getGlobalId(),
-                            read.getEvent(), event.getEvent().getGlobalId(), event.getEvent());
+                            read.getEvent(), write.getGlobalId(), write);
                     GenMCExecutionModel backwardRevisitModel = getBackwardRevisitModel(model, eventsToDelete, read, event);
-                    if (!visitCos(backwardRevisitModel, backwardRevisitModel.getTrace().getData(event.getEvent()).get(), null)) {
+                    EventData revisitWrite = backwardRevisitModel.getTrace().getData(write).orElseThrow(() ->
+                            new IllegalStateException("Backward revisit model does not contain revisit write " + write.getGlobalId() + ": " + write));
+                    if (!visitCos(backwardRevisitModel, revisitWrite, null)) {
                         return false;
                     }
                     model.updatePatternBacktrackingPoint(backwardRevisitModel);
@@ -308,19 +309,17 @@ public class GenMCSolver extends ModelChecker {
 
     private boolean visitJumps(GenMCExecutionModel model, EventData event) throws SolverException, InterruptedException, InvalidConfigurationException {
         if (model.needsJumpRevisit()) {
-            model.setJump(event, event.wasExecuted());
-            logger.debug("Visiting non-deterministic jump {}: {} with execution status {}",
-                    event.getEvent().getGlobalId(), event.getEvent(), event.wasExecuted());
-            if (!visit(model)) {
-                return false;
-            }
-            model.rollback(event);
-            model.setJump(event, !event.wasExecuted());
-            logger.debug("Visiting non-deterministic jump {}: {} with execution status {}",
-                    event.getEvent().getGlobalId(), event.getEvent(), event.wasExecuted());
-            if (!model.isConsistent()) {
-                logger.debug("Aborting exploration: Inconsistent execution");
-                return true;
+            for (boolean wasExecuted : List.of(event.wasExecuted(), !event.wasExecuted())) {
+                model.setJump(event, wasExecuted);
+                logger.debug("Visiting non-deterministic jump {}: {} with execution status {}",
+                        event.getEvent().getGlobalId(), event.getEvent(), wasExecuted);
+                if (!model.isConsistent()) {
+                    return inconsistentExecution();
+                }
+                if (!visit(model)) {
+                    return false;
+                }
+                model.rollback(event);
             }
         }
         return visit(model);
@@ -329,9 +328,7 @@ public class GenMCSolver extends ModelChecker {
     private boolean visitRfs(GenMCExecutionModel model, EventData read) throws SolverException, InterruptedException, InvalidConfigurationException {
         Collection<EventData> mayRfSet = model.getMayRfSet(read);
         if (mayRfSet.size() > 1 && !model.checkConsistency(true)) {
-            ++failedExecutions;
-            logger.debug("Aborting exploration: Inconsistent execution");
-            return true;
+            return inconsistentExecution();
         }
         boolean needsNewConsistencyCheck = model.needsNewConsistencyCheck();
         boolean lastNeedsNewConsistencyCheck = model.lastNeedsNewConsistencyCheck();
@@ -375,11 +372,14 @@ public class GenMCSolver extends ModelChecker {
         return true;
     }
 
+    private boolean inconsistentExecution() {
+        ++failedExecutions;
+        logger.debug("Aborting exploration: Inconsistent execution");
+        return true;
+    }
+
     private Collection<EventData> getPorfPrefix(GenMCExecutionModel model, EventData write) {
-        long start = System.currentTimeMillis();
-        Collection<EventData> porfPrefix = model.getPorfPrefix(write);
-        porfPrefixTime += System.currentTimeMillis() - start;
-        return porfPrefix;
+        return porfPrefixTimer.measure(() -> model.getPorfPrefix(write));
     }
 
     private Map<Thread, Integer> getPrefixLimits(GenMCExecutionModel model, Collection<EventData> writePrefix) {
@@ -436,12 +436,15 @@ public class GenMCSolver extends ModelChecker {
                 (previous.contains(maximalEvent) || writePrefix.contains(maximalEvent));
     }
 
+    // TODO: revisit write is called twice from trace (here and before visiting its co)
     private GenMCExecutionModel getBackwardRevisitModel(GenMCExecutionModel oldModel, List<EventData> eventsToDelete, EventData read, EventData write)
             throws InterruptedException, SolverException, InvalidConfigurationException {
         List<EventData> startTraceEvents = oldModel.copyTraceEvents(not(eventsToDelete::contains));
         GenMCExecutionModel newModel = oldModel.newInstance(startTraceEvents);
-        EventData newRead = GenMCEventDomain.getData(startTraceEvents, read.getEvent()).get();
-        EventData newWrite = GenMCEventDomain.getData(startTraceEvents, write.getEvent()).get();
+        EventData newRead = GenMCEventDomain.getData(startTraceEvents, read.getEvent()).orElseThrow(() ->
+                new IllegalArgumentException("Backward revisit model does not contain revisit read " + read.getEvent().getGlobalId() + ": " + read.getEvent()));
+        EventData newWrite = GenMCEventDomain.getData(startTraceEvents, write.getEvent()).orElseThrow(() ->
+                new IllegalArgumentException("Backward revisit model does not contain revisit write " + write.getEvent().getGlobalId() + ": " + write.getEvent()));
         newModel.initialize(newRead, newWrite);
         return newModel;
     }

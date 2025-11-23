@@ -24,6 +24,7 @@ import com.dat3m.dartagnan.program.memory.Memory;
 import com.dat3m.dartagnan.program.memory.MemoryObject;
 import com.dat3m.dartagnan.program.misc.NonDetValue;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
+import com.dat3m.dartagnan.utils.Timer;
 import com.dat3m.dartagnan.verification.model.EventData;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Verify;
@@ -69,14 +70,14 @@ public class GenMCTraceEncoder implements Encoder {
     private final ExecutionAnalysis exec;
     private final ReachingDefinitionsAnalysis definitions;
 
+    private final Timer encodingTimer = new Timer();
+
     private BooleanFormula constants;
     private BooleanFormula memory;
     private BooleanFormula finalRegisterValues;
     private BooleanFormula filter;
 
     private boolean initialized = false;
-
-    private int encodingTime = 0;
 
     private GenMCTraceEncoder(EncodingContext c) {
         Preconditions.checkArgument(c.getTask().getProgram().isCompiled(), "The program must be compiled before encoding.");
@@ -98,27 +99,25 @@ public class GenMCTraceEncoder implements Encoder {
     private void init() {
         if (!initialized) {
             logger.info("Starting encoding");
-            long start = System.currentTimeMillis();
-            constants = encodeConstants();
-            memory = encodeMemory();
-            finalRegisterValues = encodeFinalRegisterValues();
-            filter = encodeFilter();
-            encodingTime += System.currentTimeMillis() - start;
+            encodingTimer.measure(() -> {
+                constants = encodeConstants();
+                memory = encodeMemory();
+                finalRegisterValues = encodeFinalRegisterValues();
+                filter = encodeFilter();
+            });
             initialized = true;
         }
     }
 
     public BooleanFormula encodeFullTrace(GenMCEventDomain trace) {
         init();
-        long start = System.currentTimeMillis();
-        BooleanFormula enc = context.getBooleanFormulaManager().and(
+        return encodingTimer.measure(() -> context.getBooleanFormulaManager().and(
                 constants,
                 memory,
                 encodeControlFlow(trace),
                 encodeThreadJoining(trace),
-                encodeDependencies(trace));
-        encodingTime += System.currentTimeMillis() - start;
-        return enc;
+                encodeDependencies(trace)
+        ));
     }
 
     public BooleanFormula encodeConstants() {
@@ -167,7 +166,7 @@ public class GenMCTraceEncoder implements Encoder {
                 enc.add(bmgr.equivalence(context.controlFlow(e), bmgr.makeTrue()));
                 if (e instanceof CondJump jump) {
                     BooleanFormula jumpCond = context.jumpTaken(jump);
-                    enc.add(trace.getData(e).get().wasExecuted() ? jumpCond : bmgr.not(jumpCond));
+                    enc.add(trace.getData(e).orElseThrow().wasExecuted() ? jumpCond : bmgr.not(jumpCond));
                 }
             } else {
                 enc.add(bmgr.equivalence(context.controlFlow(e), bmgr.makeFalse()));
@@ -488,7 +487,7 @@ public class GenMCTraceEncoder implements Encoder {
         return context;
     }
 
-    public int getEncodingTime() {
-        return encodingTime;
+    public Timer getEncodingTimer() {
+        return encodingTimer;
     }
 }
