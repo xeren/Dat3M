@@ -67,6 +67,7 @@ public class GenMCExecutionModel {
     private static Map<Event, Set<Event>> mayCoOutMap;
     private static Map<Event, Event> mayLxsxMap;
     private static List<Thread> relevantThreads;
+    private static Comparator<EventData> explorationOrder;
 
     // ============= Model specific  =============
     private GenMCEventDomain trace;
@@ -105,13 +106,13 @@ public class GenMCExecutionModel {
         this.addedEvents = new ArrayList<>();
     }
 
-    public static GenMCExecutionModel withTask(VerificationTask task, Context analysisContext, ExprEvaluationContext evalContext, GenMCReasoning useReasoning,
+    public static GenMCExecutionModel withTask(VerificationTask task, Context analysisContext, ExprEvaluationContext evalContext, GenMCReasoning reasoningMethod,
                                                boolean underApproximateWmm) throws InvalidConfigurationException {
         GenMCWMMSolver solver = GenMCWMMSolver.fromConfig(task.getConfig(), task.getMemoryModel(), analysisContext);
         PatternManager patterns = new PatternManager(solver.getExecutionGraph());
         solver.injectExtractor(patterns);
         ExpressionEvaluator exprEvaluator = ExpressionEvaluator.withContext(evalContext);
-        GenMCExecutionModel model = new GenMCExecutionModel(task, solver, patterns, evalContext, exprEvaluator, useReasoning, underApproximateWmm);
+        GenMCExecutionModel model = new GenMCExecutionModel(task, solver, patterns, evalContext, exprEvaluator, reasoningMethod, underApproximateWmm);
         reasons = DNF.FALSE();
         RelationAnalysis relations = analysisContext.requires(RelationAnalysis.class);
         EventGraph mayRfGraph = relations.getKnowledge(solver.getRf()).getMaySet();
@@ -127,10 +128,16 @@ public class GenMCExecutionModel {
         GenMCExecutionModel.mayLxsxMap = mayLxsxMap.entrySet().stream()
                 .collect(toMap(Map.Entry::getKey, lxsxPair -> lxsxPair.getValue().iterator().next()));
         relevantThreads = new ArrayList<>(task.getProgram().getThreads());
+        if (reasoningMethod.usesReasons() || reasoningMethod.usesPatterns()) {
+            explorationOrder = Comparator.comparingInt(EventData::getId);
+            if (reasoningMethod.usesPatterns()) {
+                explorationOrder = explorationOrder.reversed();
+            }
+        }
         return model;
     }
 
-    public GenMCExecutionModel newInstance(List<EventData> startTraceEvents) throws InvalidConfigurationException {
+    public GenMCExecutionModel newInstance(List<EventData> startTraceEvents) {
         GenMCExecutionModel model = new GenMCExecutionModel(task, solver, patterns, evalContext, exprEvaluator.newInstance(), reasoningMethod,
                 underApproximateWmm);
         int i = 0;
@@ -209,12 +216,6 @@ public class GenMCExecutionModel {
     public boolean lastNeedsNewConsistencyCheck() {
         return lastNeedsNewConsistencyCheck;
     }
-    public void needsNewConsistencyCheck(boolean needsNewConsistencyCheck) {
-        this.needsNewConsistencyCheck = needsNewConsistencyCheck;
-    }
-    public void lastNeedsNewConsistencyCheck(boolean lastNeedsNewConsistencyCheck) {
-        this.lastNeedsNewConsistencyCheck = lastNeedsNewConsistencyCheck;
-    }
     public boolean needsJumpRevisit() {
         return needsJumpRevisit;
     }
@@ -237,6 +238,7 @@ public class GenMCExecutionModel {
                 mayCoSet.add(otherWrite);
             }
         }
+        applyExplorationOrder(mayCoSet);
         return mayCoSet;
     }
 
@@ -264,12 +266,11 @@ public class GenMCExecutionModel {
         lastNeedsNewConsistencyCheck = false;
     }
 
-    public void initialize(EventData revisitRead, EventData write)
-            throws InterruptedException, SolverException {
+    public void initialize(EventData revisitRead, EventData write, boolean needsNewConsistencyCheck) {
         setRf(revisitRead, write);
         setTrace(trace, revisitRead.getEvent());
         initFirstThreadEvent();
-        initializeFields();
+        initializeFields(needsNewConsistencyCheck, false);
     }
 
     //========================== Public methods =========================
@@ -286,7 +287,7 @@ public class GenMCExecutionModel {
         trace.setReadFrom(read, write, read.getReadFrom());
         read.setReadFrom(write);
         List<EventData> mayRfSet = mayRfMap.get(read.getEvent());
-        if (mayRfSet == null || mayRfSet.size() > 1) {
+        if ((mayRfSet == null || mayRfSet.size() > 1) && write.getCoSuccessor() != null) {
             needsNewConsistencyCheck = true;
         }
     }
@@ -302,22 +303,35 @@ public class GenMCExecutionModel {
             newWrite.getCoSuccessor().setCoPredecessor(newWrite);
         }
         if (mayCoSet == null || mayCoSet.size() > 1) {
+            if (newWrite.getCoSuccessor() == null) {
+                Event newWriteEvent = newWrite.getEvent();
+                EventData rmwLoad;
+                if (newWriteEvent instanceof RMWStore rmwStore) {
+                    rmwLoad = getDataFromRmwLoad(rmwStore);
+                } else if (newWriteEvent instanceof RMWStoreExclusive rmwStore) {
+                    rmwLoad = getDataFromRmwLoad(rmwStore);
+                } else return;
+                if (rmwLoad.getReadFrom() == write) {
+                    return;
+                }
+            }
             needsNewConsistencyCheck = true;
         }
     }
 
-    public void rollback(EventData backtrackingPoint) {
+    public void rollback(EventData backtrackingPoint, boolean needsNewConsistencyCheck, boolean lastNeedsNewConsistencyCheck) {
         lastAdded = backtrackingPoint;
         currentThreadIndex = relevantThreads.indexOf(backtrackingPoint.getThread());
         backtrackTrace(backtrackingPoint);
         setTrace(trace, null);
-        initializeFields();
+        initializeFields(needsNewConsistencyCheck, lastNeedsNewConsistencyCheck);
         if (backtrackingPoint == patternBacktrackingPoint) {
             patternBacktrackingPoint = null;
         }
     }
 
-    public void rollbackCo(EventData coPredecessor, EventData backtrackingPoint, boolean forBackwardRevisit) {
+    public void rollbackCo(EventData coPredecessor, EventData backtrackingPoint, boolean forBackwardRevisit,
+                           boolean needsNewConsistencyCheck, boolean lastNeedsNewConsistencyCheck) {
         backtrackTrace(backtrackingPoint);
         coPredecessor.setCoSuccessor(backtrackingPoint.getCoSuccessor());
         if (coPredecessor.getCoSuccessor() != null) {
@@ -332,7 +346,7 @@ public class GenMCExecutionModel {
             lastAdded = backtrackingPoint;
             currentThreadIndex = relevantThreads.indexOf(backtrackingPoint.getThread());
         }
-        initializeFields();
+        initializeFields(needsNewConsistencyCheck, lastNeedsNewConsistencyCheck);
         if (backtrackingPoint == patternBacktrackingPoint) {
             patternBacktrackingPoint = null;
         }
@@ -378,6 +392,27 @@ public class GenMCExecutionModel {
             }
         }
         return isConsistent;
+    }
+
+    public boolean checkFullConsistency() {
+        if (reasonKnown() || hasPattern()) {
+            return false;
+        }
+
+        logger.debug("Checking consistency");
+        ++consistencyChecks;
+        GenMCWMMSolver.Result result = consistencyCheckTimer.measure(() -> solver.check(trace, reasoningMethod));
+        addedEvents.clear();
+        initiallyPropagated = true;
+        if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
+            return true;
+        } else if (result.getStatus() == CAATSolver.Status.INCONSISTENT) {
+            isConsistent = false;
+            reasons = reasons.or(result.getCoreReasons());
+            return false;
+        } else {
+            throw new IllegalArgumentException("Inconclusive");
+        }
     }
 
     public boolean checkProperties() throws InterruptedException, SolverException, InvalidConfigurationException {
@@ -507,10 +542,10 @@ public class GenMCExecutionModel {
 
     //========================== Internal methods  =========================
 
-    private void initializeFields() {
+    private void initializeFields(boolean needsNewConsistencyCheck, boolean lastNeedsNewConsistencyCheck) {
         isConsistent = true;
-        needsNewConsistencyCheck = true;
-        lastNeedsNewConsistencyCheck = false;
+        this.needsNewConsistencyCheck = needsNewConsistencyCheck;
+        this.lastNeedsNewConsistencyCheck = lastNeedsNewConsistencyCheck;
     }
 
     private void initFirstThreadEvent() {
@@ -547,8 +582,7 @@ public class GenMCExecutionModel {
                     return endThread(currentThread);
                 }
             } else {
-                mayRfSet = mayRfSet(data);
-                mayRfSet.removeIf(mayRfEvent -> !address.equals(mayRfEvent.getAccessedAddress()));
+                mayRfSet = mayRfSet(data, address);
             }
             mayRfMap.put(data.getEvent(), mayRfSet);
             trace.addEvent(data);
@@ -626,9 +660,10 @@ public class GenMCExecutionModel {
         return data;
     }
 
-    private List<EventData> mayRfSet(EventData targetEvent) {
+    private List<EventData> mayRfSet(EventData targetEvent, BigInteger address) {
         Map<Event, Set<Event>> mayRfMap;
-        if (targetEvent.isWrite()) {
+        boolean isWrite = targetEvent.isWrite();
+        if (isWrite) {
             mayRfMap = mayRfOutMap;
         } else {
             mayRfMap = mayRfInMap;
@@ -639,9 +674,22 @@ public class GenMCExecutionModel {
         }
         List<EventData> mayRfSetData = new ArrayList<>();
         for (Event event :  mayRfSet) {
-            trace.getData(event).ifPresent(mayRfSetData::add);
+            trace.getData(event).ifPresent(eventData -> {
+                if (address.equals(eventData.getAccessedAddress())) {
+                    mayRfSetData.add(eventData);
+                }
+            });
+        }
+        if (!isWrite) {
+            applyExplorationOrder(mayRfSetData);
         }
         return mayRfSetData;
+    }
+
+    private void applyExplorationOrder(List<EventData> maySet) {
+        if (reasoningMethod.usesReasons() || reasoningMethod.usesPatterns()) {
+            maySet.sort(explorationOrder);
+        }
     }
 
     private Optional<EventData> getThreadStartStore(Thread thread) {
@@ -654,15 +702,24 @@ public class GenMCExecutionModel {
         threadExit.setId(trace.size());
         trace.addEvent(threadExit);
         lastAdded = threadExit;
+        lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
         return threadExit;
     }
 
     private void checkForExclusiveLoad(EventData event) {
         if (event.getEvent() instanceof RMWStoreExclusive exStore) {
-            EventData exLoad = trace.getData(mayLxsxMap.get(exStore))
-                    .orElseThrow(() -> new IllegalArgumentException("Exclusive load for event " + exStore + " is not in trace yet"));
-            trace.addLxsxPair(event, exLoad);
+            trace.addLxsxPair(event, getDataFromRmwLoad(exStore));
         }
+    }
+
+    private EventData getDataFromRmwLoad(RMWStore rmwStore) {
+        return trace.getData(rmwStore.getLoadEvent())
+                .orElseThrow(() -> new IllegalArgumentException("RMW load for event " + rmwStore.getGlobalId() + ": " + rmwStore + " is not in trace yet"));
+    }
+
+    private EventData getDataFromRmwLoad(RMWStoreExclusive rmwStore) {
+        return trace.getData(mayLxsxMap.get(rmwStore))
+                .orElseThrow(() -> new IllegalArgumentException("Exclusive load for event " + rmwStore.getGlobalId() + ": " + rmwStore + " is not in trace yet"));
     }
 
     private void backtrackTrace(EventData backtrackingPoint) {
@@ -685,27 +742,6 @@ public class GenMCExecutionModel {
 
     private List<EventData> getPorfPrefixPreviousRf(EventData event) {
         return getPorfPrefix(event.getReadFrom());
-    }
-
-    private boolean checkFullConsistency() {
-        if (reasonKnown() || hasPattern()) {
-            return false;
-        }
-
-        logger.debug("Checking consistency");
-        ++consistencyChecks;
-        GenMCWMMSolver.Result result = consistencyCheckTimer.measure(() -> solver.check(trace, reasoningMethod));
-        addedEvents.clear();
-        initiallyPropagated = true;
-        if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
-            return true;
-        } else if (result.getStatus() == CAATSolver.Status.INCONSISTENT) {
-            isConsistent = false;
-            reasons = reasons.or(result.getCoreReasons());
-            return false;
-        } else {
-            throw new IllegalArgumentException("Inconclusive");
-        }
     }
 
     private boolean reasonKnown() {

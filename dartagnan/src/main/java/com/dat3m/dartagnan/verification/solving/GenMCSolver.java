@@ -254,7 +254,7 @@ public class GenMCSolver extends ModelChecker {
         if (event == null) {
             if (model.getTrace().isFinished(model.getProgram())) {
                 ++completeExecutions;
-                if (showConsistentExecutions && model.checkConsistency(false)) {
+                if (showConsistentExecutions && model.checkFullConsistency()) {
                     ++consistentExecutions;
                 }
                 return model.checkProperties();
@@ -309,6 +309,8 @@ public class GenMCSolver extends ModelChecker {
 
     private boolean visitJumps(GenMCExecutionModel model, EventData event) throws SolverException, InterruptedException, InvalidConfigurationException {
         if (model.needsJumpRevisit()) {
+            boolean needsNewConsistencyCheck = model.needsNewConsistencyCheck();
+            boolean lastNeedsNewConsistencyCheck = model.lastNeedsNewConsistencyCheck();
             for (boolean wasExecuted : List.of(event.wasExecuted(), !event.wasExecuted())) {
                 model.setJump(event, wasExecuted);
                 logger.debug("Visiting non-deterministic jump {}: {} with execution status {}",
@@ -319,7 +321,7 @@ public class GenMCSolver extends ModelChecker {
                 if (!visit(model)) {
                     return false;
                 }
-                model.rollback(event);
+                model.rollback(event, needsNewConsistencyCheck, lastNeedsNewConsistencyCheck);
             }
         }
         return visit(model);
@@ -339,10 +341,8 @@ public class GenMCSolver extends ModelChecker {
             if (!visit(model)) {
                 return false;
             }
-            model.rollback(read);
+            model.rollback(read, needsNewConsistencyCheck, lastNeedsNewConsistencyCheck);
         }
-        model.needsNewConsistencyCheck(needsNewConsistencyCheck);
-        model.lastNeedsNewConsistencyCheck(lastNeedsNewConsistencyCheck);
         return true;
     }
 
@@ -365,10 +365,8 @@ public class GenMCSolver extends ModelChecker {
             if (!visit(model)) {
                 return false;
             }
-            model.rollbackCo(otherWrite, write, forBackwardRevisit);
+            model.rollbackCo(otherWrite, write, forBackwardRevisit, needsNewConsistencyCheck, lastNeedsNewConsistencyCheck);
         }
-        model.needsNewConsistencyCheck(needsNewConsistencyCheck);
-        model.lastNeedsNewConsistencyCheck(lastNeedsNewConsistencyCheck);
         return true;
     }
 
@@ -437,15 +435,14 @@ public class GenMCSolver extends ModelChecker {
     }
 
     // TODO: revisit write is called twice from trace (here and before visiting its co)
-    private GenMCExecutionModel getBackwardRevisitModel(GenMCExecutionModel oldModel, List<EventData> eventsToDelete, EventData read, EventData write)
-            throws InterruptedException, SolverException, InvalidConfigurationException {
+    private GenMCExecutionModel getBackwardRevisitModel(GenMCExecutionModel oldModel, List<EventData> eventsToDelete, EventData read, EventData write) {
         List<EventData> startTraceEvents = oldModel.copyTraceEvents(not(eventsToDelete::contains));
         GenMCExecutionModel newModel = oldModel.newInstance(startTraceEvents);
         EventData newRead = GenMCEventDomain.getData(startTraceEvents, read.getEvent()).orElseThrow(() ->
                 new IllegalArgumentException("Backward revisit model does not contain revisit read " + read.getEvent().getGlobalId() + ": " + read.getEvent()));
         EventData newWrite = GenMCEventDomain.getData(startTraceEvents, write.getEvent()).orElseThrow(() ->
                 new IllegalArgumentException("Backward revisit model does not contain revisit write " + write.getEvent().getGlobalId() + ": " + write.getEvent()));
-        newModel.initialize(newRead, newWrite);
+        newModel.initialize(newRead, newWrite, oldModel.needsNewConsistencyCheck());
         return newModel;
     }
 }
