@@ -17,7 +17,7 @@ public class GenMCLocationGraph extends StaticGenMCWMMGraph {
 
     @Override
     public boolean contains(EventData first, EventData second) {
-        return first.isMemoryEvent() && second.isMemoryEvent() && first.getAccessedAddress().equals(second.getAccessedAddress());
+        return first.getAccessedAddress() != null && first.getAccessedAddress().equals(second.getAccessedAddress());
     }
 
     @Override

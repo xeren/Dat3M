@@ -5,7 +5,6 @@ import com.dat3m.dartagnan.configuration.Property;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.MemoryEvent;
 import com.dat3m.dartagnan.program.processing.AssertionTransformer;
 import com.dat3m.dartagnan.program.processing.ConsecutiveGotoSimplification;
 import com.dat3m.dartagnan.program.processing.IdReassignment;
@@ -282,21 +281,14 @@ public class GenMCSolver extends ModelChecker {
                 return false;
             }
             for (EventData read : relevantReads) {
-                int readId = model.getTrace().getId(read);
-                GenMCEventDomain trace = model.getTrace();
-                Map<Thread, Integer> prefixLimits = getPrefixLimits(model, writePrefix);
-                List<EventData> eventsToDelete = trace.getElements().stream()
-                        .filter(e -> readId < trace.getId(e) &&
-                                !(writePrefix.contains(e) || (!(e.getEvent() instanceof MemoryEvent) && prefixLimits.get(e.getEvent().getThread()) > e.getEvent().getGlobalId())))
-                        .toList();
+                List<EventData> eventsToDelete = getEventsToDelete(model, writePrefix, read);
                 if (shouldRevisit(model, eventsToDelete, read, writePrefix)) {
                     Event write = event.getEvent();
                     logger.debug("Backward revisiting load {}: {} for store {}: {}", read.getEvent().getGlobalId(),
                             read.getEvent(), write.getGlobalId(), write);
-                    GenMCExecutionModel backwardRevisitModel = getBackwardRevisitModel(model, eventsToDelete, read, event);
-                    EventData revisitWrite = backwardRevisitModel.getTrace().getData(write).orElseThrow(() ->
-                            new IllegalStateException("Backward revisit model does not contain revisit write " + write.getGlobalId() + ": " + write));
-                    if (!visitCos(backwardRevisitModel, revisitWrite, null)) {
+                    Map.Entry<GenMCExecutionModel, EventData> backwardRevisit = getBackwardRevisitModel(model, eventsToDelete, read, event);
+                    GenMCExecutionModel backwardRevisitModel = backwardRevisit.getKey();
+                    if (!visitCos(backwardRevisitModel, backwardRevisit.getValue(), null)) {
                         return false;
                     }
                     model.updatePatternBacktrackingPoint(backwardRevisitModel);
@@ -380,6 +372,23 @@ public class GenMCSolver extends ModelChecker {
         return porfPrefixTimer.measure(() -> model.getPorfPrefix(write));
     }
 
+    private List<EventData> getEventsToDelete(GenMCExecutionModel model, Collection<EventData> writePrefix, EventData read) {
+        int readId = read.getId();
+        Map<Thread, Integer> prefixLimits = getPrefixLimits(model, writePrefix);
+        List<EventData> eventsToDelete = new ArrayList<>();
+        for (Map.Entry<Thread, List<EventData>> thread : model.getTrace().getThreadEventsMap().entrySet()) {
+            int prefixLimitForThread = prefixLimits.get(thread.getKey());
+            List<EventData> threadEvents = thread.getValue();
+            for (int i = threadEvents.size() - 1; i >= 0; --i) {
+                EventData e = threadEvents.get(i);
+                if (readId < e.getId() && prefixLimitForThread < e.getEvent().getGlobalId()) {
+                    eventsToDelete.add(e);
+                } else break;
+            }
+        }
+        return eventsToDelete;
+    }
+
     private Map<Thread, Integer> getPrefixLimits(GenMCExecutionModel model, Collection<EventData> writePrefix) {
         Map<Thread, Integer> prefixLimits = new HashMap<>();
         for (Thread thread : model.getTrace().getThreadEventsMap().keySet()) {
@@ -434,8 +443,8 @@ public class GenMCSolver extends ModelChecker {
                 (previous.contains(maximalEvent) || writePrefix.contains(maximalEvent));
     }
 
-    // TODO: revisit write is called twice from trace (here and before visiting its co)
-    private GenMCExecutionModel getBackwardRevisitModel(GenMCExecutionModel oldModel, List<EventData> eventsToDelete, EventData read, EventData write) {
+    private Map.Entry<GenMCExecutionModel, EventData> getBackwardRevisitModel(GenMCExecutionModel oldModel, List<EventData> eventsToDelete,
+                                                                              EventData read, EventData write) {
         List<EventData> startTraceEvents = oldModel.copyTraceEvents(not(eventsToDelete::contains));
         GenMCExecutionModel newModel = oldModel.newInstance(startTraceEvents);
         EventData newRead = GenMCEventDomain.getData(startTraceEvents, read.getEvent()).orElseThrow(() ->
@@ -443,6 +452,6 @@ public class GenMCSolver extends ModelChecker {
         EventData newWrite = GenMCEventDomain.getData(startTraceEvents, write.getEvent()).orElseThrow(() ->
                 new IllegalArgumentException("Backward revisit model does not contain revisit write " + write.getEvent().getGlobalId() + ": " + write.getEvent()));
         newModel.initialize(newRead, newWrite, oldModel.needsNewConsistencyCheck());
-        return newModel;
+        return Map.entry(newModel, newWrite);
     }
 }

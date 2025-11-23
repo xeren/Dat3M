@@ -35,16 +35,14 @@ public class GenMCCoherenceGraph extends StaticGenMCWMMGraph {
 
     @Override
     public boolean containsById(int id1, int id2) {
-        EventData a = getEvent(id1);
-        EventData aOverride = a.getCoSuccessor();
-        if (aOverride == null) {
-            return false;
+        EventData iter = getEvent(id1).getCoSuccessor();
+        while (iter != null) {
+            if (iter.getId() == id2) {
+                return true;
+            }
+            iter = iter.getCoSuccessor();
         }
-        if (aOverride.getId() == id2) {
-            return true;
-        }
-        EventData b = getEvent(id2);
-        return aOverride.getCoSuccessors().contains(b);
+        return false;
     }
 
     @Override

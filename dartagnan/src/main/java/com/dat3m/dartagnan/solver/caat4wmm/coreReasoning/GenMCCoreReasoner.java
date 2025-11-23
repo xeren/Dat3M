@@ -205,18 +205,16 @@ public class GenMCCoreReasoner {
                     }
                 } else {
                     final String name = rel.getName().orElse(null);
-                    if (RF.equals(name) || LXSX.equals(name)) {
-                        if (k.getMaySet().getInMap().get(e2).size() == 1) {
-                            addExecReason(e1, e2, simplified);
-                        } else {
-                            simplified.add(lit);
-                        }
+                    if (RF.equals(name)) {
+                        simplified.add(lit);
                     } else if (CO.equals(name)) {
                         if (!k.getMaySet().contains(e2, e1)) {
                             addExecReason(e1, e2, simplified);
                         } else {
                             simplified.add(lit);
                         }
+                    } else if (LXSX.equals(name)) {
+                        addExecReason(e1, e2, simplified);
                     } else if (AMO.equals(name)) {
                         simplified.add(new ExecLiteral(e2, lit.isPositive()));
                     } else if (LOC.equals(name)) {
