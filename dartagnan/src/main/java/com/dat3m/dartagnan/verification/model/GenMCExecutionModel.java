@@ -57,13 +57,13 @@ public class GenMCExecutionModel {
 
     private static final Logger logger = LogManager.getLogger(GenMCExecutionModel.class);
     private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
-    private static final Timer consistencyCheckTimer = new Timer();
-    private static final Timer reasonEvaluationTimer = new Timer();
-    private static final Timer patternEvaluationTimer = new Timer();
-    private static final Map<Event, Map<Thread, Integer>> porfPrefixes = new HashMap<>();
 
-    private static int consistencyChecks = 0;
-    private static DNF<CoreLiteral> reasons = DNF.FALSE();
+    private static Timer consistencyCheckTimer = new Timer();
+    private static Timer reasonEvaluationTimer = new Timer();
+    private static Timer patternEvaluationTimer = new Timer();
+
+    private static int consistencyChecks;
+    private static DNF<CoreLiteral> reasons;
     private static Relation rf;
     private static Relation co;
     private static Relation lxsx;
@@ -74,6 +74,7 @@ public class GenMCExecutionModel {
     private static Map<Event, Event> mayLxsxMap;
     private static List<Thread> relevantThreads;
     private static Comparator<EventData> explorationOrder;
+    private static Map<Event, Map<Thread, Integer>> porfPrefixes;
     private static int optimalPorfPrefixCapacity;
     private static Set<Event> failedJoinAssumes;
 
@@ -119,6 +120,11 @@ public class GenMCExecutionModel {
 
     public static GenMCExecutionModel withTask(VerificationTask task, Context analysisContext, ExprEvaluationContext evalContext, GenMCReasoning reasoningMethod,
                                                boolean underApproximateWmm) throws InvalidConfigurationException {
+        consistencyCheckTimer = new Timer();
+        reasonEvaluationTimer = new Timer();
+        patternEvaluationTimer = new Timer();
+        consistencyChecks = 0;
+        reasons = DNF.FALSE();
         Wmm memoryModel = task.getMemoryModel();
         GenMCWMMSolver solver = GenMCWMMSolver.fromConfig(task.getConfig(), task.getMemoryModel(), analysisContext);
         rf = memoryModel.getRelation(RF);
@@ -148,6 +154,7 @@ public class GenMCExecutionModel {
                 explorationOrder = explorationOrder.reversed();
             }
         }
+        porfPrefixes = new HashMap<>();
         optimalPorfPrefixCapacity = getOptimalThreadMapCapacity(relevantThreads.size() - 1);
         return model;
     }
