@@ -275,7 +275,7 @@ public class GenMCSolver extends ModelChecker {
             Map<Thread, Integer> porfPrefix = model.getPorfPrefix();
             Collection<EventData> relevantReads = model.getMayRfSet(event);
             relevantReads.removeIf(read -> inPorfPrefix(porfPrefix, currentThread, read));
-            if (!delayConsistencyChecks && (mayCoSet.size() > 1 || !relevantReads.isEmpty()) && !model.checkConsistency(true)) {
+            if ((mayCoSet.size() > 1 || !relevantReads.isEmpty()) && !model.checkConsistency(true)) {
                 return inconsistentExecution();
             }
             if (!visitCos(model, event, mayCoSet)) {
@@ -303,7 +303,7 @@ public class GenMCSolver extends ModelChecker {
                     if (!visitCos(backwardRevisitModel, backwardRevisit.getValue(), null)) {
                         return false;
                     }
-                    model.updatePatternBacktrackingPoint(backwardRevisitModel);
+                    model.updatePatternBacktrackingPoint(backwardRevisitModel, write);
                 }
             }
             return true;
@@ -333,7 +333,7 @@ public class GenMCSolver extends ModelChecker {
 
     private boolean visitRfs(GenMCExecutionModel model, EventData read) throws SolverException, InterruptedException, InvalidConfigurationException {
         Collection<EventData> mayRfSet = model.getMayRfSet(read);
-        if (mayRfSet.size() > 1 && !model.checkConsistency(true)) {
+        if (!delayConsistencyChecks && mayRfSet.size() > 1 && !model.checkConsistency(true)) {
             return inconsistentExecution();
         }
         boolean needsNewConsistencyCheck = model.needsNewConsistencyCheck();

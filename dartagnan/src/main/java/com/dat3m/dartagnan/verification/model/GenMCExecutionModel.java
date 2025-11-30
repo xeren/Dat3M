@@ -259,11 +259,11 @@ public class GenMCExecutionModel {
         if (inSet == null) {
             return Collections.emptySet();
         }
-        Set<Event> outSet = mayCoOutMap.get(writeEvent);
         EventData addressInit = trace.getAddressInits().get(writeAddress);
         if (addressInit == null) {
             return Collections.emptySet();
         }
+        Set<Event> outSet = mayCoOutMap.get(writeEvent);
         if (outSet == null) {
             EventData coPredecessor = null;
             EventData sameAddressWrite = addressInit;
@@ -385,7 +385,7 @@ public class GenMCExecutionModel {
         }
         setTrace(trace, backtrackingPoint, true);
         initializeFields(needsNewConsistencyCheck, lastNeedsNewConsistencyCheck);
-        if (backtrackingPoint == patternBacktrackingPoint) {
+        if (patternBacktrackingPoint != null && backtrackingPoint.getId() <= patternBacktrackingPoint.getId()) {
             patternBacktrackingPoint = null;
         }
     }
@@ -407,7 +407,7 @@ public class GenMCExecutionModel {
             currentThreadIndex = relevantThreads.indexOf(backtrackingPoint.getThread());
         }
         initializeFields(needsNewConsistencyCheck, lastNeedsNewConsistencyCheck);
-        if (backtrackingPoint == patternBacktrackingPoint) {
+        if (patternBacktrackingPoint != null && backtrackingPoint.getId() <= patternBacktrackingPoint.getId()) {
             patternBacktrackingPoint = null;
         }
     }
@@ -417,10 +417,10 @@ public class GenMCExecutionModel {
     }
 
     public boolean checkConsistency(boolean ignoreLast) {
-        if (reasoningMethod.usesPatterns() && patternBacktrackingPoint != null && trace.getObjectById(patternBacktrackingPoint.getId()) == patternBacktrackingPoint) {
-            return false;
-        } else if (patternBacktrackingPoint != null) {
-            patternBacktrackingPoint = null;
+        if (reasoningMethod.usesPatterns()) {
+            if (patternBacktrackingPoint != null) {
+                return false;
+            }
         }
         if ((!needsNewConsistencyCheck && !ignoreLast) || (!lastNeedsNewConsistencyCheck && ignoreLast)) {
             return isConsistent;
@@ -486,9 +486,15 @@ public class GenMCExecutionModel {
         return !checkProperties(bmgr.and(properties, traceEncoder.getPropertyRelevantEncoding()));
     }
 
-    public void updatePatternBacktrackingPoint(GenMCExecutionModel backwardRevisitModel) {
-        if (patternBacktrackingPoint == null && backwardRevisitModel.patternBacktrackingPoint != null) {
-            patternBacktrackingPoint = trace.getData(backwardRevisitModel.patternBacktrackingPoint.getEvent()).orElse(null);
+    public void updatePatternBacktrackingPoint(GenMCExecutionModel backwardRevisitModel, Event revisitWrite) {
+        if (patternBacktrackingPoint == null) {
+            EventData backwardRevisitBacktrackingPoint = backwardRevisitModel.patternBacktrackingPoint;
+            if (backwardRevisitBacktrackingPoint != null) {
+                Event backwardRevisitBacktrackingPointEvent = backwardRevisitBacktrackingPoint.getEvent();
+                if (backwardRevisitBacktrackingPointEvent != revisitWrite) {
+                    patternBacktrackingPoint = trace.getData(backwardRevisitBacktrackingPointEvent).orElse(null);
+                }
+            }
         }
     }
 
@@ -610,9 +616,6 @@ public class GenMCExecutionModel {
     private EventData addEvent(Event e) throws InterruptedException, SolverException, InvalidConfigurationException {
         needsJumpRevisit = false;
         EventData data = new EventData(e);
-        if (patternBacktrackingPoint != null && trace.size() == patternBacktrackingPoint.getId()) {
-            patternBacktrackingPoint = null;
-        }
         data.setId(trace.size());
 
         data.setWasExecuted(true);
