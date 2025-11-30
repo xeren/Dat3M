@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.solver.caat4wmm;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -7,11 +8,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.MemoryEvent;
 import com.dat3m.dartagnan.program.event.RegWriter;
 import com.dat3m.dartagnan.program.event.Tag;
 import com.dat3m.dartagnan.program.event.core.Init;
@@ -26,32 +25,35 @@ import com.dat3m.dartagnan.verification.model.EventData;
 
 public class GenMCEventDomain implements Domain<EventData> {
 
+    private static int optimalThreadMapCapacity;
+
     private final List<EventData> events;
     private final Map<Event, EventData> eventMap;
     private final Map<Thread, List<EventData>> threadEventsMap;
-    private final List<EventData> addressInits;
+    private final Map<BigInteger, EventData> addressInits;
     private final Map<EventData, EventData> readWriteMap;
     private final Map<EventData, List<EventData>> writeReadsMap;
     private final Map<EventData, EventData> lxsxPairs;
 
-    public GenMCEventDomain() {
+    public GenMCEventDomain(int threadCount) {
+        setThreadCount(threadCount);
         this.events = new ArrayList<>();
         this.eventMap = new HashMap<>();
-        this.threadEventsMap = new HashMap<>();
-        this.addressInits = new ArrayList<>();
+        this.threadEventsMap = new HashMap<>(optimalThreadMapCapacity);
+        this.addressInits = new HashMap<>();
         this.readWriteMap = new HashMap<>();
         this.writeReadsMap = new HashMap<>();
         this.lxsxPairs = new HashMap<>();
     }
 
-    public GenMCEventDomain(Collection<EventData> events, Map<Thread, List<EventData>> threadEventsMap, List<EventData> addressInits, Map<EventData, EventData> readWriteMap,
-                            Map<EventData, List<EventData>> writeReadsMap, Map<EventData, EventData> lxsxPairs) {
+    public GenMCEventDomain(Collection<EventData> events, Map<Thread, List<EventData>> threadEventsMap, Map<BigInteger, EventData> addressInits,
+                            Map<EventData, EventData> readWriteMap, Map<EventData, List<EventData>> writeReadsMap, Map<EventData, EventData> lxsxPairs) {
         this.events = new ArrayList<>(events);
         this.eventMap = new HashMap<>(events.size() * 4 / 3);
         for (EventData event : events) {
             eventMap.put(event.getEvent(), event);
         }
-        this.threadEventsMap = new HashMap<>();
+        this.threadEventsMap = new HashMap<>(optimalThreadMapCapacity);
         for (Map.Entry<Thread, List<EventData>> threadEvents : threadEventsMap.entrySet()) {
             List<EventData> newThreadEvents = new ArrayList<>();
             for (EventData threadEvent : threadEvents.getValue()) {
@@ -64,7 +66,11 @@ public class GenMCEventDomain implements Domain<EventData> {
                 this.threadEventsMap.put(threadEvents.getKey(), newThreadEvents);
             }
         }
-        this.addressInits = newList(addressInits);
+        this.addressInits = new HashMap<>(getOptimalThreadMapCapacity(addressInits.size()));
+        for (Map.Entry<BigInteger, EventData> addressInit : addressInits.entrySet()) {
+            Optional<EventData> newAddressInit = getData(addressInit.getValue().getEvent());
+            newAddressInit.ifPresent(init -> this.addressInits.put(addressInit.getKey(), init));
+        }
         this.readWriteMap = new HashMap<>();
         for (EventData read : readWriteMap.keySet()) {
             Optional<EventData> readData = getData(read.getEvent());
@@ -99,21 +105,13 @@ public class GenMCEventDomain implements Domain<EventData> {
 
     public void addEvent(EventData event) {
         events.add(event);
-        eventMap.put(event.getEvent(), event);
-        List<EventData> threadEvents = threadEventsMap.computeIfAbsent(event.getEvent().getThread(), thread -> new ArrayList<>());
+        Event e = event.getEvent();
+        eventMap.put(e, event);
+        List<EventData> threadEvents = threadEventsMap.computeIfAbsent(e.getThread(), thread -> new ArrayList<>());
         event.setLocalId(threadEvents.size());
-        if (event.getEvent() instanceof MemoryEvent) {
-            for (int i = threadEvents.size() - 1; i >= 0; i--) {
-                EventData threadEvent = threadEvents.get(i);
-                if (threadEvent.getEvent() instanceof MemoryEvent) {
-                    event.setPoPredecessor(threadEvent);
-                    break;
-                }
-            }
-        }
         threadEvents.add(event);
-        if (event.getEvent() instanceof Init) {
-            addressInits.add(event);
+        if (e instanceof Init) {
+            addAddressInit(event);
         }
         EventData readFrom = event.getReadFrom();
         if (readFrom != null) {
@@ -127,33 +125,49 @@ public class GenMCEventDomain implements Domain<EventData> {
     }
 
     public void addAddressInit(EventData addressWrite) {
-        addressInits.add(addressWrite);
+        addressInits.put((BigInteger) addressWrite.getAccessedAddress(), addressWrite);
     }
 
     public List<EventData> rollback(EventData backtrackingPoint) {
         int backtrackingIndex = backtrackingPoint.getId();
-        List<EventData> eventsToRemove = events.subList(backtrackingIndex + 1, events.size());
-        for (EventData eventToRemove : eventsToRemove) {
-            Event eventToRemoveEvent = eventToRemove.getEvent();
-            threadEventsMap.get(eventToRemoveEvent.getThread()).remove(eventToRemove);
-            addressInits.remove(eventToRemove);
-            if (eventToRemove.isRead()) {
-                readWriteMap.remove(eventToRemove);
-                List<EventData> readsForRfWrite = writeReadsMap.get(eventToRemove.getReadFrom());
-                if (readsForRfWrite != null) {
-                    readsForRfWrite.remove(eventToRemove);
-                }
-            } else if (eventToRemove.isWrite()) {
-                writeReadsMap.remove(eventToRemove);
-                if (eventToRemoveEvent instanceof RMWStoreExclusive) {
-                    lxsxPairs.remove(eventToRemove);
+        for (Map.Entry<Thread, List<EventData>> thread : threadEventsMap.entrySet()) {
+            List<EventData> threadEvents = thread.getValue();
+            int i;
+            for (i = threadEvents.size() - 1; i >= 0; --i) {
+                EventData threadEvent = threadEvents.get(i);
+                if (backtrackingIndex < threadEvent.getId()) {
+                    Event eventToRemove = threadEvent.getEvent();
+                    EventData readFrom = threadEvent.getReadFrom();
+                    if (readFrom != null) {
+                        readWriteMap.remove(threadEvent);
+                        List<EventData> readsForRfWrite = writeReadsMap.get(readFrom);
+                        if (readsForRfWrite != null) {
+                            readsForRfWrite.remove(threadEvent);
+                        }
+                    } else if (eventToRemove instanceof Store) {
+                        if (threadEvent.getCoPredecessor() == null) {
+                            BigInteger address = (BigInteger) threadEvent.getAccessedAddress();
+                            if (addressInits.get(address) == threadEvent) {
+                                addressInits.remove(address);
+                            }
+                        }
+                        writeReadsMap.remove(threadEvent);
+                        if (eventToRemove instanceof RMWStoreExclusive) {
+                            lxsxPairs.remove(threadEvent);
+                        }
+                    }
+                    eventMap.remove(eventToRemove);
+                } else {
+                    break;
                 }
             }
+            if (i <= 0) {
+                threadEvents.clear();
+            } else {
+                threadEvents.subList(i + 1, threadEvents.size()).clear();
+            }
         }
-        eventsToRemove.forEach(event -> eventMap.remove(event.getEvent()));
-        List<EventData> removedEvents = new ArrayList<>(eventsToRemove);
-        eventsToRemove.clear();
-        return removedEvents;
+        return events.subList(backtrackingIndex + 1, events.size());
     }
 
     public void setReadFrom(EventData read, EventData newWrite, EventData oldWrite) {
@@ -239,7 +253,7 @@ public class GenMCEventDomain implements Domain<EventData> {
         return threadEventsMap.keySet();
     }
 
-    public List<EventData> getAddressInits() {
+    public Map<BigInteger, EventData> getAddressInits() {
         return addressInits;
     }
 
@@ -275,6 +289,14 @@ public class GenMCEventDomain implements Domain<EventData> {
             }
         }
         return null;
+    }
+
+    public static void setThreadCount(int threadCount) {
+        optimalThreadMapCapacity = getOptimalThreadMapCapacity(threadCount);
+    }
+
+    public static int getOptimalThreadMapCapacity(int threadCount) {
+        return (threadCount * 4 + (3 - (threadCount % 3)) % 3) / 3;
     }
 
     @Override
@@ -392,7 +414,7 @@ public class GenMCEventDomain implements Domain<EventData> {
             sb.append("]");
         }
         sb.append('\n').append("Address inits: [");
-        for (EventData addrInit : addressInits) {
+        for (EventData addrInit : addressInits.values()) {
             sb.append('\n').append(addrInit.getEvent()).append(": [");
             for (EventData event : addrInit.getCoSuccessors()) {
                 sb.append(event.getEvent()).append(", ");
@@ -417,20 +439,6 @@ public class GenMCEventDomain implements Domain<EventData> {
 
     private static boolean isSynthetic(String name) {
         return name.startsWith("__");
-    }
-
-    public boolean isFinished(Program program) {
-        if (program.getFormat() == Program.SourceLanguage.LITMUS) {
-            return true;
-        }
-        List<Event> mainThreadEvents = program.getThreads().get(0).getEvents();
-        Event mainThreadEndLabel = mainThreadEvents.get(mainThreadEvents.size() - 1);
-        for (EventData event : events) {
-            if (event.getEvent() == mainThreadEndLabel.getPredecessor()) {
-                return true;
-            }
-        }
-        return false;
     }
 
     static boolean isThreadEndStore(EventData store) {

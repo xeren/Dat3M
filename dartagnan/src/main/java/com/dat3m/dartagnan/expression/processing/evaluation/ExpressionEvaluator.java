@@ -43,7 +43,7 @@ public abstract class ExpressionEvaluator {
     public abstract boolean evaluateReachability(BooleanFormula formula) throws SolverException, InterruptedException, InvalidConfigurationException;
     public abstract boolean evaluateReachability(Expression target, Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException;
 
-    public void setTrace(GenMCEventDomain trace, Event changedEvent) {
+    public void setTrace(GenMCEventDomain trace, EventData changedEvent, boolean inTraceOrder) {
         this.trace = trace;
         List<Event> cfEventsToRemove = new ArrayList<>();
         for (Event cfEvent : cfContext.keySet()) {

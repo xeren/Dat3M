@@ -6,7 +6,6 @@ import com.dat3m.dartagnan.configuration.GenMCReasoning;
 import com.dat3m.dartagnan.solver.caat.predicates.CAATPredicate;
 import com.dat3m.dartagnan.solver.caat.reasoning.CAATLiteral;
 import com.dat3m.dartagnan.solver.caat4wmm.basePredicates.genmc.AbstractGenMCWMMPredicate;
-import com.dat3m.dartagnan.wmm.Relation;
 import com.dat3m.dartagnan.solver.caat.CAATSolver;
 import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.CoreLiteral;
 import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.GenMCCoreReasoner;
@@ -18,8 +17,6 @@ import com.dat3m.dartagnan.wmm.Wmm;
 import org.sosy_lab.common.configuration.Configuration;
 import org.sosy_lab.common.configuration.InvalidConfigurationException;
 
-import static com.dat3m.dartagnan.wmm.RelationNameRepository.*;
-
 public class GenMCWMMSolver {
     
     private final GenMCExecutionGraph executionGraph;
@@ -27,17 +24,10 @@ public class GenMCWMMSolver {
     private final GenMCCoreReasoner reasoner;
     private Extractor extractor;
 
-    private final Relation rf;
-    private final Relation co;
-    private final Relation lxsx;
-
     private GenMCWMMSolver(Configuration config, Wmm memoryModel, Context analysisContext) throws InvalidConfigurationException {
         this.executionGraph = new GenMCExecutionGraph(memoryModel);
         this.reasoner = GenMCCoreReasoner.fromConfig(config, analysisContext, executionGraph);
         this.solver = CAATSolver.create();
-        this.rf = memoryModel.getRelation(RF);
-        this.co = memoryModel.getRelation(CO);
-        this.lxsx = memoryModel.getRelation(LXSX);
     }
 
     public static GenMCWMMSolver fromConfig(Configuration config, Wmm memoryModel, Context analysisContext) throws InvalidConfigurationException {
@@ -50,18 +40,6 @@ public class GenMCWMMSolver {
 
     public GenMCExecutionGraph getExecutionGraph() {
         return executionGraph;
-    }
-
-    public Relation getRf() {
-        return rf;
-    }
-
-    public Relation getCo() {
-        return co;
-    }
-
-    public Relation getLxsx() {
-        return lxsx;
     }
 
     public Result check(GenMCEventDomain trace, GenMCReasoning reasoningMethod) {

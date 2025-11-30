@@ -134,9 +134,9 @@ public class ConstantPropagationExpressionEvaluator extends ExpressionEvaluator 
     }
 
     @Override
-    public void setTrace(GenMCEventDomain trace, Event changedEvent) {
-        super.setTrace(trace, changedEvent);
-        evaluator.clear(changedEvent);
+    public void setTrace(GenMCEventDomain trace, EventData changedEvent, boolean inTraceOrder) {
+        super.setTrace(trace, changedEvent, inTraceOrder);
+        evaluator.clear(changedEvent, inTraceOrder);
     }
 
     @Override
@@ -151,11 +151,11 @@ public class ConstantPropagationExpressionEvaluator extends ExpressionEvaluator 
     
     private class ConstantPropagator extends ExprSimplifier {
 
-        private final Map<Register, Map.Entry<Event, Expression>> registerValues = new HashMap<>();
+        private final Map<Register, Map.Entry<EventData, Expression>> registerValues = new HashMap<>();
         private Event currentEvent = null;
 
         private ConstantPropagator() {
-            super(true);
+            super(true, false);
         }
 
         @Override
@@ -169,9 +169,11 @@ public class ConstantPropagationExpressionEvaluator extends ExpressionEvaluator 
             if (lastWriterEvent instanceof ThreadArgument arg) {
                 argIndex = arg.getIndex();
                 lastWriterEvent = arg.getCreator();
+                lastWriter = trace.getData(lastWriterEvent)
+                        .orElseThrow(() -> new IllegalArgumentException("Thread " + arg.getThread() + " of register " + register + " has never been created"));
             }
-            Map.Entry<Event, Expression> registerValue = registerValues.get(register);
-            if (registerValue != null && registerValue.getKey() == lastWriterEvent) {
+            Map.Entry<EventData, Expression> registerValue = registerValues.get(register);
+            if (registerValue != null && registerValue.getKey().getEvent() == lastWriterEvent) {
                 return registerValue.getValue();
             }
             Expression result;
@@ -194,7 +196,7 @@ public class ConstantPropagationExpressionEvaluator extends ExpressionEvaluator 
                 throw new UnsupportedOperationException("Cannot handle RegWriter that is neither Local, ThreadArgument, Load nor Alloc (" +
                         lastWriterEvent.getClass().getSimpleName() + ")");
             }
-            registerValues.put(register, Map.entry(lastWriterEvent, result));
+            registerValues.put(register, Map.entry(lastWriter, result));
             return result;
         }
 
@@ -220,21 +222,26 @@ public class ConstantPropagationExpressionEvaluator extends ExpressionEvaluator 
             return result;
         }
 
-        private void clear(Event changedEvent) {
+        private void clear(EventData changedEvent, boolean inTraceOrder) {
             if (trace.size() == 0) {
                 return;
             }
             List<Register> valuesToRemove = new ArrayList<>();
-            for (Map.Entry<Register, Map.Entry<Event, Expression>> registerValue : registerValues.entrySet()) {
-                Event event = registerValue.getValue().getKey();
-                if (event == changedEvent || trace.getData(event).isEmpty()) {
-                    valuesToRemove.add(registerValue.getKey());
+            if (inTraceOrder) {
+                int changeId = changedEvent.getId();
+                for (Map.Entry<Register, Map.Entry<EventData, Expression>> registerValue : registerValues.entrySet()) {
+                    if (changeId <= registerValue.getValue().getKey().getId()) {
+                        valuesToRemove.add(registerValue.getKey());
+                    }
                 }
-            }
-            EventData revisit = trace.getLast();
-            Event revisitEvent = revisit.getEvent();
-            if (revisitEvent instanceof Load load) {
-                valuesToRemove.add(load.getResultRegister());
+            } else {
+                Event change = changedEvent.getEvent();
+                for (Map.Entry<Register, Map.Entry<EventData, Expression>> registerValue : registerValues.entrySet()) {
+                    Event event = registerValue.getValue().getKey().getEvent();
+                    if (event == change || trace.getData(event).isEmpty()) {
+                        valuesToRemove.add(registerValue.getKey());
+                    }
+                }
             }
             valuesToRemove.forEach(registerValues::remove);
         }

@@ -28,15 +28,24 @@ public class ExprSimplifier extends ExprTransformer {
     // it will maintain "expr.getRegs() == simplified(expr).getRegs()".
     // For example, "0*r" will not get simplified to "0";
     private final boolean aggressive;
+    private final boolean tryGeneralRewrite;
 
     public ExprSimplifier(boolean aggressive) {
+        this(aggressive, true);
+    }
+
+    public ExprSimplifier(boolean aggressive, boolean tryGeneralRewrite) {
         this.aggressive = aggressive;
+        this.tryGeneralRewrite = tryGeneralRewrite;
     }
 
     // Tries to perform a general rewriting of a binary expression.
     // For now, it only rewrites "ITE(cond, x, y) op z" to "ITE(cond, x op z, y op z)".
     // Returns NULL, if no rewriting is applicable.
     private Expression tryGeneralRewrite(BinaryExpression expression) {
+        if (!tryGeneralRewrite) {
+            return null;
+        }
         final Expression left = expression.getLeft().accept(this);
         final Expression right = expression.getRight().accept(this);
         if (!(left instanceof ITEExpr) && !(right instanceof ITEExpr)

@@ -5,6 +5,7 @@ import com.dat3m.dartagnan.configuration.Property;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.program.event.core.Store;
 import com.dat3m.dartagnan.program.processing.AssertionTransformer;
 import com.dat3m.dartagnan.program.processing.ConsecutiveGotoSimplification;
 import com.dat3m.dartagnan.program.processing.IdReassignment;
@@ -80,7 +81,6 @@ public class GenMCSolver extends ModelChecker {
             secure = true)
     boolean useSMTSolver = false;
 
-    private final Timer porfPrefixTimer = new Timer();
     private int consistentExecutions = 0;
     private int completeExecutions = 0;
     private int failedExecutions = 0;
@@ -203,7 +203,6 @@ public class GenMCSolver extends ModelChecker {
         if (evalContext.neededSMTSolver()) {
             logger.info("Total encoding time: {}", evalContext.getTraceEncoder().getEncodingTimer().getFormattedTime());
         }
-        logger.info("Total porf-prefix calculation time: {}", porfPrefixTimer.getFormattedTime());
         logger.info("Total expression evaluation time: {}", model.getEvaluationTimer().getFormattedTime());
     }
 
@@ -251,7 +250,7 @@ public class GenMCSolver extends ModelChecker {
             return false;
         }
         if (event == null) {
-            if (model.getTrace().isFinished(model.getProgram())) {
+            if (model.isFinished()) {
                 ++completeExecutions;
                 if (showConsistentExecutions && model.checkFullConsistency()) {
                     ++consistentExecutions;
@@ -270,23 +269,36 @@ public class GenMCSolver extends ModelChecker {
             return visitRfs(model, event);
         }
         if (event.isWrite()) {
+            Event write = event.getEvent();
+            Thread currentThread = write.getThread();
             Collection<EventData> mayCoSet = model.getMayCoSet(event);
-            Collection<EventData> writePrefix = getPorfPrefix(model, event);
+            Map<Thread, Integer> porfPrefix = model.getPorfPrefix();
             Collection<EventData> relevantReads = model.getMayRfSet(event);
-            relevantReads.removeIf(writePrefix::contains);
+            relevantReads.removeIf(read -> inPorfPrefix(porfPrefix, currentThread, read));
             if (!delayConsistencyChecks && (mayCoSet.size() > 1 || !relevantReads.isEmpty()) && !model.checkConsistency(true)) {
                 return inconsistentExecution();
             }
             if (!visitCos(model, event, mayCoSet)) {
                 return false;
             }
+            if (relevantReads.isEmpty()) {
+                return true;
+            }
+            GenMCEventDomain trace = model.getTrace();
+            Map<Thread, List<EventData>> threadEventsMap = trace.getThreadEventsMap();
+            Set<Map.Entry<Thread, List<EventData>>> threadEventsEntries = threadEventsMap.entrySet();
+            Map<EventData, List<EventData>> writeReadsMap = trace.getWriteReadsMap();
+            Map<Thread, Event> boundEvents = new HashMap<>(model.getOptimalPorfPrefixCapacity() + 1);
+            EventData lastRead = getLastRead(threadEventsMap.get(currentThread), event.getLocalId() - 1);
+            if (lastRead != null) {
+                boundEvents.put(currentThread, lastRead.getEvent());
+            }
             for (EventData read : relevantReads) {
-                List<EventData> eventsToDelete = getEventsToDelete(model, writePrefix, read);
-                if (shouldRevisit(model, eventsToDelete, read, writePrefix)) {
-                    Event write = event.getEvent();
-                    logger.debug("Backward revisiting load {}: {} for store {}: {}", read.getEvent().getGlobalId(),
-                            read.getEvent(), write.getGlobalId(), write);
-                    Map.Entry<GenMCExecutionModel, EventData> backwardRevisit = getBackwardRevisitModel(model, eventsToDelete, read, event);
+                List<EventData> eventsToDelete = getEventsToDelete(threadEventsEntries, porfPrefix, read, currentThread, boundEvents);
+                if (shouldRevisit(currentThread, eventsToDelete, read, porfPrefix, writeReadsMap)) {
+                    Event readEvent = read.getEvent();
+                    logger.debug("Backward revisiting load {}: {} for store {}: {}", readEvent.getGlobalId(), readEvent, write.getGlobalId(), write);
+                    Map.Entry<GenMCExecutionModel, EventData> backwardRevisit = getBackwardRevisitModel(model, eventsToDelete, boundEvents, readEvent, write);
                     GenMCExecutionModel backwardRevisitModel = backwardRevisit.getKey();
                     if (!visitCos(backwardRevisitModel, backwardRevisit.getValue(), null)) {
                         return false;
@@ -368,89 +380,128 @@ public class GenMCSolver extends ModelChecker {
         return true;
     }
 
-    private Collection<EventData> getPorfPrefix(GenMCExecutionModel model, EventData write) {
-        return porfPrefixTimer.measure(() -> model.getPorfPrefix(write));
-    }
-
-    private List<EventData> getEventsToDelete(GenMCExecutionModel model, Collection<EventData> writePrefix, EventData read) {
+    private static List<EventData> getEventsToDelete(Set<Map.Entry<Thread, List<EventData>>> threadEventsMap, Map<Thread, Integer> porfPrefix, EventData read,
+                                                     Thread currentThread, Map<Thread, Event> boundEvents) {
         int readId = read.getId();
-        Map<Thread, Integer> prefixLimits = getPrefixLimits(model, writePrefix);
         List<EventData> eventsToDelete = new ArrayList<>();
-        for (Map.Entry<Thread, List<EventData>> thread : model.getTrace().getThreadEventsMap().entrySet()) {
-            int prefixLimitForThread = prefixLimits.get(thread.getKey());
-            List<EventData> threadEvents = thread.getValue();
-            for (int i = threadEvents.size() - 1; i >= 0; --i) {
-                EventData e = threadEvents.get(i);
-                if (readId < e.getId() && prefixLimitForThread < e.getEvent().getGlobalId()) {
-                    eventsToDelete.add(e);
-                } else break;
+        for (Map.Entry<Thread, List<EventData>> threadData : threadEventsMap) {
+            Thread thread = threadData.getKey();
+            if (thread != currentThread) {
+                Integer prefixLimitForThread = porfPrefix.get(thread);
+                List<EventData> threadEvents = threadData.getValue();
+                boolean boundFound = false;
+                if (prefixLimitForThread == null) {
+                    for (int i = threadEvents.size() - 1; i >= 0; --i) {
+                        EventData e = threadEvents.get(i);
+                        if (readId < e.getId()) {
+                            eventsToDelete.add(e);
+                        } else {
+                            EventData lastRead = getLastRead(threadEvents, e.getLocalId());
+                            if (lastRead != null) {
+                                boundEvents.put(thread, lastRead.getEvent());
+                            } else {
+                                boundEvents.remove(thread);
+                            }
+                            boundFound = true;
+                            break;
+                        }
+                    }
+                } else {
+                    for (int i = threadEvents.size() - 1; i >= 0; --i) {
+                        EventData e = threadEvents.get(i);
+                        if (readId < e.getId() && prefixLimitForThread < e.getEvent().getGlobalId()) {
+                            eventsToDelete.add(e);
+                        } else {
+                            EventData lastRead = getLastRead(threadEvents, e.getLocalId());
+                            if (lastRead != null) {
+                                boundEvents.put(thread, lastRead.getEvent());
+                            } else {
+                                boundEvents.remove(thread);
+                            }
+                            boundFound = true;
+                            break;
+                        }
+                    }
+                }
+                if (!boundFound) {
+                    boundEvents.remove(thread);
+                }
             }
         }
         return eventsToDelete;
     }
 
-    private Map<Thread, Integer> getPrefixLimits(GenMCExecutionModel model, Collection<EventData> writePrefix) {
-        Map<Thread, Integer> prefixLimits = new HashMap<>();
-        for (Thread thread : model.getTrace().getThreadEventsMap().keySet()) {
-            int limit = Integer.MIN_VALUE;
-            for (EventData prefixData : writePrefix) {
-                Event prefixEvent = prefixData.getEvent();
-                int eventId;
-                if (prefixEvent.getThread() == thread && prefixData.isMemoryEvent() && (eventId = prefixEvent.getGlobalId()) > limit) {
-                    limit = eventId;
-                }
+    private static EventData getLastRead(List<EventData> threadEvents, int maxLocalId) {
+        for (int i = maxLocalId; i >= 0; --i) {
+            EventData event = threadEvents.get(i);
+            if (event.getReadFrom() != null) {
+                return event;
             }
-            prefixLimits.put(thread, limit);
         }
-        return prefixLimits;
+        return null;
     }
 
-    private boolean shouldRevisit(GenMCExecutionModel model, List<EventData> eventsToDelete, EventData read, Collection<EventData> writePrefix) {
+    private static boolean shouldRevisit(Thread currentThread, List<EventData> eventsToDelete, EventData read, Map<Thread, Integer> porfPrefix,
+                                  Map<EventData, List<EventData>> writeReadsMap) {
         for (EventData event : eventsToDelete) {
-            if (!isMaximallyAdded(model, event, writePrefix)) {
+            if (!isMaximallyAdded(currentThread, event, porfPrefix, writeReadsMap)) {
                 return false;
             }
         }
-        return isMaximallyAdded(model, read, writePrefix);
+        return isMaximallyAdded(currentThread, read, porfPrefix, writeReadsMap);
     }
 
-    private boolean isMaximallyAdded(GenMCExecutionModel model, EventData event, Collection<EventData> writePrefix) {
+    private static boolean isMaximallyAdded(Thread currentThread, EventData event, Map<Thread, Integer> porfPrefix, Map<EventData, List<EventData>> writeReadsMap) {
         EventData maximalEvent;
-        if (event.isWrite()) {
-            for (EventData e : writePrefix) {
-                if (e.getReadFrom() == event) {
-                    return false;
+        int eventId;
+        if (event.getEvent() instanceof Store) {
+            eventId = event.getId();
+            List<EventData> reads = writeReadsMap.get(event);
+            if (reads != null) {
+                for (EventData read : reads) {
+                    if (read.getId() < eventId || inPorfPrefix(porfPrefix, currentThread, read)) {
+                        return false;
+                    }
                 }
             }
             maximalEvent = event;
-        } else if (event.isRead()) {
-            maximalEvent = event.getReadFrom();
         } else {
-            return true;
-        }
-        if (writePrefix.contains(maximalEvent.getCoSuccessor())) {
-            return false;
-        }
-        GenMCEventDomain trace = model.getTrace();
-        int eventId = trace.getId(event);
-        List<EventData> previous = trace.getElements().subList(0, eventId + 1);
-        for (EventData e : previous) {
-            if (e.getReadFrom() == event) {
+            maximalEvent = event.getReadFrom();
+            if (maximalEvent == null) {
+                return true;
+            }
+            eventId = event.getId();
+            if (maximalEvent.getId() > eventId && !inPorfPrefix(porfPrefix, currentThread, maximalEvent)) {
                 return false;
             }
         }
-        return (maximalEvent.getCoSuccessor() == null || !previous.contains(maximalEvent.getCoSuccessor())) &&
-                (previous.contains(maximalEvent) || writePrefix.contains(maximalEvent));
+        EventData coSuccessor = maximalEvent.getCoSuccessor();
+        while (coSuccessor != null) {
+            if (coSuccessor.getId() < eventId || inPorfPrefix(porfPrefix, currentThread, coSuccessor)) {
+                return false;
+            }
+            coSuccessor = coSuccessor.getCoSuccessor();
+        }
+        return true;
     }
 
-    private Map.Entry<GenMCExecutionModel, EventData> getBackwardRevisitModel(GenMCExecutionModel oldModel, List<EventData> eventsToDelete,
-                                                                              EventData read, EventData write) {
+    private static boolean inPorfPrefix(Map<Thread, Integer> porfPrefix, Thread currentThread, EventData event) {
+        Thread eventThread = event.getThread();
+        if (eventThread == currentThread) {
+            return true;
+        }
+        Integer prefixLimitForThread = porfPrefix.get(eventThread);
+        return prefixLimitForThread != null && prefixLimitForThread >= event.getEvent().getGlobalId();
+    }
+
+    private static Map.Entry<GenMCExecutionModel, EventData> getBackwardRevisitModel(GenMCExecutionModel oldModel, List<EventData> eventsToDelete, Map<Thread, Event> boundEvents,
+                                                                              Event read, Event write) {
         List<EventData> startTraceEvents = oldModel.copyTraceEvents(not(eventsToDelete::contains));
-        GenMCExecutionModel newModel = oldModel.newInstance(startTraceEvents);
-        EventData newRead = GenMCEventDomain.getData(startTraceEvents, read.getEvent()).orElseThrow(() ->
-                new IllegalArgumentException("Backward revisit model does not contain revisit read " + read.getEvent().getGlobalId() + ": " + read.getEvent()));
-        EventData newWrite = GenMCEventDomain.getData(startTraceEvents, write.getEvent()).orElseThrow(() ->
-                new IllegalArgumentException("Backward revisit model does not contain revisit write " + write.getEvent().getGlobalId() + ": " + write.getEvent()));
+        GenMCExecutionModel newModel = oldModel.newInstance(startTraceEvents, boundEvents);
+        EventData newRead = GenMCEventDomain.getData(startTraceEvents, read).orElseThrow(() ->
+                new IllegalArgumentException("Backward revisit model does not contain revisit read " + read.getGlobalId() + ": " + read));
+        EventData newWrite = GenMCEventDomain.getData(startTraceEvents, write).orElseThrow(() ->
+                new IllegalArgumentException("Backward revisit model does not contain revisit write " + write.getGlobalId() + ": " + write));
         newModel.initialize(newRead, newWrite, oldModel.needsNewConsistencyCheck());
         return Map.entry(newModel, newWrite);
     }

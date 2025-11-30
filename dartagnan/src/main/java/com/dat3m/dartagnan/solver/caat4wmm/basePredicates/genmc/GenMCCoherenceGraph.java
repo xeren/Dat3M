@@ -60,7 +60,7 @@ public class GenMCCoherenceGraph extends StaticGenMCWMMGraph {
     @Override
     public void repopulate() {
         if (isRepopulateForbidden()) return;
-        coMap = new ArrayList<>(trace.getAddressInits());
+        coMap = new ArrayList<>(trace.getAddressInits().values());
         coMap.removeIf(firstWrite -> firstWrite.getCoSuccessor() == null);
         computeSize();
     }
