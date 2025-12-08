@@ -14,4 +14,8 @@ public enum GenMCReasoning implements OptionInterface {
     public boolean usesPatterns() {
         return this == PATTERNS || this == BOTH;
     }
+
+    public boolean usesReasoning() {
+        return this != NONE;
+    }
 }

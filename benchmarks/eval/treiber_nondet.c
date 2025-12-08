@@ -1,9 +1,10 @@
 #include "treiber.h"
 #include <pthread.h>
 #include <assert.h>
+#include "dat3m.h"
 
 #ifndef NTHREADS
-#define NTHREADS 2
+#define NTHREADS 3
 #endif
 
 void *worker(void *arg)
@@ -23,7 +24,7 @@ int main()
 
     int n = __VERIFIER_nondet_int();
     if (n == 0) {
-	exit(0);
+	    exit(0);
     }
 
     pthread_create(&t[0], 0, worker, (void *)(size_t)n);

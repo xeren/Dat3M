@@ -1,17 +1,10 @@
 package com.dat3m.dartagnan.utils.logic;
 
-import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.AddressLiteral;
-import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.CoreLiteral;
-import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.ExecLiteral;
-import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.RelLiteral;
 import com.google.common.collect.Iterables;
 
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
-
-import static com.dat3m.dartagnan.wmm.RelationNameRepository.CO;
-import static com.dat3m.dartagnan.wmm.RelationNameRepository.RF;
 
 // A formal minimal conjunction of ground literals of type T
 // The class is immutable

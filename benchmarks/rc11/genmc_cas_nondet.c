@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <assert.h>
+#include "dat3m.h"
 
 atomic_int r = 0;
 atomic_int rw1 = 1;

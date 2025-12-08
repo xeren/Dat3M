@@ -294,6 +294,9 @@ public class GenMCSolver extends ModelChecker {
                 boundEvents.put(currentThread, lastRead.getEvent());
             }
             for (EventData read : relevantReads) {
+                if (model.hasBacktrackingPoint()) {
+                    return true;
+                }
                 List<EventData> eventsToDelete = getEventsToDelete(threadEventsEntries, porfPrefix, read, currentThread, boundEvents);
                 if (shouldRevisit(currentThread, eventsToDelete, read, porfPrefix, writeReadsMap)) {
                     Event readEvent = read.getEvent();
@@ -303,7 +306,7 @@ public class GenMCSolver extends ModelChecker {
                     if (!visitCos(backwardRevisitModel, backwardRevisit.getValue(), null)) {
                         return false;
                     }
-                    model.updatePatternBacktrackingPoint(backwardRevisitModel, write);
+                    model.updateBacktrackingPoint(backwardRevisitModel, write);
                 }
             }
             return true;
