@@ -28,6 +28,7 @@ public class VisitorSpirvOpenCLTest {
 
     private static final TypeFactory types = TypeFactory.getInstance();
     private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private static final EventFactory.Spirv events = EventFactory.Spirv.getInstance();
     private static final IntegerType archType = Memory.getDefaultArchType();
     private static final FunctionType funcType = types.getFunctionType(types.getVoidType(), List.of());
 
@@ -136,7 +137,7 @@ public class VisitorSpirvOpenCLTest {
         Register register = mock(Register.class);
         MemoryObject address = mock(MemoryObject.class);
         String scope = Tag.Spirv.getScopeTag(spvTags);
-        Event e = EventFactory.Spirv.newLoad(register, address, scope, spvTags);
+        Event e = events.newLoad(register, address, scope, spvTags);
         e.setFunction(mock(Function.class));
 
         // when
@@ -178,7 +179,7 @@ public class VisitorSpirvOpenCLTest {
         Expression value = mock(Expression.class);
         MemoryObject address = mock(MemoryObject.class);
         String scope = Tag.Spirv.getScopeTag(spvTags);
-        Event e = EventFactory.Spirv.newStore(address, value, scope, spvTags);
+        Event e = events.newStore(address, value, scope, spvTags);
         e.setFunction(mock(Function.class));
 
         // when
@@ -232,7 +233,7 @@ public class VisitorSpirvOpenCLTest {
         Expression value = mock(Expression.class);
         MemoryObject address = mock(MemoryObject.class);
         String scope = Tag.Spirv.getScopeTag(spvTags);
-        Event e = EventFactory.Spirv.newXchg(register, address, value, scope, spvTags);
+        Event e = events.newXchg(register, address, value, scope, spvTags);
         e.setFunction(function);
 
         // when
@@ -289,7 +290,7 @@ public class VisitorSpirvOpenCLTest {
         Expression value = expressions.makeValue(1, archType);
         MemoryObject address = mock(MemoryObject.class);
         String scope = Tag.Spirv.getScopeTag(spvTags);
-        Event e = EventFactory.Spirv.newRmw(register, address, IntBinaryOp.ADD, value, scope, spvTags);
+        Event e = events.newRmw(register, address, IntBinaryOp.ADD, value, scope, spvTags);
         e.setFunction(function);
 
         // when
@@ -354,7 +355,7 @@ public class VisitorSpirvOpenCLTest {
         Expression cmp = expressions.makeValue(0, archType);
         Expression value = expressions.makeValue(1, archType);
         MemoryObject address = mock(MemoryObject.class);
-        Event e = EventFactory.Spirv.newCmpXchg(register, address, cmp, value, scope, eqTags, neqTags);
+        Event e = events.newCmpXchg(register, address, cmp, value, scope, eqTags, neqTags);
         e.setFunction(function);
 
         // when
@@ -397,7 +398,7 @@ public class VisitorSpirvOpenCLTest {
         Expression cmp = expressions.makeValue(0, archType);
         Expression value = expressions.makeValue(1, archType);
         MemoryObject address = mock(MemoryObject.class);
-        Event e = EventFactory.Spirv.newCmpXchg(register, address, cmp, value, Tag.Spirv.WORKGROUP, eqTags, neqTags);
+        Event e = events.newCmpXchg(register, address, cmp, value, Tag.Spirv.WORKGROUP, eqTags, neqTags);
         e.setFunction(function);
 
         try {

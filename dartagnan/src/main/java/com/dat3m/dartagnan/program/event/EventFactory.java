@@ -968,29 +968,30 @@ public class EventFactory {
     // =========================================== Spir-V ==========================================
     // =============================================================================================
 
-    public static class Spirv {
+    public static class Spirv extends EventFactory {
         private Spirv() {}
 
-        public static Event newLoad(Register register, Expression address, String scope, Set<String> tags) {
+        public static Spirv getInstance() { return new Spirv(); }
+
+        public Event newLoad(Register register, Expression address, String scope, Set<String> tags) {
             return new SpirvLoad(register, address, scope, tags);
         }
 
-        public static Event newStore(Expression address, Expression value, String scope, Set<String> tags) {
+        public Event newStore(Expression address, Expression value, String scope, Set<String> tags) {
             return new SpirvStore(address, value, scope, tags);
         }
 
-        public static Event newXchg(Register register, Expression address, Expression value, String scope,
-                Set<String> tags) {
+        public Event newXchg(Register register, Expression address, Expression value, String scope, Set<String> tags) {
             return new SpirvXchg(register, address, value, scope, tags);
         }
 
-        public static Event newRmw(Register register, Expression address, IntBinaryOp op, Expression value,
-                String scope, Set<String> tags) {
+        public Event newRmw(Register register, Expression address, IntBinaryOp op, Expression value, String scope,
+                Set<String> tags) {
             return new SpirvRmw(register, address, op, value, scope, tags);
         }
 
-        public static Event newCmpXchg(Register register, Expression address, Expression cmp, Expression value,
-                String scope, Set<String> eqTags, Set<String> neqTags) {
+        public Event newCmpXchg(Register register, Expression address, Expression cmp, Expression value, String scope,
+                Set<String> eqTags, Set<String> neqTags) {
             return new SpirvCmpXchg(register, address, cmp, value, scope, eqTags, neqTags);
         }
     }

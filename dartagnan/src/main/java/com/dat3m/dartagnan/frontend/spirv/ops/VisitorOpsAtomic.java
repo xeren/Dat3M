@@ -11,14 +11,14 @@ import com.dat3m.dartagnan.frontend.spirv.helpers.HelperTags;
 import com.dat3m.dartagnan.frontend.spirv.builders.ProgramBuilder;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.program.event.EventFactory;
 
 import java.util.Set;
-
-import static com.dat3m.dartagnan.program.event.EventFactory.Spirv.*;
 
 public class VisitorOpsAtomic extends VisitorOps<Event> {
 
     private final ProgramBuilder builder;
+    private final EventFactory.Spirv events = EventFactory.Spirv.getInstance();
 
     public VisitorOpsAtomic(ProgramBuilder builder) {
         this.builder = builder;
@@ -31,7 +31,7 @@ public class VisitorOpsAtomic extends VisitorOps<Event> {
         String scope = getScopeTag(ctx.memory().getText());
         Set<String> tags = getMemorySemanticsTags(ctx.semantics().getText());
         tags.add(builder.getPointerStorageClass(ctx.pointer().getText()));
-        return builder.addEvent(newLoad(register, ptr, scope, tags));
+        return builder.addEvent(events.newLoad(register, ptr, scope, tags));
     }
 
     @Override
@@ -41,7 +41,7 @@ public class VisitorOpsAtomic extends VisitorOps<Event> {
         String scope = getScopeTag(ctx.memory().getText());
         Set<String> tags = getMemorySemanticsTags(ctx.semantics().getText());
         tags.add(builder.getPointerStorageClass(ctx.pointer().getText()));
-        return builder.addEvent(newStore(ptr, value, scope, tags));
+        return builder.addEvent(events.newStore(ptr, value, scope, tags));
     }
 
     @Override
@@ -52,7 +52,7 @@ public class VisitorOpsAtomic extends VisitorOps<Event> {
         String scope = getScopeTag(ctx.memory().getText());
         Set<String> tags = getMemorySemanticsTags(ctx.semantics().getText());
         tags.add(builder.getPointerStorageClass(ctx.pointer().getText()));
-        return builder.addEvent(newXchg(register, ptr, value, scope, tags));
+        return builder.addEvent(events.newXchg(register, ptr, value, scope, tags));
     }
 
     @Override
@@ -155,7 +155,7 @@ public class VisitorOpsAtomic extends VisitorOps<Event> {
         neqTags.add(builder.getPointerStorageClass(ptrCtx.getText()));
         Expression value = builder.getExpression(valCtx.getText());
         Expression cmp = builder.getExpression(cmpCtx.getText());
-        return builder.addEvent(newCmpXchg(register, ptr, cmp, value, scope, eqTags, neqTags));
+        return builder.addEvent(events.newCmpXchg(register, ptr, cmp, value, scope, eqTags, neqTags));
     }
 
     private Event visitAtomicOpIncDec(
@@ -202,7 +202,7 @@ public class VisitorOpsAtomic extends VisitorOps<Event> {
         String scope = getScopeTag(scopeCtx.getText());
         Set<String> tags = getMemorySemanticsTags(tagsCtx.getText());
         tags.add(builder.getPointerStorageClass(ptrCtx.getText()));
-        return builder.addEvent(newRmw(register, ptr, op, value, scope, tags));
+        return builder.addEvent(events.newRmw(register, ptr, op, value, scope, tags));
     }
 
     private String getScopeTag(String scopeId) {
