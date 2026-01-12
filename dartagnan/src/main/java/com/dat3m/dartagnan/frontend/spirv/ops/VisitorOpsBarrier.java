@@ -41,7 +41,7 @@ public class VisitorOpsBarrier extends VisitorOps<Event> {
     public Event visitOpMemoryBarrier(SpirvParser.OpMemoryBarrierContext ctx) {
         Set<String> tags = getMemorySemanticsTags(ctx.semantics().getText());
         if (!Set.of(Tag.Spirv.RELAXED).equals(tags)) {
-            Event fence = EventFactory.newFence(Tag.FENCE);
+            Event fence = EventFactory.newGenericVisibleEvent(Tag.FENCE, Tag.FENCE);
             fence.addTags(getScopeTag(ctx.memory().getText()));
             fence.addTags(tags);
             return builder.addEvent(fence);

@@ -228,4 +228,6 @@ class VisitorIMM extends VisitorBase {
                 newFence(e.getMo())
         );
     }
+
+    private Event newFence(String mo) { return newGenericVisibleEvent(mo, Tag.FENCE, mo); }
 }

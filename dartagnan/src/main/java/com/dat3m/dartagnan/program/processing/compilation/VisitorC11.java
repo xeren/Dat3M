@@ -244,6 +244,10 @@ public class VisitorC11 extends VisitorBase {
         return in;
     }
 
+    private Event newFence(String name) {
+        return newGenericVisibleEvent(name, Tag.FENCE, name);
+    }
+
     private void tagEvent(Event originalEvent, Event e) {
         if (originalEvent != null) {
             String scope = Tag.getScopeTag(originalEvent, Arch.OPENCL);

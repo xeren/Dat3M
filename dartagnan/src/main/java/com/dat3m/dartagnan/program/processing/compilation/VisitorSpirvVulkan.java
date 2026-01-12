@@ -49,7 +49,7 @@ public class VisitorSpirvVulkan extends VisitorVulkan {
 
     @Override
     public List<Event> visitGenericVisibleEvent(GenericVisibleEvent e) {
-        GenericVisibleEvent fence = new GenericVisibleEvent(e.getName(), Tag.FENCE);
+        GenericVisibleEvent fence = newGenericVisibleEvent(e.getName(), Tag.FENCE);
         addVulkanTags(e, fence);
         return super.visitGenericVisibleEvent(fence);
     }

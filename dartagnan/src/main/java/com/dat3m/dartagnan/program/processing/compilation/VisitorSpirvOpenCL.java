@@ -112,7 +112,7 @@ public class VisitorSpirvOpenCL extends VisitorC11 {
 
     @Override
     public List<Event> visitGenericVisibleEvent(GenericVisibleEvent e) {
-        Event fence = new GenericVisibleEvent(e.getName(), Tag.FENCE);
+        Event fence = newGenericVisibleEvent(e.getName(), Tag.FENCE);
         fence.removeTags(fence.getTags());
         fence.addTags(toOpenCLTags(e.getTags()));
         return eventSequence(fence);

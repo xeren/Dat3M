@@ -436,15 +436,15 @@ public class VisitorSpirvOpenCLTest {
 
     private void doTestSpirvMemoryBarrier(Set<String> spvTags, Set<String> expected) {
         // given
-        GenericVisibleEvent e = new GenericVisibleEvent("membar", Tag.FENCE);
+        Event e = EventFactory.newGenericVisibleEvent("membar", Tag.FENCE);
         e.addTags(spvTags);
 
         // when
-        List<Event> seq = visitor.visitGenericVisibleEvent(e);
+        List<Event> seq = e.accept(visitor);
 
         // then
         assertEquals(1, seq.size());
-        GenericVisibleEvent barrier = (GenericVisibleEvent) seq.getFirst();
+        Event barrier = seq.getFirst();
         Set<String> baseTags = Set.of(Tag.VISIBLE, Tag.FENCE);
         assertEquals(Sets.union(baseTags, expected), barrier.getTags());
     }

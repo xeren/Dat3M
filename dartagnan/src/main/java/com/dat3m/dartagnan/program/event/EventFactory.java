@@ -37,11 +37,11 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 public class EventFactory {
 
-    private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
-    private static final TypeFactory types = TypeFactory.getInstance();
+    protected static final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    protected static final TypeFactory types = TypeFactory.getInstance();
 
     // Static class
-    private EventFactory() {
+    protected EventFactory() {
     }
 
     // =============================================================================================
@@ -122,8 +122,8 @@ public class EventFactory {
         return store;
     }
 
-    public static GenericVisibleEvent newFence(String name) {
-        return new GenericVisibleEvent(name, name, Tag.FENCE);
+    public static GenericVisibleEvent newGenericVisibleEvent(String name, String... tags) {
+        return new GenericVisibleEvent(name, tags);
     }
 
     public static ControlBarrier newControlBarrier(String name, String instanceId, String execScope) {
@@ -578,13 +578,13 @@ public class EventFactory {
             return cas;
         }
 
-        public static GenericVisibleEvent newBarrier(String type, String option) {
+        public static Event newBarrier(String type, String option) {
             final String typeUpper = type.toUpperCase();
             final String optionUpper = option.toUpperCase();
             checkArgument(BARRIER_TYPE.contains(typeUpper), "Unknown barrier type '%s'.", type);
             checkArgument(BARRIER_OPT.contains(optionUpper), "Unknown barrier option '%s'.", option);
             final String name = "%s.%s".formatted(typeUpper, optionUpper);
-            return new GenericVisibleEvent(name, name, Tag.FENCE, typeUpper);
+            return newGenericVisibleEvent(name, name, Tag.FENCE, typeUpper);
         }
 
         private static final Set<String> BARRIER_TYPE = Set.of("DMB", "DSB", "ISB");
@@ -763,7 +763,7 @@ public class EventFactory {
                 case "lfence", "sfence" -> throw new UnsupportedOperationException("X86 fence '%s'.".formatted(type));
                 default -> throw new IllegalArgumentException("Invalid X86 fence '%s'".formatted(type));
             };
-            return newFence(name);
+            return newGenericVisibleEvent(name, Tag.FENCE, name);
         }
     }
 
@@ -815,7 +815,8 @@ public class EventFactory {
 
         public static Event newFence(String mode) {
             checkArgument(FENCE_MODE.contains(mode), "Invalid fence mode '%s'.", mode);
-            return EventFactory.newFence("Fence."+mode);
+            final String name = "Fence." + mode;
+            return newGenericVisibleEvent(name, Tag.FENCE, name);
         }
 
         private static String toTag(MemoryOrder mo) {
@@ -857,7 +858,7 @@ public class EventFactory {
 
         public static GenericVisibleEvent newBarrier(String type) {
             checkArgument(BARRIER_TYPE.contains(type), "Invalid barrier '%s'.", type);
-            return newFence(type);
+            return newGenericVisibleEvent(type, Tag.FENCE, type);
         }
 
         private static final Set<String> BARRIER_TYPE = Set.of("isync", "sync", "lwsync");
@@ -908,7 +909,7 @@ public class EventFactory {
         }
 
         public static Event newFence(String name) {
-            return EventFactory.newFence(name);
+            return newGenericVisibleEvent(name, Tag.FENCE, name);
         }
     }
 
@@ -944,18 +945,18 @@ public class EventFactory {
         public static Event newMemoryBarrier(String mo, String scope, List<String> semantics, boolean av,
                 boolean vis) {
             checkArgument(BARRIER_MEMORY_ORDER.contains(mo), "Unknown barrier memory order '%s'.", mo);
-            final GenericVisibleEvent barrier = new GenericVisibleEvent("membar", Tag.FENCE);
+            final GenericVisibleEvent barrier = newGenericVisibleEvent("membar", Tag.FENCE);
             barrier.addTags(semantics);
             barrier.addTags(mo, scope, av ? Tag.Vulkan.SEM_AVAILABLE : "", vis ? Tag.Vulkan.SEM_VISIBLE : "");
             return barrier;
         }
 
         public static GenericVisibleEvent newAvDevice() {
-            return new GenericVisibleEvent("avdevice", Tag.Vulkan.AVDEVICE);
+            return newGenericVisibleEvent("avdevice", Tag.Vulkan.AVDEVICE);
         }
 
         public static GenericVisibleEvent newVisDevice() {
-            return new GenericVisibleEvent("visdevice", Tag.Vulkan.VISDEVICE);
+            return newGenericVisibleEvent("visdevice", Tag.Vulkan.VISDEVICE);
         }
 
         private static final Set<String> BARRIER_MEMORY_ORDER = Set.of(
