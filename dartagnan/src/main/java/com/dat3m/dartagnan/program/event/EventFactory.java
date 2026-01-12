@@ -916,34 +916,34 @@ public class EventFactory {
     // =============================================================================================
     // =========================================== Vulkan ==========================================
     // =============================================================================================
-    public static class Vulkan {
+    public static class Vulkan extends EventFactory {
         private Vulkan() {}
 
-        public static Event newLoad(Register value, Expression address, String mo) {
+        public static Vulkan getInstance() { return new Vulkan(); }
+
+        public Event newLoad(Register value, Expression address, String mo) {
             return newLoadWithMo(value, address, mo);
         }
 
-        public static Event newStore(Expression address, Expression value, String mo) {
+        public Event newStore(Expression address, Expression value, String mo) {
             return newStoreWithMo(address, value, mo);
         }
 
-        public static VulkanRMW newRMW(Expression address, Register register, Expression value,
-                                          String mo, String scope) {
+        public VulkanRMW newRMW(Expression address, Register register, Expression value, String mo, String scope) {
             return new VulkanRMW(register, address, value, mo, scope);
         }
 
-        public static VulkanRMWOp newRMWOp(Expression address, Register register, Expression value,
-                                           IntBinaryOp op, String mo, String scope) {
+        public VulkanRMWOp newRMWOp(Expression address, Register register, Expression value, IntBinaryOp op, String mo,
+                String scope) {
             return new VulkanRMWOp(register, address, op, value, mo, scope);
         }
 
-        public static VulkanCmpXchg newVulkanCmpXchg(Expression address, Register register, Expression expected,
-                                                     Expression value, String mo, String scope) {
+        public VulkanCmpXchg newVulkanCmpXchg(Expression address, Register register, Expression expected,
+                Expression value, String mo, String scope) {
             return new VulkanCmpXchg(register, address, expected, value, mo, scope);
         }
 
-        public static Event newMemoryBarrier(String mo, String scope, List<String> semantics, boolean av,
-                boolean vis) {
+        public Event newMemoryBarrier(String mo, String scope, List<String> semantics, boolean av, boolean vis) {
             checkArgument(BARRIER_MEMORY_ORDER.contains(mo), "Unknown barrier memory order '%s'.", mo);
             final GenericVisibleEvent barrier = newGenericVisibleEvent("membar", Tag.FENCE);
             barrier.addTags(semantics);
@@ -951,11 +951,11 @@ public class EventFactory {
             return barrier;
         }
 
-        public static GenericVisibleEvent newAvDevice() {
+        public GenericVisibleEvent newAvDevice() {
             return newGenericVisibleEvent("avdevice", Tag.Vulkan.AVDEVICE);
         }
 
-        public static GenericVisibleEvent newVisDevice() {
+        public GenericVisibleEvent newVisDevice() {
             return newGenericVisibleEvent("visdevice", Tag.Vulkan.VISDEVICE);
         }
 

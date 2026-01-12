@@ -19,6 +19,8 @@ import static com.dat3m.dartagnan.program.event.EventFactory.*;
 
 public class VisitorSpirvVulkan extends VisitorVulkan {
 
+    private static final EventFactory.Vulkan events = EventFactory.Vulkan.getInstance();
+
     @Override
     public List<Event> visitLoad(Load e) {
         Event load = EventFactory.newLoad(e.getResultRegister(), e.getAddress());
@@ -69,7 +71,7 @@ public class VisitorSpirvVulkan extends VisitorVulkan {
     public List<Event> visitSpirvXchg(SpirvXchg e) {
         String mo = moToVulkanTag(Tag.Spirv.getMoTag(e.getTags()));
         String scope = Tag.Spirv.toVulkanTag(Tag.Spirv.getScopeTag(e.getTags()));
-        Event rmw = EventFactory.Vulkan.newRMW(e.getAddress(), e.getResultRegister(), e.getValue(), mo, scope);
+        Event rmw = events.newRMW(e.getAddress(), e.getResultRegister(), e.getValue(), mo, scope);
         rmw.addTags(Tag.Vulkan.NON_PRIVATE, Tag.Vulkan.AVAILABLE, Tag.Vulkan.VISIBLE);
         addVulkanTags(e, rmw);
         return rmw.accept(this);
@@ -79,8 +81,7 @@ public class VisitorSpirvVulkan extends VisitorVulkan {
     public List<Event> visitSpirvRMW(SpirvRmw e) {
         String mo = moToVulkanTag(Tag.Spirv.getMoTag(e.getTags()));
         String scope = Tag.Spirv.toVulkanTag(Tag.Spirv.getScopeTag(e.getTags()));
-        Event rmwOp = EventFactory.Vulkan.newRMWOp(e.getAddress(), e.getResultRegister(), e.getOperand(),
-                e.getOperator(), mo, scope);
+        Event rmwOp = events.newRMWOp(e.getAddress(), e.getResultRegister(), e.getOperand(), e.getOperator(), mo, scope);
         rmwOp.addTags(Tag.Vulkan.NON_PRIVATE, Tag.Vulkan.AVAILABLE, Tag.Vulkan.VISIBLE);
         addVulkanTags(e, rmwOp);
         return rmwOp.accept(this);
@@ -101,8 +102,8 @@ public class VisitorSpirvVulkan extends VisitorVulkan {
                     "Spir-V CmpXchg with unequal tag sets is not supported");
         }
         String scope = Tag.Spirv.toVulkanTag(Tag.Spirv.getScopeTag(e.getTags()));
-        Event cmpXchg = EventFactory.Vulkan.newVulkanCmpXchg(e.getAddress(), e.getResultRegister(),
-                e.getExpectedValue(), e.getStoreValue(), moToVulkanTag(spvMoEq), scope);
+        Event cmpXchg = events.newVulkanCmpXchg(e.getAddress(), e.getResultRegister(), e.getExpectedValue(),
+                e.getStoreValue(), moToVulkanTag(spvMoEq), scope);
         addVulkanTags(e, cmpXchg);
         cmpXchg.addTags(Tag.Vulkan.NON_PRIVATE, Tag.Vulkan.AVAILABLE, Tag.Vulkan.VISIBLE);
         return cmpXchg.accept(this);

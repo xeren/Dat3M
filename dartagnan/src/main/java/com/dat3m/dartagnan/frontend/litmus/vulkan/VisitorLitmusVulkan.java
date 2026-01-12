@@ -15,7 +15,6 @@ import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.EventFactory;
 import com.dat3m.dartagnan.program.event.Tag;
-import com.dat3m.dartagnan.program.event.common.SingleAccessMemoryEvent;
 import com.dat3m.dartagnan.program.event.core.Label;
 import com.dat3m.dartagnan.program.event.core.Load;
 import com.dat3m.dartagnan.program.event.core.Store;
@@ -27,6 +26,7 @@ import java.util.List;
 public class VisitorLitmusVulkan extends LitmusVulkanBaseVisitor<Object> {
     private final ProgramBuilder programBuilder = ProgramBuilder.forArch(Program.SourceLanguage.LITMUS, Arch.VULKAN);
     private final ExpressionFactory expressions = programBuilder.getExpressionFactory();
+    private final EventFactory.Vulkan events = EventFactory.Vulkan.getInstance();
     private final IntegerType archType = programBuilder.getArchType();
     private int mainThread;
     private int threadCount = 0;
@@ -178,7 +178,7 @@ public class VisitorLitmusVulkan extends LitmusVulkanBaseVisitor<Object> {
         MemoryObject object = programBuilder.getOrNewVirtualMemoryObject(ctx.location().getText());
         Expression value = (Expression) ctx.value().accept(this);
         String mo = ctx.moRel() != null ? Tag.Vulkan.RELEASE : Tag.Vulkan.ATOM;
-        Event store = EventFactory.Vulkan.newStore(object, value, mo);
+        Event store = events.newStore(object, value, mo);
         store.addTags(
                 Tag.Vulkan.ATOM,
                 Tag.Vulkan.NON_PRIVATE,
@@ -198,7 +198,7 @@ public class VisitorLitmusVulkan extends LitmusVulkanBaseVisitor<Object> {
         Register register = (Register) ctx.register().accept(this);
         MemoryObject location = programBuilder.getOrNewVirtualMemoryObject(ctx.location().getText());
         String mo = ctx.moAcq() != null ? Tag.Vulkan.ACQUIRE : Tag.Vulkan.ATOM;
-        Event load = EventFactory.Vulkan.newLoad(register, location, mo);
+        Event load = events.newLoad(register, location, mo);
         load.addTags(
                 Tag.Vulkan.ATOM,
                 Tag.Vulkan.NON_PRIVATE,
@@ -219,9 +219,9 @@ public class VisitorLitmusVulkan extends LitmusVulkanBaseVisitor<Object> {
         MemoryObject location = programBuilder.getOrNewVirtualMemoryObject(ctx.location().getText());
         Expression value = (Expression) ctx.value().accept(this);
         String mo = getMemoryOrderOrDefault(ctx, Tag.Vulkan.ATOM);
-        SingleAccessMemoryEvent rmw = ctx.operation() != null
-                ? EventFactory.Vulkan.newRMWOp(location, register, value, ctx.operation().op, mo, ctx.scope().content)
-                : EventFactory.Vulkan.newRMW(location, register, value, mo, ctx.scope().content);
+        Event rmw = ctx.operation() != null
+                ? events.newRMWOp(location, register, value, ctx.operation().op, mo, ctx.scope().content)
+                : events.newRMW(location, register, value, mo, ctx.scope().content);
         rmw.addTags(
                 Tag.Vulkan.NON_PRIVATE,
                 Tag.Vulkan.AVAILABLE,
@@ -245,7 +245,7 @@ public class VisitorLitmusVulkan extends LitmusVulkanBaseVisitor<Object> {
         final List<String> semantics = ctx.semSc().stream().map(c -> c.content).toList();
         final boolean av = ctx.semAv() != null;
         final boolean vis = ctx.semVis() != null;
-        return append(EventFactory.Vulkan.newMemoryBarrier(mo, scope, semantics, av, vis), ctx);
+        return append(events.newMemoryBarrier(mo, scope, semantics, av, vis), ctx);
     }
 
     @Override
@@ -313,9 +313,9 @@ public class VisitorLitmusVulkan extends LitmusVulkanBaseVisitor<Object> {
     public Object visitDeviceOperation(DeviceOperationContext ctx) {
         Event e;
         if (ctx.getText().equalsIgnoreCase(Tag.Vulkan.AVDEVICE)) {
-            e = EventFactory.Vulkan.newAvDevice();
+            e = events.newAvDevice();
         } else if (ctx.getText().equalsIgnoreCase(Tag.Vulkan.VISDEVICE)) {
-            e = EventFactory.Vulkan.newVisDevice();
+            e = events.newVisDevice();
         } else {
             throw new ParsingException("Unknown device operation");
         }
