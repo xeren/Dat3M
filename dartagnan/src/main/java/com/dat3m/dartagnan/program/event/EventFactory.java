@@ -867,48 +867,48 @@ public class EventFactory {
     // =============================================================================================
     // ============================================ PTX ============================================
     // =============================================================================================
-    public static class PTX {
+    public static class PTX extends EventFactory {
         private PTX() {}
 
-        public static Event newLoad(Register value, Expression address, String mo) {
+        public static PTX getInstance() { return new PTX(); }
+
+        public Event newLoad(Register value, Expression address, String mo) {
             return newLoadWithMo(value, address, mo);
         }
 
-        public static Event newStore(Expression address, Expression value, String mo) {
+        public Event newStore(Expression address, Expression value, String mo) {
             return newStoreWithMo(address, value, mo);
         }
 
-        public static Event newAtomOp(Expression address, Register register, Expression value,
-                IntBinaryOp op, String mo, String scope) {
+        public Event newAtomOp(Expression address, Register register, Expression value, IntBinaryOp op, String mo,
+                String scope) {
             // PTX (currently) only generates memory orders ACQ_REL and RLX for atom.
             PTXAtomOp atom = new PTXAtomOp(register, address, op, value, mo);
             atom.addTags(scope);
             return atom;
         }
 
-        public static Event newAtomCAS(Expression address, Register register, Expression expected,
-                Expression value, String mo, String scope) {
+        public Event newAtomCAS(Expression address, Register register, Expression expected, Expression value,
+                String mo, String scope) {
             PTXAtomCAS atom = new PTXAtomCAS(register, address, expected, value, mo);
             atom.addTags(scope);
             return atom;
         }
 
-        public static Event newAtomExch(Expression address, Register register,
-                Expression value, String mo, String scope) {
+        public Event newAtomExch(Expression address, Register register, Expression value, String mo, String scope) {
             PTXAtomExch atom = new PTXAtomExch(register, address, value, mo);
             atom.addTags(scope);
             return atom;
         }
 
-        public static Event newRedOp(Expression address, Expression value,
-                IntBinaryOp op, String mo, String scope) {
+        public Event newRedOp(Expression address, Expression value, IntBinaryOp op, String mo, String scope) {
             // PTX (currently) only generates memory orders ACQ_REL and RLX for red.
             PTXRedOp red = new PTXRedOp(address, value, op, mo);
             red.addTags(scope);
             return red;
         }
 
-        public static Event newFence(String name) {
+        public Event newFence(String name) {
             return newGenericVisibleEvent(name, Tag.FENCE, name);
         }
     }

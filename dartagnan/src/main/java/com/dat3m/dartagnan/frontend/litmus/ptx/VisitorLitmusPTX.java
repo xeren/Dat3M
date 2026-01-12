@@ -23,6 +23,7 @@ import org.antlr.v4.runtime.ParserRuleContext;
 public class VisitorLitmusPTX extends LitmusPTXBaseVisitor<Object> {
     private final ProgramBuilder programBuilder = ProgramBuilder.forArch(Program.SourceLanguage.LITMUS, Arch.PTX);
     private final ExpressionFactory expressions = programBuilder.getExpressionFactory();
+    private final EventFactory.PTX events = EventFactory.PTX.getInstance();
     private final IntegerType archType = programBuilder.getArchType();
     private int mainThread;
     private int threadCount = 0;
@@ -127,7 +128,7 @@ public class VisitorLitmusPTX extends LitmusPTXBaseVisitor<Object> {
         MemoryObject object = programBuilder.getOrNewVirtualMemoryObject(ctx.location().getText());
         Expression constant = (Expression) ctx.value().accept(this);
         String mo = ctx.mo().content;
-        Event store = EventFactory.PTX.newStore(object, constant, mo);
+        Event store = events.newStore(object, constant, mo);
         switch (mo) {
             case Tag.PTX.WEAK -> {
                 if (ctx.scope() != null) {
@@ -189,7 +190,7 @@ public class VisitorLitmusPTX extends LitmusPTXBaseVisitor<Object> {
         Register register = (Register) ctx.register().accept(this);
         MemoryObject location = programBuilder.getOrNewVirtualMemoryObject(ctx.location().getText());
         String mo = ctx.mo().content;
-        Event load = EventFactory.PTX.newLoad(register, location, mo);
+        Event load = events.newLoad(register, location, mo);
         switch (mo) {
             case Tag.PTX.WEAK -> {
                 if (ctx.scope() != null) {
@@ -214,7 +215,7 @@ public class VisitorLitmusPTX extends LitmusPTXBaseVisitor<Object> {
         if (!(mo.equals(Tag.PTX.ACQ) || mo.equals(Tag.PTX.REL) || mo.equals(Tag.PTX.ACQ_REL) || mo.equals(Tag.PTX.RLX))) {
             throw new ParsingException("Atom instruction doesn't support mo: " + mo);
         }
-        Event atom = EventFactory.PTX.newAtomOp(object, register_destination, value, op, mo, scope);
+        Event atom = events.newAtomOp(object, register_destination, value, op, mo, scope);
         atom.addTags(ctx.atom().atomProxy);
         return append(atom, ctx);
     }
@@ -230,7 +231,7 @@ public class VisitorLitmusPTX extends LitmusPTXBaseVisitor<Object> {
         if (!(mo.equals(Tag.PTX.ACQ) || mo.equals(Tag.PTX.REL) || mo.equals(Tag.PTX.ACQ_REL) || mo.equals(Tag.PTX.RLX))) {
             throw new ParsingException("Atom instruction doesn't support mo: " + mo);
         }
-        Event atom = EventFactory.PTX.newAtomCAS(object, register_destination, expected, value, mo, scope);
+        Event atom = events.newAtomCAS(object, register_destination, expected, value, mo, scope);
         atom.addTags(ctx.atom().atomProxy);
         return append(atom, ctx);
     }
@@ -245,7 +246,7 @@ public class VisitorLitmusPTX extends LitmusPTXBaseVisitor<Object> {
         if (!(mo.equals(Tag.PTX.ACQ) || mo.equals(Tag.PTX.REL) || mo.equals(Tag.PTX.ACQ_REL) || mo.equals(Tag.PTX.RLX))) {
             throw new ParsingException("Atom instruction doesn't support mo: " + mo);
         }
-        Event atom = EventFactory.PTX.newAtomExch(object, register_destination, value, mo, scope);
+        Event atom = events.newAtomExch(object, register_destination, value, mo, scope);
         atom.addTags(ctx.atom().atomProxy);
         return append(atom, ctx);
     }
@@ -260,7 +261,7 @@ public class VisitorLitmusPTX extends LitmusPTXBaseVisitor<Object> {
         if (!(mo.equals(Tag.PTX.ACQ) || mo.equals(Tag.PTX.REL) || mo.equals(Tag.PTX.ACQ_REL) || mo.equals(Tag.PTX.RLX))) {
             throw new ParsingException("Red instruction doesn't support mo: " + mo);
         }
-        Event red = EventFactory.PTX.newRedOp(object, value, op, mo, scope);
+        Event red = events.newRedOp(object, value, op, mo, scope);
         red.addTags(ctx.red().redProxy);
         return append(red, ctx);
     }
@@ -272,21 +273,21 @@ public class VisitorLitmusPTX extends LitmusPTXBaseVisitor<Object> {
         if (!(mo.equals(Tag.PTX.ACQ_REL) || mo.equals(Tag.PTX.SC))) {
             throw new ParsingException("Fence instruction doesn't support mo: " + mo);
         }
-        Event fence = EventFactory.PTX.newFence(ctx.getText().toLowerCase());
+        Event fence = events.newFence(ctx.getText().toLowerCase());
         fence.addTags(mo, scope, Tag.PTX.GEN);
         return append(fence, ctx);
     }
 
     @Override
     public Object visitFenceProxy(FenceProxyContext ctx) {
-        Event fence = EventFactory.PTX.newFence(ctx.getText().toLowerCase());
+        Event fence = events.newFence(ctx.getText().toLowerCase());
         fence.addTags(ctx.proxyType().content);
         return append(fence, ctx);
     }
 
     @Override
     public Object visitFenceAlias(FenceAliasContext ctx) {
-        Event fence = EventFactory.PTX.newFence(ctx.getText().toLowerCase());
+        Event fence = events.newFence(ctx.getText().toLowerCase());
         fence.addTags(Tag.PTX.ALIAS);
         return append(fence, ctx);
     }
