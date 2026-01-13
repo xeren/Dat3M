@@ -31,7 +31,6 @@ import static com.dat3m.dartagnan.configuration.OptionNames.*;
 import static com.dat3m.dartagnan.expression.processing.evaluation.ExpressionEvaluator.ExprEvaluationContext;
 import static com.dat3m.dartagnan.verification.model.GenMCExecutionModel.*;
 import static com.dat3m.dartagnan.utils.Timer.formatTime;
-import static java.util.function.Predicate.not;
 
 import java.util.*;
 
@@ -499,15 +498,10 @@ public class GenMCSolver extends ModelChecker {
         return prefixLimitForThread != null && prefixLimitForThread >= event.getEvent().getGlobalId();
     }
 
-    private static Map.Entry<GenMCExecutionModel, EventData> getBackwardRevisitModel(GenMCExecutionModel oldModel, List<EventData> eventsToDelete, Map<Thread, Event> boundEvents,
-                                                                              Event read, Event write) {
-        List<EventData> startTraceEvents = oldModel.copyTraceEvents(not(eventsToDelete::contains));
-        GenMCExecutionModel newModel = oldModel.newInstance(startTraceEvents, boundEvents);
-        EventData newRead = GenMCEventDomain.getData(startTraceEvents, read).orElseThrow(() ->
-                new IllegalArgumentException("Backward revisit model does not contain revisit read " + read.getGlobalId() + ": " + read));
-        EventData newWrite = GenMCEventDomain.getData(startTraceEvents, write).orElseThrow(() ->
-                new IllegalArgumentException("Backward revisit model does not contain revisit write " + write.getGlobalId() + ": " + write));
-        newModel.initialize(newRead, newWrite, oldModel.needsNewConsistencyCheck());
+    private static Map.Entry<GenMCExecutionModel, EventData> getBackwardRevisitModel(GenMCExecutionModel oldModel, List<EventData> eventsToDelete,
+                                                                                     Map<Thread, Event> boundEvents, Event read, Event write) {
+        GenMCExecutionModel newModel = oldModel.newInstance(eventsToDelete, boundEvents);
+        EventData newWrite = newModel.initialize(read, write, oldModel.needsNewConsistencyCheck());
         return Map.entry(newModel, newWrite);
     }
 }

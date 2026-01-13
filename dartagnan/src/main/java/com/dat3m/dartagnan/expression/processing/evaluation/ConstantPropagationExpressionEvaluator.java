@@ -211,7 +211,10 @@ public class ConstantPropagationExpressionEvaluator extends ExpressionEvaluator 
         }
 
         private Expression startPropagation(Expression expr, Event event) {
-            return evaluationTimer.measure(() -> propagate(expr, event));
+            evaluationTimer.start();
+            Expression result = propagate(expr, event);
+            evaluationTimer.stop();
+            return result;
         }
 
         private Expression propagate(Expression expr, Event event) {

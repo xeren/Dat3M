@@ -32,6 +32,10 @@ public class Conjunction<T extends Literal<T>> implements PartialOrder<Conjuncti
     public List<T> getLiterals() {
         return Collections.unmodifiableList(literals);
     }
+    // The returned Set should not be modified!
+    public Iterable<T> getLiteralsToIterateOver() {
+        return literals;
+    }
 
     public boolean isTrue() {
         return !unsat && literals.isEmpty();

@@ -40,10 +40,9 @@ import org.sosy_lab.java_smt.api.SolverException;
 
 import java.math.BigInteger;
 import java.util.*;
-import java.util.function.Predicate;
 
 import static com.dat3m.dartagnan.expression.processing.evaluation.ExpressionEvaluator.ExprEvaluationContext;
-import static com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain.getOptimalThreadMapCapacity;
+import static com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain.getOptimalMapCapacity;
 import static com.dat3m.dartagnan.wmm.RelationNameRepository.*;
 import static java.util.stream.Collectors.toMap;
 
@@ -68,8 +67,8 @@ public class GenMCExecutionModel {
     private static Relation rf;
     private static Relation co;
     private static Relation lxsx;
-    private static Map<Event, Set<Event>> mayRfInMap;
-    private static Map<Event, Set<Event>> mayRfOutMap;
+    private static Map<Event, List<Event>> mayRfInMap;
+    private static Map<Event, List<Event>> mayRfOutMap;
     private static Map<Event, Set<Event>> mayCoInMap;
     private static Map<Event, Set<Event>> mayCoOutMap;
     private static Map<Event, Event> mayLxsxMap;
@@ -122,6 +121,9 @@ public class GenMCExecutionModel {
 
     public static GenMCExecutionModel withTask(VerificationTask task, Context analysisContext, ExprEvaluationContext evalContext, GenMCReasoning reasoningMethod,
                                                boolean underApproximateWmm) throws InvalidConfigurationException {
+        if (!task.getProgram().getThreadEvents(ControlBarrier.class).isEmpty()) {
+            throw new UnsupportedOperationException("ControlBarrier not yet implemented for GenMC");
+        }
         consistencyCheckTimer = new Timer();
         reasonEvaluationTimer = new Timer();
         patternEvaluationTimer = new Timer();
@@ -139,8 +141,10 @@ public class GenMCExecutionModel {
         RelationAnalysis relations = analysisContext.requires(RelationAnalysis.class);
         EventGraph mayRfGraph = relations.getKnowledge(rf).getMaySet();
         EventGraph mayCoGraph = relations.getKnowledge(co).getMaySet();
-        mayRfInMap = mayRfGraph.getInMap();
-        mayRfOutMap = mayRfGraph.getOutMap();
+        mayRfInMap = mayRfGraph.getInMap().entrySet().stream()
+                .collect(toMap(Map.Entry::getKey, rfSet -> new ArrayList<>(rfSet.getValue())));
+        mayRfOutMap = mayRfGraph.getOutMap().entrySet().stream()
+                .collect(toMap(Map.Entry::getKey, rfSet -> new ArrayList<>(rfSet.getValue())));
         mayCoInMap = mayCoGraph.getInMap();
         mayCoOutMap = mayCoGraph.getOutMap();
         Map<Event, Set<Event>> mayLxsxMap = relations.getKnowledge(lxsx).getMaySet().getInMap();
@@ -157,28 +161,18 @@ public class GenMCExecutionModel {
             }
         }
         porfPrefixes = new HashMap<>();
-        optimalPorfPrefixCapacity = getOptimalThreadMapCapacity(relevantThreads.size() - 1);
+        optimalPorfPrefixCapacity = getOptimalMapCapacity(relevantThreads.size() - 1);
         return model;
     }
 
-    public GenMCExecutionModel newInstance(List<EventData> startTraceEvents, Map<Thread, Event> boundEvents) {
+    public GenMCExecutionModel newInstance(List<EventData> eventsToDelete, Map<Thread, Event> boundEvents) {
         GenMCExecutionModel model = new GenMCExecutionModel(task, solver, patterns, evalContext, exprEvaluator.newInstance(), boundEvents, reasoningMethod,
                 underApproximateWmm);
-        int i = 0;
-        for (EventData startTraceEvent : startTraceEvents) {
-            startTraceEvent.setId(i);
-            ++i;
-        }
-        model.trace = new GenMCEventDomain(startTraceEvents, trace.getThreadEventsMap(), trace.getAddressInits(), trace.getReadWriteMap(),
-                trace.getWriteReadsMap(), trace.getLxsxPairs());
+        model.trace = new GenMCEventDomain(trace.getElements(), eventsToDelete, trace.getAddressInits().size(), trace.getLxsxPairs());
         if (reasoningMethod.usesReasoning()) {
-            List<EventData> newAddedEvents = addedEvents.stream()
-                    .map(EventData::getEvent)
-                    .map(model.trace::getData)
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
-                    .toList();
-            model.addedEvents.addAll(newAddedEvents);
+            for (EventData addedEvent : addedEvents) {
+                model.trace.getData(addedEvent.getEvent()).ifPresent(model.addedEvents::add);
+            }
             model.initiallyPropagated = initiallyPropagated;
         }
         return model;
@@ -278,6 +272,10 @@ public class GenMCExecutionModel {
             }
             return Collections.singleton(coPredecessor);
         }
+        return getMayCoSet(inSet, outSet, addressInit);
+    }
+
+    private Collection<EventData> getMayCoSet(Set<Event> inSet, Set<Event> outSet, EventData addressInit) {
         List<EventData> mayCoSet = new ArrayList<>();
         EventData sameAddressWrite = addressInit;
         while (sameAddressWrite != null) {
@@ -314,15 +312,20 @@ public class GenMCExecutionModel {
         needsNewConsistencyCheck = false;
         lastNeedsNewConsistencyCheck = false;
         porfPrefix = new HashMap<>(optimalPorfPrefixCapacity);
-        failedJoinAssumes = new HashSet<>(getOptimalThreadMapCapacity(relevantThreads.size() - 1));
+        failedJoinAssumes = new HashSet<>(getOptimalMapCapacity(relevantThreads.size() - 1));
     }
 
-    public void initialize(EventData revisitRead, EventData write, boolean needsNewConsistencyCheck) {
-        porfPrefix = porfPrefixes.get(revisitRead.getEvent());
-        setRf(revisitRead, write);
-        setTrace(trace, revisitRead, false);
+    public EventData initialize(Event revisitRead, Event revisitWrite, boolean needsNewConsistencyCheck) {
+        EventData readEvent = trace.getData(revisitRead).orElseThrow(() ->
+                new IllegalArgumentException("Backward revisit model does not contain revisit read " + revisitRead.getGlobalId() + ": " + revisitRead));
+        EventData writeEvent = trace.getData(revisitWrite).orElseThrow(() ->
+                new IllegalArgumentException("Backward revisit model does not contain revisit write " + revisitWrite.getGlobalId() + ": " + revisitWrite));
+        porfPrefix = porfPrefixes.get(revisitRead);
+        setRf(readEvent, writeEvent);
+        setTrace(trace, readEvent, false);
         initFirstThreadEvent();
         initializeFields(needsNewConsistencyCheck, false);
+        return writeEvent;
     }
 
     //========================== Public methods =========================
@@ -484,7 +487,9 @@ public class GenMCExecutionModel {
 
         logger.debug("Checking consistency");
         ++consistencyChecks;
-        GenMCWMMSolver.Result result = consistencyCheckTimer.measure(() -> solver.check(trace, reasoningMethod));
+        consistencyCheckTimer.start();
+        GenMCWMMSolver.Result result = solver.check(trace, reasoningMethod);
+        consistencyCheckTimer.stop();
         addedEvents.clear();
         initiallyPropagated = true;
         if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
@@ -523,55 +528,6 @@ public class GenMCExecutionModel {
         }
     }
 
-    public List<EventData> copyTraceEvents(Predicate<EventData> filter) {
-        List<EventData> events = trace.getElements();
-        EventMap eventMap = new EventMap();
-        List<EventData> copiedEvents = new ArrayList<>(events.size());
-        events.stream().filter(filter).forEach(event -> {
-            EventData copiedEvent = eventMap.getOrCreate(event.getEvent());
-            copiedEvent.setReadFrom(event.getReadFrom());
-            copiedEvent.setCoPredecessor(event.getCoPredecessor());
-            copiedEvent.setCoSuccessor(event.getCoSuccessor());
-            copiedEvent.setWasExecuted(event.wasExecuted());
-            copiedEvent.setNonDet(event.isNonDet());
-            copiedEvent.setAccessedAddress(event.getAccessedAddress());
-            copiedEvent.setId(event.getId());
-            copiedEvent.setLocalId(event.getLocalId());
-            copiedEvents.add(copiedEvent);
-        });
-        for (EventData event : copiedEvents) {
-            if (event.getReadFrom() != null) {
-                EventData newReadFrom = eventMap.get(event.getReadFrom().getEvent());
-                event.setReadFrom(newReadFrom);
-            }
-            EventData coPredecessor = event.getCoPredecessor();
-            while (coPredecessor != null) {
-                EventData copiedCoPredecessor = eventMap.get(coPredecessor.getEvent());
-                if (copiedCoPredecessor != null) {
-                    event.setCoPredecessor(copiedCoPredecessor);
-                    break;
-                }
-                coPredecessor = coPredecessor.getCoPredecessor();
-            }
-            if (coPredecessor == null) {
-                event.setCoPredecessor(null);
-            }
-            EventData coSuccessor = event.getCoSuccessor();
-            while (coSuccessor != null) {
-                EventData copiedCoSuccessor = eventMap.get(coSuccessor.getEvent());
-                if (copiedCoSuccessor != null) {
-                    event.setCoSuccessor(copiedCoSuccessor);
-                    break;
-                }
-                coSuccessor = coSuccessor.getCoSuccessor();
-            }
-            if (coSuccessor == null) {
-                event.setCoSuccessor(null);
-            }
-        }
-        return copiedEvents;
-    }
-
     public EventData nextEvent() throws InterruptedException, SolverException, InvalidConfigurationException {
         EventData startEvent = null;
         boolean needsInit = true;
@@ -604,16 +560,17 @@ public class GenMCExecutionModel {
             }
             needsInit = true;
             while (e != null) {
-                if (e instanceof ControlBarrier) {
-                    throw new UnsupportedOperationException("ControlBarrier not yet implemented for GenMC");
-                }
                 EventData event = addEvent(e);
                 lastAdded = event;
                 e = lastAdded.getEvent();
-                if (e instanceof MemoryEvent || e instanceof CondJump) {
+                if (e instanceof MemoryEvent || (needsJumpRevisit && e instanceof CondJump)) {
                     return event;
                 }
-                e = e.getSuccessor();
+                if (e instanceof CondJump jump && lastAdded.wasExecuted()) {
+                    e = jump.getLabel();
+                } else {
+                    e = e.getSuccessor();
+                }
             }
             ++currentThreadIndex;
             newThread = true;
@@ -745,7 +702,7 @@ public class GenMCExecutionModel {
     }
 
     private List<EventData> mayRfSet(EventData target, BigInteger address) {
-        Map<Event, Set<Event>> mayRfMap;
+        Map<Event, List<Event>> mayRfMap;
         Event targetEvent = target.getEvent();
         boolean isWrite = targetEvent instanceof Store;
         if (isWrite) {
@@ -753,7 +710,7 @@ public class GenMCExecutionModel {
         } else {
             mayRfMap = mayRfInMap;
         }
-        Set<Event> mayRfSet = mayRfMap.get(targetEvent);
+        List<Event> mayRfSet = mayRfMap.get(targetEvent);
         if (mayRfSet == null) {
             return Collections.emptyList();
         }
@@ -824,7 +781,7 @@ public class GenMCExecutionModel {
                 if (reasonsForEvent != null) {
                     for (Conjunction<CoreLiteral> reason : reasonsForEvent) {
                         boolean reasonKnown = true;
-                        for (CoreLiteral coreLiteral : reason.getLiterals()) {
+                        for (CoreLiteral coreLiteral : reason.getLiteralsToIterateOver()) {
                             if (!evaluate(coreLiteral, event)) {
                                 reasonKnown = false;
                                 break;
@@ -832,7 +789,7 @@ public class GenMCExecutionModel {
                         }
                         if (reasonKnown) {
                             int backtrackingPointId = -1;
-                            for (CoreLiteral lit : reason.getLiterals()) {
+                            for (CoreLiteral lit : reason.getLiteralsToIterateOver()) {
                                 for (Event litEvent : getEvents(lit)) {
                                     EventData eventData = trace.getData(litEvent).orElseThrow(() ->
                                             new IllegalStateException("Event " + litEvent + " is not in trace yet but occurs in reason cube " + reason + " that is fulfilled"));

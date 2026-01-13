@@ -25,7 +25,7 @@ public class EventData implements Comparable<EventData> {
     private boolean wasExecuted;
     private Boolean isNonDet = null;
 
-    EventData(Event e) {
+    public EventData(Event e) {
         this.event = e;
     }
 
@@ -39,7 +39,7 @@ public class EventData implements Comparable<EventData> {
     public int getId() {
     	return id;
     }
-    void setId(int newId) {
+    public void setId(int newId) {
     	id = newId;
     }
 
@@ -53,7 +53,7 @@ public class EventData implements Comparable<EventData> {
     public Object getAccessedAddress() {
     	return accessedAddress;
     }
-    void setAccessedAddress(Object address) {
+    public void setAccessedAddress(Object address) {
         accessedAddress = address;
     }
 
@@ -67,7 +67,7 @@ public class EventData implements Comparable<EventData> {
     public EventData getReadFrom() {
     	return readFrom;
     }
-    void setReadFrom(EventData store) {
+    public void setReadFrom(EventData store) {
         if (store != null) {
             Preconditions.checkArgument(store.isWrite());
             isNonDet = store.isNonDet;
@@ -78,7 +78,7 @@ public class EventData implements Comparable<EventData> {
     public Boolean isNonDet() {
     	return isNonDet;
     }
-    void setNonDet(Boolean isNonDet) {
+    public void setNonDet(Boolean isNonDet) {
         this.isNonDet = isNonDet;
     }
     public void setNonDet(boolean isNonDet) {
@@ -88,7 +88,7 @@ public class EventData implements Comparable<EventData> {
     public boolean wasExecuted() {
     	return wasExecuted;
     }
-    void setWasExecuted(boolean flag) {
+    public void setWasExecuted(boolean flag) {
     	wasExecuted = flag;
     }
 
