@@ -278,18 +278,18 @@ public class GenMCSolver extends ModelChecker {
             if ((mayCoSet.size() > 1 || !relevantReads.isEmpty()) && !model.checkConsistency(true)) {
                 return inconsistentExecution();
             }
-            if (!visitCos(model, event, mayCoSet)) {
+            GenMCEventDomain trace = model.getTrace();
+            Map<Thread, List<EventData>> threadEventsMap = trace.getThreadEventsMap();
+            EventData lastRead = getLastRead(threadEventsMap.get(currentThread), event.getLocalId() - 1);
+            if (!visitCos(model, event, mayCoSet, lastRead)) {
                 return false;
             }
             if (relevantReads.isEmpty()) {
                 return true;
             }
-            GenMCEventDomain trace = model.getTrace();
-            Map<Thread, List<EventData>> threadEventsMap = trace.getThreadEventsMap();
             Set<Map.Entry<Thread, List<EventData>>> threadEventsEntries = threadEventsMap.entrySet();
             Map<EventData, List<EventData>> writeReadsMap = trace.getWriteReadsMap();
             Map<Thread, Event> boundEvents = new HashMap<>(model.getOptimalPorfPrefixCapacity() + 1);
-            EventData lastRead = getLastRead(threadEventsMap.get(currentThread), event.getLocalId() - 1);
             if (lastRead != null) {
                 boundEvents.put(currentThread, lastRead.getEvent());
             }
@@ -303,7 +303,7 @@ public class GenMCSolver extends ModelChecker {
                     logger.debug("Backward revisiting load {}: {} for store {}: {}", readEvent.getGlobalId(), readEvent, write.getGlobalId(), write);
                     Map.Entry<GenMCExecutionModel, EventData> backwardRevisit = getBackwardRevisitModel(model, eventsToDelete, boundEvents, readEvent, write);
                     GenMCExecutionModel backwardRevisitModel = backwardRevisit.getKey();
-                    if (!visitCos(backwardRevisitModel, backwardRevisit.getValue(), null)) {
+                    if (!visitCos(backwardRevisitModel, backwardRevisit.getValue(), null, null)) {
                         return false;
                     }
                     model.updateBacktrackingPoint(backwardRevisitModel, write);
@@ -353,11 +353,13 @@ public class GenMCSolver extends ModelChecker {
         return true;
     }
 
-    private boolean visitCos(GenMCExecutionModel model, EventData write, Collection<EventData> mayCoSet) throws SolverException, InterruptedException, InvalidConfigurationException {
+    private boolean visitCos(GenMCExecutionModel model, EventData write, Collection<EventData> mayCoSet, EventData lastRead)
+            throws SolverException, InterruptedException, InvalidConfigurationException {
         boolean forBackwardRevisit = false;
         if (mayCoSet == null) {
             forBackwardRevisit = true;
             mayCoSet = model.getMayCoSet(write);
+            lastRead = getLastRead(model.getTrace().getThreadEventsMap().get(write.getThread()), write.getLocalId() - 1);
         }
         if (mayCoSet.isEmpty()) {
             model.getTrace().addAddressInit(write);
@@ -372,7 +374,7 @@ public class GenMCSolver extends ModelChecker {
             if (!visit(model)) {
                 return false;
             }
-            model.rollbackCo(otherWrite, write, forBackwardRevisit, needsNewConsistencyCheck, lastNeedsNewConsistencyCheck);
+            model.rollbackCo(otherWrite, write, lastRead, forBackwardRevisit, needsNewConsistencyCheck, lastNeedsNewConsistencyCheck);
         }
         return true;
     }

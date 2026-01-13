@@ -400,8 +400,10 @@ public class GenMCExecutionModel {
         }
     }
 
-    public void rollbackCo(EventData coPredecessor, EventData rollbackPoint, boolean forBackwardRevisit,
+    public void rollbackCo(EventData coPredecessor, EventData rollbackPoint, EventData lastRead, boolean forBackwardRevisit,
                            boolean needsNewConsistencyCheck, boolean lastNeedsNewConsistencyCheck) {
+        Thread currentThread = trace.getLast().getThread();
+        Thread rollbackThread = rollbackPoint.getThread();
         backtrackTrace(rollbackPoint);
         coPredecessor.setCoSuccessor(rollbackPoint.getCoSuccessor());
         if (coPredecessor.getCoSuccessor() != null) {
@@ -415,13 +417,16 @@ public class GenMCExecutionModel {
             initFirstThreadEvent();
         } else {
             lastAdded = rollbackPoint;
-            currentThreadIndex = relevantThreads.indexOf(rollbackPoint.getThread());
+            currentThreadIndex = relevantThreads.indexOf(rollbackThread);
         }
         initializeFields(needsNewConsistencyCheck, lastNeedsNewConsistencyCheck);
         if (backtrackingPoint != null && rollbackPoint.getId() <= backtrackingPoint.getId()) {
             if (backtrackReasonIsRel || rollbackPoint != backtrackingPoint) {
                 backtrackingPoint = null;
             }
+        }
+        if (currentThread != rollbackThread) {
+            porfPrefix = lastRead == null ? new HashMap<>(optimalPorfPrefixCapacity) : porfPrefixes.get(lastRead.getEvent());
         }
     }
 
