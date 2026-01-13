@@ -1,9 +1,10 @@
 #include "treiber.h"
+#include "dat3m.h"
 #include <pthread.h>
 #include <assert.h>
 
 #ifndef NTHREADS
-#define NTHREADS 2
+#define NTHREADS 3
 #endif
 
 void *worker(void *arg)
