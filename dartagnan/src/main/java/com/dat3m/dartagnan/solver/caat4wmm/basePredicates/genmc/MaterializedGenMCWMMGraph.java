@@ -25,27 +25,27 @@ public abstract class MaterializedGenMCWMMGraph extends AbstractGenMCWMMGraph {
     }
 
     @Override
-    public Edge get(Edge edge) {
+    public Edge get(final Edge edge) {
         return simpleGraph.get(edge);
     }
 
     @Override
-    public boolean containsById(int a, int b) {
+    public boolean containsById(final int a, final int b) {
         return simpleGraph.containsById(a, b);
     }
 
     @Override
-    public boolean contains(Edge edge) {
+    public boolean contains(final Edge edge) {
         return simpleGraph.contains(edge);
     }
 
     @Override
-    public void backtrackTo(int time) {
+    public void backtrackTo(final int time) {
         simpleGraph.backtrackTo(time);
     }
 
     @Override
-    public void initializeToDomain(Domain<?> domain) {
+    public void initializeToDomain(final Domain<?> domain) {
         if (isDomainInitForbidden()) return;
         super.initializeToDomain(domain);
         simpleGraph.initializeToDomain(domain);
@@ -57,7 +57,7 @@ public abstract class MaterializedGenMCWMMGraph extends AbstractGenMCWMMGraph {
     }
 
     @Override
-    public int getEstimatedSize(int e, EdgeDirection dir) {
+    public int getEstimatedSize(final int e, final EdgeDirection dir) {
         return simpleGraph.getEstimatedSize(e, dir);
     }
 
@@ -67,7 +67,7 @@ public abstract class MaterializedGenMCWMMGraph extends AbstractGenMCWMMGraph {
     }
 
     @Override
-    public int getMinSize(int e, EdgeDirection dir) {
+    public int getMinSize(final int e, final EdgeDirection dir) {
         return simpleGraph.getMinSize(e, dir);
     }
 
@@ -77,7 +77,7 @@ public abstract class MaterializedGenMCWMMGraph extends AbstractGenMCWMMGraph {
     }
 
     @Override
-    public int getMaxSize(int e, EdgeDirection dir) {
+    public int getMaxSize(final int e, final EdgeDirection dir) {
         return simpleGraph.getMaxSize(e, dir);
     }
 
@@ -87,7 +87,7 @@ public abstract class MaterializedGenMCWMMGraph extends AbstractGenMCWMMGraph {
     }
 
     @Override
-    public Stream<Edge> edgeStream(int e, EdgeDirection dir) {
+    public Stream<Edge> edgeStream(final int e, final EdgeDirection dir) {
         return simpleGraph.edgeStream(e, dir);
     }
 
@@ -97,7 +97,7 @@ public abstract class MaterializedGenMCWMMGraph extends AbstractGenMCWMMGraph {
     }
 
     @Override
-    public Iterator<Edge> edgeIterator(int e, EdgeDirection dir) {
+    public Iterator<Edge> edgeIterator(final int e, final EdgeDirection dir) {
         return simpleGraph.edgeIterator(e, dir);
     }
 
@@ -107,7 +107,7 @@ public abstract class MaterializedGenMCWMMGraph extends AbstractGenMCWMMGraph {
     }
 
     @Override
-    public int size(int e, EdgeDirection dir) { return simpleGraph.size(e, dir); }
+    public int size(final int e, final EdgeDirection dir) { return simpleGraph.size(e, dir); }
 
     @Override
     public boolean isEmpty() {
@@ -115,17 +115,17 @@ public abstract class MaterializedGenMCWMMGraph extends AbstractGenMCWMMGraph {
     }
 
     @Override
-    public List<EventData> inEvents(EventData event) {
-        List<EventData> inEvents = new ArrayList<>();
-        for (Edge edge : simpleGraph.getEdges(event.getId(), EdgeDirection.INGOING)) {
+    public List<EventData> inEvents(final EventData event) {
+        final List<EventData> inEvents = new ArrayList<>();
+        for (final Edge edge : simpleGraph.getEdges(event.getId(), EdgeDirection.INGOING)) {
             inEvents.add(getEvent(edge.getFirst()));
         }
         return inEvents;
     }
     @Override
-    public List<EventData> outEvents(EventData event) {
-        List<EventData> outEvents = new ArrayList<>();
-        for (Edge edge : simpleGraph.getEdges(event.getId(), EdgeDirection.OUTGOING)) {
+    public List<EventData> outEvents(final EventData event) {
+        final List<EventData> outEvents = new ArrayList<>();
+        for (final Edge edge : simpleGraph.getEdges(event.getId(), EdgeDirection.OUTGOING)) {
             outEvents.add(getEvent(edge.getSecond()));
         }
         return outEvents;

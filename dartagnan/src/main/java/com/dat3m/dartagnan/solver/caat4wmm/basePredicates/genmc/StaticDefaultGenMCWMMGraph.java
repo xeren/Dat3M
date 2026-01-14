@@ -10,7 +10,7 @@ public class StaticDefaultGenMCWMMGraph extends MaterializedGenMCWMMGraph {
     private final Relation relation;
     private final RelationAnalysis ra;
 
-    public StaticDefaultGenMCWMMGraph(Relation rel, RelationAnalysis relationAnalysis) {
+    public StaticDefaultGenMCWMMGraph(final Relation rel, final RelationAnalysis relationAnalysis) {
         this.relation = rel;
         this.ra = relationAnalysis;
     }
@@ -19,8 +19,8 @@ public class StaticDefaultGenMCWMMGraph extends MaterializedGenMCWMMGraph {
     public void repopulate() {
         if (isRepopulateForbidden()) return;
         ra.getKnowledge(relation).getMaySet().apply((e1, e2) -> {
-            EventData d1 = trace.getData(e1).orElse(null);
-            EventData d2 = trace.getData(e2).orElse(null);
+            final EventData d1 = trace.getData(e1).orElse(null);
+            final EventData d2 = trace.getData(e2).orElse(null);
             if (d1 != null && d2 != null) {
                 simpleGraph.addDisjoint(new Edge(d1.getId(), d2.getId()));
             }

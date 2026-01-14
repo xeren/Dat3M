@@ -30,9 +30,9 @@ public final class SimpleGraph extends AbstractBaseGraph {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Collection<Edge> forwardPropagate(CAATPredicate changedSource, Collection<? extends Derivable> added) {
-        List<Edge> changes = new ArrayList<>( added.size());
-        for (Edge e : (Collection<Edge>)added) {
+    public Collection<Edge> forwardPropagate(final CAATPredicate changedSource, final Collection<? extends Derivable> added) {
+        final List<Edge> changes = new ArrayList<>( added.size());
+        for (final Edge e : (Collection<Edge>)added) {
             if (add(e)) {
                 changes.add(e);
             }
@@ -41,13 +41,13 @@ public final class SimpleGraph extends AbstractBaseGraph {
     }
 
     @Override
-    public void backtrackTo(int time) {
+    public void backtrackTo(final int time) {
         if (maxTime <= time) {
             return;
         }
         final int bound = Math.min(numEvents, outgoing.length);
         for (int i = 0; i < bound; i++) {
-            DataItem item = outgoing[i];
+            final DataItem item = outgoing[i];
             if (item != null) {
                 item.backtrackTo(time);
                 maxTime = Math.max(maxTime, item.maxTime);
@@ -56,7 +56,7 @@ public final class SimpleGraph extends AbstractBaseGraph {
 
         final int bound2 = Math.min(numEvents, ingoing.length);
         for (int i = 0; i < bound2; i++) {
-            DataItem item = ingoing[i];
+            final DataItem item = ingoing[i];
             if (item != null) {
                 item.backtrackTo(time);
             }
@@ -64,7 +64,7 @@ public final class SimpleGraph extends AbstractBaseGraph {
 
     }
 
-    private DataItem getItem(int e, EdgeDirection dir) {
+    private DataItem getItem(final int e, final EdgeDirection dir) {
         switch (dir) {
             case OUTGOING:
                 return outgoing[e];
@@ -75,17 +75,17 @@ public final class SimpleGraph extends AbstractBaseGraph {
         }
     }
 
-    public Collection<Edge> getEdges(int e, EdgeDirection dir) {
-        DataItem item = getItem(e, dir);
+    public Collection<Edge> getEdges(final int e, final EdgeDirection dir) {
+        final DataItem item = getItem(e, dir);
         return item == null ? Collections.emptyList() : item.edgeList;
     }
 
-    public Edge get(Edge edge) {
-        DataItem item1 = outgoing[edge.getFirst()];
-        DataItem item2 = ingoing[edge.getSecond()];
+    public Edge get(final Edge edge) {
+        final DataItem item1 = outgoing[edge.getFirst()];
+        final DataItem item2 = ingoing[edge.getSecond()];
         if (item1 != null && item2 != null) {
-            DataItem parallelEdges = item1.size() <= item2.size() ? item1 : item2;
-            for (Edge e : parallelEdges.edgeList) {
+            final DataItem parallelEdges = item1.size() <= item2.size() ? item1 : item2;
+            for (final Edge e : parallelEdges.edgeList) {
                 if (e.equals(edge)) {
                     return e;
                 }
@@ -101,16 +101,16 @@ public final class SimpleGraph extends AbstractBaseGraph {
     }
 
     @Override
-    public int size(int e, EdgeDirection dir) {
-        DataItem item = getItem(e, dir);
+    public int size(final int e, final EdgeDirection dir) {
+        final DataItem item = getItem(e, dir);
         return item == null ? 0 : item.size();
     }
 
-    public boolean contains(Edge e) {
+    public boolean contains(final Edge e) {
         return contains(e, outgoing[e.getFirst()], ingoing[e.getSecond()]);
     }
 
-    private boolean contains(Edge e, DataItem outgoing, DataItem ingoing) {
+    private boolean contains(final Edge e, final DataItem outgoing, final DataItem ingoing) {
         if (outgoing != null && ingoing != null) {
             if (outgoing.size() <= ingoing.size()) {
                 return outgoing.contains(e);
@@ -121,17 +121,17 @@ public final class SimpleGraph extends AbstractBaseGraph {
         return false;
     }
 
-    public boolean add(Edge e) {
+    public boolean add(final Edge e) {
         return add(e, false);
     }
 
-    public void addDisjoint(Edge e) {
+    public void addDisjoint(final Edge e) {
         add(e, true);
     }
 
-    public boolean add(Edge e, boolean disjoint) {
-        int firstId = e.getFirst();
-        int secondId = e.getSecond();
+    public boolean add(final Edge e, final boolean disjoint) {
+        final int firstId = e.getFirst();
+        final int secondId = e.getSecond();
         DataItem item1 = outgoing[firstId];
         DataItem item2 = ingoing[secondId];
         if (!disjoint && contains(e, item1, item2)) {
@@ -153,7 +153,7 @@ public final class SimpleGraph extends AbstractBaseGraph {
         return true;
     }
 
-    public boolean addAll(Collection<? extends Edge> c) {
+    public boolean addAll(final Collection<? extends Edge> c) {
         boolean changed = false;
         for (Edge e : c) {
             changed |= add(e);
@@ -167,7 +167,7 @@ public final class SimpleGraph extends AbstractBaseGraph {
 
         final int bound = Math.min(numEvents, outgoing.length);
         for (int i = 0; i < bound; i++) {
-            DataItem item = outgoing[i];
+            final DataItem item = outgoing[i];
             if (item != null) {
                 item.clear();
             }
@@ -175,7 +175,7 @@ public final class SimpleGraph extends AbstractBaseGraph {
 
         final int bound2 = Math.min(numEvents, ingoing.length);
         for (int i = 0; i < bound2; i++) {
-            DataItem item = ingoing[i];
+            final DataItem item = ingoing[i];
             if (item != null) {
                 item.clear();
             }
@@ -190,14 +190,14 @@ public final class SimpleGraph extends AbstractBaseGraph {
     }
 
     @Override
-    public Stream<Edge> edgeStream(int e, EdgeDirection dir) {
-        DataItem item = getItem(e, dir);
+    public Stream<Edge> edgeStream(final int e, final EdgeDirection dir) {
+        final DataItem item = getItem(e, dir);
         return item == null ? Stream.empty() : item.stream();
     }
 
     @Override
-    public Iterator<Edge> edgeIterator(int e, EdgeDirection dir) {
-        DataItem item = getItem(e, dir);
+    public Iterator<Edge> edgeIterator(final int e, final EdgeDirection dir) {
+        final DataItem item = getItem(e, dir);
         return item == null ? Collections.emptyIterator() : item.iterator();
     }
 
@@ -207,7 +207,7 @@ public final class SimpleGraph extends AbstractBaseGraph {
     }
 
     @Override
-    public void initializeToDomain(Domain<?> domain) {
+    public void initializeToDomain(final Domain<?> domain) {
         super.initializeToDomain(domain);
 
         clear();
@@ -231,7 +231,7 @@ public final class SimpleGraph extends AbstractBaseGraph {
         int maxTime;
         int size = 0;
 
-        public DataItem(boolean isOutgoing, boolean isIngoing) {
+        public DataItem(final boolean isOutgoing, final boolean isIngoing) {
             edgeList = new EdgeList(20);
             this.isOutgoing = isOutgoing;
             this.isIngoing = isIngoing;
@@ -245,24 +245,24 @@ public final class SimpleGraph extends AbstractBaseGraph {
             return size == 0;
         }
 
-        public boolean add(Edge e) {
+        public boolean add(final Edge e) {
             edgeList.add(e);
             maxTime = Math.max(maxTime, e.getTime());
             ++size;
             return true;
         }
 
-        public boolean contains(Edge e) {
+        public boolean contains(final Edge e) {
             if (isOutgoing) {
-                int second = e.getSecond();
-                for (Edge item : edgeList) {
+                final int second = e.getSecond();
+                for (final Edge item : edgeList) {
                     if (item.getSecond() == second) {
                         return true;
                     }
                 }
             } else if (isIngoing) {
-                int first = e.getFirst();
-                for (Edge item : edgeList) {
+                final int first = e.getFirst();
+                for (final Edge item : edgeList) {
                     if (item.getFirst() == first) {
                         return true;
                     }
@@ -286,14 +286,14 @@ public final class SimpleGraph extends AbstractBaseGraph {
             size = 0;
         }
 
-        public void backtrackTo(int time) {
+        public void backtrackTo(final int time) {
             //NOTE: We use the fact that the edge list
             // should be sorted by timestamp (since edges with higher timestamp get added later)
             if (maxTime > time) {
                 final List<Edge> edgeList = this.edgeList;
                 int i = edgeList.size();
                 while (--i >= 0) {
-                    Edge e = edgeList.get(i);
+                    final Edge e = edgeList.get(i);
                     if (e.getTime() > time) {
                         edgeList.remove(i);
                         if (isOutgoing) {
@@ -327,7 +327,7 @@ public final class SimpleGraph extends AbstractBaseGraph {
             if (++innerIndex >= innerList.size()) {
                 innerIndex = 0;
                 while (++index < numEvents) {
-                    DataItem item = outgoing[index];
+                    final DataItem item = outgoing[index];
                     if (item != null && !item.isEmpty()) {
                         innerList = item.edgeList;
                         edge = innerList.get(0);
@@ -346,7 +346,7 @@ public final class SimpleGraph extends AbstractBaseGraph {
 
         @Override
         public Edge next() {
-            Edge e = edge;
+            final Edge e = edge;
             findNext();
             return e;
         }

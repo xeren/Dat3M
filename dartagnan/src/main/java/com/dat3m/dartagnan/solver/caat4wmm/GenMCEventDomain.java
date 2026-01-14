@@ -23,7 +23,7 @@ import com.dat3m.dartagnan.program.filter.Filter;
 import com.dat3m.dartagnan.solver.caat.domain.Domain;
 import com.dat3m.dartagnan.verification.model.EventData;
 
-public class GenMCEventDomain implements Domain<EventData> {
+public final class GenMCEventDomain implements Domain<EventData> {
 
     private static int optimalThreadMapCapacity;
 
@@ -46,7 +46,7 @@ public class GenMCEventDomain implements Domain<EventData> {
         this.lxsxPairs = new HashMap<>();
     }
 
-    public GenMCEventDomain(List<EventData> oldEvents, List<EventData> eventsToDelete, int numOfAddresses, Map<EventData, EventData> lxsxPairs) {
+    public GenMCEventDomain(final List<EventData> oldEvents, final List<EventData> eventsToDelete, final int numOfAddresses, final Map<EventData, EventData> lxsxPairs) {
         this.events = new ArrayList<>(oldEvents.size());
         this.eventMap = new HashMap<>(getOptimalMapCapacity(oldEvents.size() - eventsToDelete.size()));
         this.threadEventsMap = new HashMap<>(optimalThreadMapCapacity);
@@ -54,12 +54,12 @@ public class GenMCEventDomain implements Domain<EventData> {
         this.readWriteMap = new HashMap<>();
         this.writeReadsMap = new HashMap<>();
         this.lxsxPairs = new HashMap<>();
-        int revisitWriteId = oldEvents.size() - 1;
+        final int revisitWriteId = oldEvents.size() - 1;
         int id = -1;
-        for (EventData event : oldEvents) {
+        for (final EventData event : oldEvents) {
             if (!eventsToDelete.contains(event)) {
-                Event e = event.getEvent();
-                EventData copiedEvent = new EventData(e);
+                final Event e = event.getEvent();
+                final EventData copiedEvent = new EventData(e);
                 eventMap.put(e, copiedEvent);
                 copiedEvent.setReadFrom(event.getReadFrom());
                 copiedEvent.setCoPredecessor(event.getCoPredecessor());
@@ -76,16 +76,16 @@ public class GenMCEventDomain implements Domain<EventData> {
                 }
             }
         }
-        for (EventData event : events) {
+        for (final EventData event : events) {
             if (event.getReadFrom() != null) {
-                EventData newReadFrom = eventMap.get(event.getReadFrom().getEvent());
+                final EventData newReadFrom = eventMap.get(event.getReadFrom().getEvent());
                 event.setReadFrom(newReadFrom);
                 readWriteMap.put(event, newReadFrom);
                 writeReadsMap.computeIfAbsent(newReadFrom, rf -> new ArrayList<>()).add(event);
             }
             EventData coPredecessor = event.getCoPredecessor();
             while (coPredecessor != null) {
-                EventData copiedCoPredecessor = eventMap.get(coPredecessor.getEvent());
+                final EventData copiedCoPredecessor = eventMap.get(coPredecessor.getEvent());
                 if (copiedCoPredecessor != null) {
                     event.setCoPredecessor(copiedCoPredecessor);
                     break;
@@ -97,7 +97,7 @@ public class GenMCEventDomain implements Domain<EventData> {
             }
             EventData coSuccessor = event.getCoSuccessor();
             while (coSuccessor != null) {
-                EventData copiedCoSuccessor = eventMap.get(coSuccessor.getEvent());
+                final EventData copiedCoSuccessor = eventMap.get(coSuccessor.getEvent());
                 if (copiedCoSuccessor != null) {
                     event.setCoSuccessor(copiedCoSuccessor);
                     break;
@@ -108,59 +108,59 @@ public class GenMCEventDomain implements Domain<EventData> {
                 event.setCoSuccessor(null);
             }
         }
-        for (Map.Entry<EventData, EventData> lxsxPair : lxsxPairs.entrySet()) {
-            Event storeEvent = lxsxPair.getKey().getEvent();
-            Optional<EventData> store = getData(storeEvent);
+        for (final Map.Entry<EventData, EventData> lxsxPair : lxsxPairs.entrySet()) {
+            final Event storeEvent = lxsxPair.getKey().getEvent();
+            final Optional<EventData> store = getData(storeEvent);
             store.ifPresent(eventData -> this.lxsxPairs.put(eventData, getData(lxsxPair.getValue().getEvent())
                     .orElseThrow(() -> new IllegalArgumentException("Exclusive store " + storeEvent.getGlobalId() + ": " + storeEvent + " has not its exclusive load "
                             + lxsxPair.getValue().getEvent().getGlobalId() + ": " + lxsxPair.getValue().getEvent() + " in the new trace"))));
         }
     }
 
-    public void addEvent(EventData event) {
+    public void addEvent(final EventData event) {
         events.add(event);
-        Event e = event.getEvent();
+        final Event e = event.getEvent();
         eventMap.put(e, event);
-        List<EventData> threadEvents = threadEventsMap.computeIfAbsent(e.getThread(), thread -> new ArrayList<>());
+        final List<EventData> threadEvents = threadEventsMap.computeIfAbsent(e.getThread(), thread -> new ArrayList<>());
         event.setLocalId(threadEvents.size());
         threadEvents.add(event);
         if (e instanceof Init) {
             addAddressInit(event);
         }
-        EventData readFrom = event.getReadFrom();
+        final EventData readFrom = event.getReadFrom();
         if (readFrom != null) {
             readWriteMap.put(event, readFrom);
             writeReadsMap.computeIfAbsent(readFrom, rf -> new ArrayList<>()).add(event);
         }
-        EventData coPredecessor = event.getCoPredecessor();
+        final EventData coPredecessor = event.getCoPredecessor();
         if (coPredecessor != null) {
             coPredecessor.setCoSuccessor(event);
         }
     }
 
-    public void addAddressInit(EventData addressWrite) {
+    public void addAddressInit(final EventData addressWrite) {
         addressInits.put((BigInteger) addressWrite.getAccessedAddress(), addressWrite);
     }
 
-    public List<EventData> rollback(EventData backtrackingPoint) {
-        int backtrackingIndex = backtrackingPoint.getId();
-        for (Map.Entry<Thread, List<EventData>> thread : threadEventsMap.entrySet()) {
-            List<EventData> threadEvents = thread.getValue();
+    public List<EventData> rollback(final EventData backtrackingPoint) {
+        final int backtrackingIndex = backtrackingPoint.getId();
+        for (final Map.Entry<Thread, List<EventData>> thread : threadEventsMap.entrySet()) {
+            final List<EventData> threadEvents = thread.getValue();
             int i;
             for (i = threadEvents.size() - 1; i >= 0; --i) {
-                EventData threadEvent = threadEvents.get(i);
+                final EventData threadEvent = threadEvents.get(i);
                 if (backtrackingIndex < threadEvent.getId()) {
-                    Event eventToRemove = threadEvent.getEvent();
-                    EventData readFrom = threadEvent.getReadFrom();
+                    final Event eventToRemove = threadEvent.getEvent();
+                    final EventData readFrom = threadEvent.getReadFrom();
                     if (readFrom != null) {
                         readWriteMap.remove(threadEvent);
-                        List<EventData> readsForRfWrite = writeReadsMap.get(readFrom);
+                        final List<EventData> readsForRfWrite = writeReadsMap.get(readFrom);
                         if (readsForRfWrite != null) {
                             readsForRfWrite.remove(threadEvent);
                         }
                     } else if (eventToRemove instanceof Store) {
                         if (threadEvent.getCoPredecessor() == null) {
-                            BigInteger address = (BigInteger) threadEvent.getAccessedAddress();
+                            final BigInteger address = (BigInteger) threadEvent.getAccessedAddress();
                             if (addressInits.get(address) == threadEvent) {
                                 addressInits.remove(address);
                             }
@@ -184,7 +184,7 @@ public class GenMCEventDomain implements Domain<EventData> {
         return events.subList(backtrackingIndex + 1, events.size());
     }
 
-    public void setReadFrom(EventData read, EventData newWrite, EventData oldWrite) {
+    public void setReadFrom(final EventData read, final EventData newWrite, final EventData oldWrite) {
         if (oldWrite != null) {
             writeReadsMap.get(oldWrite).remove(read);
         }
@@ -192,12 +192,12 @@ public class GenMCEventDomain implements Domain<EventData> {
         readWriteMap.put(read, newWrite);
     }
 
-    public void addLxsxPair(EventData store, EventData load) {
+    public void addLxsxPair(final EventData store, final EventData load) {
         lxsxPairs.put(store, load);
     }
 
-    public Optional<EventData> getLastAddedThreadEventData(Thread thread) {
-        List<EventData> threadEvents = threadEventsMap.get(thread);
+    public Optional<EventData> getLastAddedThreadEventData(final Thread thread) {
+        final List<EventData> threadEvents = threadEventsMap.get(thread);
         if (threadEvents == null || threadEvents.isEmpty()) {
             return Optional.empty();
         }
@@ -219,18 +219,18 @@ public class GenMCEventDomain implements Domain<EventData> {
     }
 
     @Override
-    public int getId(Object obj) {
-        if (obj instanceof EventData event) {
+    public int getId(final Object obj) {
+        if (obj instanceof final EventData event) {
             return event.getId();
         }
         throw new IllegalArgumentException("Excepted non-null object of class EventData");
     }
 
     @Override
-    public EventData getObjectById(int id) {
+    public EventData getObjectById(final int id) {
         try {
             return events.get(id);
-        } catch (IndexOutOfBoundsException ignored) {
+        } catch (final IndexOutOfBoundsException ignored) {
             return null;
         }
     }
@@ -240,8 +240,8 @@ public class GenMCEventDomain implements Domain<EventData> {
     }
 
     public EventData removeLast() {
-        EventData last = getLast();
-        Event lastEvent = last.getEvent();
+        final EventData last = getLast();
+        final Event lastEvent = last.getEvent();
         events.remove(last);
         eventMap.remove(lastEvent);
         threadEventsMap.get(lastEvent.getThread()).remove(last);
@@ -249,7 +249,7 @@ public class GenMCEventDomain implements Domain<EventData> {
             readWriteMap.remove(last);
             writeReadsMap.get(last.getReadFrom()).remove(last);
         }
-        EventData coPredecessor = last.getCoPredecessor();
+        final EventData coPredecessor = last.getCoPredecessor();
         if (coPredecessor != null) {
             coPredecessor.setCoSuccessor(last.getCoSuccessor());
         }
@@ -283,15 +283,15 @@ public class GenMCEventDomain implements Domain<EventData> {
         return lxsxPairs;
     }
 
-    public Optional<EventData> getData(Event e) {
+    public Optional<EventData> getData(final Event e) {
         return Optional.ofNullable(eventMap.get(e));
     }
 
-    public EventData getLastRegWriter(Register reg, Event forEvent) {
-        int forEventId = forEvent.getGlobalId();
-        List<EventData> threadEvents = threadEventsMap.get(forEvent.getThread());
+    public EventData getLastRegWriter(final Register reg, final Event forEvent) {
+        final int forEventId = forEvent.getGlobalId();
+        final List<EventData> threadEvents = threadEventsMap.get(forEvent.getThread());
         for (int i = threadEvents.size() - 1; i >= 0; --i) {
-            EventData event = threadEvents.get(i);
+            final EventData event = threadEvents.get(i);
             if (event.getEvent() instanceof RegWriter writer && writer.getResultRegister() == reg && writer.getGlobalId() < forEventId) {
                 return event;
             }
@@ -299,11 +299,11 @@ public class GenMCEventDomain implements Domain<EventData> {
         return null;
     }
 
-    public static void setThreadCount(int threadCount) {
+    public static void setThreadCount(final int threadCount) {
         optimalThreadMapCapacity = getOptimalMapCapacity(threadCount);
     }
 
-    public static int getOptimalMapCapacity(int size) {
+    public static int getOptimalMapCapacity(final int size) {
         return (size * 4 + (3 - (size % 3)) % 3) / 3;
     }
 
@@ -312,21 +312,21 @@ public class GenMCEventDomain implements Domain<EventData> {
         return toString(getElements());
     }
 
-    public String toString(Filter eventFilter) {
+    public String toString(final Filter eventFilter) {
         return toString(getElements(), eventFilter);
     }
 
-    public static String toString(Collection<EventData> events, Filter eventFilter) {
+    public static String toString(final Collection<EventData> events, final Filter eventFilter) {
         return toString(events.stream()
                 .filter(event -> eventFilter.apply(event.getEvent()))
                 .toList());
     }
 
-    public static String toString(Collection<EventData> events) {
-        StringBuilder builder = new StringBuilder();
+    public static String toString(final Collection<EventData> events) {
+        final StringBuilder builder = new StringBuilder();
         Event pred = null;
         for (EventData eventData : events) {
-            Event event = eventData.getEvent();
+            final Event event = eventData.getEvent();
             if ((event instanceof ThreadStart && event.getSuccessor() instanceof Init) || (event.getFunction().getExit() == event && event.getPredecessor() instanceof Init)) {
                 continue;
             }
@@ -348,21 +348,21 @@ public class GenMCEventDomain implements Domain<EventData> {
                     .append(": ");
             builder.append(event);
             if (eventData.getReadFrom() != null) {
-                Event readFrom = eventData.getReadFrom().getEvent();
+                final Event readFrom = eventData.getReadFrom().getEvent();
                 builder.append(" reads from ")
                         .append(readFrom.getGlobalId())
                         .append(": ")
                         .append(readFrom);
             }
             if (eventData.getCoPredecessor() != null) {
-                Event coPred = eventData.getCoPredecessor().getEvent();
+                final Event coPred = eventData.getCoPredecessor().getEvent();
                 builder.append(", writes after ")
                         .append(coPred.getGlobalId())
                         .append(": ")
                         .append(coPred);
             }
             if (eventData.getCoSuccessor() != null) {
-                Event coSuc = eventData.getCoSuccessor().getEvent();
+                final Event coSuc = eventData.getCoSuccessor().getEvent();
                 builder.append(", writes before ")
                         .append(coSuc.getGlobalId())
                         .append(": ")
@@ -381,10 +381,10 @@ public class GenMCEventDomain implements Domain<EventData> {
         return toRelevantEventsString(getElements());
     }
 
-    public static String toRelevantEventsString(Collection<EventData> events) {
-        List<EventData> filteredEvents = new ArrayList<>();
-        for (EventData eventData : events) {
-            Event event = eventData.getEvent();
+    public static String toRelevantEventsString(final Collection<EventData> events) {
+        final List<EventData> filteredEvents = new ArrayList<>();
+        for (final EventData eventData : events) {
+            final Event event = eventData.getEvent();
             if ("pthread_join".equals(event.getFunction().getName())) {
                 continue;
             }
@@ -397,7 +397,7 @@ public class GenMCEventDomain implements Domain<EventData> {
             if (event.getSuccessor() instanceof Init) {
                 continue;
             }
-            if (event instanceof RegWriter writer && isSynthetic(writer.getResultRegister().getName())) {
+            if (event instanceof final RegWriter writer && isSynthetic(writer.getResultRegister().getName())) {
                 continue;
             }
             if (event.getPredecessor() instanceof ThreadCreate) {
@@ -412,32 +412,32 @@ public class GenMCEventDomain implements Domain<EventData> {
     }
 
     public String getRelationData() {
-        StringBuilder sb = new StringBuilder();
+        final StringBuilder sb = new StringBuilder();
         sb.append("Thread events map: ");
-        for (Map.Entry<Thread, List<EventData>> entry : threadEventsMap.entrySet()) {
+        for (final Map.Entry<Thread, List<EventData>> entry : threadEventsMap.entrySet()) {
             sb.append('\n').append(entry.getKey()).append(": [");
-            for (EventData event : entry.getValue()) {
+            for (final EventData event : entry.getValue()) {
                 sb.append(event.getId()).append(": ").append(event.getEvent()).append(", ");
             }
             sb.append("]");
         }
         sb.append('\n').append("Address inits: [");
-        for (EventData addrInit : addressInits.values()) {
+        for (final EventData addrInit : addressInits.values()) {
             sb.append('\n').append(addrInit.getEvent()).append(": [");
-            for (EventData event : addrInit.getCoSuccessors()) {
+            for (final EventData event : addrInit.getCoSuccessors()) {
                 sb.append(event.getEvent()).append(", ");
             }
             sb.append("]");
         }
         sb.append('\n').append("Read-write map: ");
-        for (Map.Entry<EventData, EventData> entry : readWriteMap.entrySet()) {
+        for (final Map.Entry<EventData, EventData> entry : readWriteMap.entrySet()) {
             sb.append('\n').append(entry.getKey().getEvent()).append(": ");
             sb.append(entry.getValue().getEvent());
         }
         sb.append('\n').append("Write-reads map: ");
-        for (Map.Entry<EventData, List<EventData>> entry : writeReadsMap.entrySet()) {
+        for (final Map.Entry<EventData, List<EventData>> entry : writeReadsMap.entrySet()) {
             sb.append('\n').append(entry.getKey().getEvent()).append(": [");
-            for (EventData event : entry.getValue()) {
+            for (final EventData event : entry.getValue()) {
                 sb.append(event.getEvent()).append(", ");
             }
             sb.append("]");
@@ -445,12 +445,12 @@ public class GenMCEventDomain implements Domain<EventData> {
         return sb.toString();
     }
 
-    private static boolean isSynthetic(String name) {
+    private static boolean isSynthetic(final String name) {
         return name.startsWith("__");
     }
 
-    static boolean isThreadEndStore(EventData store) {
-        return store.getEvent() instanceof Store && store.getEvent().getSuccessor() instanceof Label label && label.getThread().getEntry().isSpawned()
+    static boolean isThreadEndStore(final EventData store) {
+        return store.getEvent() instanceof Store && store.getEvent().getSuccessor() instanceof final Label label && label.getThread().getEntry().isSpawned()
                 && label.getName().startsWith("END_OF_T");
     }
 }

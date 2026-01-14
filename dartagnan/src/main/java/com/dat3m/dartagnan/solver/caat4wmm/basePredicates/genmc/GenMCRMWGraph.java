@@ -21,9 +21,9 @@ public class GenMCRMWGraph extends MaterializedGenMCWMMGraph {
     @Override
     public void repopulate() {
         if (isRepopulateForbidden()) return;
-        for (List<EventData> events : trace.getThreadEventsMap().values()) {
+        for (final List<EventData> events : trace.getThreadEventsMap().values()) {
             EventData lastExclLoad = null;
-            for (EventData e : events) {
+            for (final EventData e : events) {
                 if (e.getReadFrom() != null) {
                     if (e.isExclusive()) {  // LoadExcl
                         lastExclLoad = e;
@@ -35,8 +35,8 @@ public class GenMCRMWGraph extends MaterializedGenMCWMMGraph {
                         }
                         simpleGraph.addDisjoint(new Edge(lastExclLoad.getId(), e.getId()));
                         lastExclLoad = null;
-                    } else if (e.getEvent() instanceof RMWStore rmwStore) { // RMWStore
-                        EventData load = trace.getData(rmwStore.getLoadEvent()).get();
+                    } else if (e.getEvent() instanceof final RMWStore rmwStore) { // RMWStore
+                        final EventData load = trace.getData(rmwStore.getLoadEvent()).get();
                         simpleGraph.addDisjoint(new Edge(load.getId(), e.getId()));
                     }
                 }
@@ -45,15 +45,15 @@ public class GenMCRMWGraph extends MaterializedGenMCWMMGraph {
     }
 
     @Override
-    public List<EventData> inEvents(EventData event) {
-        if (!(event.getEvent() instanceof RMWStore rmwStore)) {
+    public List<EventData> inEvents(final EventData event) {
+        if (!(event.getEvent() instanceof final RMWStore rmwStore)) {
             return Collections.emptyList();
         } else {
             return Collections.singletonList(trace.getData(rmwStore.getLoadEvent()).get());
         }
     }
     @Override
-    public List<EventData> outEvents(EventData event) {
+    public List<EventData> outEvents(final EventData event) {
         if (event.getReadFrom() == null) {
             return Collections.emptyList();
         }

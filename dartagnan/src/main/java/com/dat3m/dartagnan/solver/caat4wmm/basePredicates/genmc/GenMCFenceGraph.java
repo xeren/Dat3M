@@ -15,16 +15,16 @@ public class GenMCFenceGraph extends StaticGenMCWMMGraph {
     private final Filter fenceFilter;
     private Map<Thread, List<EventData>> threadFencesMap;
 
-    public GenMCFenceGraph(Filter fenceFilter) {
+    public GenMCFenceGraph(final Filter fenceFilter) {
         this.fenceFilter = fenceFilter;
     }
 
     @Override
-    public boolean containsById(int id1, int id2) {
-        EventData a = getEvent(id1);
-        EventData b = getEvent(id2);
-        int localId1;
-        int localId2;
+    public boolean containsById(final int id1, final int id2) {
+        final EventData a = getEvent(id1);
+        final EventData b = getEvent(id2);
+        final int localId1;
+        final int localId2;
         if (a.getThread() != b.getThread() || (localId1 = a.getLocalId()) >= (localId2 = b.getLocalId()) || !a.isMemoryEvent() || !b.isMemoryEvent()) {
             return false;
         }
@@ -38,14 +38,14 @@ public class GenMCFenceGraph extends StaticGenMCWMMGraph {
     public void repopulate() {
         if (isRepopulateForbidden()) return;
         threadFencesMap = new HashMap<>();
-        for (Thread t : trace.getThreads()) {
+        for (final Thread t : trace.getThreads()) {
             threadFencesMap.put(t, new ArrayList<>());
         }
 
         trace.getElements().stream().filter(e -> fenceFilter.apply(e.getEvent()))
                 .forEach(fence -> threadFencesMap.get(fence.getThread()).add(fence));
 
-        for (List<EventData> fenceList : threadFencesMap.values()) {
+        for (final List<EventData> fenceList : threadFencesMap.values()) {
             fenceList.sort(Comparator.comparingInt(EventData::getLocalId));
         }
         super.autoComputeSize();
@@ -59,26 +59,26 @@ public class GenMCFenceGraph extends StaticGenMCWMMGraph {
                     if (fences.isEmpty()) {
                         return Stream.empty();
                     }
-                    int lastId = fences.get(fences.size() - 1).getLocalId();
+                    final int lastId = fences.get(fences.size() - 1).getLocalId();
                     return x.getValue().subList(0, lastId).stream().filter(EventData::isMemoryEvent);
                 })
                 .flatMap(x -> edgeStream(x.getId(), EdgeDirection.OUTGOING));
     }
 
     @Override
-    public Stream<Edge> edgeStream(int id, EdgeDirection dir) {
-        EventData e = getEvent(id);
+    public Stream<Edge> edgeStream(final int id, final EdgeDirection dir) {
+        final EventData e = getEvent(id);
         if (!e.isMemoryEvent()) {
             return Stream.empty();
         }
-        List<EventData> threadEvents = trace.getThreadEventsMap().get(e.getThread());
+        final List<EventData> threadEvents = trace.getThreadEventsMap().get(e.getThread());
         if (dir == EdgeDirection.OUTGOING) {
-            EventData fence = getNextFence(e);
+            final EventData fence = getNextFence(e);
             return fence == null ? Stream.empty() :
                     threadEvents.subList(fence.getLocalId() + 1, threadEvents.size()).stream()
                             .filter(EventData::isMemoryEvent).map(x -> new Edge(id, x.getId()));
         } else {
-            EventData fence = getPreviousFence(e);
+            final EventData fence = getPreviousFence(e);
             return fence == null ? Stream.empty() :
                     threadEvents.subList(0, fence.getLocalId()).stream()
                             .filter(EventData::isMemoryEvent).map(x -> new Edge(x.getId(), id));
@@ -86,14 +86,14 @@ public class GenMCFenceGraph extends StaticGenMCWMMGraph {
     }
 
     @Override
-    public int size(int id, EdgeDirection dir) {
-        EventData e = getEvent(id);
+    public int size(final int id, final EdgeDirection dir) {
+        final EventData e = getEvent(id);
         if (!e.isMemoryEvent()) {
             return 0;
         }
-        int size = 0;
+        final int size = 0;
         if (dir == EdgeDirection.OUTGOING) {
-            EventData closestFence = getNextFence(e);
+            final EventData closestFence = getNextFence(e);
             if (closestFence == null) {
                 return 0;
             }
@@ -101,7 +101,7 @@ public class GenMCFenceGraph extends StaticGenMCWMMGraph {
             eventsAfterFence = eventsAfterFence.subList(closestFence.getLocalId() + 1, eventsAfterFence.size());
             return (int)eventsAfterFence.stream().filter(EventData::isMemoryEvent).count();
         } else if (dir == EdgeDirection.INGOING) {
-            EventData closestFence = getPreviousFence(e);
+            final EventData closestFence = getPreviousFence(e);
             if (closestFence == null) {
                 return 0;
             }
@@ -112,15 +112,15 @@ public class GenMCFenceGraph extends StaticGenMCWMMGraph {
         return size;
     }
 
-    public EventData getNextFence(EventData e) {
-        List<EventData> fences = threadFencesMap.get(e.getThread());
+    public EventData getNextFence(final EventData e) {
+        final List<EventData> fences = threadFencesMap.get(e.getThread());
         if (fences.isEmpty()) {
             return null;
         }
 
         EventData closestFence = null;
         for (int i = fences.size() - 1; i >= 0; i--) {
-            EventData fence = fences.get(i);
+            final EventData fence = fences.get(i);
             if (fence.getLocalId() > e.getLocalId()) {
                 closestFence = fence;
             } else {
@@ -130,15 +130,15 @@ public class GenMCFenceGraph extends StaticGenMCWMMGraph {
         return closestFence;
     }
 
-    public EventData getPreviousFence(EventData e) {
-        List<EventData> fences = threadFencesMap.get(e.getThread());
+    public EventData getPreviousFence(final EventData e) {
+        final List<EventData> fences = threadFencesMap.get(e.getThread());
         if (fences.isEmpty()) {
             return null;
         }
 
 
         EventData closestFence = null;
-        for (EventData fence : fences) {
+        for (final EventData fence : fences) {
             if (fence.getLocalId() < e.getLocalId()) {
                 closestFence = fence;
             } else {

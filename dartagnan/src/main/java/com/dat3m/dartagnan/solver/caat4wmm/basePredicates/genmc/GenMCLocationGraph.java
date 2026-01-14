@@ -16,13 +16,13 @@ public class GenMCLocationGraph extends StaticGenMCWMMGraph {
     private Map<Object, List<EventData>> addrEventsMap;
 
     @Override
-    public boolean contains(EventData first, EventData second) {
+    public boolean contains(final EventData first, final EventData second) {
         return first.getAccessedAddress() != null && first.getAccessedAddress().equals(second.getAccessedAddress());
     }
 
     @Override
-    public int size(int id, EdgeDirection dir) {
-        EventData e = getEvent(id);
+    public int size(final int id, final EdgeDirection dir) {
+        final EventData e = getEvent(id);
         return e.isMemoryEvent() ? addrEventsMap.get(e.getAccessedAddress()).size() : 0;
     }
 
@@ -32,23 +32,23 @@ public class GenMCLocationGraph extends StaticGenMCWMMGraph {
         addrEventsMap = trace.getElements().stream()
                 .filter(EventData::isMemoryEvent)
                 .collect(groupingBy(EventData::getAccessedAddress));
-        for (List<EventData> addrSet : addrEventsMap.values()) {
+        for (final List<EventData> addrSet : addrEventsMap.values()) {
             size += addrSet.size() * addrSet.size();
         }
     }
 
 
     @Override
-    public List<EventData> inEvents(EventData event) {
+    public List<EventData> inEvents(final EventData event) {
         return getEvents(event);
     }
 
     @Override
-    public List<EventData> outEvents(EventData event) {
+    public List<EventData> outEvents(final EventData event) {
         return getEvents(event);
     }
 
-    public List<EventData> getEvents(EventData event) {
+    public List<EventData> getEvents(final EventData event) {
         return addrEventsMap.get(event.getAccessedAddress());
     }
 
@@ -59,12 +59,12 @@ public class GenMCLocationGraph extends StaticGenMCWMMGraph {
     }
 
     @Override
-    public Stream<Edge> edgeStream(int id, EdgeDirection dir) {
-        EventData e = getEvent(id);
+    public Stream<Edge> edgeStream(final int id, final EdgeDirection dir) {
+        final EventData e = getEvent(id);
         if (!e.isMemoryEvent()) {
             return Stream.empty();
         }
-        Function<EventData, Edge> edgeMapping = dir == EdgeDirection.OUTGOING ?
+        final Function<EventData, Edge> edgeMapping = dir == EdgeDirection.OUTGOING ?
                 (x -> new Edge(id, x.getId())) : (x -> new Edge(x.getId(), id));
         return addrEventsMap.get(e.getAccessedAddress()).stream().map(edgeMapping);
     }

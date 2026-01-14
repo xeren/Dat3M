@@ -18,8 +18,8 @@ public class GenMCCoherenceGraph extends StaticGenMCWMMGraph {
     private List<EventData> coMap;
 
     @Override
-    public int size(int id, EdgeDirection dir) {
-        EventData e = getEvent(id);
+    public int size(final int id, final EdgeDirection dir) {
+        final EventData e = getEvent(id);
         if (dir == EdgeDirection.INGOING) {
             if (e.getCoPredecessor() == null) {
                 return 0;
@@ -34,7 +34,7 @@ public class GenMCCoherenceGraph extends StaticGenMCWMMGraph {
     }
 
     @Override
-    public boolean containsById(int id1, int id2) {
+    public boolean containsById(final int id1, final int id2) {
         EventData iter = getEvent(id1).getCoSuccessor();
         while (iter != null) {
             if (iter.getId() == id2) {
@@ -46,7 +46,7 @@ public class GenMCCoherenceGraph extends StaticGenMCWMMGraph {
     }
 
     @Override
-    public boolean contains(EventData first, EventData second) {
+    public boolean contains(final EventData first, final EventData second) {
         EventData iter = first.getCoSuccessor();
         while (iter != null) {
             if (iter == second) {
@@ -67,22 +67,22 @@ public class GenMCCoherenceGraph extends StaticGenMCWMMGraph {
 
     private void computeSize() {
         size = 0;
-        for (EventData addressInit : coMap) {
-            int sameAddressWrites = addressInit.getCoSuccessors().size();
+        for (final EventData addressInit : coMap) {
+            final int sameAddressWrites = addressInit.getCoSuccessors().size();
             size += (sameAddressWrites * (sameAddressWrites - 1));
         }
         size >>= 1;
     }
 
     @Override
-    public List<EventData> inEvents(EventData event) {
-        EventData pre = event.getCoPredecessor();
+    public List<EventData> inEvents(final EventData event) {
+        final EventData pre = event.getCoPredecessor();
         return pre == null ? Collections.emptyList() : pre.getCoPredecessors();
     }
 
     @Override
-    public List<EventData> outEvents(EventData event) {
-        EventData override = event.getCoSuccessor();
+    public List<EventData> outEvents(final EventData event) {
+        final EventData override = event.getCoSuccessor();
         return override == null ? Collections.emptyList() : override.getCoSuccessors();
     }
 
@@ -95,12 +95,12 @@ public class GenMCCoherenceGraph extends StaticGenMCWMMGraph {
     }
 
     @Override
-    public Stream<Edge> edgeStream(int id, EdgeDirection dir) {
-        EventData e = getEvent(id);
+    public Stream<Edge> edgeStream(final int id, final EdgeDirection dir) {
+        final EventData e = getEvent(id);
         if (!e.isWrite()) {
             return Stream.empty();
         }
-        Function<EventData, Edge> mapping = dir == EdgeDirection.INGOING ?
+        final Function<EventData, Edge> mapping = dir == EdgeDirection.INGOING ?
                 (event -> new Edge(event.getId(), id)) : (event -> new Edge(id, event.getId()));
         return getCoSuccessorList(e, dir).stream().map(mapping);
     }
@@ -111,18 +111,18 @@ public class GenMCCoherenceGraph extends StaticGenMCWMMGraph {
     }
 
     @Override
-    public Iterator<Edge> edgeIterator(int id, EdgeDirection dir) {
-        EventData e = getEvent(id);
+    public Iterator<Edge> edgeIterator(final int id, final EdgeDirection dir) {
+        final EventData e = getEvent(id);
         if (!e.isWrite()) {
             return Collections.emptyIterator();
         }
-        com.google.common.base.Function<EventData, Edge> mapping = dir == EdgeDirection.INGOING ?
+        final com.google.common.base.Function<EventData, Edge> mapping = dir == EdgeDirection.INGOING ?
                 (event -> new Edge(event.getId(), id)) : (event -> new Edge(id, event.getId()));
         return Iterators.transform(getCoSuccessorList(e, dir).iterator(), mapping);
     }
 
-    private List<EventData> getCoSuccessorList(EventData e, EdgeDirection dir) {
-        List<EventData> coSuccessorList = (dir == EdgeDirection.INGOING ?
+    private List<EventData> getCoSuccessorList(final EventData e, final EdgeDirection dir) {
+        final List<EventData> coSuccessorList = (dir == EdgeDirection.INGOING ?
                 e.getCoPredecessors()
                 : e.getCoSuccessors());
         coSuccessorList.remove(0);
@@ -166,7 +166,7 @@ public class GenMCCoherenceGraph extends StaticGenMCWMMGraph {
 
         @Override
         public Edge next() {
-            Edge e = edge;
+            final Edge e = edge;
             findNext();
             return e;
         }

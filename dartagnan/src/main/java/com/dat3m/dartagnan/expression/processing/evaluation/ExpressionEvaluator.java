@@ -37,13 +37,13 @@ public abstract class ExpressionEvaluator {
 
     public abstract ExpressionEvaluator newInstance();
 
-    public abstract BigInteger evaluate(Expression expr, Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException;
-    public abstract BigInteger evaluateNonDet(Expression expr, Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException;
-    public abstract BigInteger evaluateAddress(EventData e) throws SolverException, InterruptedException, InvalidConfigurationException;
-    public abstract boolean evaluateReachability(BooleanFormula formula) throws SolverException, InterruptedException, InvalidConfigurationException;
-    public abstract boolean evaluateReachability(Expression target, Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException;
+    public abstract BigInteger evaluate(final Expression expr, final Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException;
+    public abstract BigInteger evaluateNonDet(final Expression expr, final Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException;
+    public abstract BigInteger evaluateAddress(final EventData e) throws SolverException, InterruptedException, InvalidConfigurationException;
+    public abstract boolean evaluateReachability(final BooleanFormula formula) throws SolverException, InterruptedException, InvalidConfigurationException;
+    public abstract boolean evaluateReachability(final Expression target, final Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException;
 
-    public void setTrace(GenMCEventDomain trace, EventData changedEvent, boolean inTraceOrder) {
+    public void setTrace(final GenMCEventDomain trace, final EventData changedEvent, final boolean inTraceOrder) {
         this.trace = trace;
         List<Event> cfEventsToRemove = new ArrayList<>();
         for (Event cfEvent : cfContext.keySet()) {
@@ -53,7 +53,7 @@ public abstract class ExpressionEvaluator {
         }
         cfEventsToRemove.forEach(cfContext::remove);
     }
-    public abstract void addNonDetCondition(Event event, Expression condition, boolean isTrue) throws InvalidConfigurationException;
+    public abstract void addNonDetCondition(final Event event, final Expression condition, final boolean isTrue) throws InvalidConfigurationException;
 
     public Timer getEvaluationTime() {
         return Timer.add(solverCheckTimer, evaluationTimer);
@@ -67,8 +67,8 @@ public abstract class ExpressionEvaluator {
         return solverChecks;
     }
 
-    public static BigInteger getValue(Object value) {
-        String valueString = String.valueOf(value);
+    public static BigInteger getValue(final Object value) {
+        final String valueString = String.valueOf(value);
         return switch(valueString) {
             // NULL case can happen if the solver optimized away a variable.
             // This should only happen if the value is irrelevant, so we will just pick 0.
@@ -78,7 +78,7 @@ public abstract class ExpressionEvaluator {
         };
     }
 
-    public static ExpressionEvaluator withContext(ExprEvaluationContext evalContext) throws InvalidConfigurationException {
+    public static ExpressionEvaluator withContext(final ExprEvaluationContext evalContext) throws InvalidConfigurationException {
         initMemoryLayout(evalContext);
         if (evalContext.usesSMTSolver()) {
             return new ProverExpressionEvaluator(evalContext.getProver(), evalContext.getTraceEncoder());
@@ -87,9 +87,9 @@ public abstract class ExpressionEvaluator {
         }
     }
 
-    private static void initMemoryLayout(ExprEvaluationContext evalContext) {
-        for (Map.Entry<MemoryObject, Expression> address : evalContext.getMemoryLayout().entrySet()) {
-            MemoryObject addressObject = address.getKey();
+    private static void initMemoryLayout(final ExprEvaluationContext evalContext) {
+        for (final Map.Entry<MemoryObject, Expression> address : evalContext.getMemoryLayout().entrySet()) {
+            final MemoryObject addressObject = address.getKey();
             if (addressObject.getAddress() == null) {
                 addressObject.setAddress(address.getValue());
             }
@@ -108,7 +108,8 @@ public abstract class ExpressionEvaluator {
         private GenMCTraceEncoder traceEncoder;
         private BooleanFormula properties;
 
-        public ExprEvaluationContext(VerificationTask task, Context analysisContext, SolverContext ctx, ProverEnvironment prover, boolean useSMTSolver) {
+        public ExprEvaluationContext(final VerificationTask task, final Context analysisContext, final SolverContext ctx, final ProverEnvironment prover,
+                                     final boolean useSMTSolver) {
             this.task = task;
             this.analysisContext = analysisContext;
             this.ctx = ctx;
@@ -121,7 +122,7 @@ public abstract class ExpressionEvaluator {
         }
         public GenMCTraceEncoder getTraceEncoder() throws InvalidConfigurationException {
             if (!neededSMTSolver()) {
-                EncodingContext context = EncodingContext.of(task, analysisContext, ctx.getFormulaManager());
+                final EncodingContext context = EncodingContext.of(task, analysisContext, ctx.getFormulaManager());
                 logger.info("Used SMT solver: {}", ctx.getVersion());
                 traceEncoder = GenMCTraceEncoder.withContext(context);
             }

@@ -26,7 +26,7 @@ public class ProverExpressionEvaluator extends ExpressionEvaluator {
     private final ProverEnvironment prover;
     private final GenMCTraceEncoder traceEncoder;
 
-    public ProverExpressionEvaluator(ProverEnvironment prover, GenMCTraceEncoder traceEncoder) {
+    public ProverExpressionEvaluator(final ProverEnvironment prover, final GenMCTraceEncoder traceEncoder) {
         this.encodingContext = traceEncoder.getEncodingContext();
         this.prover = prover;
         this.traceEncoder = traceEncoder;
@@ -34,14 +34,14 @@ public class ProverExpressionEvaluator extends ExpressionEvaluator {
 
     @Override
     public ProverExpressionEvaluator newInstance() {
-        ProverExpressionEvaluator newEvaluator = new ProverExpressionEvaluator(prover, traceEncoder);
+        final ProverExpressionEvaluator newEvaluator = new ProverExpressionEvaluator(prover, traceEncoder);
         newEvaluator.cfContext.putAll(cfContext);
         return newEvaluator;
     }
 
     @Override
-    public BigInteger evaluate(Expression expr, Event forEvent) throws SolverException, InterruptedException {
-        NonDetCollector nonDetCollector = new NonDetCollector(trace, forEvent);
+    public BigInteger evaluate(final Expression expr, final Event forEvent) throws SolverException, InterruptedException {
+        final NonDetCollector nonDetCollector = new NonDetCollector(trace, forEvent);
         if (expr.accept(nonDetCollector)) {
             return null;
         }
@@ -49,18 +49,18 @@ public class ProverExpressionEvaluator extends ExpressionEvaluator {
     }
 
     @Override
-    public BigInteger evaluateNonDet(Expression expr, Event forEvent) throws SolverException, InterruptedException {
+    public BigInteger evaluateNonDet(final Expression expr, final Event forEvent) throws SolverException, InterruptedException {
         return evaluate(exprToFormula(expr, forEvent), new ArrayList<>());
     }
 
     @Override
-    public BigInteger evaluateAddress(EventData event) throws SolverException, InterruptedException {
-        if (event.getEvent() instanceof MemoryCoreEvent memEvent) {
-            if (memEvent.getAddress() instanceof MemoryObject memObj) {
+    public BigInteger evaluateAddress(final EventData event) throws SolverException, InterruptedException {
+        if (event.getEvent() instanceof final MemoryCoreEvent memEvent) {
+            if (memEvent.getAddress() instanceof final MemoryObject memObj) {
                 return evaluate(memObj.getAddress(), memEvent);
             } else {
                 trace.addEvent(event);
-                BigInteger ret = evaluate(memEvent.getAddress(), event.getEvent());
+                final BigInteger ret = evaluate(memEvent.getAddress(), event.getEvent());
                 trace.removeLast();
                 return ret;
             }
@@ -69,18 +69,18 @@ public class ProverExpressionEvaluator extends ExpressionEvaluator {
     }
 
     @Override
-    public boolean evaluateReachability(BooleanFormula formula) throws SolverException, InterruptedException {
-        List<BooleanFormula> assumptionWrapper = new ArrayList<>();
+    public boolean evaluateReachability(final BooleanFormula formula) throws SolverException, InterruptedException {
+        final List<BooleanFormula> assumptionWrapper = new ArrayList<>();
         assumptionWrapper.add(formula);
         return calculateModel(assumptionWrapper) != null;
     }
 
-    public BigInteger evaluate(Expression expr, Collection<Expression> assumptions, Event forEvent) throws SolverException, InterruptedException {
+    public BigInteger evaluate(final Expression expr, final Collection<Expression> assumptions, final Event forEvent) throws SolverException, InterruptedException {
         return evaluate(exprToFormula(expr, forEvent), exprsToBoolFormula(assumptions, forEvent));
     }
 
-    public BigInteger evaluate(Formula formula, List<BooleanFormula> assumptions) throws SolverException, InterruptedException {
-        Model model = calculateModel(assumptions);
+    public BigInteger evaluate(final Formula formula, final List<BooleanFormula> assumptions) throws SolverException, InterruptedException {
+        final Model model = calculateModel(assumptions);
         if (model == null) {
             return null;
         }
@@ -88,19 +88,21 @@ public class ProverExpressionEvaluator extends ExpressionEvaluator {
     }
 
     @Override
-    public boolean evaluateReachability(Expression expr, Event forEvent) throws SolverException, InterruptedException {
-        List<BooleanFormula> exprWrapper = new ArrayList<>();
+    public boolean evaluateReachability(final Expression expr, final Event forEvent) throws SolverException, InterruptedException {
+        final List<BooleanFormula> exprWrapper = new ArrayList<>();
         exprWrapper.add(exprToBoolFormula(expr, forEvent));
         return calculateModel(exprWrapper) != null;
     }
 
-    public Model calculateModel(Collection<BooleanFormula> assumptions) throws SolverException, InterruptedException {
+    public Model calculateModel(final Collection<BooleanFormula> assumptions) throws SolverException, InterruptedException {
         assumptions.addAll(cfContext.values());
         assumptions.add(traceEncoder.encodeFullTrace(trace));
-        Model model = null;
+        final Model model;
         solverCheckTimer.start();
         if (!prover.isUnsatWithAssumptions(assumptions)) {
             model = prover.getModel();
+        } else {
+            model = null;
         }
         solverCheckTimer.stop();
         ++solverChecks;
@@ -108,26 +110,23 @@ public class ProverExpressionEvaluator extends ExpressionEvaluator {
     }
 
     @Override
-    public void addNonDetCondition(Event event, Expression condition, boolean isTrue) {
-        BooleanFormula encodedCondition = exprToBoolFormula(condition, event);
-        BooleanFormula newCfContext = encodedCondition;
-        if (!isTrue) {
-            newCfContext = encodingContext.getBooleanFormulaManager().not(encodedCondition);
-        }
+    public void addNonDetCondition(final Event event, final Expression condition, final boolean isTrue) {
+        final BooleanFormula encodedCondition = exprToBoolFormula(condition, event);
+        final BooleanFormula newCfContext = isTrue ? encodedCondition : encodingContext.getBooleanFormulaManager().not(encodedCondition);
         cfContext.put(event, newCfContext);
     }
     
-    private List<BooleanFormula> exprsToBoolFormula(Collection<Expression> exprs, Event forEvent) {
+    private List<BooleanFormula> exprsToBoolFormula(final Collection<Expression> exprs, final Event forEvent) {
         return new ArrayList<>(exprs.stream()
                 .map(expr -> exprToBoolFormula(expr, forEvent))
                 .toList());
     }
     
-    private Formula exprToFormula(Expression expr, Event forEvent) {
+    private Formula exprToFormula(final Expression expr, final Event forEvent) {
         return encodingContext.getExpressionEncoder().encodeAt(expr, forEvent).formula();
     }
 
-    private BooleanFormula exprToBoolFormula(Expression expr, Event forEvent) {
+    private BooleanFormula exprToBoolFormula(final Expression expr, final Event forEvent) {
         return encodingContext.getExpressionEncoder().encodeBooleanAt(expr, forEvent).formula();
     }
 }

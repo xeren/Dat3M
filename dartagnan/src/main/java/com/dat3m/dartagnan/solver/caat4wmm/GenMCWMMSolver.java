@@ -24,17 +24,17 @@ public class GenMCWMMSolver {
     private final GenMCCoreReasoner reasoner;
     private Extractor extractor;
 
-    private GenMCWMMSolver(Configuration config, Wmm memoryModel, Context analysisContext) throws InvalidConfigurationException {
+    private GenMCWMMSolver(final Configuration config, final Wmm memoryModel, final Context analysisContext) throws InvalidConfigurationException {
         this.executionGraph = new GenMCExecutionGraph(memoryModel);
         this.reasoner = GenMCCoreReasoner.fromConfig(config, analysisContext, executionGraph);
         this.solver = CAATSolver.create();
     }
 
-    public static GenMCWMMSolver fromConfig(Configuration config, Wmm memoryModel, Context analysisContext) throws InvalidConfigurationException {
+    public static GenMCWMMSolver fromConfig(final Configuration config, final Wmm memoryModel, final Context analysisContext) throws InvalidConfigurationException {
         return new GenMCWMMSolver(config, memoryModel, analysisContext);
     }
 
-    public void injectExtractor(Extractor extractor) {
+    public void injectExtractor(final Extractor extractor) {
         this.extractor = extractor;
     }
 
@@ -42,23 +42,23 @@ public class GenMCWMMSolver {
         return executionGraph;
     }
 
-    public Result check(GenMCEventDomain trace, GenMCReasoning reasoningMethod) {
+    public Result check(final GenMCEventDomain trace, final GenMCReasoning reasoningMethod) {
         // ============ Extract GenMCEventDomain ==============
         executionGraph.initializeFromDomain(trace);
 
         // ============== Run the CAATSolver ==============
-        boolean useReasoning = reasoningMethod != GenMCReasoning.NONE;
-        CAATSolver.Result caatResult = useReasoning ? solver.check(executionGraph.getCAATModel()) : solver.simpleCheck(executionGraph.getCAATModel());
-        Result result = Result.fromCAATResult(caatResult);
+        final boolean useReasoning = reasoningMethod != GenMCReasoning.NONE;
+        final CAATSolver.Result caatResult = useReasoning ? solver.check(executionGraph.getCAATModel()) : solver.simpleCheck(executionGraph.getCAATModel());
+        final Result result = Result.fromCAATResult(caatResult);
 
         if (useReasoning && result.getStatus() == CAATSolver.Status.INCONSISTENT) {
             // ============== Compute Core reasons ==============
-            DNF<CAATLiteral> baseReasons = caatResult.getBaseReasons();
+            final DNF<CAATLiteral> baseReasons = caatResult.getBaseReasons();
             if (reasoningMethod.usesPatterns()) {
                 extractor.extract(baseReasons);
             }
             if (reasoningMethod.usesReasons()) {
-                Set<Conjunction<CoreLiteral>> coreReasons = reasoner.toCoreReasons(baseReasons);
+                final Set<Conjunction<CoreLiteral>> coreReasons = reasoner.toCoreReasons(baseReasons);
                 result.coreReasons = new DNF<>(coreReasons);
             }
         }
@@ -66,9 +66,9 @@ public class GenMCWMMSolver {
         return result;
     }
 
-    public void updateBasePredicates(GenMCEventDomain trace) {
+    public void updateBasePredicates(final GenMCEventDomain trace) {
         AbstractGenMCWMMPredicate.allowInit();
-        for (CAATPredicate basePredicate : executionGraph.getCAATModel().getHierarchy().getBasePredicates()) {
+        for (final CAATPredicate basePredicate : executionGraph.getCAATModel().getHierarchy().getBasePredicates()) {
             basePredicate.initializeToDomain(trace);
             basePredicate.repopulate();
         }
@@ -89,8 +89,8 @@ public class GenMCWMMSolver {
             coreReasons = DNF.FALSE();
         }
 
-        static Result fromCAATResult(CAATSolver.Result caatResult) {
-            Result result = new Result();
+        static Result fromCAATResult(final CAATSolver.Result caatResult) {
+            final Result result = new Result();
             result.status = caatResult.getStatus();
 
             return result;

@@ -30,11 +30,11 @@ public class ExprSimplifier extends ExprTransformer {
     private final boolean aggressive;
     private final boolean tryGeneralRewrite;
 
-    public ExprSimplifier(boolean aggressive) {
+    public ExprSimplifier(final boolean aggressive) {
         this(aggressive, true);
     }
 
-    public ExprSimplifier(boolean aggressive, boolean tryGeneralRewrite) {
+    public ExprSimplifier(final boolean aggressive, final boolean tryGeneralRewrite) {
         this.aggressive = aggressive;
         this.tryGeneralRewrite = tryGeneralRewrite;
     }
@@ -42,7 +42,7 @@ public class ExprSimplifier extends ExprTransformer {
     // Tries to perform a general rewriting of a binary expression.
     // For now, it only rewrites "ITE(cond, x, y) op z" to "ITE(cond, x op z, y op z)".
     // Returns NULL, if no rewriting is applicable.
-    private Expression tryGeneralRewrite(BinaryExpression expression) {
+    private Expression tryGeneralRewrite(final BinaryExpression expression) {
         if (!tryGeneralRewrite) {
             return null;
         }
@@ -69,7 +69,7 @@ public class ExprSimplifier extends ExprTransformer {
     }
 
     @Override
-    public Expression visitBoolBinaryExpression(BoolBinaryExpr expr) {
+    public Expression visitBoolBinaryExpression(final BoolBinaryExpr expr) {
         final Expression rewrite = tryGeneralRewrite(expr);
         if (rewrite != null) {
             return rewrite;
@@ -90,7 +90,7 @@ public class ExprSimplifier extends ExprTransformer {
         }
 
 
-        if (left instanceof BoolLiteral l1 && right instanceof BoolLiteral l2) {
+        if (left instanceof final BoolLiteral l1 && right instanceof final BoolLiteral l2) {
             final boolean newValue = switch (op) {
                 case AND -> l1.getValue() && l2.getValue();
                 case OR -> l1.getValue() || l2.getValue();
@@ -103,7 +103,7 @@ public class ExprSimplifier extends ExprTransformer {
             case AND, OR -> true;
             default -> false;
         };
-        if (right instanceof BoolLiteral lit && isRing) {
+        if (right instanceof final BoolLiteral lit && isRing) {
             final boolean neutralValue = op == BoolBinaryOp.AND;
             final boolean absorbingValue = !neutralValue;
 
@@ -120,17 +120,17 @@ public class ExprSimplifier extends ExprTransformer {
     }
 
     @Override
-    public Expression visitBoolUnaryExpression(BoolUnaryExpr expr) {
+    public Expression visitBoolUnaryExpression(final BoolUnaryExpr expr) {
         assert expr.getKind() == BoolUnaryOp.NOT;
         final Expression operand = expr.getOperand().accept(this);
 
         // Constant negation
-        if (operand instanceof BoolLiteral lit) {
+        if (operand instanceof final BoolLiteral lit) {
             return expressions.makeValue(!lit.getValue());
         }
 
         // Double negation
-        if (operand instanceof BoolUnaryExpr negation) {
+        if (operand instanceof final BoolUnaryExpr negation) {
             assert negation.getKind() == BoolUnaryOp.NOT;
             return negation.getOperand();
         }
@@ -139,7 +139,7 @@ public class ExprSimplifier extends ExprTransformer {
     }
 
     @Override
-    public Expression visitIntCmpExpression(IntCmpExpr cmp) {
+    public Expression visitIntCmpExpression(final IntCmpExpr cmp) {
         final Expression rewrite = tryGeneralRewrite(cmp);
         if (rewrite != null) {
             return rewrite;
@@ -163,7 +163,7 @@ public class ExprSimplifier extends ExprTransformer {
         }
 
         // ------- Operations with constants -------
-        if (left instanceof IntLiteral l1 && right instanceof IntLiteral l2) {
+        if (left instanceof final IntLiteral l1 && right instanceof final IntLiteral l2) {
             final int bitWidth = l1.getType().getBitWidth();
             final boolean cmpResult = switch (op) {
                 case EQ -> IntegerHelper.equals(l1.getValue(), l2.getValue(), bitWidth);
@@ -182,24 +182,24 @@ public class ExprSimplifier extends ExprTransformer {
     }
 
     @Override
-    public Expression visitIntConcat(IntConcat expr) {
-        List<Expression> operands = new ArrayList<>();
+    public Expression visitIntConcat(final IntConcat expr) {
+        final List<Expression> operands = new ArrayList<>();
         boolean allLiterals = true;
-        for (Expression operand : expr.getOperands()) {
-            operand = operand.accept(this);
-            if (!(operand instanceof IntLiteral)) {
+        for (final Expression operand : expr.getOperands()) {
+            final Expression simplifiedOperand = operand.accept(this);
+            if (!(simplifiedOperand instanceof IntLiteral)) {
                 allLiterals = false;
             }
             operands.add(operand);
         }
 
         if (allLiterals) {
-            IntLiteral firstLit = (IntLiteral) operands.get(0);
+            final IntLiteral firstLit = (IntLiteral) operands.get(0);
             BigInteger result = firstLit.getValue();
             int offset = firstLit.getType().getBitWidth();
             for (Expression subExpr : operands.subList(1, operands.size())) {
-                IntLiteral lit = (IntLiteral) subExpr;
-                BigInteger op = lit.getValue();
+                final IntLiteral lit = (IntLiteral) subExpr;
+                final BigInteger op = lit.getValue();
                 final BigInteger offsetValue = BigInteger.TWO.pow(offset - 1);
                 result = result.add(op.multiply(offsetValue));
                 offset += lit.getType().getBitWidth();
@@ -215,9 +215,9 @@ public class ExprSimplifier extends ExprTransformer {
 
     @Override
     public Expression visitIntExtract(IntExtract expr) {
-        Expression operand = expr.getOperand().accept(this);
-        if (operand instanceof IntLiteral lit) {
-            BigInteger op = lit.getValue();
+        final Expression operand = expr.getOperand().accept(this);
+        if (operand instanceof final IntLiteral lit) {
+            final BigInteger op = lit.getValue();
             final BigInteger highBitValue = BigInteger.TWO.pow(expr.getHighBit() + 1);
             final BigInteger lowBitValue = BigInteger.TWO.pow(expr.getLowBit());
             final BigInteger extracted = expr.isExtractingHighBits() ? op : op.mod(highBitValue);
@@ -232,11 +232,11 @@ public class ExprSimplifier extends ExprTransformer {
     }
 
     @Override
-    public Expression visitIntSizeCastExpression(IntSizeCast expr) {
+    public Expression visitIntSizeCastExpression(final IntSizeCast expr) {
         final Expression operand = expr.getOperand().accept(this);
 
         // ------- Operations with constants -------
-        if (operand instanceof IntLiteral lit) {
+        if (operand instanceof final IntLiteral lit) {
             final int sourceWidth = expr.getSourceType().getBitWidth();
             final int targetWidth = expr.getTargetType().getBitWidth();
             final BigInteger newValue;
@@ -259,11 +259,11 @@ public class ExprSimplifier extends ExprTransformer {
     }
 
     @Override
-    public Expression visitIntUnaryExpression(IntUnaryExpr expr) {
+    public Expression visitIntUnaryExpression(final IntUnaryExpr expr) {
         final Expression operand = expr.getOperand().accept(this);
 
         // ------- Operations with constants -------
-        if (operand instanceof IntLiteral lit) {
+        if (operand instanceof final IntLiteral lit) {
             final int bitWidth = expr.getType().getBitWidth();
             final BigInteger newValue = switch (expr.getKind()) {
                 case MINUS -> IntegerHelper.neg(lit.getValue(), bitWidth);
@@ -274,7 +274,7 @@ public class ExprSimplifier extends ExprTransformer {
         }
 
         // ------- Nested negation -------
-        if (operand instanceof IntUnaryExpr neg && neg.getKind() == IntUnaryOp.MINUS) {
+        if (operand instanceof final IntUnaryExpr neg && neg.getKind() == IntUnaryOp.MINUS) {
             return neg.getOperand();
         }
 
@@ -282,7 +282,7 @@ public class ExprSimplifier extends ExprTransformer {
     }
 
     @Override
-    public Expression visitIntBinaryExpression(IntBinaryExpr expr) {
+    public Expression visitIntBinaryExpression(final IntBinaryExpr expr) {
         final Expression rewrite = tryGeneralRewrite(expr);
         if (rewrite != null) {
             return rewrite;
@@ -298,7 +298,7 @@ public class ExprSimplifier extends ExprTransformer {
         final Expression right = swap ? l : r;
 
         // Optimizations for "x op constant"
-        if (right instanceof IntLiteral lit) {
+        if (right instanceof final IntLiteral lit) {
             final boolean isZeroNeutral = lit.isZero() && switch (op) {
                 case ADD, SUB, OR, XOR, LSHIFT, RSHIFT, ARSHIFT -> true;
                 default -> false;
@@ -317,7 +317,7 @@ public class ExprSimplifier extends ExprTransformer {
         }
 
         // Folding of constants
-        if (left instanceof IntLiteral leftLit && right instanceof IntLiteral rightLit) {
+        if (left instanceof final IntLiteral leftLit && right instanceof final IntLiteral rightLit) {
             final int bitWidth = expr.getType().getBitWidth();
             return expressions.makeValue(op.apply(leftLit.getValue(), rightLit.getValue(), bitWidth), expr.getType());
         }
@@ -330,13 +330,13 @@ public class ExprSimplifier extends ExprTransformer {
     // TODO: Add simplifications for IntExtract and IntConcat expressions
 
     @Override
-    public Expression visitITEExpression(ITEExpr expr) {
+    public Expression visitITEExpression(final ITEExpr expr) {
         final Expression cond = expr.getCondition().accept(this);
         final Expression trueCase = expr.getTrueCase().accept(this);
         final Expression falseCase = expr.getFalseCase().accept(this);
 
         // ------- Operations with constants -------
-        if (cond instanceof BoolLiteral lit) {
+        if (cond instanceof final BoolLiteral lit) {
             if (lit.getValue() && isPotentiallyEliminable(falseCase)) {
                 return trueCase;
             }
@@ -345,7 +345,7 @@ public class ExprSimplifier extends ExprTransformer {
             }
         }
 
-        if (trueCase instanceof BoolLiteral tLit && falseCase instanceof BoolLiteral fLit) {
+        if (trueCase instanceof final BoolLiteral tLit && falseCase instanceof final BoolLiteral fLit) {
             if (tLit.getValue() == fLit.getValue()) {
                 if (isPotentiallyEliminable(cond)) {
                     return tLit;
@@ -374,7 +374,7 @@ public class ExprSimplifier extends ExprTransformer {
     }
 
     @Override
-    public Expression visitExtractExpression(ExtractExpr expr) {
+    public Expression visitExtractExpression(final ExtractExpr expr) {
         Expression inner = expr.getOperand().accept(this);
 
         final ImmutableList<Integer> indices = expr.getIndices();
@@ -388,7 +388,7 @@ public class ExprSimplifier extends ExprTransformer {
         if (newIndices.isEmpty()) {
             return inner;
         }
-        if (inner instanceof ExtractExpr extract) {
+        if (inner instanceof final ExtractExpr extract) {
             // Merge multiple extracts
             return expressions.makeExtract(inner, Iterables.concat(extract.getIndices(), newIndices));
         }
@@ -398,15 +398,15 @@ public class ExprSimplifier extends ExprTransformer {
     // TODO: Add simplifications for InsertExpr
 
     @Override
-    public Expression visitAggregateCmpExpression(AggregateCmpExpr expr) {
+    public Expression visitAggregateCmpExpression(final AggregateCmpExpr expr) {
         final Expression left = expr.getLeft().accept(this);
         final Expression right = expr.getRight().accept(this);
         assert expr.getKind() == AggregateCmpOp.EQ || expr.getKind() == AggregateCmpOp.NEQ;
         final boolean isEq = expr.getKind() == AggregateCmpOp.EQ;
-        if (left instanceof ConstructExpr l && right instanceof ConstructExpr r) {
-            List<Expression> leftOperands = l.getOperands();
-            List<Expression> rightOperands = r.getOperands();
-            int size = leftOperands.size();
+        if (left instanceof final ConstructExpr l && right instanceof final ConstructExpr r) {
+            final List<Expression> leftOperands = l.getOperands();
+            final List<Expression> rightOperands = r.getOperands();
+            final int size = leftOperands.size();
             if (size == rightOperands.size()) {
                 if (leftOperands.isEmpty()) {
                     return expressions.makeValue(isEq);
@@ -415,8 +415,8 @@ public class ExprSimplifier extends ExprTransformer {
                     final Expression rOp = rightOperands.get(0);
                     return (isEq ? expressions.makeEQ(lOp, rOp) : expressions.makeNEQ(lOp, rOp)).accept(this);
                 } else {
-                    List<Map.Entry<Type, BigInteger>> leftValues = new ArrayList<>();
-                    for (Expression leftOperand : leftOperands) {
+                    final List<Map.Entry<Type, BigInteger>> leftValues = new ArrayList<>();
+                    for (final Expression leftOperand : leftOperands) {
                         if (leftOperand instanceof BoolLiteral bool) {
                             leftValues.add(Map.entry(leftOperand.getType(), bool.getValue() ? BigInteger.ONE : BigInteger.ZERO));
                         } else if (leftOperand instanceof IntLiteral integer) {
@@ -426,8 +426,8 @@ public class ExprSimplifier extends ExprTransformer {
                     if (leftValues.size() == size) {
                         boolean cmpResult = true;
                         int i = 0;
-                        for (Expression rightOperand : rightOperands) {
-                            Map.Entry<Type, BigInteger> leftValue = leftValues.get(i);
+                        for (final Expression rightOperand : rightOperands) {
+                            final Map.Entry<Type, BigInteger> leftValue = leftValues.get(i);
                             boolean eq = leftValue.getKey().equals(rightOperand.getType());
                             if (rightOperand instanceof BoolLiteral bool) {
                                 eq &= (BigInteger.ONE.equals(leftValue.getValue())) == bool.getValue();
@@ -451,9 +451,9 @@ public class ExprSimplifier extends ExprTransformer {
     }
 
     @Override
-    public Expression visitConstructExpression(ConstructExpr expr) {
-        List<Expression> simplifiedOperands = new ArrayList<>();
-        for (Expression operand : expr.getOperands()) {
+    public Expression visitConstructExpression(final ConstructExpr expr) {
+        final List<Expression> simplifiedOperands = new ArrayList<>();
+        for (final Expression operand : expr.getOperands()) {
             simplifiedOperands.add(operand.accept(this));
         }
 
@@ -464,7 +464,7 @@ public class ExprSimplifier extends ExprTransformer {
 
     // An expression is potentially eliminable if it either carries no dependencies
     // or we are in aggressive mode.
-    private boolean isPotentiallyEliminable(Expression expr) {
+    private boolean isPotentiallyEliminable(final Expression expr) {
         return aggressive || expr.getRegs().isEmpty();
     }
 }

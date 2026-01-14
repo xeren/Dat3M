@@ -7,15 +7,15 @@ public enum GenMCReasoning implements OptionInterface {
         return BOTH;
     }
 
-    public boolean usesReasons() {
+    public final boolean usesReasons() {
         return this == REASONS || this == BOTH;
     }
 
-    public boolean usesPatterns() {
+    public final boolean usesPatterns() {
         return this == PATTERNS || this == BOTH;
     }
 
-    public boolean usesReasoning() {
+    public final boolean usesReasoning() {
         return this != NONE;
     }
 }

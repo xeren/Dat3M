@@ -19,26 +19,26 @@ public abstract class AbstractGenMCWMMGraph extends AbstractGenMCWMMPredicate im
     }
 
     @Override
-    public <TRet, TData, TContext> TRet accept(PredicateVisitor<TRet, TData, TContext> visitor, TData tData, TContext context) {
+    public <TRet, TData, TContext> TRet accept(final PredicateVisitor<TRet, TData, TContext> visitor, TData tData, TContext context) {
         return visitor.visitBaseGraph(this, tData, context);
     }
 
     @Override
-    public Collection<Edge> forwardPropagate(CAATPredicate changedSource, Collection<? extends Derivable> added) {
+    public Collection<Edge> forwardPropagate(final CAATPredicate changedSource, final Collection<? extends Derivable> added) {
         return Collections.emptyList();
     }
 
-    public boolean contains(EventData first, EventData second) {
+    public boolean contains(final EventData first, final EventData second) {
         return containsById(first.getId(), second.getId());
     }
 
-    public List<EventData> inEvents(EventData event) {
+    public List<EventData> inEvents(final EventData event) {
         return inEdgeStream(event.getId())
                 .map(Edge::getFirst)
                 .map(this::getEvent)
                 .toList();
     }
-    public List<EventData> outEvents(EventData event) {
+    public List<EventData> outEvents(final EventData event) {
         return outEdgeStream(event.getId())
                 .map(Edge::getSecond)
                 .map(this::getEvent)

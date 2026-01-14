@@ -46,7 +46,7 @@ import java.util.*;
           provided by the theory solver.
  */
 @Options
-public class GenMCSolver extends ModelChecker {
+public final class GenMCSolver extends ModelChecker {
 
     private static final Logger logger = LogManager.getLogger(GenMCSolver.class);
     
@@ -95,9 +95,9 @@ public class GenMCSolver extends ModelChecker {
     //TODO: We do not yet use Witness information. The problem is that WitnessGraph.encode() generates
     // constraints on hb, which is not encoded in Refinement.
     //TODO (2): Add possibility for Refinement to handle CAT-properties (it ignores them for now).
-    public static GenMCSolver run(SolverContext ctx, ProverEnvironment prover, VerificationTask task)
+    public static GenMCSolver run(final SolverContext ctx, final ProverEnvironment prover, final VerificationTask task)
             throws InterruptedException, SolverException, InvalidConfigurationException {
-        GenMCSolver solver = new GenMCSolver(task);
+        final GenMCSolver solver = new GenMCSolver(task);
         task.getConfig().inject(solver);
         logger.info("{}: {}", DELAY_CONSISTENCY_CHECKS, solver.delayConsistencyChecks);
         logger.info("{}: {}", SHOW_CONSISTENT_EXECUTIONS, solver.showConsistentExecutions);
@@ -108,7 +108,7 @@ public class GenMCSolver extends ModelChecker {
         return solver;
     }
 
-    private void runInternal(SolverContext ctx, ProverEnvironment prover)
+    private void runInternal(final SolverContext ctx, final ProverEnvironment prover)
             throws InterruptedException, SolverException, InvalidConfigurationException {
         final Program program = task.getProgram();
         final Wmm memoryModel = task.getMemoryModel();
@@ -142,9 +142,9 @@ public class GenMCSolver extends ModelChecker {
         // ------------------------ Solving ------------------------
 
         logger.info("TruSt algorithm started.");
-        Timer genmcTimer = new Timer();
+        final Timer genmcTimer = new Timer();
         genmcTimer.start();
-        boolean result = trust(model);
+        final boolean result = trust(model);
         genmcTimer.stop();
         logger.info("TruSt took {}", genmcTimer.getFormattedTime());
 
@@ -175,17 +175,17 @@ public class GenMCSolver extends ModelChecker {
         logger.info("Time per execution estimation: {}", formatTime(
                 (genmcTimer.getTime() + (completeExecutions + (incompleteExecutions + 1) / 2) / 2) / (completeExecutions + (incompleteExecutions + 1) / 2)));
 
-        int solverChecks = model.getSolverChecks();
-        Timer solverCheckTimer = model.getSolverCheckTimer();
+        final int solverChecks = model.getSolverChecks();
+        final Timer solverCheckTimer = model.getSolverCheckTimer();
 
         logger.info("Solver checks: {}", solverChecks);
         if (solverChecks != 0) {
             logger.info("Total solver check time: {}", solverCheckTimer.getFormattedTime());
             logger.info("Average solver check time: {}", formatTime((solverCheckTimer.getTime() + solverChecks / 2) / solverChecks));
         }
-        
-        int consistencyChecks = getConsistencyChecks();
-        Timer consistencyCheckTimer = getConsistencyCheckTimer();
+
+        final int consistencyChecks = getConsistencyChecks();
+        final Timer consistencyCheckTimer = getConsistencyCheckTimer();
 
         logger.info("Consistency checks: {}", consistencyChecks);
         if (consistencyChecks != 0) {
@@ -210,7 +210,7 @@ public class GenMCSolver extends ModelChecker {
         return false;
     }
 
-    private static void removeFlaggedAxiomsIfNotNeeded(VerificationTask task) {
+    private static void removeFlaggedAxiomsIfNotNeeded(final VerificationTask task) {
         // We remove flagged axioms if we do not check for them.
         if (!task.getProperty().contains(Property.CAT_SPEC)) {
             List.copyOf(task.getMemoryModel().getAxioms()).stream()
@@ -219,29 +219,29 @@ public class GenMCSolver extends ModelChecker {
         }
     }
 
-    private static void removePorfAcyclicityAxiom(VerificationTask task) {
+    private static void removePorfAcyclicityAxiom(final VerificationTask task) {
         // We remove po | rf acyclicity axioms as GenMC cannot create such executions.
         List.copyOf(task.getMemoryModel().getAxioms()).stream()
                 .filter(GenMCSolver::isPorfAcyclicity)
                 .forEach(task.getMemoryModel()::removeConstraint);
     }
 
-    private static boolean isPorfAcyclicity(Axiom axiom) {
+    private static boolean isPorfAcyclicity(final Axiom axiom) {
         if (axiom.isAcyclicity()) {
-            String acyclicTerm = axiom.getRelation().getDefinition().getTerm();
+            final  String acyclicTerm = axiom.getRelation().getDefinition().getTerm();
             return "po | rf".equals(acyclicTerm) || "rf | po".equals(acyclicTerm);
         }
         return false;
     }
 
-    private boolean trust(GenMCExecutionModel model) throws SolverException, InterruptedException, InvalidConfigurationException {
+    private boolean trust(final GenMCExecutionModel model) throws SolverException, InterruptedException, InvalidConfigurationException {
         model.initialize();
         return visit(model);
     }
 
-    private boolean visit(GenMCExecutionModel model) throws SolverException, InterruptedException, InvalidConfigurationException {
+    private boolean visit(final GenMCExecutionModel model) throws SolverException, InterruptedException, InvalidConfigurationException {
         model.resetConsistencyStatus();
-        EventData event = model.nextEvent();
+        final EventData event = model.nextEvent();
         if (!model.isConsistent()) {
             return inconsistentExecution();
         }
@@ -268,41 +268,44 @@ public class GenMCSolver extends ModelChecker {
             return visitRfs(model, event);
         }
         if (event.isWrite()) {
-            Event write = event.getEvent();
-            Thread currentThread = write.getThread();
-            Collection<EventData> mayCoSet = model.getMayCoSet(event);
-            Map<Thread, Integer> porfPrefix = model.getPorfPrefix();
-            Collection<EventData> relevantReads = model.getMayRfSet(event);
+            final Event write = event.getEvent();
+            final Thread currentThread = write.getThread();
+            final Collection<EventData> mayCoSet = model.getMayCoSet(event);
+            final Map<Thread, Integer> porfPrefix = model.getPorfPrefix();
+            final Collection<EventData> relevantReads = model.getMayRfSet(event);
             relevantReads.removeIf(read -> inPorfPrefix(porfPrefix, currentThread, read));
             if ((mayCoSet.size() > 1 || !relevantReads.isEmpty()) && !model.checkConsistency(true)) {
                 return inconsistentExecution();
             }
-            GenMCEventDomain trace = model.getTrace();
-            Map<Thread, List<EventData>> threadEventsMap = trace.getThreadEventsMap();
-            EventData lastRead = getLastRead(threadEventsMap.get(currentThread), event.getLocalId() - 1);
-            if (!visitCos(model, event, mayCoSet, lastRead)) {
+            final GenMCEventDomain trace = model.getTrace();
+            final Map<Thread, List<EventData>> threadEventsMap = trace.getThreadEventsMap();
+            final EventData lastRead = getLastRead(threadEventsMap.get(currentThread), event.getLocalId() - 1);
+            if (!visitCos(model, event, mayCoSet, lastRead, false)) {
                 return false;
             }
             if (relevantReads.isEmpty()) {
                 return true;
             }
-            Set<Map.Entry<Thread, List<EventData>>> threadEventsEntries = threadEventsMap.entrySet();
-            Map<EventData, List<EventData>> writeReadsMap = trace.getWriteReadsMap();
-            Map<Thread, Event> boundEvents = new HashMap<>(model.getOptimalPorfPrefixCapacity() + 1);
+            final Set<Map.Entry<Thread, List<EventData>>> threadEventsEntries = threadEventsMap.entrySet();
+            final Map<EventData, List<EventData>> writeReadsMap = trace.getWriteReadsMap();
+            final Map<Thread, Event> boundEvents = new HashMap<>(model.getOptimalPorfPrefixCapacity() + 1);
             if (lastRead != null) {
                 boundEvents.put(currentThread, lastRead.getEvent());
             }
-            for (EventData read : relevantReads) {
+            for (final EventData read : relevantReads) {
                 if (model.hasBacktrackingPoint()) {
                     return true;
                 }
-                List<EventData> eventsToDelete = getEventsToDelete(threadEventsEntries, porfPrefix, read, currentThread, boundEvents);
+                final List<EventData> eventsToDelete = getEventsToDelete(threadEventsEntries, porfPrefix, read, currentThread, boundEvents);
                 if (shouldRevisit(currentThread, eventsToDelete, read, porfPrefix, writeReadsMap)) {
-                    Event readEvent = read.getEvent();
+                    final Event readEvent = read.getEvent();
                     logger.debug("Backward revisiting load {}: {} for store {}: {}", readEvent.getGlobalId(), readEvent, write.getGlobalId(), write);
-                    Map.Entry<GenMCExecutionModel, EventData> backwardRevisit = getBackwardRevisitModel(model, eventsToDelete, boundEvents, readEvent, write);
-                    GenMCExecutionModel backwardRevisitModel = backwardRevisit.getKey();
-                    if (!visitCos(backwardRevisitModel, backwardRevisit.getValue(), null, null)) {
+                    final Map.Entry<GenMCExecutionModel, EventData> backwardRevisit = getBackwardRevisitModel(model, eventsToDelete, boundEvents, readEvent, write);
+                    final GenMCExecutionModel backwardRevisitModel = backwardRevisit.getKey();
+                    final EventData revisitWrite = backwardRevisit.getValue();
+                    final EventData lastReadInRevisit = getLastRead(backwardRevisitModel.getTrace().getThreadEventsMap()
+                            .get(revisitWrite.getThread()), revisitWrite.getLocalId() - 1);
+                    if (!visitCos(backwardRevisitModel, revisitWrite, backwardRevisitModel.getMayCoSet(revisitWrite), lastReadInRevisit, true)) {
                         return false;
                     }
                     model.updateBacktrackingPoint(backwardRevisitModel, write);
@@ -313,11 +316,11 @@ public class GenMCSolver extends ModelChecker {
         return visit(model);
     }
 
-    private boolean visitJumps(GenMCExecutionModel model, EventData event) throws SolverException, InterruptedException, InvalidConfigurationException {
+    private boolean visitJumps(final GenMCExecutionModel model, final EventData event) throws SolverException, InterruptedException, InvalidConfigurationException {
         if (model.needsJumpRevisit()) {
-            boolean needsNewConsistencyCheck = model.needsNewConsistencyCheck();
-            boolean lastNeedsNewConsistencyCheck = model.lastNeedsNewConsistencyCheck();
-            for (boolean wasExecuted : List.of(event.wasExecuted(), !event.wasExecuted())) {
+            final boolean needsNewConsistencyCheck = model.needsNewConsistencyCheck();
+            final boolean lastNeedsNewConsistencyCheck = model.lastNeedsNewConsistencyCheck();
+            for (final boolean wasExecuted : List.of(event.wasExecuted(), !event.wasExecuted())) {
                 model.setJump(event, wasExecuted);
                 logger.debug("Visiting non-deterministic jump {}: {} with execution status {}",
                         event.getEvent().getGlobalId(), event.getEvent(), wasExecuted);
@@ -333,14 +336,14 @@ public class GenMCSolver extends ModelChecker {
         return visit(model);
     }
 
-    private boolean visitRfs(GenMCExecutionModel model, EventData read) throws SolverException, InterruptedException, InvalidConfigurationException {
-        Collection<EventData> mayRfSet = model.getMayRfSet(read);
+    private boolean visitRfs(final GenMCExecutionModel model, final EventData read) throws SolverException, InterruptedException, InvalidConfigurationException {
+        final Collection<EventData> mayRfSet = model.getMayRfSet(read);
         if (!delayConsistencyChecks && mayRfSet.size() > 1 && !model.checkConsistency(true)) {
             return inconsistentExecution();
         }
-        boolean needsNewConsistencyCheck = model.needsNewConsistencyCheck();
-        boolean lastNeedsNewConsistencyCheck = model.lastNeedsNewConsistencyCheck();
-        for (EventData write : mayRfSet) {
+        final boolean needsNewConsistencyCheck = model.needsNewConsistencyCheck();
+        final boolean lastNeedsNewConsistencyCheck = model.lastNeedsNewConsistencyCheck();
+        for (final EventData write : mayRfSet) {
             model.setRf(read, write);
             logger.debug("Forward revisiting load {}: {} for store {}: {}", read.getEvent().getGlobalId(),
                     read.getEvent(), write.getEvent().getGlobalId(), write.getEvent());
@@ -352,21 +355,15 @@ public class GenMCSolver extends ModelChecker {
         return true;
     }
 
-    private boolean visitCos(GenMCExecutionModel model, EventData write, Collection<EventData> mayCoSet, EventData lastRead)
-            throws SolverException, InterruptedException, InvalidConfigurationException {
-        boolean forBackwardRevisit = false;
-        if (mayCoSet == null) {
-            forBackwardRevisit = true;
-            mayCoSet = model.getMayCoSet(write);
-            lastRead = getLastRead(model.getTrace().getThreadEventsMap().get(write.getThread()), write.getLocalId() - 1);
-        }
+    private boolean visitCos(final GenMCExecutionModel model, final EventData write, final Collection<EventData> mayCoSet, final EventData lastRead,
+                             final boolean forBackwardRevisit) throws SolverException, InterruptedException, InvalidConfigurationException {
         if (mayCoSet.isEmpty()) {
             model.getTrace().addAddressInit(write);
             return visit(model);
         }
-        boolean needsNewConsistencyCheck = model.needsNewConsistencyCheck();
-        boolean lastNeedsNewConsistencyCheck = model.lastNeedsNewConsistencyCheck();
-        for (EventData otherWrite : mayCoSet) {
+        final boolean needsNewConsistencyCheck = model.needsNewConsistencyCheck();
+        final boolean lastNeedsNewConsistencyCheck = model.lastNeedsNewConsistencyCheck();
+        for (final EventData otherWrite : mayCoSet) {
             model.setCo(otherWrite, write, mayCoSet);
             logger.debug("Visiting coherence ({}, {}): ({},  {})", otherWrite.getEvent().getGlobalId(),
                     write.getEvent().getGlobalId(), otherWrite.getEvent(), write.getEvent());
@@ -384,23 +381,23 @@ public class GenMCSolver extends ModelChecker {
         return true;
     }
 
-    private static List<EventData> getEventsToDelete(Set<Map.Entry<Thread, List<EventData>>> threadEventsMap, Map<Thread, Integer> porfPrefix, EventData read,
-                                                     Thread currentThread, Map<Thread, Event> boundEvents) {
+    private static List<EventData> getEventsToDelete(final Set<Map.Entry<Thread, List<EventData>>> threadEventsMap, final Map<Thread, Integer> porfPrefix, EventData read,
+                                                     final Thread currentThread, Map<Thread, Event> boundEvents) {
         int readId = read.getId();
-        List<EventData> eventsToDelete = new ArrayList<>();
-        for (Map.Entry<Thread, List<EventData>> threadData : threadEventsMap) {
-            Thread thread = threadData.getKey();
+        final List<EventData> eventsToDelete = new ArrayList<>();
+        for (final Map.Entry<Thread, List<EventData>> threadData : threadEventsMap) {
+            final Thread thread = threadData.getKey();
             if (thread != currentThread) {
-                Integer prefixLimitForThread = porfPrefix.get(thread);
-                List<EventData> threadEvents = threadData.getValue();
+                final Integer prefixLimitForThread = porfPrefix.get(thread);
+                final List<EventData> threadEvents = threadData.getValue();
                 boolean boundFound = false;
                 if (prefixLimitForThread == null) {
                     for (int i = threadEvents.size() - 1; i >= 0; --i) {
-                        EventData e = threadEvents.get(i);
+                        final EventData e = threadEvents.get(i);
                         if (readId < e.getId()) {
                             eventsToDelete.add(e);
                         } else {
-                            EventData lastRead = getLastRead(threadEvents, e.getLocalId());
+                            final EventData lastRead = getLastRead(threadEvents, e.getLocalId());
                             if (lastRead != null) {
                                 boundEvents.put(thread, lastRead.getEvent());
                             } else {
@@ -412,11 +409,11 @@ public class GenMCSolver extends ModelChecker {
                     }
                 } else {
                     for (int i = threadEvents.size() - 1; i >= 0; --i) {
-                        EventData e = threadEvents.get(i);
+                        final EventData e = threadEvents.get(i);
                         if (readId < e.getId() && prefixLimitForThread < e.getEvent().getGlobalId()) {
                             eventsToDelete.add(e);
                         } else {
-                            EventData lastRead = getLastRead(threadEvents, e.getLocalId());
+                            final EventData lastRead = getLastRead(threadEvents, e.getLocalId());
                             if (lastRead != null) {
                                 boundEvents.put(thread, lastRead.getEvent());
                             } else {
@@ -435,9 +432,9 @@ public class GenMCSolver extends ModelChecker {
         return eventsToDelete;
     }
 
-    private static EventData getLastRead(List<EventData> threadEvents, int maxLocalId) {
+    private static EventData getLastRead(final List<EventData> threadEvents, final int maxLocalId) {
         for (int i = maxLocalId; i >= 0; --i) {
-            EventData event = threadEvents.get(i);
+            final EventData event = threadEvents.get(i);
             if (event.getReadFrom() != null) {
                 return event;
             }
@@ -445,9 +442,9 @@ public class GenMCSolver extends ModelChecker {
         return null;
     }
 
-    private static boolean shouldRevisit(Thread currentThread, List<EventData> eventsToDelete, EventData read, Map<Thread, Integer> porfPrefix,
-                                  Map<EventData, List<EventData>> writeReadsMap) {
-        for (EventData event : eventsToDelete) {
+    private static boolean shouldRevisit(final Thread currentThread, final List<EventData> eventsToDelete, final EventData read, final Map<Thread, Integer> porfPrefix,
+                                         final Map<EventData, List<EventData>> writeReadsMap) {
+        for (final EventData event : eventsToDelete) {
             if (!isMaximallyAdded(currentThread, event, porfPrefix, writeReadsMap)) {
                 return false;
             }
@@ -455,14 +452,15 @@ public class GenMCSolver extends ModelChecker {
         return isMaximallyAdded(currentThread, read, porfPrefix, writeReadsMap);
     }
 
-    private static boolean isMaximallyAdded(Thread currentThread, EventData event, Map<Thread, Integer> porfPrefix, Map<EventData, List<EventData>> writeReadsMap) {
-        EventData maximalEvent;
-        int eventId;
+    private static boolean isMaximallyAdded(final Thread currentThread, final EventData event, final Map<Thread, Integer> porfPrefix,
+                                            final Map<EventData, List<EventData>> writeReadsMap) {
+        final EventData maximalEvent;
+        final int eventId;
         if (event.getEvent() instanceof Store) {
             eventId = event.getId();
-            List<EventData> reads = writeReadsMap.get(event);
+            final List<EventData> reads = writeReadsMap.get(event);
             if (reads != null) {
-                for (EventData read : reads) {
+                for (final EventData read : reads) {
                     if (read.getId() < eventId || inPorfPrefix(porfPrefix, currentThread, read)) {
                         return false;
                     }
@@ -489,19 +487,19 @@ public class GenMCSolver extends ModelChecker {
         return true;
     }
 
-    private static boolean inPorfPrefix(Map<Thread, Integer> porfPrefix, Thread currentThread, EventData event) {
-        Thread eventThread = event.getThread();
+    private static boolean inPorfPrefix(final Map<Thread, Integer> porfPrefix, final Thread currentThread, final EventData event) {
+        final Thread eventThread = event.getThread();
         if (eventThread == currentThread) {
             return true;
         }
-        Integer prefixLimitForThread = porfPrefix.get(eventThread);
+        final Integer prefixLimitForThread = porfPrefix.get(eventThread);
         return prefixLimitForThread != null && prefixLimitForThread >= event.getEvent().getGlobalId();
     }
 
-    private static Map.Entry<GenMCExecutionModel, EventData> getBackwardRevisitModel(GenMCExecutionModel oldModel, List<EventData> eventsToDelete,
-                                                                                     Map<Thread, Event> boundEvents, Event read, Event write) {
-        GenMCExecutionModel newModel = oldModel.newInstance(eventsToDelete, boundEvents);
-        EventData newWrite = newModel.initialize(read, write, oldModel.needsNewConsistencyCheck());
+    private static Map.Entry<GenMCExecutionModel, EventData> getBackwardRevisitModel(final GenMCExecutionModel oldModel, final List<EventData> eventsToDelete,
+                                                                                     final Map<Thread, Event> boundEvents, final Event read, final Event write) {
+        final GenMCExecutionModel newModel = oldModel.newInstance(eventsToDelete, boundEvents);
+        final EventData newWrite = newModel.initialize(read, write, oldModel.needsNewConsistencyCheck());
         return Map.entry(newModel, newWrite);
     }
 }

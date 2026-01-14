@@ -9,17 +9,17 @@ public abstract class StaticGenMCWMMGraph extends AbstractGenMCWMMGraph {
     protected int size;
 
     @Override
-    public Edge get(Edge edge) {
+    public Edge get(final Edge edge) {
         return contains(edge) ? edge.with(0, 0) : null;
     }
 
     @Override
-    public boolean contains(Edge edge) {
+    public boolean contains(final Edge edge) {
         return containsById(edge.getFirst(), edge.getSecond());
     }
 
     @Override
-    public boolean containsById(int id1, int id2) {
+    public boolean containsById(final int id1, final int id2) {
         return contains(getEvent(id1), getEvent(id2));
     }
 
@@ -32,10 +32,10 @@ public abstract class StaticGenMCWMMGraph extends AbstractGenMCWMMGraph {
     public int getEstimatedSize() { return size; }
 
     @Override
-    public void backtrackTo(int time) { }
+    public void backtrackTo(final int time) { }
 
     @Override
-    public void initializeToDomain(Domain<?> domain) {
+    public void initializeToDomain(final Domain<?> domain) {
         if (isDomainInitForbidden()) return;
         super.initializeToDomain(domain);
         size = 0;

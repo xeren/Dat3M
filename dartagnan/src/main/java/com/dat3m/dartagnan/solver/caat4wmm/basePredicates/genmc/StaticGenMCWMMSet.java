@@ -16,12 +16,12 @@ public class StaticGenMCWMMSet extends AbstractGenMCWMMPredicate implements SetP
     private final Filter filter;
     private List<Element> events;
 
-    public StaticGenMCWMMSet(Filter filter) {
+    public StaticGenMCWMMSet(final Filter filter) {
         this.filter = filter;
     }
 
     @Override
-    public <TRet, TData, TContext> TRet accept(PredicateVisitor<TRet, TData, TContext> visitor, TData tData, TContext context) {
+    public <TRet, TData, TContext> TRet accept(final PredicateVisitor<TRet, TData, TContext> visitor, TData tData, TContext context) {
         return visitor.visitBaseSet(this, tData, context);
     }
 
@@ -29,7 +29,7 @@ public class StaticGenMCWMMSet extends AbstractGenMCWMMPredicate implements SetP
     public void repopulate() {
         if (isRepopulateForbidden()) return;
         events = new ArrayList<>();
-        for (EventData event : trace.getElements()) {
+        for (final EventData event : trace.getElements()) {
             if (filter.apply(event.getEvent())) {
                 events.add(new Element(event.getId()));
             }
@@ -41,7 +41,7 @@ public class StaticGenMCWMMSet extends AbstractGenMCWMMPredicate implements SetP
     }
 
     @Override
-    public Collection<Element> forwardPropagate(CAATPredicate changedSource, Collection<? extends Derivable> added) {
+    public Collection<Element> forwardPropagate(final CAATPredicate changedSource, final Collection<? extends Derivable> added) {
         return Collections.emptyList();
     }
 
@@ -56,21 +56,21 @@ public class StaticGenMCWMMSet extends AbstractGenMCWMMPredicate implements SetP
     }
 
     @Override
-    public boolean containsById(int id) {
+    public boolean containsById(final int id) {
         return contains(getEvent(id));
     }
 
-    public boolean contains(EventData event) {
+    public boolean contains(final EventData event) {
         return filter.apply(event.getEvent());
     }
 
     @Override
-    public Element get(Element e) {
+    public Element get(final Element e) {
         return getById(e.getId());
     }
 
     @Override
-    public Element getById(int id) {
+    public Element getById(final int id) {
         return containsById(id) ? new Element(id) : null;
     }
 

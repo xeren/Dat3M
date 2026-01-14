@@ -18,13 +18,13 @@ public class GenMCLXSXGraph extends MaterializedGenMCWMMGraph {
     public void repopulate() {
         if (isRepopulateForbidden()) return;
         lxsxPairs = trace.getLxsxPairs();
-        for (Map.Entry<EventData, EventData> lxsxPair : lxsxPairs.entrySet()) {
+        for (final Map.Entry<EventData, EventData> lxsxPair : lxsxPairs.entrySet()) {
             simpleGraph.addDisjoint(new Edge(lxsxPair.getValue().getId(), lxsxPair.getKey().getId()));
         }
     }
 
     @Override
-    public List<EventData> inEvents(EventData event) {
+    public List<EventData> inEvents(final EventData event) {
         if (!(event.getEvent() instanceof RMWStoreExclusive)) {
             return Collections.emptyList();
         } else {
@@ -32,11 +32,11 @@ public class GenMCLXSXGraph extends MaterializedGenMCWMMGraph {
         }
     }
     @Override
-    public List<EventData> outEvents(EventData event) {
+    public List<EventData> outEvents(final EventData event) {
         if (event.getReadFrom() == null) {
             return Collections.emptyList();
         }
-        for (Map.Entry<EventData, EventData> lxsxPair : lxsxPairs.entrySet()) {
+        for (final Map.Entry<EventData, EventData> lxsxPair : lxsxPairs.entrySet()) {
             if (lxsxPair.getValue() == event) {
                 return Collections.singletonList(lxsxPair.getKey());
             }

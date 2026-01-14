@@ -17,29 +17,29 @@ public class GenMCExternalGraph extends StaticGenMCWMMGraph {
     private Map<Thread, List<EventData>> threadEventsMap;
 
     @Override
-    public boolean contains(EventData first, EventData second) {
+    public boolean contains(final EventData first, final EventData second) {
         return first.getThread() != second.getThread();
     }
 
     @Override
-    public int size(int id, EdgeDirection dir) {
+    public int size(final int id, final EdgeDirection dir) {
         return domain.size() - threadEventsMap.get(getEvent(id).getThread()).size();
     }
 
     @Override
-    public List<EventData> inEvents(EventData event) {
+    public List<EventData> inEvents(final EventData event) {
         return getEvents(event);
     }
 
     @Override
-    public List<EventData> outEvents(EventData event) {
+    public List<EventData> outEvents(final EventData event) {
         return getEvents(event);
     }
 
-    public List<EventData> getEvents(EventData event) {
-        List<EventData> events = new ArrayList<>();
-        Thread eventThread = event.getThread();
-        for (Map.Entry<Thread, List<EventData>> entry : threadEventsMap.entrySet()) {
+    public List<EventData> getEvents(final EventData event) {
+        final List<EventData> events = new ArrayList<>();
+        final Thread eventThread = event.getThread();
+        for (final Map.Entry<Thread, List<EventData>> entry : threadEventsMap.entrySet()) {
             if (entry.getKey() != eventThread) {
                 events.addAll(entry.getValue());
             }
@@ -55,9 +55,9 @@ public class GenMCExternalGraph extends StaticGenMCWMMGraph {
     }
 
     @Override
-    public Stream<Edge> edgeStream(int id, EdgeDirection dir) {
-        EventData e = getEvent(id);
-        Function<EventData, Edge> edgeMapping = dir == EdgeDirection.OUTGOING ?
+    public Stream<Edge> edgeStream(final int id, final EdgeDirection dir) {
+        final EventData e = getEvent(id);
+        final Function<EventData, Edge> edgeMapping = dir == EdgeDirection.OUTGOING ?
                 (x -> new Edge(id, x.getId())) : (x -> new Edge(x.getId(), id));
 
         return threadEventsMap.entrySet().stream()
@@ -70,9 +70,9 @@ public class GenMCExternalGraph extends StaticGenMCWMMGraph {
     public void repopulate() {
         if (isRepopulateForbidden()) return;
         threadEventsMap = trace.getThreadEventsMap();
-        int totalSize = domain.size();
-        for (List<EventData> threadEvents : threadEventsMap.values()) {
-            int threadSize = threadEvents.size();
+        final int totalSize = domain.size();
+        for (final List<EventData> threadEvents : threadEventsMap.values()) {
+            final int threadSize = threadEvents.size();
             size += (totalSize - threadSize) * threadSize;
         }
     }

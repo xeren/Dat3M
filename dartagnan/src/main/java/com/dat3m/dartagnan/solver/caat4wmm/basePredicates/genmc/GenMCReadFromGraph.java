@@ -14,13 +14,13 @@ import java.util.stream.Stream;
 public class GenMCReadFromGraph extends StaticGenMCWMMGraph {
 
     @Override
-    public boolean contains(EventData first, EventData second) {
+    public boolean contains(final EventData first, final EventData second) {
         return first == second.getReadFrom();
     }
 
     @Override
-    public int size(int id, EdgeDirection dir) {
-        EventData e = getEvent(id);
+    public int size(final int id, final EdgeDirection dir) {
+        final EventData e = getEvent(id);
         if (dir == EdgeDirection.INGOING) {
             return e.getReadFrom() == null ? 0 : 1;
         } else  {
@@ -34,12 +34,12 @@ public class GenMCReadFromGraph extends StaticGenMCWMMGraph {
         size = trace.getReadWriteMap().size();
     }
 
-    private Edge makeEdge(int a, int b) {
+    private Edge makeEdge(final int a, final int b) {
         return new Edge(a, b);
     }
 
     @Override
-    public List<EventData> inEvents(EventData event) {
+    public List<EventData> inEvents(final EventData event) {
         if (event.getReadFrom() != null) {
             return Collections.singletonList(event.getReadFrom());
         } else {
@@ -48,7 +48,7 @@ public class GenMCReadFromGraph extends StaticGenMCWMMGraph {
     }
 
     @Override
-    public List<EventData> outEvents(EventData event) {
+    public List<EventData> outEvents(final EventData event) {
         if (event.getEvent() instanceof Store) {
             return trace.getWriteReadsMap().getOrDefault(event, new ArrayList<>());
         } else {
@@ -63,8 +63,8 @@ public class GenMCReadFromGraph extends StaticGenMCWMMGraph {
     }
 
     @Override
-    public Stream<Edge> edgeStream(int id, EdgeDirection dir) {
-        EventData e = getEvent(id);
+    public Stream<Edge> edgeStream(final int id, final EdgeDirection dir) {
+        final EventData e = getEvent(id);
         if (e.isWrite()) {
             return dir == EdgeDirection.INGOING ? Stream.empty() :
                     trace.getWriteReadsMap().getOrDefault(e, new ArrayList<>()).stream().map(read -> makeEdge(id, read.getId()));

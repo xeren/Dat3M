@@ -54,14 +54,14 @@ public class GenMCCoreReasoner {
     private final RelationAnalysis ra;
     private final List<Function<Event, Event>> symmGenerators;
 
-    public GenMCCoreReasoner(Context analysisContext, GenMCExecutionGraph executionGraph) {
+    public GenMCCoreReasoner(final Context analysisContext, final GenMCExecutionGraph executionGraph) {
         this.executionGraph = executionGraph;
         this.exec = analysisContext.requires(ExecutionAnalysis.class);
         this.ra = analysisContext.requires(RelationAnalysis.class);
         this.symmGenerators = computeSymmetryGenerators(analysisContext.requires(ThreadSymmetry.class));
     }
 
-    public static GenMCCoreReasoner fromConfig(Configuration config, Context analysisContext, GenMCExecutionGraph executionGraph) throws InvalidConfigurationException {
+    public static GenMCCoreReasoner fromConfig(final Configuration config, final Context analysisContext, final GenMCExecutionGraph executionGraph) throws InvalidConfigurationException {
         GenMCCoreReasoner reasoner = new GenMCCoreReasoner(analysisContext, executionGraph);
         config.inject(reasoner);
         logger.info("{}: {}", SYMMETRIC_LEARNING, reasoner.symmetricLearning);
@@ -77,12 +77,12 @@ public class GenMCCoreReasoner {
         Since we compute only (at most) B core reasons, we try to estimate which
         base reasons give us the best (smallest) core reasons (Steps (1)-(3)).
      */
-    public Set<Conjunction<CoreLiteral>> toCoreReasons(DNF<CAATLiteral> baseReasons) {
+    public Set<Conjunction<CoreLiteral>> toCoreReasons(final DNF<CAATLiteral> baseReasons) {
 
         // (1) Reduce base reasons to simplified core reasons (without symmetry).
         final BiMap<Conjunction<CAATLiteral>, Conjunction<CoreLiteral>> base2core =
                 HashBiMap.create(baseReasons.getNumberOfCubes());
-        for (Conjunction<CAATLiteral> baseReason : baseReasons.getCubes()) {
+        for (final Conjunction<CAATLiteral> baseReason : baseReasons.getCubes()) {
             final Conjunction<CoreLiteral> coreReason = toCoreReasonNoSymmetry(baseReason);
             if (!coreReason.isFalse() && !base2core.containsValue(coreReason)) {
                 // NOTE: We only add productive base reasons whose core reasons are not FALSE.
@@ -101,7 +101,7 @@ public class GenMCCoreReasoner {
         // (4) Recompute core reasons with symmetry reasoning.
         //  Stop early, if the number of reasons exceeds a bound.
         final Set<Conjunction<CoreLiteral>> coreReasons = new HashSet<>();
-        for (Conjunction<CAATLiteral> baseReason : reducedBaseReasons) {
+        for (final Conjunction<CAATLiteral> baseReason : reducedBaseReasons) {
             coreReasons.addAll(toCoreReasons(baseReason));
             if (coreReasons.size() > MAX_NUM_COMPUTED_REASONS) {
                 break;
@@ -111,7 +111,7 @@ public class GenMCCoreReasoner {
         return coreReasons;
     }
 
-    public Set<Conjunction<CoreLiteral>> toCoreReasons(Conjunction<CAATLiteral> baseReason) {
+    public Set<Conjunction<CoreLiteral>> toCoreReasons(final Conjunction<CAATLiteral> baseReason) {
         final GenMCEventDomain domain = executionGraph.getDomain();
 
         // We compute the orbit of <baseReason> under the symmetry group of the program's threads.
@@ -123,7 +123,7 @@ public class GenMCCoreReasoner {
         workqueue.add(toUnreducedCoreReason(baseReason, domain));
         while (!workqueue.isEmpty()) {
             final List<CoreLiteral> reason = workqueue.removeFirst();
-            for (Function<Event, Event> generator : symmGenerators) {
+            for (final Function<Event, Event> generator : symmGenerators) {
                 final List<CoreLiteral> permuted = getPermuted(reason, generator);
                 if (orbit.add(permuted)) {
                     workqueue.add(permuted);
@@ -135,19 +135,19 @@ public class GenMCCoreReasoner {
         return orbit.stream().map(this::reduce).filter(Objects::nonNull).map(Conjunction::new).collect(Collectors.toSet());
     }
 
-    private Conjunction<CoreLiteral> toCoreReasonNoSymmetry(Conjunction<CAATLiteral> baseReason) {
-        List<CoreLiteral> reduced = reduce(toUnreducedCoreReason(baseReason, executionGraph.getDomain()));
+    private Conjunction<CoreLiteral> toCoreReasonNoSymmetry(final Conjunction<CAATLiteral> baseReason) {
+        final List<CoreLiteral> reduced = reduce(toUnreducedCoreReason(baseReason, executionGraph.getDomain()));
         return reduced == null ? Conjunction.FALSE() : new Conjunction<>(reduced);
     }
 
-    private List<CoreLiteral> getPermuted(List<CoreLiteral> reason, Function<Event, Event> perm) {
+    private List<CoreLiteral> getPermuted(final List<CoreLiteral> reason, final Function<Event, Event> perm) {
         final List<CoreLiteral> permuted = new ArrayList<>(reason.size());
 
-        for (CoreLiteral lit : reason) {
-            if (lit instanceof ExecLiteral execLiteral) {
+        for (final CoreLiteral lit : reason) {
+            if (lit instanceof final ExecLiteral execLiteral) {
                 final Event e = perm.apply(execLiteral.getEvent());
                 permuted.add(new ExecLiteral(e, execLiteral.isPositive()));
-            } else if (lit instanceof RelLiteral relLiteral) {
+            } else if (lit instanceof final RelLiteral relLiteral) {
                 final Event e1 = perm.apply(relLiteral.getSource());
                 final Event e2 = perm.apply(relLiteral.getTarget());
                 permuted.add(new RelLiteral(relLiteral.getRelation(), e1, e2, relLiteral.isPositive()));
@@ -159,17 +159,17 @@ public class GenMCCoreReasoner {
     }
 
     // An "unreduced" core reason is a faithful (invertible) translation of a base relation to a core reason.
-    private List<CoreLiteral> toUnreducedCoreReason(Conjunction<CAATLiteral> baseReason, GenMCEventDomain domain) {
+    private List<CoreLiteral> toUnreducedCoreReason(final Conjunction<CAATLiteral> baseReason, final GenMCEventDomain domain) {
         final List<CoreLiteral> coreReason = new ArrayList<>(baseReason.getSize());
-        for (CAATLiteral lit : baseReason.getLiterals()) {
-            if (lit instanceof ElementLiteral eleLit) {
+        for (final CAATLiteral lit : baseReason.getLiterals()) {
+            if (lit instanceof final ElementLiteral eleLit) {
                 // FIXME: This step is not really faithful because we forget the unary predicate
                 //  from which we derived the exec literals.
                 //  This should be fine for now because all unary sets are static so they behave similarly.
                 //  If we ever support dynamic unary predicates, this code needs to get updated.
                 final Event e = domain.getObjectById(eleLit.getData().getId()).getEvent();
                 coreReason.add(new ExecLiteral(e, lit.isPositive()));
-            } else if (lit instanceof EdgeLiteral edgeLit) {
+            } else if (lit instanceof final EdgeLiteral edgeLit) {
                 final Event e1 = domain.getObjectById(edgeLit.getData().getFirst()).getEvent();
                 final Event e2 = domain.getObjectById(edgeLit.getData().getSecond()).getEvent();
                 final Relation rel = executionGraph.getRelationGraphMap().inverse().get(edgeLit.getPredicate());
@@ -182,12 +182,12 @@ public class GenMCCoreReasoner {
     // Reduce a core reason by applying knowledge about the semantics of its literals
     // (relation analysis / base semantics / control-flow information etc.)
     // This may return NULL, if our knowledge tells us that this is impossible to happen.
-    private List<CoreLiteral> reduce(List<CoreLiteral> reason) {
+    private List<CoreLiteral> reduce(final List<CoreLiteral> reason) {
         final List<CoreLiteral> simplified = new ArrayList<>();
-        for (CoreLiteral lit : reason) {
-            if (lit instanceof ExecLiteral execLiteral) {
+        for (final CoreLiteral lit : reason) {
+            if (lit instanceof final ExecLiteral execLiteral) {
                 simplified.add(execLiteral);
-            } else if (lit instanceof RelLiteral relLiteral) {
+            } else if (lit instanceof final RelLiteral relLiteral) {
                 final Event e1 = relLiteral.getSource();
                 final Event e2 = relLiteral.getTarget();
                 final Relation rel = relLiteral.getRelation();
@@ -230,9 +230,9 @@ public class GenMCCoreReasoner {
         return simplified;
     }
 
-    private void removeDominatedLiterals(List<CoreLiteral> reason) {
+    private void removeDominatedLiterals(final List<CoreLiteral> reason) {
         reason.removeIf( lit -> {
-            if (!(lit instanceof ExecLiteral execLit) || lit.isNegative()) {
+            if (!(lit instanceof final ExecLiteral execLit) || lit.isNegative()) {
                 return false;
             }
             final Event ev = execLit.getEvent();
@@ -243,12 +243,11 @@ public class GenMCCoreReasoner {
         //TODO: Remove dominated exec literals and maybe address literals
     }
 
-    private void addExecReason(Event e1, Event e2, List<CoreLiteral> coreReasons) {
+    private void addExecReason(final Event e1, final Event e2, final List<CoreLiteral> coreReasons) {
         if (e1.getGlobalId() > e2.getGlobalId()) {
             // Normalize edge direction
-            Event temp = e1;
-            e1 = e2;
-            e2 = temp;
+            addExecReason(e2, e1, coreReasons);
+            return;
         }
 
         if (exec.isImplied(e1, e2)) {
@@ -267,7 +266,7 @@ public class GenMCCoreReasoner {
 
     // Computes a list of generators for the symmetry group of threads.
     // NOTE We always add the identity as generator, although it is unnecessary.
-    private List<Function<Event, Event>> computeSymmetryGenerators(ThreadSymmetry symm) {
+    private List<Function<Event, Event>> computeSymmetryGenerators(final ThreadSymmetry symm) {
         final Set<? extends EquivalenceClass<Thread>> symmClasses = symm.getNonTrivialClasses();
         final List<Function<Event, Event>> perms = new ArrayList<>();
         perms.add(Function.identity());
@@ -278,7 +277,7 @@ public class GenMCCoreReasoner {
 
         assert symmetricLearning == SymmetricLearning.FULL;
 
-        for (EquivalenceClass<Thread> c : symmClasses) {
+        for (final EquivalenceClass<Thread> c : symmClasses) {
             final List<Thread> threads = new ArrayList<>(c);
             threads.sort(Comparator.comparingInt(Thread::getId));
             for (int i = 0; i < threads.size(); i++) {

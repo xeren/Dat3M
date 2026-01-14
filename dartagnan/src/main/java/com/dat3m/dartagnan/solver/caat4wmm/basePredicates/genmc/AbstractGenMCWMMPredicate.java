@@ -18,14 +18,14 @@ public abstract class AbstractGenMCWMMPredicate extends AbstractPredicate {
     }
 
     @Override
-    public void initializeToDomain(Domain<?> domain) {
+    public void initializeToDomain(final Domain<?> domain) {
         Preconditions.checkArgument(domain instanceof GenMCEventDomain,
                 "Incompatible domain. Expected " + GenMCEventDomain.class.getSimpleName());
         super.initializeToDomain(domain);
         trace = (GenMCEventDomain) domain;
     }
 
-    protected EventData getEvent(int id) {
+    protected EventData getEvent(final int id) {
         return trace.getObjectById(id);
     }
 

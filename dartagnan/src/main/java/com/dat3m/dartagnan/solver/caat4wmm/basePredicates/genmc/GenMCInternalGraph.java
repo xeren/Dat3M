@@ -16,26 +16,26 @@ public class GenMCInternalGraph extends StaticGenMCWMMGraph {
     private Map<Thread, List<EventData>> threadEventsMap;
 
     @Override
-    public boolean contains(EventData first, EventData second) {
+    public boolean contains(final EventData first, final EventData second) {
         return first.getThread() == second.getThread();
     }
 
     @Override
-    public int size(int id, EdgeDirection dir) {
+    public int size(final int id, final EdgeDirection dir) {
         return threadEventsMap.get(getEvent(id).getThread()).size();
     }
 
     @Override
-    public List<EventData> inEvents(EventData event) {
+    public List<EventData> inEvents(final EventData event) {
         return getEvents(event);
     }
 
     @Override
-    public List<EventData> outEvents(EventData event) {
+    public List<EventData> outEvents(final EventData event) {
         return getEvents(event);
     }
 
-    public List<EventData> getEvents(EventData event) {
+    public List<EventData> getEvents(final EventData event) {
         return threadEventsMap.get(event.getThread());
     }
 
@@ -46,9 +46,9 @@ public class GenMCInternalGraph extends StaticGenMCWMMGraph {
     }
 
     @Override
-    public Stream<Edge> edgeStream(int id, EdgeDirection dir) {
-        EventData e = getEvent(id);
-        Function<EventData, Edge> edgeMapping = dir == EdgeDirection.OUTGOING ?
+    public Stream<Edge> edgeStream(final int id, final EdgeDirection dir) {
+        final EventData e = getEvent(id);
+        final Function<EventData, Edge> edgeMapping = dir == EdgeDirection.OUTGOING ?
                 (x -> new Edge(id, x.getId())) : (x -> new Edge(x.getId(), id));
 
         return threadEventsMap.get(e.getThread()).stream().map(edgeMapping);

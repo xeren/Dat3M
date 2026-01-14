@@ -20,13 +20,13 @@ public class ViolationPattern {
         return addNode(Collections.emptyList(), Collections.emptyList());
     }
 
-    public Node addNode(List<StaticGenMCWMMSet> positiveConditions,  List<StaticGenMCWMMSet> negativeConditions) {
+    public Node addNode(final List<StaticGenMCWMMSet> positiveConditions, final List<StaticGenMCWMMSet> negativeConditions) {
         final Node node = new Node(nodes.size(), positiveConditions, negativeConditions);
         nodes.add(node);
         return node;
     }
 
-    public Edge addEdge(Relation relation, Node from, Node to, boolean isStatic) {
+    public Edge addEdge(final Relation relation, final Node from, final Node to, final boolean isStatic) {
         final AbstractGenMCWMMGraph graph = rel2Graph.get(relation);
         assert graph != null;
         final Edge edge = new Edge(relation, graph, from, to, false, isStatic);
@@ -34,16 +34,16 @@ public class ViolationPattern {
         return edge;
     }
 
-    public void addRelationGraph(Relation rel, AbstractGenMCWMMGraph graph) {
+    public void addRelationGraph(final Relation rel, final AbstractGenMCWMMGraph graph) {
         rel2Graph.put(rel, graph);
     }
 
     // ------------------------------------------------------------------------------------------
     // Matching
 
-    public List<Edge> findEdgesByRelation(Relation relation) {
-        List<Edge> matches = new ArrayList<>();
-        for (Edge edge : edges) {
+    public List<Edge> findEdgesByRelation(final Relation relation) {
+        final List<Edge> matches = new ArrayList<>();
+        for (final Edge edge : edges) {
             if (edge.relation == relation) {
                 matches.add(edge);
             }
@@ -51,7 +51,7 @@ public class ViolationPattern {
         return matches;
     }
 
-    public List<Match> findMatches(Edge edge, EventData from, EventData to) {
+    public List<Match> findMatches(final Edge edge, final EventData from, final EventData to) {
         if (!edge.from.check(from) || !edge.to.check(to)) {
             return Collections.emptyList();
         }
@@ -81,7 +81,7 @@ public class ViolationPattern {
             } else {
                 final Node matchedNode = joinAtSource ? nextEdgeToJoin.from : nextEdgeToJoin.to;
                 final Node unmatchedNode = joinAtSource ? nextEdgeToJoin.to : nextEdgeToJoin.from;
-                List<Match> nextMatches = new ArrayList<>();
+                final List<Match> nextMatches = new ArrayList<>();
                 for (Match match : curMatches) {
                     final List<EventData> joinedNodeIds = joinAlong(match, matchedNode, nextEdgeToJoin);
                     for (EventData nodeId : joinedNodeIds) {
@@ -102,7 +102,7 @@ public class ViolationPattern {
         return curMatches;
     }
 
-    private List<EventData> joinAlong(Match partialMatch, Node node, Edge edge) {
+    private List<EventData> joinAlong(final Match partialMatch, final Node node, final Edge edge) {
         final boolean outgoing = edge.from == node;
         final Node target = outgoing ? edge.to : edge.from;
         final EventData nodeMatch = partialMatch.atNode(node);
@@ -114,7 +114,7 @@ public class ViolationPattern {
         return outgoing ? relationGraph.outEvents(nodeMatch) : relationGraph.inEvents(nodeMatch);
     }
 
-    private void prune(List<Match> matches, Edge edge) {
+    private void prune(final List<Match> matches, final Edge edge) {
         final AbstractGenMCWMMGraph relationGraph = edge.graph;
         matches.removeIf(m -> {
             final EventData source = m.atNode(edge.from);
@@ -130,15 +130,15 @@ public class ViolationPattern {
     private static class NodeSet {
         private int nodeSet = 0;
 
-        private static int toIndex(Node node) {
+        private static int toIndex(final Node node) {
             return 1 << node.id;
         }
 
-        public boolean contains(Node node) {
+        public boolean contains(final Node node) {
             return (nodeSet & toIndex(node)) != 0;
         }
 
-        public boolean add(Node node) {
+        public boolean add(final Node node) {
             final int old = nodeSet;
             nodeSet |= toIndex(node);
             return old != nodeSet;
@@ -148,21 +148,21 @@ public class ViolationPattern {
     private static class EdgeQueue {
         private final List<Edge> unmatchedEdges;
 
-        public EdgeQueue(ViolationPattern pattern) {
+        public EdgeQueue(final ViolationPattern pattern) {
             unmatchedEdges = new ArrayList<>(pattern.edges);
         }
 
-        public void remove(Edge edge) {
+        public void remove(final Edge edge) {
             unmatchedEdges.remove(edge);
         }
 
-        public Edge pop(NodeSet visited) {
+        public Edge pop(final NodeSet visited) {
             if (unmatchedEdges.isEmpty()) {
                 return null;
             }
 
             Edge candidate = null;
-            for (Edge e : unmatchedEdges) {
+            for (final Edge e : unmatchedEdges) {
                 final boolean fromVisited = visited.contains(e.from);
                 final boolean toVisited = visited.contains(e.to);
                 if (fromVisited && toVisited) {
@@ -186,13 +186,13 @@ public class ViolationPattern {
         @Override
         public boolean equals(Object obj) { return this == obj; }
 
-        private boolean check(EventData event) {
-            for (StaticGenMCWMMSet condition : positiveConditions) {
+        private boolean check(final EventData event) {
+            for (final StaticGenMCWMMSet condition : positiveConditions) {
                 if (!condition.contains(event)) {
                     return false;
                 }
             }
-            for (StaticGenMCWMMSet condition : negativeConditions) {
+            for (final StaticGenMCWMMSet condition : negativeConditions) {
                 if (condition.contains(event)) {
                     return false;
                 }
@@ -207,27 +207,27 @@ public class ViolationPattern {
             return String.format("%s-%s->%s", from, relation.getNameOrTerm(), to);
         }
         @Override
-        public boolean equals(Object obj) { return this == obj; }
+        public boolean equals(final Object obj) { return this == obj; }
     }
 
     public static class Match {
         private final EventData[] nodeId2EventId;
 
-        public EventData atNode(Node node) { return nodeId2EventId[node.id]; }
-        private void setMatch(Node node, EventData id) { nodeId2EventId[node.id] = id; }
+        public EventData atNode(final Node node) { return nodeId2EventId[node.id]; }
+        private void setMatch(final Node node, final EventData id) { nodeId2EventId[node.id] = id; }
 
-        private Match(EventData[] mapping) {
+        private Match(final EventData[] mapping) {
             this.nodeId2EventId = mapping;
         }
 
-        public Match(int size) {
+        public Match(final int size) {
             this(new EventData[size]);
             Arrays.fill(nodeId2EventId, null);
         }
 
-        public Match with(Node node, EventData match) {
+        public Match with(final Node node, final EventData match) {
             assert atNode(node) == null;
-            EventData[] updatedMatching = Arrays.copyOf(this.nodeId2EventId, this.nodeId2EventId.length);
+            final EventData[] updatedMatching = Arrays.copyOf(this.nodeId2EventId, this.nodeId2EventId.length);
             updatedMatching[node.id] = match;
             return new Match(updatedMatching);
         }
@@ -236,7 +236,7 @@ public class ViolationPattern {
 
         @Override
         public String toString() {
-            StringBuilder builder = new StringBuilder();
+            final StringBuilder builder = new StringBuilder();
             for (int i = 0; i < nodeId2EventId.length; i++) {
                 builder.append("[n")
                         .append(i)

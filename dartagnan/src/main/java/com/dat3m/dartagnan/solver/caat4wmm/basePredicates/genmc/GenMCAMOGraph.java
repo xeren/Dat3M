@@ -15,10 +15,10 @@ public class GenMCAMOGraph extends MaterializedGenMCWMMGraph {
     @Override
     public void repopulate() {
         if (isRepopulateForbidden()) return;
-        for (List<EventData> events : trace.getThreadEventsMap().values()) {
-            for (EventData e : events) {
-                if (e.getEvent() instanceof RMWStore rmwStore) {
-                    EventData load = trace.getData(rmwStore.getLoadEvent()).get();
+        for (final List<EventData> events : trace.getThreadEventsMap().values()) {
+            for (final EventData e : events) {
+                if (e.getEvent() instanceof final RMWStore rmwStore) {
+                    final EventData load = trace.getData(rmwStore.getLoadEvent()).get();
                     simpleGraph.addDisjoint(new Edge(load.getId(), e.getId()));
                 } else if (e.getEvent() instanceof BeginAtomic) {
                     throw new UnsupportedOperationException("Atomic blocks for GenMC are not supported yet.");
@@ -28,15 +28,15 @@ public class GenMCAMOGraph extends MaterializedGenMCWMMGraph {
     }
 
     @Override
-    public List<EventData> inEvents(EventData event) {
-        if (!(event.getEvent() instanceof RMWStore rmwStore)) {
+    public List<EventData> inEvents(final EventData event) {
+        if (!(event.getEvent() instanceof final RMWStore rmwStore)) {
             return Collections.emptyList();
         } else {
             return Collections.singletonList(trace.getData(rmwStore.getLoadEvent()).get());
         }
     }
     @Override
-    public List<EventData> outEvents(EventData event) {
+    public List<EventData> outEvents(final EventData event) {
         if (event.getReadFrom() == null) {
             return Collections.emptyList();
         }

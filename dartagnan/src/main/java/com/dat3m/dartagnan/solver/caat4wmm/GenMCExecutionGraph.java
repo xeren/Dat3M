@@ -47,7 +47,7 @@ public class GenMCExecutionGraph {
 
     // ============= Construction & Init ===============
 
-    public GenMCExecutionGraph(Wmm memoryModel) {
+    public GenMCExecutionGraph(final Wmm memoryModel) {
         this.memoryModel = memoryModel;
         relationGraphMap = HashBiMap.create();
         filterSetMap = HashBiMap.create();
@@ -56,7 +56,7 @@ public class GenMCExecutionGraph {
         constructMappings();
     }
 
-    public void initializeFromDomain(GenMCEventDomain trace) {
+    public void initializeFromDomain(final GenMCEventDomain trace) {
         domain = trace;
         caatModel.initializeToDomain(trace);
     }
@@ -64,38 +64,38 @@ public class GenMCExecutionGraph {
     // --------------------------------------------------
 
     private void constructMappings() {
-        Set<RelationGraph> graphs = new HashSet<>();
-        Set<Constraint> constraints = new HashSet<>();
-        DependencyGraph<Relation> dependencyGraph = DependencyGraph.from(memoryModel.getRelations());
+        final Set<RelationGraph> graphs = new HashSet<>();
+        final Set<Constraint> constraints = new HashSet<>();
+        final DependencyGraph<Relation> dependencyGraph = DependencyGraph.from(memoryModel.getRelations());
 
         // Special treatment for recursive relations.
-        for (Set<DependencyGraph<Relation>.Node> component : dependencyGraph.getSCCs()) {
+        for (final Set<DependencyGraph<Relation>.Node> component : dependencyGraph.getSCCs()) {
             if (component.size() > 1) {
-                for (DependencyGraph<Relation>.Node node : component) {
-                    Relation relation = node.getContent();
+                for (final DependencyGraph<Relation>.Node node : component) {
+                    final Relation relation = node.getContent();
                     if (relation.isRecursive()) {
-                        RecursiveGraph graph = new RecursiveGraph();
+                        final RecursiveGraph graph = new RecursiveGraph();
                         graph.setName(relation.getNameOrTerm() + "_rec");
                         graphs.add(graph);
                         relationGraphMap.put(relation, graph);
                     }
                 }
-                for (DependencyGraph<Relation>.Node node : component) {
-                    Relation relation = node.getContent();
+                for (final DependencyGraph<Relation>.Node node : component) {
+                    final Relation relation = node.getContent();
                     if (relation.isRecursive()) {
                         // side effect leads to calculation of children
-                        RecursiveGraph graph = (RecursiveGraph) relationGraphMap.get(relation);
+                        final RecursiveGraph graph = (RecursiveGraph) relationGraphMap.get(relation);
                         graph.setConcreteGraph(createGraphFromRelation(relation));
                     }
                 }
             }
         }
 
-        for (Axiom axiom : memoryModel.getAxioms()) {
+        for (final Axiom axiom : memoryModel.getAxioms()) {
             if (axiom instanceof ForceEncodeAxiom || axiom.isFlagged()) {
                 continue;
             }
-            Constraint constraint = getOrCreateConstraintFromAxiom(axiom);
+            final Constraint constraint = getOrCreateConstraintFromAxiom(axiom);
             constraints.add(constraint);
         }
 
@@ -118,15 +118,15 @@ public class GenMCExecutionGraph {
         return Maps.unmodifiableBiMap(constraintMap);
     }
 
-    public RelationGraph getRelationGraph(Relation rel) {
+    public RelationGraph getRelationGraph(final Relation rel) {
         return relationGraphMap.get(rel);
     }
 
-    public RelationGraph getRelationGraphByName(String name) {
+    public RelationGraph getRelationGraphByName(final String name) {
         return getRelationGraph(memoryModel.getRelation(name));
     }
 
-    public Constraint getConstraint(Axiom axiom) {
+    public Constraint getConstraint(final Axiom axiom) {
         return constraintMap.get(axiom);
     }
 
@@ -138,7 +138,7 @@ public class GenMCExecutionGraph {
 
     // ==================== Mutation ======================
 
-    public void backtrackTo(int time) {
+    public void backtrackTo(final int time) {
         caatModel.getHierarchy().backtrackTo(time);
     }
 
@@ -154,13 +154,13 @@ public class GenMCExecutionGraph {
 
     //=================== Reading the WMM ====================
 
-    private Constraint getOrCreateConstraintFromAxiom(Axiom axiom) {
+    private Constraint getOrCreateConstraintFromAxiom(final Axiom axiom) {
         if (constraintMap.containsKey(axiom)) {
             return constraintMap.get(axiom);
         }
 
-        Constraint constraint;
-        RelationGraph innerGraph = getOrCreateGraphFromRelation(axiom.getRelation());
+        final Constraint constraint;
+        final RelationGraph innerGraph = getOrCreateGraphFromRelation(axiom.getRelation());
         if (axiom.isAcyclicity()) {
             constraint = new AcyclicityConstraint(innerGraph);
         } else if (axiom.isEmptiness()) {
@@ -175,16 +175,16 @@ public class GenMCExecutionGraph {
         return constraint;
     }
 
-    private RelationGraph getOrCreateGraphFromRelation(Relation rel) {
+    private RelationGraph getOrCreateGraphFromRelation(final Relation rel) {
         if (relationGraphMap.containsKey(rel)) {
             return relationGraphMap.get(rel);
         }
-        RelationGraph graph = createGraphFromRelation(rel);
+        final RelationGraph graph = createGraphFromRelation(rel);
         relationGraphMap.put(rel, graph);
         return graph;
     }
 
-    private RelationGraph createGraphFromRelation(Relation rel) {
+    private RelationGraph createGraphFromRelation(final Relation rel) {
         final RelationGraph graph;
         final Class<?> relClass = rel.getDefinition().getClass();
         final List<Relation> dependencies = rel.getDependencies();
@@ -198,30 +198,30 @@ public class GenMCExecutionGraph {
         } else if (relClass == Coherence.class) {
             graph = new GenMCCoherenceGraph();
         } else if (relClass == RangeIdentity.class || relClass == DomainIdentity.class) {
-            RelationGraph g = getOrCreateGraphFromRelation(dependencies.get(0));
-            ProjectionIdentityGraph.Dimension dim = relClass == RangeIdentity.class ?
+            final RelationGraph g = getOrCreateGraphFromRelation(dependencies.get(0));
+            final ProjectionIdentityGraph.Dimension dim = relClass == RangeIdentity.class ?
                     ProjectionIdentityGraph.Dimension.RANGE :
                     ProjectionIdentityGraph.Dimension.DOMAIN;
             graph = new ProjectionIdentityGraph(g, dim);
         } else if (relClass == Inverse.class || relClass == TransitiveClosure.class) {
-            RelationGraph g = getOrCreateGraphFromRelation(dependencies.get(0));
+            final RelationGraph g = getOrCreateGraphFromRelation(dependencies.get(0));
             graph = relClass == Inverse.class ? new InverseGraph(g) : new TransitiveGraph(g);
         } else if (relClass == Union.class || relClass == Intersection.class) {
-            RelationGraph[] graphs = new RelationGraph[dependencies.size()];
+            final RelationGraph[] graphs = new RelationGraph[dependencies.size()];
             for (int i = 0; i < graphs.length; i++) {
                 graphs[i] = getOrCreateGraphFromRelation(dependencies.get(i));
             }
             graph = relClass == Union.class ? new UnionGraph(graphs) :
                     new IntersectionGraph(graphs);
         } else if (relClass == Composition.class || relClass == Difference.class) {
-            RelationGraph g1 = getOrCreateGraphFromRelation(dependencies.get(0));
-            RelationGraph g2 = getOrCreateGraphFromRelation(dependencies.get(1));
+            final RelationGraph g1 = getOrCreateGraphFromRelation(dependencies.get(0));
+            final RelationGraph g2 = getOrCreateGraphFromRelation(dependencies.get(1));
             graph = relClass == Composition.class ? new CompositionGraph(g1, g2) :
                     new DifferenceGraph(g1, g2);
         } else if (relClass == CartesianProduct.class) {
-            CartesianProduct cartRel = (CartesianProduct)rel.getDefinition();
-            SetPredicate lhs = getOrCreateSetFromFilter(cartRel.getFirstFilter());
-            SetPredicate rhs = getOrCreateSetFromFilter(cartRel.getSecondFilter());
+            final CartesianProduct cartRel = (CartesianProduct)rel.getDefinition();
+            final SetPredicate lhs = getOrCreateSetFromFilter(cartRel.getFirstFilter());
+            final SetPredicate rhs = getOrCreateSetFromFilter(cartRel.getSecondFilter());
             graph = new CartesianGraph(lhs, rhs);
         } else if (relClass == AMOPairs.class) {
             graph = new GenMCAMOGraph();
@@ -232,7 +232,7 @@ public class GenMCExecutionGraph {
         } else if (relClass == Internal.class) {
             graph = new GenMCInternalGraph();
         } else if (relClass == SetIdentity.class) {
-            SetPredicate set = getOrCreateSetFromFilter(((SetIdentity) rel.getDefinition()).getFilter());
+            final SetPredicate set = getOrCreateSetFromFilter(((SetIdentity) rel.getDefinition()).getFilter());
             graph = new SetIdentityGraph(set);
         } else if (relClass == Empty.class) {
             graph = new EmptyGraph();
@@ -246,12 +246,12 @@ public class GenMCExecutionGraph {
         return graph;
     }
 
-    private SetPredicate getOrCreateSetFromFilter(Filter filter) {
+    private SetPredicate getOrCreateSetFromFilter(final Filter filter) {
         if (filterSetMap.containsKey(filter)) {
             return filterSetMap.get(filter);
         }
 
-        SetPredicate set = new StaticGenMCWMMSet(filter);
+        final SetPredicate set = new StaticGenMCWMMSet(filter);
         set.setName(filter.toString());
         filterSetMap.put(filter, set);
         return set;
