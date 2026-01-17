@@ -37,13 +37,14 @@ public abstract class ExpressionEvaluator {
 
     public abstract ExpressionEvaluator newInstance();
 
-    public abstract BigInteger evaluate(final Expression expr, final Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException;
-    public abstract BigInteger evaluateNonDet(final Expression expr, final Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException;
+    public abstract BigInteger evaluate(final Expression expr, final EventData forEvent) throws SolverException, InterruptedException, InvalidConfigurationException;
+    public abstract Expression evaluateToLiteral(final Expression expr, final EventData forEvent) throws SolverException, InterruptedException, InvalidConfigurationException;
+    public abstract BigInteger evaluateNonDet(final Expression expr, final EventData forEvent) throws SolverException, InterruptedException, InvalidConfigurationException;
     public abstract BigInteger evaluateAddress(final EventData e) throws SolverException, InterruptedException, InvalidConfigurationException;
     public abstract boolean evaluateReachability(final BooleanFormula formula) throws SolverException, InterruptedException, InvalidConfigurationException;
-    public abstract boolean evaluateReachability(final Expression target, final Event forEvent) throws SolverException, InterruptedException, InvalidConfigurationException;
+    public abstract boolean evaluateReachability(final Expression target, final EventData forEvent) throws SolverException, InterruptedException, InvalidConfigurationException;
 
-    public void setTrace(final GenMCEventDomain trace, final EventData changedEvent, final boolean inTraceOrder) {
+    public void setTrace(final GenMCEventDomain trace) {
         this.trace = trace;
         List<Event> cfEventsToRemove = new ArrayList<>();
         for (Event cfEvent : cfContext.keySet()) {

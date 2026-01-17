@@ -34,6 +34,7 @@ public final class GenMCEventDomain implements Domain<EventData> {
     private final Map<EventData, EventData> readWriteMap;
     private final Map<EventData, List<EventData>> writeReadsMap;
     private final Map<EventData, EventData> lxsxPairs;
+    private final Map<Register, EventData> lastRegWriters;
 
     public GenMCEventDomain(int threadCount) {
         setThreadCount(threadCount);
@@ -44,6 +45,7 @@ public final class GenMCEventDomain implements Domain<EventData> {
         this.readWriteMap = new HashMap<>();
         this.writeReadsMap = new HashMap<>();
         this.lxsxPairs = new HashMap<>();
+        this.lastRegWriters = new HashMap<>();
     }
 
     public GenMCEventDomain(final List<EventData> oldEvents, final List<EventData> eventsToDelete, final int numOfAddresses, final Map<EventData, EventData> lxsxPairs) {
@@ -54,6 +56,7 @@ public final class GenMCEventDomain implements Domain<EventData> {
         this.readWriteMap = new HashMap<>();
         this.writeReadsMap = new HashMap<>();
         this.lxsxPairs = new HashMap<>();
+        this.lastRegWriters = new HashMap<>();
         final int revisitWriteId = oldEvents.size() - 1;
         int id = -1;
         for (final EventData event : oldEvents) {
@@ -67,12 +70,16 @@ public final class GenMCEventDomain implements Domain<EventData> {
                 copiedEvent.setWasExecuted(event.wasExecuted());
                 copiedEvent.setNonDet(event.isNonDet());
                 copiedEvent.setAccessedAddress(event.getAccessedAddress());
+                copiedEvent.setValue(event.getValue());
                 copiedEvent.setId(++id);
                 copiedEvent.setLocalId(event.getLocalId());
                 events.add(copiedEvent);
                 threadEventsMap.computeIfAbsent(e.getThread(), t -> new ArrayList<>()).add(copiedEvent);
                 if (e instanceof Store && event.getCoPredecessor() == null && event.getId() != revisitWriteId) {
                     addressInits.put((BigInteger) event.getAccessedAddress(), copiedEvent);
+                }
+                if (e instanceof RegWriter regWriter) {
+                    lastRegWriters.put(regWriter.getResultRegister(), copiedEvent);
                 }
             }
         }
@@ -127,6 +134,9 @@ public final class GenMCEventDomain implements Domain<EventData> {
         if (e instanceof Init) {
             addAddressInit(event);
         }
+        if (e instanceof RegWriter regWriter) {
+            lastRegWriters.put(regWriter.getResultRegister(), event);
+        }
         final EventData readFrom = event.getReadFrom();
         if (readFrom != null) {
             readWriteMap.put(event, readFrom);
@@ -170,6 +180,9 @@ public final class GenMCEventDomain implements Domain<EventData> {
                             lxsxPairs.remove(threadEvent);
                         }
                     }
+                    if (eventToRemove instanceof final RegWriter regWriter) {
+                        lastRegWriters.remove(regWriter.getResultRegister());
+                    }
                     eventMap.remove(eventToRemove);
                 } else {
                     break;
@@ -190,6 +203,8 @@ public final class GenMCEventDomain implements Domain<EventData> {
         }
         writeReadsMap.computeIfAbsent(newWrite, write -> new ArrayList<>()).add(read);
         readWriteMap.put(read, newWrite);
+        read.setValue(newWrite.getValue());
+        read.setReadFrom(newWrite);
     }
 
     public void addLxsxPair(final EventData store, final EventData load) {
@@ -287,12 +302,18 @@ public final class GenMCEventDomain implements Domain<EventData> {
         return Optional.ofNullable(eventMap.get(e));
     }
 
-    public EventData getLastRegWriter(final Register reg, final Event forEvent) {
-        final int forEventId = forEvent.getGlobalId();
+    public EventData getLastRegWriter(final Register reg, final EventData forEvent) {
+        final EventData alreadySeenRegWriter = lastRegWriters.get(reg);
+        if (alreadySeenRegWriter != null) {
+            return alreadySeenRegWriter;
+        }
         final List<EventData> threadEvents = threadEventsMap.get(forEvent.getThread());
-        for (int i = threadEvents.size() - 1; i >= 0; --i) {
+        final int eventLocalId = forEvent.getLocalId();
+        final int startIdExclusive = eventLocalId == -1 ? threadEvents.size() : eventLocalId;
+        for (int i = startIdExclusive - 1; i >= 0; --i) {
             final EventData event = threadEvents.get(i);
-            if (event.getEvent() instanceof RegWriter writer && writer.getResultRegister() == reg && writer.getGlobalId() < forEventId) {
+            if (event.getEvent() instanceof RegWriter writer && writer.getResultRegister() == reg) {
+                lastRegWriters.put(reg, event);
                 return event;
             }
         }

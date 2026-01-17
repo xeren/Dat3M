@@ -5,6 +5,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import com.dat3m.dartagnan.expression.booleans.BoolLiteral;
+import com.dat3m.dartagnan.expression.integers.IntLiteral;
+import com.dat3m.dartagnan.expression.type.BooleanType;
+import com.dat3m.dartagnan.expression.type.IntegerType;
 import org.sosy_lab.java_smt.api.BooleanFormula;
 import org.sosy_lab.java_smt.api.Model;
 import org.sosy_lab.java_smt.api.ProverEnvironment;
@@ -40,7 +44,7 @@ public class ProverExpressionEvaluator extends ExpressionEvaluator {
     }
 
     @Override
-    public BigInteger evaluate(final Expression expr, final Event forEvent) throws SolverException, InterruptedException {
+    public BigInteger evaluate(final Expression expr, final EventData forEvent) throws SolverException, InterruptedException {
         final NonDetCollector nonDetCollector = new NonDetCollector(trace, forEvent);
         if (expr.accept(nonDetCollector)) {
             return null;
@@ -49,18 +53,33 @@ public class ProverExpressionEvaluator extends ExpressionEvaluator {
     }
 
     @Override
-    public BigInteger evaluateNonDet(final Expression expr, final Event forEvent) throws SolverException, InterruptedException {
-        return evaluate(exprToFormula(expr, forEvent), new ArrayList<>());
+    public Expression evaluateToLiteral(final Expression expr, final EventData forEvent) throws SolverException, InterruptedException {
+        final BigInteger result = evaluate(expr, forEvent);
+        if (result == null) {
+            return null;
+        }
+        if (expr.getType() instanceof final BooleanType type) {
+            return new BoolLiteral(type, !BigInteger.ZERO.equals(result));
+        }
+        if (expr.getType() instanceof final IntegerType type) {
+            return new IntLiteral(type, result);
+        }
+        return null;
+    }
+
+    @Override
+    public BigInteger evaluateNonDet(final Expression expr, final EventData forEvent) throws SolverException, InterruptedException {
+        return evaluate(exprToFormula(expr, forEvent.getEvent()), new ArrayList<>());
     }
 
     @Override
     public BigInteger evaluateAddress(final EventData event) throws SolverException, InterruptedException {
         if (event.getEvent() instanceof final MemoryCoreEvent memEvent) {
             if (memEvent.getAddress() instanceof final MemoryObject memObj) {
-                return evaluate(memObj.getAddress(), memEvent);
+                return evaluate(memObj.getAddress(), event);
             } else {
                 trace.addEvent(event);
-                final BigInteger ret = evaluate(memEvent.getAddress(), event.getEvent());
+                final BigInteger ret = evaluate(memEvent.getAddress(), event);
                 trace.removeLast();
                 return ret;
             }
@@ -75,8 +94,9 @@ public class ProverExpressionEvaluator extends ExpressionEvaluator {
         return calculateModel(assumptionWrapper) != null;
     }
 
-    public BigInteger evaluate(final Expression expr, final Collection<Expression> assumptions, final Event forEvent) throws SolverException, InterruptedException {
-        return evaluate(exprToFormula(expr, forEvent), exprsToBoolFormula(assumptions, forEvent));
+    public BigInteger evaluate(final Expression expr, final Collection<Expression> assumptions, final EventData forEvent) throws SolverException, InterruptedException {
+        final Event e = forEvent.getEvent();
+        return evaluate(exprToFormula(expr, e), exprsToBoolFormula(assumptions, e));
     }
 
     public BigInteger evaluate(final Formula formula, final List<BooleanFormula> assumptions) throws SolverException, InterruptedException {
@@ -88,9 +108,9 @@ public class ProverExpressionEvaluator extends ExpressionEvaluator {
     }
 
     @Override
-    public boolean evaluateReachability(final Expression expr, final Event forEvent) throws SolverException, InterruptedException {
+    public boolean evaluateReachability(final Expression expr, final EventData forEvent) throws SolverException, InterruptedException {
         final List<BooleanFormula> exprWrapper = new ArrayList<>();
-        exprWrapper.add(exprToBoolFormula(expr, forEvent));
+        exprWrapper.add(exprToBoolFormula(expr, forEvent.getEvent()));
         return calculateModel(exprWrapper) != null;
     }
 

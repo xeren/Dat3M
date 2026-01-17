@@ -141,8 +141,8 @@ public class ThreadCreation implements ProgramProcessor {
                 allThreads.add(spawnedThread);
 
                 final List<Event> replacement = eventSequence(
-                        newReleaseStore(spawnedThread.comAddress(), expressions.makeTrue()),
                         createEvent,
+                        newReleaseStore(spawnedThread.comAddress(), expressions.makeTrue()),
                         newLocal(tidRegister, new TIdExpr(archType, spawnedThread.thread()))
                 );
                 IRHelper.replaceWithMetadata(create, replacement);
@@ -208,9 +208,9 @@ public class ThreadCreation implements ProgramProcessor {
                     // Successful join
                     caseBody = eventSequence(
                             joinCase,
-                            newThreadJoin(retValRegister, data.thread()),
                             newAcquireLoad(syncRegister, data.comAddress),
                             newAssume(expressions.makeNot(syncRegister)),
+                            newThreadJoin(retValRegister, data.thread()),
                             newLocal(statusRegister, successValue),
                             EventFactory.newGoto(joinEnd)
                     );
@@ -327,7 +327,7 @@ public class ThreadCreation implements ProgramProcessor {
             ));
 
             // End
-            threadReturnLabel.insertAfter(newReleaseStore(comAddress, expressions.makeFalse()));
+            threadReturn.insertAfter(newReleaseStore(comAddress, expressions.makeFalse()));
 
             creator.setSpawnedThread(thread);
             return new ThreadData(thread, comAddress);

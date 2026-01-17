@@ -10,8 +10,7 @@ import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.event.core.*;
-import com.dat3m.dartagnan.program.event.core.threading.ThreadJoin;
-import com.dat3m.dartagnan.program.event.core.threading.ThreadStart;
+import com.dat3m.dartagnan.program.event.core.threading.*;
 import com.dat3m.dartagnan.solver.caat.CAATSolver;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCWMMSolver;
@@ -173,7 +172,7 @@ public final class GenMCExecutionModel {
         final PatternManager patterns = new PatternManager(solver.getExecutionGraph());
         solver.injectExtractor(patterns);
         final ExpressionEvaluator exprEvaluator = ExpressionEvaluator.withContext(evalContext);
-        exprEvaluator.setTrace(trace, null, true);
+        exprEvaluator.setTrace(trace);
         Comparator<EventData> explorationOrder = null;
         if (reasoningMethod.usesReasons() || reasoningMethod.usesPatterns()) {
             explorationOrder = Comparator.comparingInt(EventData::getId);
@@ -321,7 +320,8 @@ public final class GenMCExecutionModel {
                 final EventData data = new EventData(initThreadEvent);
                 data.setId(trace.size());
                 if (initThreadEvent == init) {
-                    data.setAccessedAddress(exprEvaluator.evaluate(init.getAddress(), init));
+                    data.setAccessedAddress(exprEvaluator.evaluate(init.getAddress(), data));
+                    data.setValue(exprEvaluator.evaluateToLiteral(init.getMemValue(), data));
                 }
                 trace.addEvent(data);
             }
@@ -341,7 +341,7 @@ public final class GenMCExecutionModel {
                 new IllegalArgumentException("Backward revisit model does not contain revisit write " + revisitWrite.getGlobalId() + ": " + revisitWrite));
         porfPrefix = porfPrefixes.get(revisitRead);
         setRf(readEvent, writeEvent);
-        setTrace(readEvent, false);
+        setTrace();
         initFirstThreadEvent();
         initializeFields(needsNewConsistencyCheck, false);
         return writeEvent;
@@ -354,12 +354,11 @@ public final class GenMCExecutionModel {
         exprEvaluator.addNonDetCondition(jumpEvent, jumpEvent.getGuard(), jumpIsExecuted);
         needsNewConsistencyCheck = jump.wasExecuted() != jumpIsExecuted;
         jump.setWasExecuted(jumpIsExecuted);
-        isConsistent = exprEvaluator.evaluateReachability(jumpIsExecuted ? jumpEvent.getGuard() : expressions.makeNot(jumpEvent.getGuard()), jumpEvent);
+        isConsistent = exprEvaluator.evaluateReachability(jumpIsExecuted ? jumpEvent.getGuard() : expressions.makeNot(jumpEvent.getGuard()), jump);
     }
 
     public void setRf(final EventData read, final EventData write) {
         trace.setReadFrom(read, write, read.getReadFrom());
-        read.setReadFrom(write);
         final Event writeEvent = write.getEvent();
         final Thread writeThread = writeEvent.getThread();
         final Integer porfPrefixInWriteThread = porfPrefix.get(writeThread);
@@ -413,7 +412,7 @@ public final class GenMCExecutionModel {
             porfPrefix = porfPrefixes.get(backtrackEvent);
         }
         addedEvents.remove(rollbackPoint);
-        setTrace(rollbackPoint, true);
+        setTrace();
         initializeFields(needsNewConsistencyCheck, lastNeedsNewConsistencyCheck);
         if (backtrackingPoint != null && rollbackPoint.getId() <= backtrackingPoint.getId()) {
             if (backtrackReasonIsRel || rollbackPoint != backtrackingPoint) {
@@ -434,7 +433,7 @@ public final class GenMCExecutionModel {
         rollbackPoint.setCoPredecessor(null);
         rollbackPoint.setCoSuccessor(null);
         addedEvents.remove(rollbackPoint);
-        setTrace(rollbackPoint, true);
+        setTrace();
         if (forBackwardRevisit) {
             initFirstThreadEvent();
         } else {
@@ -627,6 +626,9 @@ public final class GenMCExecutionModel {
         data.setWasExecuted(true);
         if (e instanceof MemoryEvent) {
             // ===== Memory Events =====
+            if (e instanceof Store store) {
+                data.setValue(exprEvaluator.evaluateToLiteral(store.getMemValue(), data));
+            }
             final BigInteger address = exprEvaluator.evaluateAddress(data);
             if (address == null || BigInteger.ZERO.equals(address)) {
                 isConsistent = false;
@@ -651,15 +653,14 @@ public final class GenMCExecutionModel {
             trace.addEvent(data);
             checkForExclusiveLoad(data);
             lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
-        } else if (data.isJump()) {
+        } else if (e instanceof final CondJump jump) {
             // ===== Jumps =====
             // We override the meaning of execution here. A jump is executed IFF its condition was true.
-            final CondJump jump = (CondJump) e;
             lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
             if (jump.getGuard() instanceof final BoolLiteral bool) {
                 data.setWasExecuted(bool.getValue());
             } else {
-                final BigInteger guardResult = exprEvaluator.evaluate(jump.getGuard(), jump);
+                final BigInteger guardResult = exprEvaluator.evaluate(jump.getGuard(), data);
                 if (guardResult == null) {
                     if (needsNewConsistencyCheck) {
                         if (!checkConsistency(false)) {
@@ -667,7 +668,7 @@ public final class GenMCExecutionModel {
                             return data;
                         }
                     }
-                    final BigInteger result = exprEvaluator.evaluateNonDet(jump.getGuard(), jump);
+                    final BigInteger result = exprEvaluator.evaluateNonDet(jump.getGuard(), data);
                     if (result == null) {
                         isConsistent = false;
                         return data;
@@ -682,7 +683,7 @@ public final class GenMCExecutionModel {
                 }
             }
             trace.addEvent(data);
-        } else if (data.getEvent() instanceof final Assume assumptionEvent) {
+        } else if (e instanceof final Assume assumptionEvent) {
             // ===== Assumptions =====
             final Event lastEvent = e.getPredecessor();
             if (!(lastEvent != null && lastEvent.getPredecessor() instanceof final ThreadStart start && start.isSpawned())) {
@@ -692,8 +693,8 @@ public final class GenMCExecutionModel {
                 if (assumption instanceof final BoolLiteral bool) {
                     isConsistent = bool.getValue();
                 } else {
-                    isConsistent = exprEvaluator.evaluateReachability(assumption, assumptionEvent);
-                    if (lastEvent != null && lastEvent.getPredecessor() instanceof ThreadJoin) {
+                    isConsistent = exprEvaluator.evaluateReachability(assumption, data);
+                    if (e.getSuccessor() instanceof ThreadJoin) {
                         if (!isConsistent) {
                             failedJoinAssumes.add(e);
                             trace.removeLast();
@@ -705,7 +706,7 @@ public final class GenMCExecutionModel {
                     }
                 }
             }
-        } else if (data.getEvent() instanceof final Assert assertionEvent) {
+        } else if (e instanceof final Assert assertionEvent) {
             // ===== Assertions =====
             trace.addEvent(data);
             lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
@@ -715,8 +716,35 @@ public final class GenMCExecutionModel {
                     hasError = true;
                 }
             } else {
-                hasError = checkProperties(assertionEvent);
+                hasError = checkProperties(data);
             }
+        } else if (e instanceof final Local assign) {
+            // ===== Locals =====
+            data.setValue(exprEvaluator.evaluateToLiteral(assign.getExpr(), data));
+            trace.addEvent(data);
+            lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
+        } else if (e instanceof final ThreadArgument arg) {
+            // ===== Thread arguments =====
+            final ThreadCreate creator = arg.getCreator();
+            final Expression argExpr = creator.getArguments().get(arg.getIndex());
+            final EventData creatorEvent = trace.getData(creator).orElseThrow();
+            data.setValue(exprEvaluator.evaluateToLiteral(argExpr, creatorEvent));
+            trace.addEvent(data);
+            lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
+        } else if (e instanceof final Alloc alloc) {
+            // ===== Allocations =====
+            data.setValue(exprEvaluator.evaluateToLiteral(alloc.getAllocatedObject().getAddress(), data));
+            trace.addEvent(data);
+            lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
+        } else if (e instanceof final ThreadJoin join) {
+            // ===== Thread joins =====
+            final ThreadReturn threadReturn = join.getJoinThread().getEvents(ThreadReturn.class).get(0);
+            final Expression returnValue = threadReturn.getValue().orElseThrow(() ->
+                    new IllegalStateException("Return value of thread " + threadReturn.getThread().getName() + " is referenced but does not return anything"));
+            final EventData returnEvent = trace.getData(threadReturn).orElseThrow();
+            data.setValue(exprEvaluator.evaluateToLiteral(returnValue, returnEvent));
+            trace.addEvent(data);
+            lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
         } else {
             trace.addEvent(data);
             lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
@@ -759,7 +787,7 @@ public final class GenMCExecutionModel {
 
     private Optional<EventData> getThreadStartStore(final Thread thread) {
         final Optional<EventData> threadCreator = trace.getData(thread.getEntry().getCreator());
-        return threadCreator.map(creator -> trace.getObjectById(trace.getId(creator) - 1));
+        return threadCreator.map(creator -> trace.getObjectById(trace.getId(creator) + 1));
     }
 
     private EventData endThread(final Thread thread) {
@@ -1103,8 +1131,9 @@ public final class GenMCExecutionModel {
         boolean check(final T properties) throws InterruptedException, SolverException, InvalidConfigurationException;
     }
 
-    private boolean checkProperties(final Assert assertion) throws InterruptedException, SolverException, InvalidConfigurationException {
-        return checkProperties(expressions.makeNot(assertion.getExpression()),
+    private boolean checkProperties(final EventData assertion) throws InterruptedException, SolverException, InvalidConfigurationException {
+        final Assert assertEvent = (Assert) assertion.getEvent();
+        return checkProperties(expressions.makeNot(assertEvent.getExpression()),
                 properties -> exprEvaluator.evaluateReachability(properties, assertion));
     }
 
@@ -1120,7 +1149,7 @@ public final class GenMCExecutionModel {
         return checkFullConsistency();
     }
 
-    private void setTrace(final EventData changedEvent, final boolean inTraceOrder) {
-        exprEvaluator.setTrace(trace, changedEvent, inTraceOrder);
+    private void setTrace() {
+        exprEvaluator.setTrace(trace);
     }
 }

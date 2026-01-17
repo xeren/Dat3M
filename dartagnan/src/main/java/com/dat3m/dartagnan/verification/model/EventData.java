@@ -60,7 +60,7 @@ public class EventData implements Comparable<EventData> {
     public Object getValue() {
     	return value;
     }
-    void setValue(Object val) {
+    public void setValue(Object val) {
     	value = val;
     }
 
