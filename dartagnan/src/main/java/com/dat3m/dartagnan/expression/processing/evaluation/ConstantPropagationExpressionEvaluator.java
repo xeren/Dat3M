@@ -7,7 +7,6 @@ import java.util.Collection;
 import com.dat3m.dartagnan.encoding.EncodingContext;
 import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
 import com.dat3m.dartagnan.expression.Expression;
-import com.dat3m.dartagnan.expression.ExpressionFactory;
 import com.dat3m.dartagnan.expression.ExpressionKind;
 import com.dat3m.dartagnan.expression.booleans.BoolLiteral;
 import com.dat3m.dartagnan.expression.integers.IntLiteral;
@@ -58,6 +57,11 @@ public class ConstantPropagationExpressionEvaluator extends ExpressionEvaluator 
     }
 
     @Override
+    public BigInteger evaluate(final Expression expr) {
+        return evaluate(expr, null);
+    }
+
+    @Override
     public BigInteger evaluate(final Expression expr, final EventData forEvent) {
         final Expression result = evaluator.startPropagation(expr, forEvent);
         if (result instanceof final BoolLiteral bool) {
@@ -66,6 +70,11 @@ public class ConstantPropagationExpressionEvaluator extends ExpressionEvaluator 
             return num.getValue();
         }
         return null;
+    }
+
+    @Override
+    public Expression evaluateToLiteral(final Expression expr) {
+        return evaluateToLiteral(expr, null);
     }
 
     @Override
@@ -105,19 +114,19 @@ public class ConstantPropagationExpressionEvaluator extends ExpressionEvaluator 
         if (result instanceof final BoolLiteral bool) {
             return bool.getValue();
         }
-        return evaluateReachabilityNonDet(result);
+        return evaluateReachabilityNonDet(result, forEvent);
     }
 
-    private boolean evaluateReachabilityNonDet(final Expression expr) throws SolverException, InterruptedException, InvalidConfigurationException {
-        return calculateModel(expr) != null;
+    private boolean evaluateReachabilityNonDet(final Expression expr, final EventData forEvent) throws SolverException, InterruptedException, InvalidConfigurationException {
+        return calculateModel(expr, forEvent) != null;
     }
 
     private Model calculateModel() throws SolverException, InterruptedException, InvalidConfigurationException {
-        return calculateModel(ExpressionFactory.getInstance().makeTrue());
+        return calculateModel(getEncodingContext().getBooleanFormulaManager().makeTrue());
     }
 
-    private Model calculateModel(final Expression assumption) throws SolverException, InterruptedException, InvalidConfigurationException {
-        return calculateModel(getEncodingContext().getExpressionEncoder().encodeBooleanAt(assumption, trace.getLast().getEvent()).formula());
+    private Model calculateModel(final Expression assumption, final EventData forEvent) throws SolverException, InterruptedException, InvalidConfigurationException {
+        return calculateModel(getEncodingContext().getExpressionEncoder().encodeBooleanAt(assumption, forEvent.getEvent()).formula());
     }
 
     private Model calculateModel(final BooleanFormula assumption) throws SolverException, InterruptedException, InvalidConfigurationException {
@@ -153,10 +162,12 @@ public class ConstantPropagationExpressionEvaluator extends ExpressionEvaluator 
 
         @Override
         public Expression visitRegister(final Register register) {
+            final EventData lastRegWriter;
             if (currentEvent == null) {
-                return register;
+                lastRegWriter = trace.getLastRegWriter(register);
+            } else {
+                lastRegWriter = trace.getLastRegWriter(register, currentEvent);
             }
-            final EventData lastRegWriter = trace.getLastRegWriter(register, currentEvent);
             final Expression result = (Expression) lastRegWriter.getValue();
             if (result != null) {
                 return result;

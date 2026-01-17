@@ -44,6 +44,19 @@ public abstract class ExpressionEvaluator {
     public abstract boolean evaluateReachability(final BooleanFormula formula) throws SolverException, InterruptedException, InvalidConfigurationException;
     public abstract boolean evaluateReachability(final Expression target, final EventData forEvent) throws SolverException, InterruptedException, InvalidConfigurationException;
 
+    public BigInteger evaluate(final Expression expr) throws SolverException, InterruptedException, InvalidConfigurationException {
+        return evaluate(expr, trace.getLast());
+    }
+    public Expression evaluateToLiteral(final Expression expr) throws SolverException, InterruptedException, InvalidConfigurationException {
+        return evaluateToLiteral(expr, trace.getLast());
+    }
+    public BigInteger evaluateNonDet(final Expression expr) throws SolverException, InterruptedException, InvalidConfigurationException {
+        return evaluateNonDet(expr, trace.getLast());
+    }
+    public boolean evaluateReachability(final Expression target) throws SolverException, InterruptedException, InvalidConfigurationException {
+        return evaluateReachability(target, trace.getLast());
+    }
+
     public void setTrace(final GenMCEventDomain trace) {
         this.trace = trace;
         List<Event> cfEventsToRemove = new ArrayList<>();

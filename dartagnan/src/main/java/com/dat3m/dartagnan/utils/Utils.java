@@ -23,4 +23,8 @@ public class Utils {
             return String.format("%d:%02d:%02d hours", hours, minutes, seconds);
         }
     }
+
+    public static int getOptimalMapCapacity(final int size) {
+        return (size * 4 + (3 - (size % 3)) % 3) / 3;
+    }
 }

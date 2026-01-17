@@ -23,6 +23,8 @@ import com.dat3m.dartagnan.program.filter.Filter;
 import com.dat3m.dartagnan.solver.caat.domain.Domain;
 import com.dat3m.dartagnan.verification.model.EventData;
 
+import static com.dat3m.dartagnan.utils.Utils.getOptimalMapCapacity;
+
 public final class GenMCEventDomain implements Domain<EventData> {
 
     private static int optimalThreadMapCapacity;
@@ -302,18 +304,27 @@ public final class GenMCEventDomain implements Domain<EventData> {
         return Optional.ofNullable(eventMap.get(e));
     }
 
+    public EventData getLastRegWriter(final Register reg) {
+        final EventData alreadySeenRegWriter = lastRegWriters.get(reg);
+        if (alreadySeenRegWriter != null) {
+            return alreadySeenRegWriter;
+        }
+        final EventData lastRegWriter = getLastRegWriter(reg, null);
+        lastRegWriters.put(reg, lastRegWriter);
+        return lastRegWriter;
+    }
+
     public EventData getLastRegWriter(final Register reg, final EventData forEvent) {
         final EventData alreadySeenRegWriter = lastRegWriters.get(reg);
         if (alreadySeenRegWriter != null) {
             return alreadySeenRegWriter;
         }
-        final List<EventData> threadEvents = threadEventsMap.get(forEvent.getThread());
-        final int eventLocalId = forEvent.getLocalId();
+        final List<EventData> threadEvents = threadEventsMap.get(reg.getThread());
+        final int eventLocalId = forEvent == null ? -1 : forEvent.getLocalId();
         final int startIdExclusive = eventLocalId == -1 ? threadEvents.size() : eventLocalId;
         for (int i = startIdExclusive - 1; i >= 0; --i) {
             final EventData event = threadEvents.get(i);
             if (event.getEvent() instanceof RegWriter writer && writer.getResultRegister() == reg) {
-                lastRegWriters.put(reg, event);
                 return event;
             }
         }
@@ -322,10 +333,6 @@ public final class GenMCEventDomain implements Domain<EventData> {
 
     public static void setThreadCount(final int threadCount) {
         optimalThreadMapCapacity = getOptimalMapCapacity(threadCount);
-    }
-
-    public static int getOptimalMapCapacity(final int size) {
-        return (size * 4 + (3 - (size % 3)) % 3) / 3;
     }
 
     @Override
