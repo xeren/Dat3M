@@ -71,7 +71,6 @@ public final class GenMCExecutionModel {
     private static final Map<Event, Event> mayLxsxMap = new HashMap<>();
     private static final List<Thread> relevantThreads = new ArrayList<>();
     private static final Map<Event, Map<Thread, Integer>> porfPrefixes = new HashMap<>();
-    private static final Set<Event> failedJoinAssumes = new HashSet<>();
 
     // ============= Model specific  =============
     private EventData lastAdded = null;
@@ -101,12 +100,13 @@ public final class GenMCExecutionModel {
     private final boolean underApproximateWmm;
 
     private final Map<Thread, Event> boundEvents;
+    private final Set<Event> failedJoinAssumes;
     private final Map<Event, List<EventData>> mayRfMap;
     private final List<EventData> addedEvents;
 
     private GenMCExecutionModel(final GenMCEventDomain trace, final VerificationTask task, final GenMCWMMSolver solver, final PatternManager patterns,
                                 final ExprEvaluationContext evalContext, final ExpressionEvaluator exprEvaluator, final Map<Thread, Event> boundEvents,
-                                final Relation rf, final Relation co, final Relation lxsx, final Comparator<EventData> explorationOrder,
+                                final Set<Event> failedJoinAssumes, final Relation rf, final Relation co, final Relation lxsx, final Comparator<EventData> explorationOrder,
                                 final int optimalPorfPrefixCapacity, final GenMCReasoning reasoningMethod, final boolean underApproximateWmm) {
         this.trace = trace;
         this.task = task;
@@ -123,6 +123,7 @@ public final class GenMCExecutionModel {
         this.underApproximateWmm = underApproximateWmm;
 
         this.boundEvents = boundEvents;
+        this.failedJoinAssumes = failedJoinAssumes;
         this.mayRfMap = new HashMap<>();
         this.addedEvents = new ArrayList<>();
     }
@@ -166,7 +167,6 @@ public final class GenMCExecutionModel {
         relevantThreads.clear();
         relevantThreads.addAll(program.getThreads());
         porfPrefixes.clear();
-        failedJoinAssumes.clear();
 
         final GenMCEventDomain trace = new GenMCEventDomain(relevantThreads.size());
         final GenMCWMMSolver solver = GenMCWMMSolver.fromConfig(task.getConfig(), task.getMemoryModel(), analysisContext);
@@ -182,13 +182,22 @@ public final class GenMCExecutionModel {
             }
         }
         final int optimalPorfPrefixCapacity = getOptimalMapCapacity(relevantThreads.size() - 1);
-        return new GenMCExecutionModel(trace, task, solver, patterns, evalContext, exprEvaluator, new HashMap<>(), rf, co, lxsx, explorationOrder,
+        return new GenMCExecutionModel(trace, task, solver, patterns, evalContext, exprEvaluator, new HashMap<>(), new HashSet<>(), rf, co, lxsx, explorationOrder,
                 optimalPorfPrefixCapacity, reasoningMethod, underApproximateWmm);
     }
 
     public GenMCExecutionModel newInstance(final List<EventData> eventsToDelete, final Map<Thread, Event> boundEvents) {
         final GenMCEventDomain newTrace = new GenMCEventDomain(trace.getElements(), eventsToDelete, trace.getAddressInits().size(), trace.getLxsxPairs());
-        final GenMCExecutionModel model = new GenMCExecutionModel(newTrace, task, solver, patterns, evalContext, exprEvaluator.newInstance(), boundEvents,
+        final Set<Event> failedJoinAssumes = new HashSet<>(this.failedJoinAssumes);
+        failedJoinAssumes.removeIf(assume -> {
+            for (final EventData deletedEvent : eventsToDelete) {
+                if (deletedEvent.getEvent() == assume) {
+                    return true;
+                }
+            }
+            return false;
+        });
+        final GenMCExecutionModel model = new GenMCExecutionModel(newTrace, task, solver, patterns, evalContext, exprEvaluator.newInstance(), boundEvents, failedJoinAssumes,
                 rf, co, lxsx, explorationOrder, optimalPorfPrefixCapacity, reasoningMethod, underApproximateWmm);
         if (reasoningMethod.usesReasoning()) {
             for (final EventData addedEvent : addedEvents) {
