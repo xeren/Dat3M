@@ -10,6 +10,7 @@ import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.event.core.*;
+import com.dat3m.dartagnan.program.event.core.annotations.StringAnnotation;
 import com.dat3m.dartagnan.program.event.core.threading.*;
 import com.dat3m.dartagnan.solver.caat.CAATSolver;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
@@ -63,8 +64,8 @@ public final class GenMCExecutionModel {
     private static final Timer reasonEvaluationTimer = new Timer();
     private static final Timer patternEvaluationTimer = new Timer();
     private static final Map<Event, List<Conjunction<CoreLiteral>>> reasons = new HashMap<>();
-    private static final Map<Event, List<Event>> mayRfInMap = new HashMap<>();
-    private static final Map<Event, List<Event>> mayRfOutMap = new HashMap<>();
+    private static final Map<Event, Event[]> mayRfInMap = new HashMap<>();
+    private static final Map<Event, Event[]> mayRfOutMap = new HashMap<>();
     private static final Map<Event, Set<Event>> mayCoInMap = new HashMap<>();
     private static final Map<Event, Set<Event>> mayCoOutMap = new HashMap<>();
     private static final Map<Event, Event> mayLxsxMap = new HashMap<>();
@@ -147,10 +148,10 @@ public final class GenMCExecutionModel {
         final EventGraph mayCoGraph = relations.getKnowledge(co).getMaySet();
         mayRfInMap.clear();
         mayRfInMap.putAll(mayRfGraph.getInMap().entrySet().stream()
-                .collect(toMap(Map.Entry::getKey, rfSet -> new ArrayList<>(rfSet.getValue()))));
+                .collect(toMap(Map.Entry::getKey, rfSet -> rfSet.getValue().toArray(Event[]::new))));
         mayRfOutMap.clear();
         mayRfOutMap.putAll(mayRfGraph.getOutMap().entrySet().stream()
-                .collect(toMap(Map.Entry::getKey, rfSet -> new ArrayList<>(rfSet.getValue()))));
+                .collect(toMap(Map.Entry::getKey, rfSet -> rfSet.getValue().toArray(Event[]::new))));
         mayCoInMap.clear();
         mayCoInMap.putAll(mayCoGraph.getInMap());
         mayCoOutMap.clear();
@@ -629,7 +630,7 @@ public final class GenMCExecutionModel {
             if (e instanceof Store store) {
                 data.setValue(exprEvaluator.evaluateToLiteral(store.getMemValue()));
             }
-            final BigInteger address = exprEvaluator.evaluateAddress(data);
+            final BigInteger address = exprEvaluator.evaluateCurrentAddress(data);
             if (address == null || BigInteger.ZERO.equals(address)) {
                 isConsistent = false;
                 trace.addEvent(data);
@@ -637,7 +638,7 @@ public final class GenMCExecutionModel {
             }
             data.setAccessedAddress(address);
             final List<EventData> mayRfSet;
-            if (trace.getLast().getEvent() instanceof final ThreadStart start && start.isSpawned()) {
+            if (e.getPredecessor() instanceof final ThreadStart start && start.isSpawned()) {
                 mayRfSet = new ArrayList<>();
                 final Thread currentThread = e.getThread();
                 final Optional<EventData> threadStartStore = getThreadStartStore(currentThread);
@@ -656,19 +657,17 @@ public final class GenMCExecutionModel {
         } else if (e instanceof final CondJump jump) {
             // ===== Jumps =====
             // We override the meaning of execution here. A jump is executed IFF its condition was true.
-            trace.addEvent(data);
-            lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
             if (jump.getGuard() instanceof final BoolLiteral bool) {
                 data.setWasExecuted(bool.getValue());
             } else {
                 final BigInteger guardResult = exprEvaluator.evaluate(jump.getGuard());
                 if (guardResult == null) {
-                    if (needsNewConsistencyCheck) {
-                        if (!checkConsistency(false)) {
-                            isConsistent = false;
-                            return data;
-                        }
+                    if (!checkConsistency(false)) {
+                        isConsistent = false;
+                        return data;
                     }
+                    trace.addEvent(data);
+                    lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
                     final BigInteger result = exprEvaluator.evaluateNonDet(jump.getGuard());
                     if (result == null) {
                         isConsistent = false;
@@ -738,13 +737,13 @@ public final class GenMCExecutionModel {
             lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
         } else if (e instanceof final ThreadJoin join) {
             // ===== Thread joins =====
-            final ThreadReturn threadReturn = join.getJoinThread().getEvents(ThreadReturn.class).get(0);
+            final ThreadReturn threadReturn = (ThreadReturn) trace.getThreadReturn(join.getJoinThread()).getEvent();
             final Expression returnValue = threadReturn.getValue().orElseThrow(() ->
                     new IllegalStateException("Return value of thread " + threadReturn.getThread().getName() + " is referenced but does not return anything"));
             data.setValue(exprEvaluator.evaluateToLiteral(returnValue));
             trace.addEvent(data);
             lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
-        } else {
+        } else if (!(e instanceof StringAnnotation) && !(e instanceof ThreadStart) && !(e instanceof Label)) {
             trace.addEvent(data);
             lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
         }
@@ -752,7 +751,7 @@ public final class GenMCExecutionModel {
     }
 
     private List<EventData> mayRfSet(final EventData target, final BigInteger address) {
-        final Map<Event, List<Event>> mayRfMap;
+        final Map<Event, Event[]> mayRfMap;
         final Event targetEvent = target.getEvent();
         final boolean isWrite = targetEvent instanceof Store;
         if (isWrite) {
@@ -760,17 +759,19 @@ public final class GenMCExecutionModel {
         } else {
             mayRfMap = mayRfInMap;
         }
-        final List<Event> mayRfSet = mayRfMap.get(targetEvent);
+        final Event[] mayRfSet = mayRfMap.get(targetEvent);
         if (mayRfSet == null) {
             return Collections.emptyList();
         }
-        final List<EventData> mayRfSetData = new ArrayList<>();
+        final List<EventData> mayRfSetData = new ArrayList<>(mayRfSet.length);
         for (final Event event : mayRfSet) {
-            trace.getData(event).ifPresent(eventData -> {
+            final Optional<EventData> e = trace.getData(event);
+            if (e.isPresent()) {
+                final EventData eventData = e.get();
                 if (address.equals(eventData.getAccessedAddress())) {
                     mayRfSetData.add(eventData);
                 }
-            });
+            }
         }
         if (!isWrite) {
             applyExplorationOrder(mayRfSetData);

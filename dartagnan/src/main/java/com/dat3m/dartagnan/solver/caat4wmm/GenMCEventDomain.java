@@ -14,10 +14,10 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.RegWriter;
 import com.dat3m.dartagnan.program.event.Tag;
 import com.dat3m.dartagnan.program.event.core.Init;
-import com.dat3m.dartagnan.program.event.core.Label;
 import com.dat3m.dartagnan.program.event.core.RMWStoreExclusive;
 import com.dat3m.dartagnan.program.event.core.Store;
 import com.dat3m.dartagnan.program.event.core.threading.ThreadCreate;
+import com.dat3m.dartagnan.program.event.core.threading.ThreadReturn;
 import com.dat3m.dartagnan.program.event.core.threading.ThreadStart;
 import com.dat3m.dartagnan.program.filter.Filter;
 import com.dat3m.dartagnan.solver.caat.domain.Domain;
@@ -80,7 +80,7 @@ public final class GenMCEventDomain implements Domain<EventData> {
                 if (e instanceof Store && event.getCoPredecessor() == null && event.getId() != revisitWriteId) {
                     addressInits.put((BigInteger) event.getAccessedAddress(), copiedEvent);
                 }
-                if (e instanceof RegWriter regWriter) {
+                if (e instanceof final RegWriter regWriter) {
                     lastRegWriters.put(regWriter.getResultRegister(), copiedEvent);
                 }
             }
@@ -136,7 +136,7 @@ public final class GenMCEventDomain implements Domain<EventData> {
         if (e instanceof Init) {
             addAddressInit(event);
         }
-        if (e instanceof RegWriter regWriter) {
+        if (e instanceof final RegWriter regWriter) {
             lastRegWriters.put(regWriter.getResultRegister(), event);
         }
         final EventData readFrom = event.getReadFrom();
@@ -190,7 +190,7 @@ public final class GenMCEventDomain implements Domain<EventData> {
                     break;
                 }
             }
-            if (i <= 0) {
+            if (i < 0) {
                 threadEvents.clear();
             } else {
                 threadEvents.subList(i + 1, threadEvents.size()).clear();
@@ -257,9 +257,8 @@ public final class GenMCEventDomain implements Domain<EventData> {
     }
 
     public EventData removeLast() {
-        final EventData last = getLast();
+        final EventData last = events.remove(events.size() - 1);
         final Event lastEvent = last.getEvent();
-        events.remove(last);
         eventMap.remove(lastEvent);
         threadEventsMap.get(lastEvent.getThread()).remove(last);
         if (last.getReadFrom() != null) {
@@ -315,16 +314,23 @@ public final class GenMCEventDomain implements Domain<EventData> {
     }
 
     public EventData getLastRegWriter(final Register reg, final EventData forEvent) {
-        final EventData alreadySeenRegWriter = lastRegWriters.get(reg);
-        if (alreadySeenRegWriter != null) {
-            return alreadySeenRegWriter;
-        }
         final List<EventData> threadEvents = threadEventsMap.get(reg.getThread());
         final int eventLocalId = forEvent == null ? -1 : forEvent.getLocalId();
         final int startIdExclusive = eventLocalId == -1 ? threadEvents.size() : eventLocalId;
         for (int i = startIdExclusive - 1; i >= 0; --i) {
             final EventData event = threadEvents.get(i);
-            if (event.getEvent() instanceof RegWriter writer && writer.getResultRegister() == reg) {
+            if (event.getEvent() instanceof final RegWriter writer && writer.getResultRegister() == reg) {
+                return event;
+            }
+        }
+        return null;
+    }
+
+    public EventData getThreadReturn(final Thread thread) {
+        final List<EventData> threadEvents = threadEventsMap.get(thread);
+        for (int i = threadEvents.size() - 1; i >= 0; --i) {
+            final EventData event = threadEvents.get(i);
+            if (event.getEvent() instanceof ThreadReturn) {
                 return event;
             }
         }
@@ -478,7 +484,6 @@ public final class GenMCEventDomain implements Domain<EventData> {
     }
 
     static boolean isThreadEndStore(final EventData store) {
-        return store.getEvent() instanceof Store && store.getEvent().getSuccessor() instanceof final Label label && label.getThread().getEntry().isSpawned()
-                && label.getName().startsWith("END_OF_T");
+        return store.getEvent() instanceof Store && store.getEvent().getPredecessor() instanceof final ThreadReturn ret && ret.getThread().getEntry().isSpawned();
     }
 }

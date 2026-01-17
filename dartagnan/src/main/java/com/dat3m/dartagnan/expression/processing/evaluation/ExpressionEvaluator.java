@@ -53,6 +53,9 @@ public abstract class ExpressionEvaluator {
     public BigInteger evaluateNonDet(final Expression expr) throws SolverException, InterruptedException, InvalidConfigurationException {
         return evaluateNonDet(expr, trace.getLast());
     }
+    public BigInteger evaluateCurrentAddress(final EventData event) throws SolverException, InterruptedException, InvalidConfigurationException {
+        return evaluateAddress(event);
+    }
     public boolean evaluateReachability(final Expression target) throws SolverException, InterruptedException, InvalidConfigurationException {
         return evaluateReachability(target, trace.getLast());
     }

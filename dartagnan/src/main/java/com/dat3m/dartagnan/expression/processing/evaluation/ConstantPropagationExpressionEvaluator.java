@@ -96,6 +96,14 @@ public class ConstantPropagationExpressionEvaluator extends ExpressionEvaluator 
     }
 
     @Override
+    public BigInteger evaluateCurrentAddress(final EventData event) {
+        if (event.getEvent() instanceof final MemoryCoreEvent memEvent) {
+            return evaluate(memEvent.getAddress(), null);
+        }
+        return null;
+    }
+
+    @Override
     public BigInteger evaluateAddress(final EventData event) {
         if (event.getEvent() instanceof final MemoryCoreEvent memEvent) {
             return evaluate(memEvent.getAddress(), event);
