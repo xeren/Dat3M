@@ -6,7 +6,6 @@ import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.core.Store;
-import com.dat3m.dartagnan.program.processing.AssertionTransformer;
 import com.dat3m.dartagnan.program.processing.ConsecutiveGotoSimplification;
 import com.dat3m.dartagnan.program.processing.IdReassignment;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
@@ -125,7 +124,6 @@ public final class GenMCSolver extends ModelChecker {
         memoryModel.configureAll(config);
         preprocessProgram(task, config);
         ConsecutiveGotoSimplification.newInstance().run(program);
-        AssertionTransformer.newInstance().run(program);
         IdReassignment.newInstance().run(program);
         preprocessMemoryModel(task, config);
 
