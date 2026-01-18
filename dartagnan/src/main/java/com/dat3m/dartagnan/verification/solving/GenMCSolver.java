@@ -297,7 +297,6 @@ public final class GenMCSolver extends ModelChecker {
                 final List<EventData> eventsToDelete = getEventsToDelete(threadEventsEntries, porfPrefix, read, currentThread, boundEvents);
                 if (shouldRevisit(currentThread, eventsToDelete, read, porfPrefix, writeReadsMap)) {
                     final Event readEvent = read.getEvent();
-                    logger.debug("Backward revisiting load {}: {} for store {}: {}", readEvent.getGlobalId(), readEvent, write.getGlobalId(), write);
                     final Map.Entry<GenMCExecutionModel, EventData> backwardRevisit = getBackwardRevisitModel(model, eventsToDelete, boundEvents, readEvent, write, lastRead);
                     final GenMCExecutionModel backwardRevisitModel = backwardRevisit.getKey();
                     final EventData revisitWrite = backwardRevisit.getValue();
@@ -319,8 +318,6 @@ public final class GenMCSolver extends ModelChecker {
             final boolean lastNeedsNewConsistencyCheck = model.lastNeedsNewConsistencyCheck();
             for (final boolean wasExecuted : List.of(event.wasExecuted(), !event.wasExecuted())) {
                 model.setJump(event, wasExecuted);
-                logger.debug("Visiting non-deterministic jump {}: {} with execution status {}",
-                        event.getEvent().getGlobalId(), event.getEvent(), wasExecuted);
                 if (!model.isConsistent()) {
                     return inconsistentExecution();
                 }
@@ -342,8 +339,6 @@ public final class GenMCSolver extends ModelChecker {
         final boolean lastNeedsNewConsistencyCheck = model.lastNeedsNewConsistencyCheck();
         for (final EventData write : mayRfSet) {
             model.setRf(read, write);
-            logger.debug("Forward revisiting load {}: {} for store {}: {}", read.getEvent().getGlobalId(),
-                    read.getEvent(), write.getEvent().getGlobalId(), write.getEvent());
             if (!visit(model)) {
                 return false;
             }
@@ -362,8 +357,6 @@ public final class GenMCSolver extends ModelChecker {
         final boolean lastNeedsNewConsistencyCheck = model.lastNeedsNewConsistencyCheck();
         for (final EventData otherWrite : mayCoSet) {
             model.setCo(otherWrite, write, mayCoSet);
-            logger.debug("Visiting coherence ({}, {}): ({},  {})", otherWrite.getEvent().getGlobalId(),
-                    write.getEvent().getGlobalId(), otherWrite.getEvent(), write.getEvent());
             if (!visit(model)) {
                 return false;
             }
