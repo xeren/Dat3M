@@ -70,7 +70,7 @@ public final class GenMCExecutionModel {
     private static final Map<Event, Set<Event>> mayCoOutMap = new HashMap<>();
     private static final Map<Event, Event> mayLxsxMap = new HashMap<>();
     private static final List<Thread> relevantThreads = new ArrayList<>();
-    private static final Map<Event, Map<Thread, Integer>> porfPrefixes = new HashMap<>();
+    private static final Map<Event, List<Map<Thread, Integer>>> porfPrefixes = new HashMap<>();
 
     // ============= Model specific  =============
     private EventData lastAdded = null;
@@ -181,7 +181,7 @@ public final class GenMCExecutionModel {
                 explorationOrder = explorationOrder.reversed();
             }
         }
-        final int optimalPorfPrefixCapacity = getOptimalMapCapacity(relevantThreads.size() - 1);
+        final int optimalPorfPrefixCapacity = getOptimalMapCapacity(relevantThreads.size() - program.getThreadEvents(Init.class).size() - 1);
         return new GenMCExecutionModel(trace, task, solver, patterns, evalContext, exprEvaluator, new HashMap<>(), new HashSet<>(), rf, co, lxsx, explorationOrder,
                 optimalPorfPrefixCapacity, reasoningMethod, underApproximateWmm);
     }
@@ -344,13 +344,15 @@ public final class GenMCExecutionModel {
         porfPrefix = new HashMap<>(optimalPorfPrefixCapacity);
     }
 
-    public EventData initialize(final Event revisitRead, final Event revisitWrite, final boolean needsNewConsistencyCheck) {
+    public EventData initialize(final Event revisitRead, final Event revisitWrite, final Event lastReadInReadThread, final Event lastReadInWriteThread,
+                                final boolean needsNewConsistencyCheck) {
         final EventData readEvent = trace.getData(revisitRead).orElseThrow(() ->
                 new IllegalArgumentException("Backward revisit model does not contain revisit read " + revisitRead.getGlobalId() + ": " + revisitRead));
         final EventData writeEvent = trace.getData(revisitWrite).orElseThrow(() ->
                 new IllegalArgumentException("Backward revisit model does not contain revisit write " + revisitWrite.getGlobalId() + ": " + revisitWrite));
-        porfPrefix = porfPrefixes.get(revisitRead);
+        porfPrefix = lastReadInReadThread == null ? new HashMap<>(optimalPorfPrefixCapacity) : getPorfPrefix(lastReadInReadThread, false);
         setRf(readEvent, writeEvent);
+        porfPrefix = lastReadInWriteThread == null ? new HashMap<>(optimalPorfPrefixCapacity) : getPorfPrefix(lastReadInWriteThread, false);
         setTrace();
         initFirstThreadEvent();
         initializeFields(needsNewConsistencyCheck, false);
@@ -369,15 +371,33 @@ public final class GenMCExecutionModel {
 
     public void setRf(final EventData read, final EventData write) {
         trace.setReadFrom(read, write, read.getReadFrom());
-        final Event writeEvent = write.getEvent();
-        final Thread writeThread = writeEvent.getThread();
-        final Integer porfPrefixInWriteThread = porfPrefix.get(writeThread);
-        final int writeGid = writeEvent.getGlobalId();
-        if (porfPrefixInWriteThread == null || writeGid > porfPrefixInWriteThread) {
-            porfPrefix.put(writeThread, writeGid);
-        }
         final Event readEvent = read.getEvent();
-        porfPrefixes.put(readEvent, new HashMap<>(porfPrefix));
+        final Event writeEvent = write.getEvent();
+        if (!(writeEvent instanceof Init)) {
+            final Thread readThread = readEvent.getThread();
+            final Thread writeThread = writeEvent.getThread();
+            if (writeThread != readThread) {
+                final Integer porfPrefixInWriteThread = porfPrefix.get(writeThread);
+                final int writeGid = writeEvent.getGlobalId();
+                if (porfPrefixInWriteThread == null || writeGid > porfPrefixInWriteThread) {
+                    porfPrefix.put(writeThread, writeGid);
+                    final Event lastReadInWriteThread = getLastRead(trace.getThreadEventsMap().get(writeThread), write.getLocalId() - 1);
+                    if (lastReadInWriteThread != null) {
+                        for (final Map.Entry<Thread, Integer> writePorfPrefixEntry : getPorfPrefix(lastReadInWriteThread, true).entrySet()) {
+                            final Thread thread = writePorfPrefixEntry.getKey();
+                            if (thread != readThread) {
+                                final int writePorfPrefixBound = writePorfPrefixEntry.getValue();
+                                final Integer porfPrefixBound = porfPrefix.get(thread);
+                                if (porfPrefixBound == null || writePorfPrefixBound > porfPrefixBound) {
+                                    porfPrefix.put(thread, writePorfPrefixBound);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        porfPrefixes.computeIfAbsent(readEvent, e -> new ArrayList<>()).add(new HashMap<>(porfPrefix));
         addedEvents.add(read);
         final List<EventData> mayRfSet = mayRfMap.get(readEvent);
         if ((mayRfSet == null || mayRfSet.size() > 1) && write.getCoSuccessor() != null) {
@@ -415,11 +435,15 @@ public final class GenMCExecutionModel {
 
     public void rollback(final EventData rollbackPoint, final boolean needsNewConsistencyCheck, final boolean lastNeedsNewConsistencyCheck) {
         lastAdded = rollbackPoint;
-        final Event backtrackEvent = rollbackPoint.getEvent();
-        currentThreadIndex = relevantThreads.indexOf(backtrackEvent.getThread());
+        final Event rollBackEvent = rollbackPoint.getEvent();
+        final Thread rollbackThread = rollBackEvent.getThread();
+        currentThreadIndex = relevantThreads.indexOf(rollbackThread);
         backtrackTrace(rollbackPoint);
         if (rollbackPoint.getReadFrom() != null) {
-            porfPrefix = porfPrefixes.get(backtrackEvent);
+            final List<Map<Thread, Integer>> porfPrefixesForRollbackEvent = porfPrefixes.get(rollBackEvent);
+            porfPrefixesForRollbackEvent.remove(porfPrefixesForRollbackEvent.size() - 1);
+            final Event lastRead = getLastRead(trace.getThreadEventsMap().get(rollbackThread), rollbackPoint.getLocalId() - 1);
+            porfPrefix = lastRead == null ? new HashMap<>(optimalPorfPrefixCapacity) : getPorfPrefix(lastRead, false);
         }
         addedEvents.remove(rollbackPoint);
         setTrace();
@@ -431,7 +455,7 @@ public final class GenMCExecutionModel {
         }
     }
 
-    public void rollbackCo(final EventData coPredecessor, final EventData rollbackPoint, final EventData lastRead, final boolean forBackwardRevisit,
+    public void rollbackCo(final EventData coPredecessor, final EventData rollbackPoint, final Event lastRead, final boolean forBackwardRevisit,
                            final boolean needsNewConsistencyCheck, final boolean lastNeedsNewConsistencyCheck) {
         final Thread currentThread = trace.getLast().getThread();
         final Thread rollbackThread = rollbackPoint.getThread();
@@ -457,8 +481,18 @@ public final class GenMCExecutionModel {
             }
         }
         if (currentThread != rollbackThread) {
-            porfPrefix = lastRead == null ? new HashMap<>(optimalPorfPrefixCapacity) : porfPrefixes.get(lastRead.getEvent());
+            porfPrefix = lastRead == null ? new HashMap<>(optimalPorfPrefixCapacity) : getPorfPrefix(lastRead, false);
         }
+    }
+
+    public static Event getLastRead(final List<EventData> threadEvents, final int maxLocalId) {
+        for (int i = maxLocalId; i >= 0; --i) {
+            final EventData event = threadEvents.get(i);
+            if (event.getReadFrom() != null) {
+                return event.getEvent();
+            }
+        }
+        return null;
     }
 
     public void resetConsistencyStatus() {
@@ -558,6 +592,11 @@ public final class GenMCExecutionModel {
         }
     }
 
+    public void removeRevisitFromPorfPrefixes(final Event revisitRead) {
+        final List<Map<Thread, Integer>> porfPrefixesForRevisitRead = porfPrefixes.get(revisitRead);
+        porfPrefixesForRevisitRead.remove(porfPrefixesForRevisitRead.size() - 1);
+    }
+
     public EventData nextEvent() throws InterruptedException, SolverException, InvalidConfigurationException {
         final EventData startEvent;
         boolean needsInit;
@@ -573,7 +612,7 @@ public final class GenMCExecutionModel {
             final Thread thread = relevantThreads.get(currentThreadIndex);
             if (newThread) {
                 final Event boundEvent = boundEvents.get(thread);
-                porfPrefix = boundEvent == null ? new HashMap<>(optimalPorfPrefixCapacity) : porfPrefixes.get(boundEvent);
+                porfPrefix = boundEvent == null ? new HashMap<>(optimalPorfPrefixCapacity) : getPorfPrefix(boundEvent, false);
             }
             Event e;
             if (needsInit) {
@@ -830,6 +869,12 @@ public final class GenMCExecutionModel {
             addedEvents.removeAll(removedEvents);
         }
         removedEvents.clear();
+    }
+
+    private Map<Thread, Integer> getPorfPrefix(final Event event, final boolean readOnly) {
+        final List<Map<Thread, Integer>> porfPrefixesForEvent = porfPrefixes.get(event);
+        final Map<Thread, Integer> porfPrefixForEvent = porfPrefixesForEvent.get(porfPrefixesForEvent.size() - 1);
+        return readOnly ? porfPrefixForEvent : new HashMap<>(porfPrefixForEvent);
     }
 
     private boolean reasonKnown() {

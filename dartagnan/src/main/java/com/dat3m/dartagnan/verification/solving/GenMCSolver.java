@@ -277,7 +277,7 @@ public final class GenMCSolver extends ModelChecker {
             }
             final GenMCEventDomain trace = model.getTrace();
             final Map<Thread, List<EventData>> threadEventsMap = trace.getThreadEventsMap();
-            final EventData lastRead = getLastRead(threadEventsMap.get(currentThread), event.getLocalId() - 1);
+            final Event lastRead = getLastRead(threadEventsMap.get(currentThread), event.getLocalId() - 1);
             if (!visitCos(model, event, mayCoSet, lastRead, false)) {
                 return false;
             }
@@ -288,7 +288,7 @@ public final class GenMCSolver extends ModelChecker {
             final Map<EventData, List<EventData>> writeReadsMap = trace.getWriteReadsMap();
             final Map<Thread, Event> boundEvents = new HashMap<>(model.getOptimalPorfPrefixCapacity() + 1);
             if (lastRead != null) {
-                boundEvents.put(currentThread, lastRead.getEvent());
+                boundEvents.put(currentThread, lastRead);
             }
             for (final EventData read : relevantReads) {
                 if (model.hasBacktrackingPoint()) {
@@ -298,14 +298,13 @@ public final class GenMCSolver extends ModelChecker {
                 if (shouldRevisit(currentThread, eventsToDelete, read, porfPrefix, writeReadsMap)) {
                     final Event readEvent = read.getEvent();
                     logger.debug("Backward revisiting load {}: {} for store {}: {}", readEvent.getGlobalId(), readEvent, write.getGlobalId(), write);
-                    final Map.Entry<GenMCExecutionModel, EventData> backwardRevisit = getBackwardRevisitModel(model, eventsToDelete, boundEvents, readEvent, write);
+                    final Map.Entry<GenMCExecutionModel, EventData> backwardRevisit = getBackwardRevisitModel(model, eventsToDelete, boundEvents, readEvent, write, lastRead);
                     final GenMCExecutionModel backwardRevisitModel = backwardRevisit.getKey();
                     final EventData revisitWrite = backwardRevisit.getValue();
-                    final EventData lastReadInRevisit = getLastRead(backwardRevisitModel.getTrace().getThreadEventsMap()
-                            .get(revisitWrite.getThread()), revisitWrite.getLocalId() - 1);
-                    if (!visitCos(backwardRevisitModel, revisitWrite, backwardRevisitModel.getMayCoSet(revisitWrite), lastReadInRevisit, true)) {
+                    if (!visitCos(backwardRevisitModel, revisitWrite, backwardRevisitModel.getMayCoSet(revisitWrite), lastRead, true)) {
                         return false;
                     }
+                    backwardRevisitModel.removeRevisitFromPorfPrefixes(readEvent);
                     model.updateBacktrackingPoint(backwardRevisitModel, write);
                 }
             }
@@ -353,7 +352,7 @@ public final class GenMCSolver extends ModelChecker {
         return true;
     }
 
-    private boolean visitCos(final GenMCExecutionModel model, final EventData write, final Collection<EventData> mayCoSet, final EventData lastRead,
+    private boolean visitCos(final GenMCExecutionModel model, final EventData write, final Collection<EventData> mayCoSet, final Event lastRead,
                              final boolean forBackwardRevisit) throws SolverException, InterruptedException, InvalidConfigurationException {
         if (mayCoSet.isEmpty()) {
             model.getTrace().addAddressInit(write);
@@ -395,9 +394,9 @@ public final class GenMCSolver extends ModelChecker {
                         if (readId < e.getId()) {
                             eventsToDelete.add(e);
                         } else {
-                            final EventData lastRead = getLastRead(threadEvents, e.getLocalId());
+                            final Event lastRead = getLastRead(threadEvents, e.getLocalId());
                             if (lastRead != null) {
-                                boundEvents.put(thread, lastRead.getEvent());
+                                boundEvents.put(thread, lastRead);
                             } else {
                                 boundEvents.remove(thread);
                             }
@@ -411,9 +410,9 @@ public final class GenMCSolver extends ModelChecker {
                         if (readId < e.getId() && prefixLimitForThread < e.getEvent().getGlobalId()) {
                             eventsToDelete.add(e);
                         } else {
-                            final EventData lastRead = getLastRead(threadEvents, e.getLocalId());
+                            final Event lastRead = getLastRead(threadEvents, e.getLocalId());
                             if (lastRead != null) {
-                                boundEvents.put(thread, lastRead.getEvent());
+                                boundEvents.put(thread, lastRead);
                             } else {
                                 boundEvents.remove(thread);
                             }
@@ -428,16 +427,6 @@ public final class GenMCSolver extends ModelChecker {
             }
         }
         return eventsToDelete;
-    }
-
-    private static EventData getLastRead(final List<EventData> threadEvents, final int maxLocalId) {
-        for (int i = maxLocalId; i >= 0; --i) {
-            final EventData event = threadEvents.get(i);
-            if (event.getReadFrom() != null) {
-                return event;
-            }
-        }
-        return null;
     }
 
     private static boolean shouldRevisit(final Thread currentThread, final List<EventData> eventsToDelete, final EventData read, final Map<Thread, Integer> porfPrefix,
@@ -495,9 +484,10 @@ public final class GenMCSolver extends ModelChecker {
     }
 
     private static Map.Entry<GenMCExecutionModel, EventData> getBackwardRevisitModel(final GenMCExecutionModel oldModel, final List<EventData> eventsToDelete,
-                                                                                     final Map<Thread, Event> boundEvents, final Event read, final Event write) {
+                                                                                     final Map<Thread, Event> boundEvents, final Event read, final Event write,
+                                                                                     final Event lastRead) {
         final GenMCExecutionModel newModel = oldModel.newInstance(eventsToDelete, boundEvents);
-        final EventData newWrite = newModel.initialize(read, write, oldModel.needsNewConsistencyCheck());
+        final EventData newWrite = newModel.initialize(read, write, boundEvents.get(read.getThread()), lastRead, oldModel.needsNewConsistencyCheck());
         return Map.entry(newModel, newWrite);
     }
 }
