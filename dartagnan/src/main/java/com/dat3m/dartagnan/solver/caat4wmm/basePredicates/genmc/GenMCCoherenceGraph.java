@@ -62,7 +62,7 @@ public class GenMCCoherenceGraph extends StaticGenMCWMMGraph {
         if (isRepopulateForbidden()) return;
         coMap = new ArrayList<>(trace.getAddressInits().values());
         coMap.removeIf(firstWrite -> firstWrite.getCoSuccessor() == null);
-        computeSize();
+        size = -1;
     }
 
     private void computeSize() {
@@ -73,6 +73,17 @@ public class GenMCCoherenceGraph extends StaticGenMCWMMGraph {
         }
         size >>= 1;
     }
+
+    @Override
+    public int size() {
+        if (size == -1) {
+            computeSize();
+        }
+        return size;
+    }
+
+    @Override
+    public int getEstimatedSize() { return size(); }
 
     @Override
     public List<EventData> inEvents(final EventData event) {
@@ -89,7 +100,7 @@ public class GenMCCoherenceGraph extends StaticGenMCWMMGraph {
     @Override
     public Stream<Edge> edgeStream() {
         return StreamSupport.stream(
-                Spliterators.spliterator(edgeIterator(), size, SIZED | NONNULL | DISTINCT | IMMUTABLE | ORDERED),
+                Spliterators.spliterator(edgeIterator(), size(), SIZED | NONNULL | DISTINCT | IMMUTABLE | ORDERED),
                 false
         );
     }

@@ -31,7 +31,12 @@ public class GenMCLocationGraph extends StaticGenMCWMMGraph {
         for (final EventData event : trace.getElements()) {
             final Object address = event.getAccessedAddress();
             if (address != null) {
-                addrEventsMap.computeIfAbsent(address, a -> new ArrayList<>()).add(event);
+                List<EventData> addrEvents = addrEventsMap.get(address);
+                if (addrEvents == null) {
+                    addrEvents = new ArrayList<>();
+                    addrEventsMap.put(address, addrEvents);
+                }
+                addrEvents.add(event);
             }
         }
         for (final List<EventData> addrSet : addrEventsMap.values()) {

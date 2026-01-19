@@ -97,22 +97,22 @@ public class PatternManager {
                 pattern.addRelationGraph(rel, graph);
                 pattern.addEdge(rel, firstNode, secondNode, false);
             }
+            final Map.Entry<Edge, AbstractGenMCWMMGraph> anyEdge = edges.get(0);
+            final AbstractGenMCWMMGraph graph = anyEdge.getValue();
+            final GenMCEventDomain trace = graph.getDomain();
+            final Edge edge = anyEdge.getKey();
+            final Map.Entry<EventData, Boolean> patternBacktrackingPoint =
+                    isViolated(pattern, trace.getObjectById(edge.getFirst()), trace.getObjectById(edge.getSecond()), graphs.get(graph));
+            final EventData patternBacktrackingEvent = patternBacktrackingPoint.getKey();
+            final int patternBacktrackingPointId = patternBacktrackingEvent.getId();
+            final boolean patternBacktrackingPointIsRel = patternBacktrackingPoint.getValue();
+            if (patternBacktrackingPointId < backtrackingPointId || (backtrackingPointId == patternBacktrackingPointId && !patternBacktrackingPointIsRel)) {
+                backtrackingPoint = patternBacktrackingEvent;
+                backtrackingPointId = patternBacktrackingPointId;
+                backtrackingPointIsRel = patternBacktrackingPointIsRel;
+            }
             if (!existsPattern(newPatterns, pattern)) {
                 newPatterns.add(pattern);
-                final Map.Entry<Edge, AbstractGenMCWMMGraph> anyEdge = edges.get(0);
-                final AbstractGenMCWMMGraph graph = anyEdge.getValue();
-                final GenMCEventDomain trace = graph.getDomain();
-                final Edge edge = anyEdge.getKey();
-                final Map.Entry<EventData, Boolean> patternBacktrackingPoint =
-                        isViolated(pattern, trace.getObjectById(edge.getFirst()), trace.getObjectById(edge.getSecond()), graphs.get(graph));
-                final EventData patternBacktrackingEvent = patternBacktrackingPoint.getKey();
-                final int patternBacktrackingPointId = patternBacktrackingEvent.getId();
-                final boolean patternBacktrackingPointIsRel = patternBacktrackingPoint.getValue();
-                if (patternBacktrackingPointId < backtrackingPointId || (backtrackingPointId == patternBacktrackingPointId && !patternBacktrackingPointIsRel)) {
-                    backtrackingPoint = patternBacktrackingEvent;
-                    backtrackingPointId = patternBacktrackingPointId;
-                    backtrackingPointIsRel = patternBacktrackingPointIsRel;
-                }
             }
         }
         patterns.addAll(newPatterns);

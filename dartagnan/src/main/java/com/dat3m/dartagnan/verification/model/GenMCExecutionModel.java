@@ -515,6 +515,7 @@ public final class GenMCExecutionModel {
         } else {
             isConsistent &= !reasonKnown() && !hasPattern();
         }
+        addedEvents.clear();
         if (isConsistent) {
             if (ignoredEvent != null) {
                 lastNeedsNewConsistencyCheck = false;
@@ -550,7 +551,6 @@ public final class GenMCExecutionModel {
         }
         final GenMCWMMSolver.Result result = solver.check(trace, reasoningMethod);
         consistencyCheckTimer.stop();
-        addedEvents.clear();
         if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
             return true;
         } else if (result.getStatus() == CAATSolver.Status.INCONSISTENT) {
@@ -911,7 +911,6 @@ public final class GenMCExecutionModel {
                     }
                 }
             }
-            addedEvents.clear();
             reasonEvaluationTimer.stop();
             return backtrackingPoint != null;
         }
