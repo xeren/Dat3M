@@ -7,6 +7,7 @@ import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.verification.model.EventData;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
@@ -31,6 +32,11 @@ public class GenMCReadFromGraph extends StaticGenMCWMMGraph {
     @Override
     public void repopulate() {
         if (isRepopulateForbidden()) return;
+        size = trace.getReadWriteMap().size();
+    }
+
+    @Override
+    public void forwardPropagate(final Collection<EventData> added) {
         size = trace.getReadWriteMap().size();
     }
 

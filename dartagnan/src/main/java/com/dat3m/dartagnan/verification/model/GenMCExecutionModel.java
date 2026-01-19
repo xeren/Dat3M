@@ -77,6 +77,8 @@ public final class GenMCExecutionModel {
     private boolean needsNewConsistencyCheck = true;
     private boolean lastNeedsNewConsistencyCheck = true;
     private boolean needsJumpRevisit = false;
+    private boolean initiallyPropagated = false;
+    private boolean initiallyPropagatedByPatterns = false;
     private EventData backtrackingPoint = null;
     private boolean backtrackReasonIsRel = true;
     private Map<Thread, Integer> porfPrefix;
@@ -99,6 +101,7 @@ public final class GenMCExecutionModel {
     private final Set<Event> failedJoinAssumes;
     private final Map<Event, List<EventData>> mayRfMap;
     private final List<EventData> addedEvents;
+    private final List<EventData> addedReasoningEvents;
 
     private GenMCExecutionModel(final GenMCEventDomain trace, final VerificationTask task, final GenMCWMMSolver solver, final ExprEvaluationContext evalContext,
                                 final ExpressionEvaluator exprEvaluator, final Map<Thread, Event> boundEvents, final Set<Event> failedJoinAssumes,
@@ -122,6 +125,7 @@ public final class GenMCExecutionModel {
         this.failedJoinAssumes = failedJoinAssumes;
         this.mayRfMap = new HashMap<>();
         this.addedEvents = new ArrayList<>();
+        this.addedReasoningEvents = new ArrayList<>();
     }
 
     public static GenMCExecutionModel withTask(final VerificationTask task, final Context analysisContext, final ExprEvaluationContext evalContext,
@@ -165,7 +169,7 @@ public final class GenMCExecutionModel {
         porfPrefixes.clear();
 
         final GenMCEventDomain trace = new GenMCEventDomain(relevantThreads.size());
-        final GenMCWMMSolver solver = GenMCWMMSolver.fromConfig(task.getConfig(), task.getMemoryModel(), analysisContext);
+        final GenMCWMMSolver solver = GenMCWMMSolver.fromConfig(task.getConfig(), task.getMemoryModel(), analysisContext, reasoningMethod);
         final ExpressionEvaluator exprEvaluator = ExpressionEvaluator.withContext(evalContext);
         exprEvaluator.setTrace(trace);
         Comparator<EventData> explorationOrder = null;
@@ -194,10 +198,12 @@ public final class GenMCExecutionModel {
         final GenMCExecutionModel model = new GenMCExecutionModel(newTrace, task, solver, evalContext, exprEvaluator.newInstance(), boundEvents, failedJoinAssumes,
                 rf, co, lxsx, explorationOrder, optimalPorfPrefixCapacity, reasoningMethod, underApproximateWmm);
         if (reasoningMethod.usesReasoning()) {
-            for (final EventData addedEvent : addedEvents) {
-                model.trace.getData(addedEvent.getEvent()).ifPresent(model.addedEvents::add);
+            for (final EventData addedEvent : addedReasoningEvents) {
+                model.trace.getData(addedEvent.getEvent()).ifPresent(model.addedReasoningEvents::add);
             }
         }
+        initiallyPropagated = false;
+        initiallyPropagatedByPatterns = false;
         return model;
     }
 
@@ -392,6 +398,9 @@ public final class GenMCExecutionModel {
         }
         porfPrefixes.computeIfAbsent(readEvent, e -> new ArrayList<>()).add(new HashMap<>(porfPrefix));
         addedEvents.add(read);
+        if (reasoningMethod.usesReasoning()) {
+            addedReasoningEvents.add(read);
+        }
         final List<EventData> mayRfSet = mayRfMap.get(readEvent);
         if ((mayRfSet == null || mayRfSet.size() > 1) && write.getCoSuccessor() != null) {
             needsNewConsistencyCheck = true;
@@ -409,6 +418,9 @@ public final class GenMCExecutionModel {
             newWrite.getCoSuccessor().setCoPredecessor(newWrite);
         }
         addedEvents.add(newWrite);
+        if (reasoningMethod.usesReasoning()) {
+            addedReasoningEvents.add(newWrite);
+        }
         if (mayCoSet == null || mayCoSet.size() > 1) {
             if (newWrite.getCoSuccessor() == null) {
                 final Event newWriteEvent = newWrite.getEvent();
@@ -439,6 +451,9 @@ public final class GenMCExecutionModel {
             porfPrefix = lastRead == null ? new HashMap<>(optimalPorfPrefixCapacity) : getPorfPrefix(lastRead, false);
         }
         addedEvents.remove(rollbackPoint);
+        if (reasoningMethod.usesReasoning()) {
+            addedReasoningEvents.remove(rollbackPoint);
+        }
         setTrace();
         initializeFields(needsNewConsistencyCheck, lastNeedsNewConsistencyCheck);
         if (backtrackingPoint != null && rollbackPoint.getId() <= backtrackingPoint.getId()) {
@@ -460,6 +475,9 @@ public final class GenMCExecutionModel {
         rollbackPoint.setCoPredecessor(null);
         rollbackPoint.setCoSuccessor(null);
         addedEvents.remove(rollbackPoint);
+        if (reasoningMethod.usesReasoning()) {
+            addedReasoningEvents.remove(rollbackPoint);
+        }
         setTrace();
         if (forBackwardRevisit) {
             initFirstThreadEvent();
@@ -504,9 +522,6 @@ public final class GenMCExecutionModel {
         final EventData ignoredEvent;
         if (ignoreLast) {
             ignoredEvent = trace.removeLast();
-            if (reasoningMethod.usesReasoning()) {
-                addedEvents.remove(ignoredEvent);
-            }
         } else {
             ignoredEvent = null;
         }
@@ -514,8 +529,9 @@ public final class GenMCExecutionModel {
             isConsistent &= checkFullConsistency();
         } else {
             isConsistent &= !reasonKnown() && !hasPattern();
+            addedEvents.clear();
+            addedReasoningEvents.clear();
         }
-        addedEvents.clear();
         if (isConsistent) {
             if (ignoredEvent != null) {
                 lastNeedsNewConsistencyCheck = false;
@@ -526,9 +542,6 @@ public final class GenMCExecutionModel {
         if (ignoredEvent != null) {
             trace.addEvent(ignoredEvent);
             checkForExclusiveLoad(ignoredEvent);
-            if (reasoningMethod.usesReasoning()) {
-                addedEvents.add(ignoredEvent);
-            }
         }
         return isConsistent;
     }
@@ -539,6 +552,7 @@ public final class GenMCExecutionModel {
                 return false;
             }
         }
+        boolean wasInitiallyPropagatedByPatterns = initiallyPropagatedByPatterns;
         if (reasonKnown() || hasPattern()) {
             return false;
         }
@@ -546,11 +560,20 @@ public final class GenMCExecutionModel {
         logger.debug("Checking consistency");
         ++consistencyChecks;
         consistencyCheckTimer.start();
-        if (reasoningMethod.usesPatterns()) {
+        if (!initiallyPropagatedByPatterns) {
+            solver.updateBasePredicates(trace);
             solver.updateRemainingBasePredicates(trace);
+            initiallyPropagated = true;
+        } else if (!initiallyPropagated || !wasInitiallyPropagatedByPatterns) {
+            solver.updateRemainingBasePredicates(trace);
+            initiallyPropagated = true;
+        } else {
+            solver.updateRemainingBasePredicates(trace, addedEvents);
         }
-        final GenMCWMMSolver.Result result = solver.check(trace, reasoningMethod);
+        final GenMCWMMSolver.Result result = solver.check(trace);
         consistencyCheckTimer.stop();
+        addedEvents.clear();
+        addedReasoningEvents.clear();
         if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
             return true;
         } else if (result.getStatus() == CAATSolver.Status.INCONSISTENT) {
@@ -792,6 +815,9 @@ public final class GenMCExecutionModel {
             trace.addEvent(data);
             lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
         } else if (!(e instanceof StringAnnotation) && !(e instanceof ThreadStart) && !(e instanceof Label)) {
+            if (e instanceof GenericVisibleEvent) {
+                addedEvents.add(data);
+            }
             trace.addEvent(data);
             lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
         }
@@ -865,9 +891,12 @@ public final class GenMCExecutionModel {
 
     private void backtrackTrace(final EventData backtrackingPoint) {
         final List<EventData> removedEvents = trace.rollback(backtrackingPoint);
+        addedEvents.removeAll(removedEvents);
         if (reasoningMethod.usesReasoning()) {
-            addedEvents.removeAll(removedEvents);
+            addedReasoningEvents.removeAll(removedEvents);
         }
+        initiallyPropagated = false;
+        initiallyPropagatedByPatterns = false;
         removedEvents.clear();
     }
 
@@ -881,7 +910,7 @@ public final class GenMCExecutionModel {
         if (reasoningMethod.usesReasons()) {
             reasonEvaluationTimer.start();
             EVENT_LOOP:
-            for (final EventData event : addedEvents) {
+            for (final EventData event : addedReasoningEvents) {
                 final List<GenMCReason> reasonsForEvent = reasons.get(event.getEvent());
                 if (reasonsForEvent != null) {
                     for (final GenMCReason reason : reasonsForEvent) {
@@ -1030,7 +1059,12 @@ public final class GenMCExecutionModel {
     private boolean hasPattern() {
         if (reasoningMethod.usesPatterns()) {
             patternEvaluationTimer.start();
-            solver.updateBasePredicates(trace);
+            if (initiallyPropagatedByPatterns) {
+                solver.updateBasePredicates(trace, addedEvents);
+            } else {
+                solver.updateBasePredicates(trace);
+                initiallyPropagatedByPatterns = true;
+            }
             Map.Entry<EventData, Boolean> backtrack = evaluatePatterns();
             patternEvaluationTimer.stop();
             if (backtrack != null) {
@@ -1044,7 +1078,7 @@ public final class GenMCExecutionModel {
 
     private Map.Entry<EventData, Boolean> evaluatePatterns() {
         Map.Entry<EventData, Boolean> backtrack;
-        for (final EventData event : addedEvents) {
+        for (final EventData event : addedReasoningEvents) {
             final EventData readFrom = event.getReadFrom();
             if (readFrom != null) {
                 if ((backtrack = patterns.isViolated(readFrom, event, rf)) != null) {

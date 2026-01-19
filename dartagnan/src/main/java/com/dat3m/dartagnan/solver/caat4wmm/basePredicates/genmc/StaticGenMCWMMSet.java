@@ -46,6 +46,15 @@ public class StaticGenMCWMMSet extends AbstractGenMCWMMPredicate implements SetP
     }
 
     @Override
+    public void forwardPropagate(final Collection<EventData> added) {
+        for (final EventData event : added) {
+            if (filter.apply(event.getEvent())) {
+                events.add(new Element(event.getId()));
+            }
+        }
+    }
+
+    @Override
     public void backtrackTo(int time) {
     }
 

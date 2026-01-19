@@ -1,5 +1,6 @@
 package com.dat3m.dartagnan.solver.caat4wmm;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
@@ -29,16 +30,27 @@ public class GenMCWMMSolver {
     private final CAATSolver solver;
     private final GenMCCoreReasoner reasoner;
     private final PatternManager patterns;
+    private final GenMCReasoning reasoningMethod;
+    private final AbstractGenMCWMMPredicate[] basePredicates;
 
-    private GenMCWMMSolver(final Configuration config, final Wmm memoryModel, final Context analysisContext) throws InvalidConfigurationException {
+    private GenMCWMMSolver(final Configuration config, final Wmm memoryModel, final Context analysisContext, final GenMCReasoning reasoningMethod)
+            throws InvalidConfigurationException {
         this.executionGraph = new GenMCExecutionGraph(memoryModel);
         this.reasoner = GenMCCoreReasoner.fromConfig(config, analysisContext, executionGraph);
         this.solver = CAATSolver.create();
         this.patterns = PatternManager.fromConfig(config, executionGraph, memoryModel.getRelation(RF), memoryModel.getRelation(CO));
+        this.reasoningMethod = reasoningMethod;
+        final Set<CAATPredicate> basePredicates = executionGraph.getCAATModel().getHierarchy().getBasePredicates();
+        this.basePredicates = new AbstractGenMCWMMPredicate[basePredicates.size()];
+        int i = -1;
+        for (final CAATPredicate pred : basePredicates) {
+            this.basePredicates[++i] = (AbstractGenMCWMMPredicate) pred;
+        }
     }
 
-    public static GenMCWMMSolver fromConfig(final Configuration config, final Wmm memoryModel, final Context analysisContext) throws InvalidConfigurationException {
-        return new GenMCWMMSolver(config, memoryModel, analysisContext);
+    public static GenMCWMMSolver fromConfig(final Configuration config, final Wmm memoryModel, final Context analysisContext, final GenMCReasoning reasoningMethod)
+            throws InvalidConfigurationException {
+        return new GenMCWMMSolver(config, memoryModel, analysisContext, reasoningMethod);
     }
 
     public GenMCExecutionGraph getExecutionGraph() {
@@ -49,7 +61,7 @@ public class GenMCWMMSolver {
         return patterns;
     }
 
-    public Result check(final GenMCEventDomain trace, final GenMCReasoning reasoningMethod) {
+    public Result check(final GenMCEventDomain trace) {
         // ============ Extract GenMCEventDomain ==============
         executionGraph.initializeFromDomain(trace);
 
@@ -75,7 +87,7 @@ public class GenMCWMMSolver {
 
     public void updateBasePredicates(final GenMCEventDomain trace) {
         AbstractGenMCWMMPredicate.allowInit();
-        for (final CAATPredicate basePredicate : executionGraph.getCAATModel().getHierarchy().getBasePredicates()) {
+        for (final AbstractGenMCWMMPredicate basePredicate : basePredicates) {
             if (patterns.usesSets() || !(basePredicate instanceof SetPredicate)) {
                 basePredicate.initializeToDomain(trace);
                 basePredicate.repopulate();
@@ -84,12 +96,37 @@ public class GenMCWMMSolver {
         AbstractGenMCWMMPredicate.forbidInit();
     }
 
+    public void updateBasePredicates(final GenMCEventDomain trace, final Collection<EventData> addedEvents) {
+        AbstractGenMCWMMPredicate.allowInit();
+        for (final AbstractGenMCWMMPredicate basePredicate : basePredicates) {
+            if (patterns.usesSets() || !(basePredicate instanceof SetPredicate)) {
+                basePredicate.initializeToDomain(trace);
+                basePredicate.forwardPropagate(addedEvents);
+            }
+        }
+        AbstractGenMCWMMPredicate.forbidInit();
+    }
+
     public void updateRemainingBasePredicates(final GenMCEventDomain trace) {
         AbstractGenMCWMMPredicate.allowInit();
-        for (final CAATPredicate basePredicate : executionGraph.getCAATModel().getHierarchy().getBasePredicates()) {
+        for (final AbstractGenMCWMMPredicate basePredicate : basePredicates) {
             if (!patterns.usesSets() && basePredicate instanceof SetPredicate) {
                 basePredicate.initializeToDomain(trace);
                 basePredicate.repopulate();
+            }
+        }
+        AbstractGenMCWMMPredicate.forbidInit();
+    }
+
+    public void updateRemainingBasePredicates(final GenMCEventDomain trace, final Collection<EventData> addedEvents) {
+        if (!reasoningMethod.usesPatterns()) {
+            updateBasePredicates(trace, addedEvents);
+        }
+        AbstractGenMCWMMPredicate.allowInit();
+        for (final AbstractGenMCWMMPredicate basePredicate : basePredicates) {
+            if (!patterns.usesSets() && basePredicate instanceof SetPredicate) {
+                basePredicate.initializeToDomain(trace);
+                basePredicate.forwardPropagate(addedEvents);
             }
         }
         AbstractGenMCWMMPredicate.forbidInit();

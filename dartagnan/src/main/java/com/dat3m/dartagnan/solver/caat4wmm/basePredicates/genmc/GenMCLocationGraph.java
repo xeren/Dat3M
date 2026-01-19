@@ -39,11 +39,26 @@ public class GenMCLocationGraph extends StaticGenMCWMMGraph {
                 addrEvents.add(event);
             }
         }
+        size = -1;
+    }
+
+    private void computeSize() {
+        size = 0;
         for (final List<EventData> addrSet : addrEventsMap.values()) {
             size += addrSet.size() * addrSet.size();
         }
     }
 
+    @Override
+    public int size() {
+        if (size == -1) {
+            computeSize();
+        }
+        return size;
+    }
+
+    @Override
+    public int getEstimatedSize() { return size(); }
 
     @Override
     public List<EventData> inEvents(final EventData event) {
@@ -76,4 +91,19 @@ public class GenMCLocationGraph extends StaticGenMCWMMGraph {
         return addrEventsMap.get(e.getAccessedAddress()).stream().map(edgeMapping);
     }
 
+    @Override
+    public void forwardPropagate(final Collection<EventData> added) {
+        for (final EventData event : added) {
+            final Object address = event.getAccessedAddress();
+            if (address != null) {
+                List<EventData> addrEvents = addrEventsMap.get(address);
+                if (addrEvents == null) {
+                    addrEvents = new ArrayList<>();
+                    addrEventsMap.put(address, addrEvents);
+                }
+                addrEvents.add(event);
+            }
+        }
+        size = -1;
+    }
 }

@@ -4,6 +4,7 @@ import com.dat3m.dartagnan.program.event.core.RMWStore;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.verification.model.EventData;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -21,6 +22,7 @@ public class GenMCRMWGraph extends MaterializedGenMCWMMGraph {
     @Override
     public void repopulate() {
         if (isRepopulateForbidden()) return;
+        super.repopulate();
         for (final List<EventData> events : trace.getThreadEventsMap().values()) {
             EventData lastExclLoad = null;
             for (final EventData e : events) {
@@ -42,6 +44,11 @@ public class GenMCRMWGraph extends MaterializedGenMCWMMGraph {
                 }
             }
         }
+    }
+
+    @Override
+    public void forwardPropagate(final Collection<EventData> added) {
+        throw new UnsupportedOperationException("Not supported.");
     }
 
     @Override

@@ -5,6 +5,8 @@ import com.dat3m.dartagnan.solver.caat.predicates.AbstractPredicate;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
 import com.dat3m.dartagnan.verification.model.EventData;
 
+import java.util.Collection;
+
 public abstract class AbstractGenMCWMMPredicate extends AbstractPredicate {
 
     protected GenMCEventDomain trace;
@@ -20,6 +22,8 @@ public abstract class AbstractGenMCWMMPredicate extends AbstractPredicate {
         super.initializeToDomain(domain);
         trace = (GenMCEventDomain) domain;
     }
+
+    public abstract void forwardPropagate(Collection<EventData> added);
 
     protected EventData getEvent(final int id) {
         return trace.getObjectById(id);

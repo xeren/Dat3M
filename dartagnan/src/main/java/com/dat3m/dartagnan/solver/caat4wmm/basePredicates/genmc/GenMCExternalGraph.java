@@ -5,10 +5,7 @@ import com.dat3m.dartagnan.solver.caat.misc.EdgeDirection;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.verification.model.EventData;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -70,11 +67,21 @@ public class GenMCExternalGraph extends StaticGenMCWMMGraph {
     public void repopulate() {
         if (isRepopulateForbidden()) return;
         threadEventsMap = trace.getThreadEventsMap();
+        computeSize();
+    }
+
+    private void computeSize() {
+        size = 0;
         final int totalSize = domain.size();
         for (final List<EventData> threadEvents : threadEventsMap.values()) {
             final int threadSize = threadEvents.size();
             size += (totalSize - threadSize) * threadSize;
         }
+    }
+
+    @Override
+    public void forwardPropagate(final Collection<EventData> added) {
+        computeSize();
     }
 
 }

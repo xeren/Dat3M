@@ -165,17 +165,13 @@ public final class SimpleGraph extends AbstractBaseGraph {
         maxTime = 0;
         size = 0;
 
-        final int bound = Math.min(numEvents, outgoing.length);
-        for (int i = 0; i < bound; i++) {
-            final DataItem item = outgoing[i];
+        for (final DataItem item : outgoing) {
             if (item != null) {
                 item.clear();
             }
         }
 
-        final int bound2 = Math.min(numEvents, ingoing.length);
-        for (int i = 0; i < bound2; i++) {
-            final DataItem item = ingoing[i];
+        for (final DataItem item : ingoing) {
             if (item != null) {
                 item.clear();
             }
@@ -211,6 +207,15 @@ public final class SimpleGraph extends AbstractBaseGraph {
         super.initializeToDomain(domain);
 
         clear();
+        numEvents = domain.size();
+        if (numEvents > outgoing.length) {
+            final int newCapacity = numEvents + 20; // We give a buffer of 20 extra events
+            outgoing = Arrays.copyOf(outgoing, newCapacity);
+            ingoing = Arrays.copyOf(ingoing, newCapacity);
+        }
+    }
+
+    public void updateDomain(final Domain<?> domain) {
         numEvents = domain.size();
         if (numEvents > outgoing.length) {
             final int newCapacity = numEvents + 20; // We give a buffer of 20 extra events

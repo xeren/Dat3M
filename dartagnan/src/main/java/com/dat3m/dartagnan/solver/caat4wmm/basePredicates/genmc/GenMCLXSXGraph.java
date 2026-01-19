@@ -4,9 +4,7 @@ import com.dat3m.dartagnan.program.event.core.RMWStoreExclusive;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.verification.model.EventData;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class GenMCLXSXGraph extends MaterializedGenMCWMMGraph {
 
@@ -17,6 +15,7 @@ public class GenMCLXSXGraph extends MaterializedGenMCWMMGraph {
     @Override
     public void repopulate() {
         if (isRepopulateForbidden()) return;
+        super.repopulate();
         lxsxPairs = trace.getLxsxPairs();
         for (final Map.Entry<EventData, EventData> lxsxPair : lxsxPairs.entrySet()) {
             simpleGraph.addDisjoint(new Edge(lxsxPair.getValue().getId(), lxsxPair.getKey().getId()));
@@ -42,5 +41,14 @@ public class GenMCLXSXGraph extends MaterializedGenMCWMMGraph {
             }
         }
         return Collections.emptyList();
+    }
+
+    @Override
+    public void forwardPropagate(final Collection<EventData> added) {
+        for (final EventData event : added) {
+            if (event.getEvent() instanceof RMWStoreExclusive) {
+                simpleGraph.addDisjoint(new Edge(lxsxPairs.get(event).getId(), event.getId()));
+            }
+        }
     }
 }

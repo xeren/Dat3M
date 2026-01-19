@@ -6,6 +6,7 @@ import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.verification.model.EventData;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
@@ -34,10 +35,30 @@ public class GenMCProgramOrderGraph extends StaticGenMCWMMGraph {
     public void repopulate() {
         if (isRepopulateForbidden()) return;
         this.threadEventsMap = trace.getThreadEventsMap();
+        size = -1;
+    }
+
+    private void computeSize() {
         size = 0;
         for (final List<EventData> threadEvents : threadEventsMap.values()) {
             size += ((threadEvents.size() - 1) * threadEvents.size()) >> 1;
         }
+    }
+
+    @Override
+    public int size() {
+        if (size == -1) {
+            computeSize();
+        }
+        return size;
+    }
+
+    @Override
+    public int getEstimatedSize() { return size(); }
+
+    @Override
+    public void forwardPropagate(final Collection<EventData> added) {
+        size = -1;
     }
 
     @Override

@@ -52,6 +52,11 @@ public class GenMCFenceGraph extends StaticGenMCWMMGraph {
     }
 
     @Override
+    public void forwardPropagate(final Collection<EventData> added) {
+        throw new UnsupportedOperationException("Not supported.");
+    }
+
+    @Override
     public Stream<Edge> edgeStream() {
         return trace.getThreadEventsMap().entrySet().stream()
                 .flatMap(x -> {

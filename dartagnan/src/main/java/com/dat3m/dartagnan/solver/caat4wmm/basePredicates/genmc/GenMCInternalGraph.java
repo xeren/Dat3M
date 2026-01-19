@@ -5,7 +5,7 @@ import com.dat3m.dartagnan.solver.caat.misc.EdgeDirection;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.verification.model.EventData;
 
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -61,5 +61,8 @@ public class GenMCInternalGraph extends StaticGenMCWMMGraph {
         size = threadEventsMap.values().stream().mapToInt(x -> x.size() * x.size()).sum();
     }
 
-
+    @Override
+    public void forwardPropagate(final Collection<EventData> added) {
+        size = threadEventsMap.values().stream().mapToInt(x -> x.size() * x.size()).sum();
+    }
 }
