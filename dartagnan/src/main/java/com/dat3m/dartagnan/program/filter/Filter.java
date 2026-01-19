@@ -48,4 +48,6 @@ public abstract class Filter {
     public static UnionFilter union(Filter a, Filter b) {
         return (UnionFilter) canonicalizer.computeIfAbsent(new UnionFilter(a, b), key -> key);
     }
+
+    public abstract Filter accept(final FilterTransformer transformer);
 }

@@ -39,4 +39,9 @@ public class IntersectionFilter extends Filter {
         IntersectionFilter fObj = (IntersectionFilter) obj;
         return fObj.filter1.equals(filter1) && fObj.filter2.equals(filter2);
     }
+
+    @Override
+    public Filter accept(final FilterTransformer transformer) {
+        return transformer.visitIntersection(filter1, filter2);
+    }
 }

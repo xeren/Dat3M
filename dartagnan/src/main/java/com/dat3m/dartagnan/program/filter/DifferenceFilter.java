@@ -39,4 +39,9 @@ public class DifferenceFilter extends Filter {
         DifferenceFilter fObj = (DifferenceFilter) obj;
         return fObj.filter1.equals(filter1) && fObj.filter2.equals(filter2);
     }
+
+    @Override
+    public Filter accept(final FilterTransformer transformer) {
+        return transformer.visitDifference(filter1, filter2);
+    }
 }

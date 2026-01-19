@@ -39,4 +39,9 @@ public class UnionFilter extends Filter {
         UnionFilter fObj = (UnionFilter) obj;
         return fObj.filter1.equals(filter1) && fObj.filter2.equals(filter2);
     }
+
+    @Override
+    public Filter accept(final FilterTransformer transformer) {
+        return transformer.visitUnion(filter1, filter2);
+    }
 }

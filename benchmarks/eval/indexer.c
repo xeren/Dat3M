@@ -1,5 +1,5 @@
 #define SIZE 128
-#define MAX  4
+#define MAX 4
 
 atomic_int table[SIZE];
 

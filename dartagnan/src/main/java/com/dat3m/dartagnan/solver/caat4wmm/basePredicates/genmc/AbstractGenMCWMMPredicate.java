@@ -4,8 +4,6 @@ import com.dat3m.dartagnan.solver.caat.domain.Domain;
 import com.dat3m.dartagnan.solver.caat.predicates.AbstractPredicate;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
 import com.dat3m.dartagnan.verification.model.EventData;
-import com.google.common.base.Preconditions;
-
 
 public abstract class AbstractGenMCWMMPredicate extends AbstractPredicate {
 
@@ -19,8 +17,6 @@ public abstract class AbstractGenMCWMMPredicate extends AbstractPredicate {
 
     @Override
     public void initializeToDomain(final Domain<?> domain) {
-        Preconditions.checkArgument(domain instanceof GenMCEventDomain,
-                "Incompatible domain. Expected " + GenMCEventDomain.class.getSimpleName());
         super.initializeToDomain(domain);
         trace = (GenMCEventDomain) domain;
     }

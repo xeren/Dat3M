@@ -4,7 +4,7 @@ import com.dat3m.dartagnan.program.event.Event;
 
 public class TagFilter extends Filter {
 
-    private final String tag;
+    protected final String tag;
 
     TagFilter(String tag){
         this.tag = tag;
@@ -35,5 +35,10 @@ public class TagFilter extends Filter {
 
         TagFilter fObj = (TagFilter) obj;
         return fObj.tag.equals(tag);
+    }
+
+    @Override
+    public Filter accept(final FilterTransformer transformer) {
+        return transformer.visitTagFilter(this);
     }
 }

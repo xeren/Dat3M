@@ -132,7 +132,7 @@ public class GenMCCoreReasoner {
         }
 
         // Now we can reduce all computed (symmetric) reasons.
-        return orbit.stream().map(this::reduce).filter(Objects::nonNull).map(Conjunction::new).collect(Collectors.toSet());
+        return orbit.stream().map(this::reduce).filter(Objects::nonNull).map(GenMCReason::new).collect(Collectors.toSet());
     }
 
     private Conjunction<CoreLiteral> toCoreReasonNoSymmetry(final Conjunction<CAATLiteral> baseReason) {

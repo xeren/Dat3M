@@ -8,8 +8,6 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import static java.util.stream.Collectors.groupingBy;
-
 // NOTE: Unlike RelLoc, this graph is reflexive!
 public class GenMCLocationGraph extends StaticGenMCWMMGraph {
 
@@ -29,9 +27,13 @@ public class GenMCLocationGraph extends StaticGenMCWMMGraph {
     @Override
     public void repopulate() {
         if (isRepopulateForbidden()) return;
-        addrEventsMap = trace.getElements().stream()
-                .filter(EventData::isMemoryEvent)
-                .collect(groupingBy(EventData::getAccessedAddress));
+        addrEventsMap = new HashMap<>();
+        for (final EventData event : trace.getElements()) {
+            final Object address = event.getAccessedAddress();
+            if (address != null) {
+                addrEventsMap.computeIfAbsent(address, a -> new ArrayList<>()).add(event);
+            }
+        }
         for (final List<EventData> addrSet : addrEventsMap.values()) {
             size += addrSet.size() * addrSet.size();
         }

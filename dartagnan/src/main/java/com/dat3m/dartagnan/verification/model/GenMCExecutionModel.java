@@ -16,10 +16,7 @@ import com.dat3m.dartagnan.solver.caat.CAATSolver;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCWMMSolver;
 import com.dat3m.dartagnan.solver.caat4wmm.PatternManager;
-import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.AddressLiteral;
-import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.CoreLiteral;
-import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.ExecLiteral;
-import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.RelLiteral;
+import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.*;
 import com.dat3m.dartagnan.utils.Timer;
 import com.dat3m.dartagnan.utils.logic.Conjunction;
 import com.dat3m.dartagnan.utils.logic.DNF;
@@ -63,7 +60,7 @@ public final class GenMCExecutionModel {
     private static final Timer consistencyCheckTimer = new Timer();
     private static final Timer reasonEvaluationTimer = new Timer();
     private static final Timer patternEvaluationTimer = new Timer();
-    private static final Map<Event, List<Conjunction<CoreLiteral>>> reasons = new HashMap<>();
+    private static final Map<Event, List<GenMCReason>> reasons = new HashMap<>();
     private static final Map<Event, Event[]> mayRfInMap = new HashMap<>();
     private static final Map<Event, Event[]> mayRfOutMap = new HashMap<>();
     private static final Map<Event, Set<Event>> mayCoInMap = new HashMap<>();
@@ -80,9 +77,8 @@ public final class GenMCExecutionModel {
     private boolean needsNewConsistencyCheck = true;
     private boolean lastNeedsNewConsistencyCheck = true;
     private boolean needsJumpRevisit = false;
-    private boolean initiallyPropagated = false;
     private EventData backtrackingPoint = null;
-    private boolean backtrackReasonIsRel = true;    // TODO: set for patterns
+    private boolean backtrackReasonIsRel = true;
     private Map<Thread, Integer> porfPrefix;
 
     private final GenMCEventDomain trace;
@@ -104,14 +100,14 @@ public final class GenMCExecutionModel {
     private final Map<Event, List<EventData>> mayRfMap;
     private final List<EventData> addedEvents;
 
-    private GenMCExecutionModel(final GenMCEventDomain trace, final VerificationTask task, final GenMCWMMSolver solver, final PatternManager patterns,
-                                final ExprEvaluationContext evalContext, final ExpressionEvaluator exprEvaluator, final Map<Thread, Event> boundEvents,
-                                final Set<Event> failedJoinAssumes, final Relation rf, final Relation co, final Relation lxsx, final Comparator<EventData> explorationOrder,
+    private GenMCExecutionModel(final GenMCEventDomain trace, final VerificationTask task, final GenMCWMMSolver solver, final ExprEvaluationContext evalContext,
+                                final ExpressionEvaluator exprEvaluator, final Map<Thread, Event> boundEvents, final Set<Event> failedJoinAssumes,
+                                final Relation rf, final Relation co, final Relation lxsx, final Comparator<EventData> explorationOrder,
                                 final int optimalPorfPrefixCapacity, final GenMCReasoning reasoningMethod, final boolean underApproximateWmm) {
         this.trace = trace;
         this.task = task;
         this.solver = solver;
-        this.patterns = patterns;
+        this.patterns = solver.getPatterns();
         this.evalContext = evalContext;
         this.exprEvaluator = exprEvaluator;
         this.rf = rf;
@@ -170,19 +166,17 @@ public final class GenMCExecutionModel {
 
         final GenMCEventDomain trace = new GenMCEventDomain(relevantThreads.size());
         final GenMCWMMSolver solver = GenMCWMMSolver.fromConfig(task.getConfig(), task.getMemoryModel(), analysisContext);
-        final PatternManager patterns = new PatternManager(solver.getExecutionGraph());
-        solver.injectExtractor(patterns);
         final ExpressionEvaluator exprEvaluator = ExpressionEvaluator.withContext(evalContext);
         exprEvaluator.setTrace(trace);
         Comparator<EventData> explorationOrder = null;
         if (reasoningMethod.usesReasons() || reasoningMethod.usesPatterns()) {
             explorationOrder = Comparator.comparingInt(EventData::getId);
-            if (reasoningMethod.usesPatterns()) {
+            if (underApproximateWmm && reasoningMethod.usesPatterns()) {
                 explorationOrder = explorationOrder.reversed();
             }
         }
         final int optimalPorfPrefixCapacity = getOptimalMapCapacity(relevantThreads.size() - program.getThreadEvents(Init.class).size() - 1);
-        return new GenMCExecutionModel(trace, task, solver, patterns, evalContext, exprEvaluator, new HashMap<>(), new HashSet<>(), rf, co, lxsx, explorationOrder,
+        return new GenMCExecutionModel(trace, task, solver, evalContext, exprEvaluator, new HashMap<>(), new HashSet<>(), rf, co, lxsx, explorationOrder,
                 optimalPorfPrefixCapacity, reasoningMethod, underApproximateWmm);
     }
 
@@ -197,13 +191,12 @@ public final class GenMCExecutionModel {
             }
             return false;
         });
-        final GenMCExecutionModel model = new GenMCExecutionModel(newTrace, task, solver, patterns, evalContext, exprEvaluator.newInstance(), boundEvents, failedJoinAssumes,
+        final GenMCExecutionModel model = new GenMCExecutionModel(newTrace, task, solver, evalContext, exprEvaluator.newInstance(), boundEvents, failedJoinAssumes,
                 rf, co, lxsx, explorationOrder, optimalPorfPrefixCapacity, reasoningMethod, underApproximateWmm);
         if (reasoningMethod.usesReasoning()) {
             for (final EventData addedEvent : addedEvents) {
                 model.trace.getData(addedEvent.getEvent()).ifPresent(model.addedEvents::add);
             }
-            model.initiallyPropagated = initiallyPropagated;
         }
         return model;
     }
@@ -552,15 +545,22 @@ public final class GenMCExecutionModel {
         logger.debug("Checking consistency");
         ++consistencyChecks;
         consistencyCheckTimer.start();
+        if (reasoningMethod.usesPatterns()) {
+            solver.updateRemainingBasePredicates(trace);
+        }
         final GenMCWMMSolver.Result result = solver.check(trace, reasoningMethod);
         consistencyCheckTimer.stop();
         addedEvents.clear();
-        initiallyPropagated = true;
         if (result.getStatus() == CAATSolver.Status.CONSISTENT) {
             return true;
         } else if (result.getStatus() == CAATSolver.Status.INCONSISTENT) {
             isConsistent = false;
             addReasons(result.getCoreReasons());
+            Map.Entry<EventData, Boolean> backtrack = result.getBacktrackingPoint();
+            if (backtrack != null) {
+                backtrackingPoint = backtrack.getKey();
+                backtrackReasonIsRel = backtrack.getValue();
+            }
             return false;
         } else {
             throw new IllegalArgumentException("Inconclusive");
@@ -882,9 +882,9 @@ public final class GenMCExecutionModel {
             reasonEvaluationTimer.start();
             EVENT_LOOP:
             for (final EventData event : addedEvents) {
-                final List<Conjunction<CoreLiteral>> reasonsForEvent = reasons.get(event.getEvent());
+                final List<GenMCReason> reasonsForEvent = reasons.get(event.getEvent());
                 if (reasonsForEvent != null) {
-                    for (final Conjunction<CoreLiteral> reason : reasonsForEvent) {
+                    for (final GenMCReason reason : reasonsForEvent) {
                         boolean reasonKnown = true;
                         for (final CoreLiteral coreLiteral : reason.getLiteralsToIterateOver()) {
                             if (!evaluate(coreLiteral, event)) {
@@ -1030,70 +1030,53 @@ public final class GenMCExecutionModel {
 
     private boolean hasPattern() {
         if (reasoningMethod.usesPatterns()) {
-            return patternEvaluationTimer.measure(() -> {
-                solver.updateBasePredicates(trace);
-                return evaluatePatterns();
-            });
+            patternEvaluationTimer.start();
+            solver.updateBasePredicates(trace);
+            Map.Entry<EventData, Boolean> backtrack = evaluatePatterns();
+            patternEvaluationTimer.stop();
+            if (backtrack != null) {
+                backtrackingPoint = backtrack.getKey();
+                backtrackReasonIsRel = backtrack.getValue();
+                return true;
+            }
         }
         return false;
     }
 
-    private boolean evaluatePatterns() {
-        if (!initiallyPropagated) {
-            for (final Map.Entry<EventData, EventData> rfEntry : trace.getReadWriteMap().entrySet()) {
-                if ((backtrackingPoint = patterns.isViolated(rfEntry.getValue(), rfEntry.getKey(), rf)) != null) {
-                    return true;
+    private Map.Entry<EventData, Boolean> evaluatePatterns() {
+        Map.Entry<EventData, Boolean> backtrack;
+        for (final EventData event : addedEvents) {
+            final EventData readFrom = event.getReadFrom();
+            if (readFrom != null) {
+                if ((backtrack = patterns.isViolated(readFrom, event, rf)) != null) {
+                    return backtrack;
                 }
-            }
-            for (final EventData addressInit : trace.getAddressInits().values()) {
-                final EventData firstOverride = addressInit.getCoSuccessor();
-                if (firstOverride != null) {
-                    for (final EventData coSuccessor : firstOverride.getCoSuccessors()) {
-                        if ((backtrackingPoint = patterns.isViolated(addressInit, coSuccessor, co)) != null) {
-                            return true;
-                        }
+            } else {
+                if (event.getEvent() instanceof RMWStoreExclusive) {
+                    if ((backtrack = patterns.isViolated(trace.getLxsxPairs().get(event), event, lxsx)) != null) {
+                        return backtrack;
                     }
                 }
-            }
-            for (final Map.Entry<EventData, EventData> lxsxPair : trace.getLxsxPairs().entrySet()) {
-                if ((backtrackingPoint = patterns.isViolated(lxsxPair.getValue(), lxsxPair.getKey(), lxsx)) != null) {
-                    return true;
-                }
-            }
-        } else {
-            for (final EventData event : addedEvents) {
-                final EventData readFrom = event.getReadFrom();
-                if (readFrom != null) {
-                    if ((backtrackingPoint = patterns.isViolated(readFrom, event, rf)) != null) {
-                        return true;
-                    }
-                } else {
-                    if (event.getEvent() instanceof RMWStoreExclusive) {
-                        if ((backtrackingPoint = patterns.isViolated(trace.getLxsxPairs().get(event), event, lxsx)) != null) {
-                            return true;
-                        }
-                    }
-                    final List<Integer> alreadyCheckedIds = new ArrayList<>();
-                    final EventData coPredecessor = event.getCoPredecessor();
-                    final EventData coSuccessor = event.getCoSuccessor();
-                    if (coPredecessor != null || coSuccessor != null) {
-                        final int eventId = event.getId();
-                        alreadyCheckedIds.add(eventId);
-                        if (coPredecessor != null) {
-                            for (final EventData anyCoPredecessor : coPredecessor.getCoPredecessors()) {
-                                if (!alreadyCheckedIds.contains(anyCoPredecessor.getId())) {
-                                    if ((backtrackingPoint = patterns.isViolated(anyCoPredecessor, event, co)) != null) {
-                                        return true;
-                                    }
+                final List<Integer> alreadyCheckedIds = new ArrayList<>();
+                final EventData coPredecessor = event.getCoPredecessor();
+                final EventData coSuccessor = event.getCoSuccessor();
+                if (coPredecessor != null || coSuccessor != null) {
+                    final int eventId = event.getId();
+                    alreadyCheckedIds.add(eventId);
+                    if (coPredecessor != null) {
+                        for (final EventData anyCoPredecessor : coPredecessor.getCoPredecessors()) {
+                            if (!alreadyCheckedIds.contains(anyCoPredecessor.getId())) {
+                                if ((backtrack = patterns.isViolated(anyCoPredecessor, event, co)) != null) {
+                                    return backtrack;
                                 }
                             }
                         }
-                        if (coSuccessor != null) {
-                            for (final EventData anyCoSuccessor : coSuccessor.getCoSuccessors()) {
-                                if (!alreadyCheckedIds.contains(anyCoSuccessor.getId())) {
-                                    if ((backtrackingPoint = patterns.isViolated(event, anyCoSuccessor, co)) != null) {
-                                        return true;
-                                    }
+                    }
+                    if (coSuccessor != null) {
+                        for (final EventData anyCoSuccessor : coSuccessor.getCoSuccessors()) {
+                            if (!alreadyCheckedIds.contains(anyCoSuccessor.getId())) {
+                                if ((backtrack = patterns.isViolated(event, anyCoSuccessor, co)) != null) {
+                                    return backtrack;
                                 }
                             }
                         }
@@ -1101,14 +1084,14 @@ public final class GenMCExecutionModel {
                 }
             }
         }
-        return false;
+        return null;
     }
 
-    // TODO: This method for patterns
     private void addReasons(final DNF<CoreLiteral> newReasons) {
         final Map<Thread, Event> maxEventForThreads = new HashMap<>();
         int backtrackingPointId = Integer.MAX_VALUE;
-        for (final Conjunction<CoreLiteral> cube : newReasons.getCubes()) {
+        for (final Conjunction<CoreLiteral> reason : newReasons.getCubes()) {
+            final GenMCReason cube = (GenMCReason) reason;
             EventData cubeBacktrackingPoint = null;
             int cubeBacktrackingPointId = -1;
             boolean cubeBacktrackingPointReasonIsRel = true;

@@ -78,6 +78,7 @@ public class OptionNames {
     public static final String DELAY_CONSISTENCY_CHECKS = "genmc.delayConsistencyChecks";
     public static final String SHOW_CONSISTENT_EXECUTIONS = "genmc.numberOfConsistentExecutions";
     public static final String REASONING = "genmc.reasoning";
+    public static final String USE_SET_PATTERNS = "genmc.reasoning.patterns.useSets";
     public static final String UNDERAPPROXIMATE_WMM = "genmc.underapproximateWmm";
     public static final String USE_SMT_SOLVER = "genmc.useSmtSolver";
 

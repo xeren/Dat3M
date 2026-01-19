@@ -1,6 +1,9 @@
 package com.dat3m.dartagnan.solver.caat4wmm.basePredicates.genmc;
 
 import com.dat3m.dartagnan.program.filter.Filter;
+import com.dat3m.dartagnan.program.filter.FilterTransformer;
+import com.dat3m.dartagnan.program.filter.GenMCTagFilter;
+import com.dat3m.dartagnan.program.filter.TagFilter;
 import com.dat3m.dartagnan.solver.caat.predicates.CAATPredicate;
 import com.dat3m.dartagnan.solver.caat.predicates.Derivable;
 import com.dat3m.dartagnan.solver.caat.predicates.misc.PredicateVisitor;
@@ -17,7 +20,13 @@ public class StaticGenMCWMMSet extends AbstractGenMCWMMPredicate implements SetP
     private List<Element> events;
 
     public StaticGenMCWMMSet(final Filter filter) {
-        this.filter = filter;
+        this.filter = filter.accept(new FilterTransformer() {
+            @Override
+            public Filter visitTagFilter(final TagFilter filter) {
+                final GenMCTagFilter newFilter = new GenMCTagFilter(filter);
+                return newFilter.isEffective() ? newFilter : filter;
+            }
+        });
     }
 
     @Override
