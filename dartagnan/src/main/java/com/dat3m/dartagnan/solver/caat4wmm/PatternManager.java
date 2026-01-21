@@ -208,7 +208,7 @@ public class PatternManager {
         return false;
     }
 
-    boolean usesSets() {
+    boolean useSets() {
         return useSets;
     }
 }
