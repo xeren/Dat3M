@@ -52,7 +52,8 @@ public class LKMMLibrary extends AbstractLibrary<LKMMLibrary> {
             return variants.contains(funcName);
         }
     }
-    
+
+    private static final EventFactory.Linux events = EventFactory.Linux.getInstance();
 
     public LKMMLibrary(Configuration config) throws InvalidConfigurationException {
         super(config);
@@ -92,7 +93,7 @@ public class LKMMLibrary extends AbstractLibrary<LKMMLibrary> {
                 final Type bytes = toLKMMAccessSize(p1);
                 final String mo = toLKMMMemoryOrder(p2);
                 final Register dummy = call.getFunction().newUniqueRegister("__lkmm_temp", bytes);
-                result.add(EventFactory.Linux.newLoad(dummy, p0, mo));
+                result.add(events.newLoad(dummy, p0, mo));
                 result.add(EventFactory.newLocal(reg, expressions.makeCast(dummy, reg.getType())));
             }
             case "__LKMM_store" -> {
@@ -100,7 +101,7 @@ public class LKMMLibrary extends AbstractLibrary<LKMMLibrary> {
                 final Type bytes = toLKMMAccessSize(p1);
                 final String mo = toLKMMMemoryOrder(p3);
                 final Expression value = expressions.makeCast(p2, bytes);
-                result.add(EventFactory.Linux.newStore(p0, value, mo));
+                result.add(events.newStore(p0, value, mo));
             }
             case "__LKMM_xchg" -> {
                 checkArguments(4, call);
@@ -108,7 +109,7 @@ public class LKMMLibrary extends AbstractLibrary<LKMMLibrary> {
                 final String mo = toLKMMMemoryOrder(p3);
                 final Register dummy = call.getFunction().newUniqueRegister("__lkmm_temp", bytes);
                 final Expression value = expressions.makeCast(p2, bytes);
-                result.add(EventFactory.Linux.newRMWExchange(p0, dummy, value, mo));
+                result.add(events.newRMWExchange(p0, dummy, value, mo));
                 result.add(EventFactory.newLocal(reg, expressions.makeCast(dummy, reg.getType())));
             }
             case "__LKMM_cmpxchg" -> {
@@ -118,7 +119,7 @@ public class LKMMLibrary extends AbstractLibrary<LKMMLibrary> {
                 final Register dummy = call.getFunction().newUniqueRegister("__lkmm_temp", bytes);
                 final Expression expectation = expressions.makeCast(p2, bytes);
                 final Expression value = expressions.makeCast(p3, bytes);
-                result.add(EventFactory.Linux.newRMWCompareExchange(p0, dummy, expectation, value, mo));
+                result.add(events.newRMWCompareExchange(p0, dummy, expectation, value, mo));
                 result.add(EventFactory.newLocal(reg, expressions.makeCast(dummy, reg.getType())));
             }
             case "__LKMM_atomic_fetch_op" -> {
@@ -128,7 +129,7 @@ public class LKMMLibrary extends AbstractLibrary<LKMMLibrary> {
                 final IntBinaryOp op = toLKMMOperation(p4);
                 final Register dummy = call.getFunction().newUniqueRegister("__lkmm_temp", bytes);
                 final Expression value = expressions.makeCast(p2, bytes);
-                result.add(EventFactory.Linux.newRMWFetchOp(p0, dummy, value, op, mo));
+                result.add(events.newRMWFetchOp(p0, dummy, value, op, mo));
                 result.add(EventFactory.newLocal(reg, expressions.makeCast(dummy, reg.getType())));
             }
             case "__LKMM_atomic_op_return" -> {
@@ -138,7 +139,7 @@ public class LKMMLibrary extends AbstractLibrary<LKMMLibrary> {
                 final IntBinaryOp op = toLKMMOperation(p4);
                 final Register dummy = call.getFunction().newUniqueRegister("__lkmm_temp", bytes);
                 final Expression value = expressions.makeCast(p2, bytes);
-                result.add(EventFactory.Linux.newRMWOpReturn(p0, dummy, value, op, mo));
+                result.add(events.newRMWOpReturn(p0, dummy, value, op, mo));
                 result.add(EventFactory.newLocal(reg, expressions.makeCast(dummy, reg.getType())));
             }
             case "__LKMM_atomic_op" -> {
@@ -146,20 +147,20 @@ public class LKMMLibrary extends AbstractLibrary<LKMMLibrary> {
                 final Type bytes = toLKMMAccessSize(p1);
                 final IntBinaryOp op = toLKMMOperation(p3);
                 final Expression value = expressions.makeCast(p2, bytes);
-                result.add(EventFactory.Linux.newRMWOp(p0, value, op));
+                result.add(events.newRMWOp(p0, value, op));
             }
             case "__LKMM_fence" -> {
                 checkArguments(1, call);
                 final String mo = toLKMMMemoryOrder(p0);
-                result.add(EventFactory.Linux.newBarrier(mo));
+                result.add(events.newBarrier(mo));
             }
             case "__LKMM_SPIN_LOCK" -> {
                 checkArguments(1, call);
-                result.add(EventFactory.Linux.newLock(p0));
+                result.add(events.newLock(p0));
             }
             case "__LKMM_SPIN_UNLOCK" -> {
                 checkArguments(1, call);
-                result.add(EventFactory.Linux.newUnlock(p0));
+                result.add(events.newUnlock(p0));
             }
             default -> {
                 assert false;

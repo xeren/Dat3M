@@ -31,6 +31,7 @@ public class VisitorLitmusC extends LitmusCBaseVisitor<Object> {
     private final ExpressionFactory expressions = programBuilder.getExpressionFactory();
     private final IntegerType archType = programBuilder.getArchType();
     private final int archSize = TypeFactory.getInstance().getMemorySizeInBytes(archType);
+    private final EventFactory.Linux linux = EventFactory.Linux.getInstance();
     private int currentThread;
     private int scope;
     private int ifId = 0;
@@ -269,7 +270,7 @@ public class VisitorLitmusC extends LitmusCBaseVisitor<Object> {
     public Expression visitReAtomicOpReturn(ReAtomicOpReturnContext ctx){
         Register register = getReturnRegister(true);
         Expression value = returnExpressionOrOne(ctx.value);
-        Event event = EventFactory.Linux.newRMWOpReturn(getAddress(ctx.address), register, value, ctx.op, ctx.mo);
+        Event event = linux.newRMWOpReturn(getAddress(ctx.address), register, value, ctx.op, ctx.mo);
         append(event, ctx);
         return register;
     }
@@ -279,7 +280,7 @@ public class VisitorLitmusC extends LitmusCBaseVisitor<Object> {
     public Expression visitReAtomicFetchOp(ReAtomicFetchOpContext ctx){
         Register register = getReturnRegister(true);
         Expression value = returnExpressionOrOne(ctx.value);
-        Event event = EventFactory.Linux.newRMWFetchOp(getAddress(ctx.address), register, value, ctx.op, ctx.mo);
+        Event event = linux.newRMWFetchOp(getAddress(ctx.address), register, value, ctx.op, ctx.mo);
         append(event, ctx);
         return register;
     }
@@ -300,7 +301,7 @@ public class VisitorLitmusC extends LitmusCBaseVisitor<Object> {
     public Expression visitReAtomicOpAndTest(ReAtomicOpAndTestContext ctx){
         Register register = getReturnRegister(true);
         Expression value = returnExpressionOrOne(ctx.value);
-        Event event = EventFactory.Linux.newRMWOpAndTest(getAddress(ctx.address), register, value, ctx.op);
+        Event event = linux.newRMWOpAndTest(getAddress(ctx.address), register, value, ctx.op);
         append(event, ctx);
         return register;
     }
@@ -311,7 +312,7 @@ public class VisitorLitmusC extends LitmusCBaseVisitor<Object> {
         Register register = getReturnRegister(true);
         Expression value = (Expression) ctx.value.accept(this);
         Expression cmp = (Expression) ctx.cmp.accept(this);
-        append(EventFactory.Linux.newRMWAddUnless(getAddress(ctx.address), register, cmp, value), ctx);
+        append(linux.newRMWAddUnless(getAddress(ctx.address), register, cmp, value), ctx);
         return register;
     }
 
@@ -341,7 +342,7 @@ public class VisitorLitmusC extends LitmusCBaseVisitor<Object> {
     public Expression visitReXchg(ReXchgContext ctx){
         Register register = getReturnRegister(true);
         Expression value = (Expression) ctx.value.accept(this);
-        Event event = EventFactory.Linux.newRMWExchange(getAddress(ctx.address), register, value, ctx.mo);
+        Event event = linux.newRMWExchange(getAddress(ctx.address), register, value, ctx.mo);
         append(event, ctx);
         return register;
     }
@@ -400,7 +401,7 @@ public class VisitorLitmusC extends LitmusCBaseVisitor<Object> {
         Register register = getReturnRegister(true);
         Expression cmp = (Expression)ctx.cmp.accept(this);
         Expression value = (Expression)ctx.value.accept(this);
-        Event event = EventFactory.Linux.newRMWCompareExchange(getAddress(ctx.address), register, cmp, value, ctx.mo);
+        Event event = linux.newRMWCompareExchange(getAddress(ctx.address), register, cmp, value, ctx.mo);
         append(event, ctx);
         return register;
     }
@@ -428,7 +429,7 @@ public class VisitorLitmusC extends LitmusCBaseVisitor<Object> {
     @Override
     public Expression visitReLoad(ReLoadContext ctx){
         Register register = getReturnRegister(true);
-        Event event = EventFactory.Linux.newLoad(register, getAddress(ctx.address), ctx.mo);
+        Event event = linux.newLoad(register, getAddress(ctx.address), ctx.mo);
         append(event, ctx);
         return register;
     }
@@ -436,7 +437,7 @@ public class VisitorLitmusC extends LitmusCBaseVisitor<Object> {
     @Override
     public Expression visitReReadOnce(ReReadOnceContext ctx){
         Register register = getReturnRegister(true);
-        Event event = EventFactory.Linux.newLoad(register, getAddress(ctx.address), ctx.mo);
+        Event event = linux.newLoad(register, getAddress(ctx.address), ctx.mo);
         append(event, ctx);
         return register;
     }
@@ -532,7 +533,7 @@ public class VisitorLitmusC extends LitmusCBaseVisitor<Object> {
     @Override
     public Object visitNreAtomicOp(NreAtomicOpContext ctx){
         Expression value = returnExpressionOrOne(ctx.value);
-        Event event = EventFactory.Linux.newRMWOp(getAddress(ctx.address), value, ctx.op);
+        Event event = linux.newRMWOp(getAddress(ctx.address), value, ctx.op);
         return append(event, ctx);
     }
 
@@ -546,14 +547,14 @@ public class VisitorLitmusC extends LitmusCBaseVisitor<Object> {
     @Override
     public Object visitNreStore(NreStoreContext ctx){
         Expression value = (Expression)ctx.value.accept(this);
-        Event event = EventFactory.Linux.newStore(getAddress(ctx.address), value, ctx.mo);
+        Event event = linux.newStore(getAddress(ctx.address), value, ctx.mo);
         return append(event, ctx);
     }
 
     @Override
     public Object visitNreWriteOnce(NreWriteOnceContext ctx){
         Expression value = (Expression)ctx.value.accept(this);
-        Event event = EventFactory.Linux.newStore(getAddress(ctx.address), value, ctx.mo);
+        Event event = linux.newStore(getAddress(ctx.address), value, ctx.mo);
         return append(event, ctx);
     }
 
@@ -620,7 +621,7 @@ public class VisitorLitmusC extends LitmusCBaseVisitor<Object> {
 
     @Override
     public Object visitNreFence(NreFenceContext ctx){
-        return append(EventFactory.Linux.newBarrier(ctx.name), ctx);
+        return append(linux.newBarrier(ctx.name), ctx);
     }
 
     @Override
@@ -653,17 +654,17 @@ public class VisitorLitmusC extends LitmusCBaseVisitor<Object> {
 
     @Override
     public Object visitNreSpinLock(NreSpinLockContext ctx) {
-        return append(EventFactory.Linux.newLock(getAddress(ctx.address)), ctx);
+        return append(linux.newLock(getAddress(ctx.address)), ctx);
     }
 
     @Override
     public Object visitNreSpinUnlock(NreSpinUnlockContext ctx) {
-        return append(EventFactory.Linux.newUnlock(getAddress(ctx.address)), ctx);
+        return append(linux.newUnlock(getAddress(ctx.address)), ctx);
     }
 
     @Override
     public Object visitNreSrcuSync(NreSrcuSyncContext ctx) {
-        return append(EventFactory.Linux.newSrcuSync(getAddress(ctx.address)), ctx);
+        return append(linux.newSrcuSync(getAddress(ctx.address)), ctx);
     }
 
     // ----------------------------------------------------------------------------------------------------------------

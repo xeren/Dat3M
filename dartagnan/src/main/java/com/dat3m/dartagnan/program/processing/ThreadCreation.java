@@ -84,6 +84,7 @@ public class ThreadCreation implements ProgramProcessor {
     private final ExpressionFactory expressions = ExpressionFactory.getInstance();
     // The thread state consists of two flags: ALIVE and JOINABLE.
     private final IntegerType threadStateType = types.getIntegerType(2);
+    private final EventFactory.Linux linux = EventFactory.Linux.getInstance();
 
     private ThreadCreation(Configuration config) throws InvalidConfigurationException {
         config.inject(this);
@@ -665,21 +666,21 @@ public class ThreadCreation implements ProgramProcessor {
 
     private List<Event> newReleaseStore(Expression address, Expression storeValue) {
         final Event releaseStore = compiler.getTarget() == Arch.LKMM ?
-                EventFactory.Linux.newStore(address, storeValue, Tag.Linux.MO_RELEASE) :
+                linux.newStore(address, storeValue, Tag.Linux.MO_RELEASE) :
                 EventFactory.Atomic.newStore(address, storeValue, Tag.C11.MO_RELEASE);
         return compiler.getCompilationResult(releaseStore);
     }
 
     private List<Event> newAcquireLoad(Register resultRegister, Expression address) {
         final Event acquireLoad = compiler.getTarget() == Arch.LKMM ?
-                EventFactory.Linux.newLoad(resultRegister, address, Tag.Linux.MO_ACQUIRE) :
+                linux.newLoad(resultRegister, address, Tag.Linux.MO_ACQUIRE) :
                 EventFactory.Atomic.newLoad(resultRegister, address, Tag.C11.MO_ACQUIRE);
         return compiler.getCompilationResult(acquireLoad);
     }
 
     private List<Event> newRelaxedAnd(Register register, Expression address, Expression value) {
         final Event relaxedAnd = compiler.getTarget() == Arch.LKMM ?
-                EventFactory.Linux.newRMWFetchOp(address, register, value, IntBinaryOp.AND, Tag.Linux.MO_ONCE) :
+                linux.newRMWFetchOp(address, register, value, IntBinaryOp.AND, Tag.Linux.MO_ONCE) :
                 EventFactory.Atomic.newFetchOp(register, address, value, IntBinaryOp.AND, Tag.C11.MO_RELAXED);
         relaxedAnd.setFunction(register.getFunction());
         return compiler.getCompilationResult(relaxedAnd);
@@ -687,7 +688,7 @@ public class ThreadCreation implements ProgramProcessor {
 
     private List<Event> newReleaseAnd(Register register, Expression address, Expression value) {
         final Event releaseAnd = compiler.getTarget() == Arch.LKMM ?
-                EventFactory.Linux.newRMWFetchOp(address, register, value, IntBinaryOp.AND, Tag.Linux.MO_RELEASE) :
+                linux.newRMWFetchOp(address, register, value, IntBinaryOp.AND, Tag.Linux.MO_RELEASE) :
                 EventFactory.Atomic.newFetchOp(register, address, value, IntBinaryOp.AND, Tag.C11.MO_RELEASE);
         releaseAnd.setFunction(register.getFunction());
         return compiler.getCompilationResult(releaseAnd);
@@ -695,7 +696,7 @@ public class ThreadCreation implements ProgramProcessor {
 
     private List<Event> newAcquireAnd(Register register, Expression address, Expression value) {
         final Event acquireAnd = compiler.getTarget() == Arch.LKMM ?
-                EventFactory.Linux.newRMWFetchOp(address, register, value, IntBinaryOp.AND, Tag.Linux.MO_ACQUIRE) :
+                linux.newRMWFetchOp(address, register, value, IntBinaryOp.AND, Tag.Linux.MO_ACQUIRE) :
                 EventFactory.Atomic.newFetchOp(register, address, value, IntBinaryOp.AND, Tag.C11.MO_ACQUIRE);
         acquireAnd.setFunction(register.getFunction());
         return compiler.getCompilationResult(acquireAnd);

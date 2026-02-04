@@ -685,59 +685,64 @@ public class EventFactory {
     // =============================================================================================
     // =========================================== Linux ===========================================
     // =============================================================================================
-    public static class Linux {
+    public static class Linux extends EventFactory {
         private Linux() {
         }
 
-        public static LKMMLoad newLoad(Register reg, Expression address, String mo) {
+        public static Linux getInstance() { return new Linux(); }
+
+        public LKMMLoad newLoad(Register reg, Expression address, String mo) {
             return new LKMMLoad(reg, address, mo);
         }
 
-        public static LKMMStore newStore(Expression address, Expression value, String mo) {
+        public LKMMStore newStore(Expression address, Expression value, String mo) {
             return new LKMMStore(address, value, mo);
         }
 
-        public static LKMMAddUnless newRMWAddUnless(Expression address, Register register, Expression cmp, Expression value) {
+        public LKMMAddUnless newRMWAddUnless(Expression address, Register register, Expression cmp, Expression value) {
             return new LKMMAddUnless(register, address, value, cmp);
         }
 
-        public static LKMMCmpXchg newRMWCompareExchange(Expression address, Register register, Expression cmp, Expression value, String mo) {
+        public LKMMCmpXchg newRMWCompareExchange(Expression address, Register register, Expression cmp,
+                Expression value, String mo) {
             return new LKMMCmpXchg(register, address, cmp, value, mo);
         }
 
-        public static LKMMFetchOp newRMWFetchOp(Expression address, Register register, Expression value, IntBinaryOp op, String mo) {
+        public LKMMFetchOp newRMWFetchOp(Expression address, Register register, Expression value, IntBinaryOp op,
+                String mo) {
             return new LKMMFetchOp(register, address, op, value, mo);
         }
 
-        public static LKMMOpNoReturn newRMWOp(Expression address, Expression value, IntBinaryOp op) {
+        public LKMMOpNoReturn newRMWOp(Expression address, Expression value, IntBinaryOp op) {
             return new LKMMOpNoReturn(address, op, value);
         }
 
-        public static LKMMOpAndTest newRMWOpAndTest(Expression address, Register register, Expression value, IntBinaryOp op) {
+        public LKMMOpAndTest newRMWOpAndTest(Expression address, Register register, Expression value, IntBinaryOp op) {
             return new LKMMOpAndTest(register, address, op, value);
         }
 
-        public static LKMMOpReturn newRMWOpReturn(Expression address, Register register, Expression value, IntBinaryOp op, String mo) {
+        public LKMMOpReturn newRMWOpReturn(Expression address, Register register, Expression value, IntBinaryOp op,
+                String mo) {
             return new LKMMOpReturn(register, address, op, value, mo);
         }
 
-        public static LKMMXchg newRMWExchange(Expression address, Register register, Expression value, String mo) {
+        public LKMMXchg newRMWExchange(Expression address, Register register, Expression value, String mo) {
             return new LKMMXchg(register, address, value, mo);
         }
 
-        public static LKMMFence newBarrier(String name) {
+        public LKMMFence newBarrier(String name) {
             return new LKMMFence(name);
         }
 
-        public static LKMMLock newLock(Expression address) {
+        public LKMMLock newLock(Expression address) {
             return new LKMMLock(address);
         }
 
-        public static LKMMUnlock newUnlock(Expression address) {
+        public LKMMUnlock newUnlock(Expression address) {
             return new LKMMUnlock(address);
         }
 
-        public static GenericMemoryEvent newSrcuSync(Expression address) {
+        public GenericMemoryEvent newSrcuSync(Expression address) {
             // Accesses zero bytes to avoid tearing.
             GenericMemoryEvent srcuSync = new GenericMemoryEvent(address, types.getUnitType(), "synchronize_srcu");
             srcuSync.addTags(Tag.Linux.SRCU_SYNC);
