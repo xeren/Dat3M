@@ -9,6 +9,7 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Tag;
 import com.dat3m.dartagnan.program.event.Tag.C11;
 import com.dat3m.dartagnan.program.event.arch.StoreExclusive;
+import com.dat3m.dartagnan.program.event.arch.power.Power;
 import com.dat3m.dartagnan.program.event.core.*;
 import com.dat3m.dartagnan.program.event.lang.catomic.*;
 import com.dat3m.dartagnan.program.event.lang.linux.*;
@@ -31,6 +32,8 @@ public class VisitorPower extends VisitorBase {
     // "Repairing Sequential Consistency in C/C++11"
     // "Outlawing Ghosts: Avoiding Out-of-Thin-Air Results"
     private final boolean useRC11Scheme;
+
+    private final Power events = Power.newInstance();
 
     protected VisitorPower(boolean useRC11Scheme, PowerScheme cToPowerScheme) {
         this.useRC11Scheme = useRC11Scheme;
@@ -626,15 +629,15 @@ public class VisitorPower extends VisitorBase {
     }
 
     private Event newISync() {
-        return Power.newBarrier("isync");
+        return events.newBarrier("isync");
     }
 
     private Event newLwSync() {
-        return Power.newBarrier("lwsync");
+        return events.newBarrier("lwsync");
     }
 
     private Event newSync() {
-        return Power.newBarrier("sync");
+        return events.newBarrier("sync");
     }
 
     public enum PowerScheme {

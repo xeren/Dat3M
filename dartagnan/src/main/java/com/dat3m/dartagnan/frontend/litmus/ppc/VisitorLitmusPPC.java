@@ -13,6 +13,7 @@ import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.EventFactory;
+import com.dat3m.dartagnan.program.event.EventFactory;
 import com.dat3m.dartagnan.program.event.core.Label;
 import org.antlr.v4.runtime.ParserRuleContext;
 
@@ -26,6 +27,7 @@ public class VisitorLitmusPPC extends LitmusPPCBaseVisitor<Object> {
     private final ProgramBuilder programBuilder = ProgramBuilder.forArch(Program.SourceLanguage.LITMUS, Arch.POWER);
     private final ExpressionFactory expressions = programBuilder.getExpressionFactory();
     private final IntegerType archType = programBuilder.getArchType();
+    private final EventFactory.Power events = EventFactory.Power.getInstance();
     private final Map<Integer, CmpInstruction> lastCmpInstructionPerThread = new HashMap<>();
     private int mainThread;
     private int threadCount = 0;
@@ -113,7 +115,7 @@ public class VisitorLitmusPPC extends LitmusPPCBaseVisitor<Object> {
     public Object visitLwz(LwzContext ctx) {
         Register r1 = (Register) ctx.register(0).accept(this);
         Register ra = (Register) ctx.register(1).accept(this);
-        return append(EventFactory.Power.newLoad(r1, ra), ctx);
+        return append(EventFactory.newLoad(r1, ra), ctx);
     }
 
     @Override
@@ -127,14 +129,14 @@ public class VisitorLitmusPPC extends LitmusPPCBaseVisitor<Object> {
         Register r1 = (Register) ctx.register(0).accept(this);
         Register ra = (Register) ctx.register(1).accept(this);
         Register rb = (Register) ctx.register(2).accept(this);
-        return append(EventFactory.Power.newLoadReserve(r1, expressions.makeAdd(ra, rb)), ctx);
+        return append(events.newLoadReserve(r1, expressions.makeAdd(ra, rb)), ctx);
     }
 
     @Override
     public Object visitStw(StwContext ctx) {
         Register r1 = (Register) ctx.register(0).accept(this);
         Register ra = (Register) ctx.register(1).accept(this);
-        return append(EventFactory.Power.newStore(ra, r1), ctx);
+        return append(EventFactory.newStore(ra, r1), ctx);
     }
 
     @Override
@@ -152,7 +154,7 @@ public class VisitorLitmusPPC extends LitmusPPCBaseVisitor<Object> {
         Register r1 = (Register) ctx.register(0).accept(this);
         Register ra = (Register) ctx.register(1).accept(this);
         Register rb = (Register) ctx.register(2).accept(this);
-        return append(EventFactory.Power.newStoreConditional(rs, expressions.makeAdd(ra, rb), r1), ctx);
+        return append(events.newStoreConditional(rs, expressions.makeAdd(ra, rb), r1), ctx);
     }
 
     @Override
@@ -205,7 +207,7 @@ public class VisitorLitmusPPC extends LitmusPPCBaseVisitor<Object> {
 
     @Override
     public Object visitFence(FenceContext ctx) {
-        return append(EventFactory.Power.newBarrier(ctx.getText().toLowerCase()), ctx);
+        return append(events.newBarrier(ctx.getText().toLowerCase()), ctx);
     }
 
     @Override

@@ -836,27 +836,21 @@ public class EventFactory {
     // =============================================================================================
     // =========================================== Power ===========================================
     // =============================================================================================
-    public static class Power {
+    public static class Power extends EventFactory {
         private Power() {
         }
 
-        public static Event newLoad(Register value, Expression address) {
-            return EventFactory.newLoad(value, address);
+        public static Power getInstance() { return new Power(); }
+
+        public Event newLoadReserve(Register value, Expression address) {
+            return newRMWLoadExclusive(value, address);
         }
 
-        public static Event newLoadReserve(Register value, Expression address) {
-            return EventFactory.newRMWLoadExclusive(value, address);
+        public Event newStoreConditional(Register status, Expression address, Expression value) {
+            return Common.newExclusiveStore(status, address, value, "");
         }
 
-        public static Event newStore(Expression address, Expression value) {
-            return EventFactory.newStore(address, value);
-        }
-
-        public static Event newStoreConditional(Register status, Expression address, Expression value) {
-            return EventFactory.Common.newExclusiveStore(status, address, value, "");
-        }
-
-        public static GenericVisibleEvent newBarrier(String type) {
+        public GenericVisibleEvent newBarrier(String type) {
             checkArgument(BARRIER_TYPE.contains(type), "Invalid barrier '%s'.", type);
             return newGenericVisibleEvent(type, Tag.FENCE, type);
         }

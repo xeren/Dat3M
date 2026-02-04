@@ -11,6 +11,7 @@ import com.dat3m.dartagnan.program.Function;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.EventFactory;
+import com.dat3m.dartagnan.program.event.EventFactory;
 import com.dat3m.dartagnan.program.event.core.Label;
 import com.dat3m.dartagnan.program.event.core.Local;
 
@@ -31,6 +32,7 @@ public class VisitorAsmPPC extends AsmPPCBaseVisitor<Object> {
     private final Function llvmFunction;
     private final Register returnRegister;
     private final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private final EventFactory.Power events = EventFactory.Power.getInstance();
     private CmpInstruction comparator;
     // keeps track of all the labels defined in the the asm code
     private final HashMap<String, Label> labelsDefined = new HashMap<>();
@@ -78,7 +80,7 @@ public class VisitorAsmPPC extends AsmPPCBaseVisitor<Object> {
     public Object visitLoad(LoadContext ctx) {
         Register register = (Register) ctx.register(0).accept(this);
         Register address = (Register) ctx.register(1).accept(this);
-        asmInstructions.add(EventFactory.Power.newLoad(register, address));
+        asmInstructions.add(events.newLoad(register, address));
         return null;
     }
 
@@ -89,7 +91,7 @@ public class VisitorAsmPPC extends AsmPPCBaseVisitor<Object> {
         expectedType = address.getType();
         Expression offset = (Expression) ctx.value().accept(this);
         Expression newAddress = expressions.makeAdd(address,offset);
-        asmInstructions.add(EventFactory.Power.newLoadReserve(register, newAddress));
+        asmInstructions.add(events.newLoadReserve(register, newAddress));
         return null;
     }
 
@@ -97,7 +99,7 @@ public class VisitorAsmPPC extends AsmPPCBaseVisitor<Object> {
     public Object visitStore(StoreContext ctx) {
         Register value = (Register) ctx.register(0).accept(this);
         Register address = (Register) ctx.register(1).accept(this);
-        asmInstructions.add(EventFactory.Power.newStore(address, value));
+        asmInstructions.add(events.newStore(address, value));
         return null;
     }
 
@@ -110,7 +112,7 @@ public class VisitorAsmPPC extends AsmPPCBaseVisitor<Object> {
         Expression newAddress = expressions.makeAdd(address,offset);
         Register resultRegister = llvmFunction.getOrNewRegister("CondStoreResult", value.getType());
         this.comparator = new CmpInstruction(resultRegister,expressions.makeZero((IntegerType) value.getType()));
-        asmInstructions.add(EventFactory.Power.newStoreConditional(resultRegister, newAddress, value));
+        asmInstructions.add(events.newStoreConditional(resultRegister, newAddress, value));
         return null;
     }
 
@@ -260,7 +262,7 @@ public class VisitorAsmPPC extends AsmPPCBaseVisitor<Object> {
 
     @Override
     public Object visitPpcFence(PpcFenceContext ctx) {
-        asmInstructions.add(EventFactory.Power.newBarrier(ctx.PPCFence().getText()));
+        asmInstructions.add(events.newBarrier(ctx.PPCFence().getText()));
         return null;
     }
 
