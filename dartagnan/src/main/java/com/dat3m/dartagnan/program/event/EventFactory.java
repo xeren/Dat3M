@@ -749,15 +749,17 @@ public class EventFactory {
     // =============================================================================================
     // ============================================ X86 ============================================
     // =============================================================================================
-    public static class X86 {
+    public static class X86 extends EventFactory {
         private X86() {
         }
 
-        public static TSOXchg newExchange(MemoryObject address, Register register) {
+        public static X86 getInstance() { return new X86(); }
+
+        public TSOXchg newExchange(MemoryObject address, Register register) {
             return new TSOXchg(address, register);
         }
 
-        public static Event newMemoryFence(String type) {
+        public Event newMemoryFence(String type) {
             final String name = switch (type) {
                 case "mfence" -> type;
                 case "lfence", "sfence" -> throw new UnsupportedOperationException("X86 fence '%s'.".formatted(type));

@@ -8,6 +8,7 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.MemoryEvent;
 import com.dat3m.dartagnan.program.event.Tag;
 import com.dat3m.dartagnan.program.event.arch.tso.TSOXchg;
+import com.dat3m.dartagnan.program.event.arch.x86.X86;
 import com.dat3m.dartagnan.program.event.core.*;
 import com.dat3m.dartagnan.program.event.lang.catomic.*;
 import com.dat3m.dartagnan.program.event.lang.llvm.*;
@@ -18,6 +19,8 @@ import static com.dat3m.dartagnan.program.event.EventFactory.*;
 import static com.google.common.base.Verify.verify;
 
 class VisitorTso extends VisitorBase {
+
+    private final X86 events = X86.newInstance();
 
     @Override
     public List<Event> visitTSOXchg(TSOXchg e) {
@@ -196,7 +199,7 @@ class VisitorTso extends VisitorBase {
     }
 
     private Event optionalMFence(String mo) {
-        return mo.equals(Tag.C11.MO_SC) ? X86.newMemoryFence("mfence") : null;
+        return mo.equals(Tag.C11.MO_SC) ? events.newMemoryFence("mfence") : null;
     }
 
     private List<Event> tagList(List<Event> in) {

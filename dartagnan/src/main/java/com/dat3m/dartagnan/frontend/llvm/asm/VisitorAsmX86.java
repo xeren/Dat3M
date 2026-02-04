@@ -15,6 +15,8 @@ public class VisitorAsmX86 extends AsmX86BaseVisitor<Object> {
 
     private final List<Event> asmInstructions = new ArrayList<>();
 
+    private final EventFactory.X86 events = EventFactory.X86.getInstance();
+
     public VisitorAsmX86(Function llvmFunction, Register returnRegister, List<Expression> llvmArguments) {}
 
     @Override
@@ -25,7 +27,7 @@ public class VisitorAsmX86 extends AsmX86BaseVisitor<Object> {
 
     @Override
     public Object visitX86Fence(X86FenceContext ctx) {
-        asmInstructions.add(EventFactory.X86.newMemoryFence(ctx.X86Fence().getText()));
+        asmInstructions.add(events.newMemoryFence(ctx.X86Fence().getText()));
         return null;
     }
 }

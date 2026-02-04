@@ -12,6 +12,7 @@ import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.EventFactory;
+import com.dat3m.dartagnan.program.event.EventFactory;
 import com.dat3m.dartagnan.program.memory.MemoryObject;
 import org.antlr.v4.runtime.ParserRuleContext;
 
@@ -19,6 +20,7 @@ public class VisitorLitmusX86 extends LitmusX86BaseVisitor<Object> {
 
     private final ProgramBuilder programBuilder = ProgramBuilder.forArch(Program.SourceLanguage.LITMUS, Arch.TSO);
     private final ExpressionFactory expressions = programBuilder.getExpressionFactory();
+    private final EventFactory.X86 events = EventFactory.X86.getInstance();
     private final IntegerType archType = programBuilder.getArchType();
     private int mainThread;
     private int threadCount = 0;
@@ -127,7 +129,7 @@ public class VisitorLitmusX86 extends LitmusX86BaseVisitor<Object> {
     public Object visitExchangeRegisterLocation(ExchangeRegisterLocationContext ctx) {
         Register register = programBuilder.getOrErrorRegister(mainThread, ctx.register().getText());
         MemoryObject object = programBuilder.getOrNewMemoryObject(ctx.location().getText());
-        return append(EventFactory.X86.newExchange(object, register), ctx);
+        return append(events.newExchange(object, register), ctx);
     }
 
     @Override
@@ -162,7 +164,7 @@ public class VisitorLitmusX86 extends LitmusX86BaseVisitor<Object> {
 
     @Override
     public Object visitFence(FenceContext ctx) {
-        return append(EventFactory.X86.newMemoryFence(ctx.getText().toLowerCase()), ctx);
+        return append(events.newMemoryFence(ctx.getText().toLowerCase()), ctx);
     }
 
     private Event append(Event event, ParserRuleContext ctx) {
