@@ -97,6 +97,7 @@ public class VisitorAsmArm extends AsmArmBaseVisitor<Object> {
     private final Function llvmFunction;
     private final Register returnRegister;
     private final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private final EventFactory.AArch64 events = EventFactory.AArch64.getInstance();
     private CmpInstruction comparator;
     // keeps track of all the labels defined in the asm code
     private final HashMap<String, Label> labelsDefined = new HashMap<>();
@@ -157,7 +158,7 @@ public class VisitorAsmArm extends AsmArmBaseVisitor<Object> {
     public Object visitLoad(LoadContext ctx) {
         Register register = (Register) ctx.register(0).accept(this);
         Register address = (Register) ctx.register(1).accept(this);
-        asmInstructions.add(EventFactory.AArch64.newLoad(register, address, PLAIN));
+        asmInstructions.add(events.newLoad(register, address, PLAIN));
         return null;
     }
 
@@ -165,7 +166,7 @@ public class VisitorAsmArm extends AsmArmBaseVisitor<Object> {
     public Object visitLoadAcquire(LoadAcquireContext ctx) {
         Register register = (Register) ctx.register(0).accept(this);
         Register address = (Register) ctx.register(1).accept(this);
-        asmInstructions.add(EventFactory.AArch64.newLoad(register, address, ACQUIRE));
+        asmInstructions.add(events.newLoad(register, address, ACQUIRE));
         return null;
     }
 
@@ -173,7 +174,7 @@ public class VisitorAsmArm extends AsmArmBaseVisitor<Object> {
     public Object visitLoadExclusive(LoadExclusiveContext ctx) {
         Register register = (Register) ctx.register(0).accept(this);
         Register address = (Register) ctx.register(1).accept(this);
-        asmInstructions.add(EventFactory.AArch64.newLoadExclusive(register, address, PLAIN));
+        asmInstructions.add(events.newLoadExclusive(register, address, PLAIN));
         return null;
     }
 
@@ -181,7 +182,7 @@ public class VisitorAsmArm extends AsmArmBaseVisitor<Object> {
     public Object visitLoadAcquireExclusive(LoadAcquireExclusiveContext ctx) {
         Register register = (Register) ctx.register(0).accept(this);
         Register address = (Register) ctx.register(1).accept(this);
-        asmInstructions.add(EventFactory.AArch64.newLoadExclusive(register, address, ACQUIRE));
+        asmInstructions.add(events.newLoadExclusive(register, address, ACQUIRE));
         return null;
     }
 
@@ -231,7 +232,7 @@ public class VisitorAsmArm extends AsmArmBaseVisitor<Object> {
     public Object visitStore(StoreContext ctx) {
         Register value = (Register) ctx.register(0).accept(this);
         Register address = (Register) ctx.register(1).accept(this);
-        asmInstructions.add(EventFactory.AArch64.newStore(address, value, PLAIN));
+        asmInstructions.add(events.newStore(address, value, PLAIN));
         return null;
     }
 
@@ -239,7 +240,7 @@ public class VisitorAsmArm extends AsmArmBaseVisitor<Object> {
     public Object visitStoreRelease(StoreReleaseContext ctx) {
         Register value = (Register) ctx.register(0).accept(this);
         Register address = (Register) ctx.register(1).accept(this);
-        asmInstructions.add(EventFactory.AArch64.newStore(address, value, RELEASE));
+        asmInstructions.add(events.newStore(address, value, RELEASE));
         return null;
     }
 
@@ -248,7 +249,7 @@ public class VisitorAsmArm extends AsmArmBaseVisitor<Object> {
         Register freshResultRegister = (Register) ctx.register(0).accept(this);
         Register value = (Register) ctx.register(1).accept(this);
         Register address = (Register) ctx.register(2).accept(this);
-        asmInstructions.add(EventFactory.AArch64.newStoreExclusive(freshResultRegister, address, value, PLAIN));
+        asmInstructions.add(events.newStoreExclusive(freshResultRegister, address, value, PLAIN));
         return null;
     }
 
@@ -257,7 +258,7 @@ public class VisitorAsmArm extends AsmArmBaseVisitor<Object> {
         Register freshResultRegister = (Register) ctx.register(0).accept(this);
         Register value = (Register) ctx.register(1).accept(this);
         Register address = (Register) ctx.register(2).accept(this);
-        asmInstructions.add(EventFactory.AArch64.newStoreExclusive(freshResultRegister, address, value, RELEASE));
+        asmInstructions.add(events.newStoreExclusive(freshResultRegister, address, value, RELEASE));
         return null;
     }
 
@@ -398,7 +399,7 @@ public class VisitorAsmArm extends AsmArmBaseVisitor<Object> {
         // check which type of fence it is : DataMemoryBarrier or DataSynchronizationBarrier
         final String type = (ctx.DataMemoryBarrier() == null ? ctx.DataSynchronizationBarrier() : ctx.DataMemoryBarrier()).getText();
         final String option = ctx.FenceArmOpt().getText();
-        asmInstructions.add(EventFactory.AArch64.newBarrier(type.toUpperCase(), option.toUpperCase()));
+        asmInstructions.add(events.newBarrier(type.toUpperCase(), option.toUpperCase()));
         return null;
     }
 }

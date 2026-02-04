@@ -42,6 +42,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object> {
     private final IntegerType i32 = types.getIntegerType(32);
     private final IntegerType i64 = types.getIntegerType(64);
     private final ExpressionFactory expressions = programBuilder.getExpressionFactory();
+    private final EventFactory.AArch64 events = EventFactory.AArch64.getInstance();
     private int mainThread;
     private int threadCount = 0;
     private final Map<Integer, CmpInstruction> lastCmpInstructionPerThread = new HashMap<>();
@@ -196,7 +197,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object> {
         final LoadInstructionContext inst = ctx.loadInstruction();
         final Register register = shrinkRegister(r64, ctx.rD32, inst.halfWordSize, inst.byteSize);
         final Expression address = parseAddress(ctx.address());
-        final Event ld = EventFactory.AArch64.newLoad(register, address, inst.acquire ? ACQUIRE : PLAIN);
+        final Event ld = events.newLoad(register, address, inst.acquire ? ACQUIRE : PLAIN);
         return appendAndRegister64Update(ld, r64, register, ctx);
     }
 
@@ -210,8 +211,8 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object> {
         final Expression address0 = parseAddress(ctx.address());
         final Expression address1 = expressions.makeAdd(address0, expressions.makeValue(extended ? 8 : 4, i64));
         final int lineOfCode = ctx.getStart().getLine();
-        add(EventFactory.AArch64.newLoad(value0, address0, PLAIN), lineOfCode);
-        add(EventFactory.AArch64.newLoad(value1, address1, PLAIN), lineOfCode);
+        add(events.newLoad(value0, address0, PLAIN), lineOfCode);
+        add(events.newLoad(value1, address1, PLAIN), lineOfCode);
         addRegister64Update(r064, value0, lineOfCode);
         addRegister64Update(r164, value1, lineOfCode);
         return null;
@@ -223,7 +224,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object> {
         final LoadExclusiveInstructionContext inst = ctx.loadExclusiveInstruction();
         final Register register = shrinkRegister(r64, ctx.rD32, inst.halfWordSize, inst.byteSize);
         final Expression address = parseAddress(ctx.address());
-        final Event ldx = EventFactory.AArch64.newLoadExclusive(register, address, inst.acquire ? ACQUIRE : PLAIN);
+        final Event ldx = events.newLoadExclusive(register, address, inst.acquire ? ACQUIRE : PLAIN);
         return appendAndRegister64Update(ldx, r64, register, ctx);
     }
 
@@ -234,7 +235,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object> {
         final IntegerType type = type(ctx.rV32, inst.halfWordSize, inst.byteSize);
         final Expression value = expressions.makeIntegerCast(r64, type, false);
         final Expression address = parseAddress(ctx.address());
-        return append(EventFactory.AArch64.newStore(address, value, inst.release ? RELEASE : PLAIN), ctx);
+        return append(events.newStore(address, value, inst.release ? RELEASE : PLAIN), ctx);
     }
 
     @Override
@@ -260,7 +261,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object> {
         final Expression value = expressions.makeIntegerCast(r64, type, false);
         final Register status = parseRegister64(ctx.rS32);
         final Expression address = parseAddress(ctx.address());
-        return append(EventFactory.AArch64.newStoreExclusive(status, address, value, inst.release ? RELEASE : PLAIN), ctx);
+        return append(events.newStoreExclusive(status, address, value, inst.release ? RELEASE : PLAIN), ctx);
     }
 
     @Override
@@ -273,7 +274,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object> {
         final Expression value = extended ? sReg : expressions.makeCast(sReg, lReg.getType(), false);
         final Expression address = parseAddress(ctx.address());
 
-        final Event xchg = EventFactory.AArch64.newSwap(lReg, address, value, mo(inst.acquire, inst.release));
+        final Event xchg = events.newSwap(lReg, address, value, mo(inst.acquire, inst.release));
 
         return appendAndRegister64Update(xchg, r64, lReg, ctx);
     }
@@ -290,7 +291,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object> {
         final Expression val = expressions.makeCast(rt64, rs.getType(), false);
         final Expression address = parseAddress(ctx.address());
 
-        final Event cas = EventFactory.AArch64.newCas(rs, address, cmpVal, val, mo(inst.acquire, inst.release));
+        final Event cas = events.newCas(rs, address, cmpVal, val, mo(inst.acquire, inst.release));
         return appendAndRegister64Update(cas, rs64, rs, ctx);
     }
 
@@ -357,7 +358,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object> {
         }
 
         final Expression address = parseAddress(ctx.address());
-        final Event ldOp = EventFactory.AArch64.newLoadOp(rt, address, info.op, operand, info.mo);
+        final Event ldOp = events.newLoadOp(rt, address, info.op, operand, info.mo);
         return appendAndRegister64Update(ldOp, rt64, rt, ctx);
     }
 
@@ -375,7 +376,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object> {
         }
 
         final Expression address = parseAddress(ctx.address());
-        final Event stOp = EventFactory.AArch64.newStoreOp(address, info.op, operand, info.mo);
+        final Event stOp = events.newStoreOp(address, info.op, operand, info.mo);
         return append(stOp, ctx);
     }
 
@@ -412,7 +413,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object> {
 
     @Override
     public Object visitFence(FenceContext ctx) {
-        return append(EventFactory.AArch64.newBarrier(ctx.Fence().getText(), ctx.opt), ctx);
+        return append(events.newBarrier(ctx.Fence().getText(), ctx.opt), ctx);
     }
 
     @Override

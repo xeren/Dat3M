@@ -522,63 +522,65 @@ public class EventFactory {
     // ============================================ ARM ============================================
     // =============================================================================================
 
-    public static class AArch64 {
+    public static class AArch64 extends EventFactory {
         private AArch64() {
         }
+
+        public static AArch64 getInstance() { return new AArch64(); }
 
         public enum MemoryOrder {
             PLAIN, ACQUIRE, RELEASE, ACQ_REL
         }
 
-        public static Event newLoad(Register value, Expression address, MemoryOrder mo) {
-            return EventFactory.newLoadWithMo(value, address, toAcqTag(mo));
+        public Event newLoad(Register value, Expression address, MemoryOrder mo) {
+            return newLoadWithMo(value, address, toAcqTag(mo));
         }
 
-        public static Event newStore(Expression address, Expression value, MemoryOrder mo) {
-            return EventFactory.newStoreWithMo(address, value, toRelTag(mo));
+        public Event newStore(Expression address, Expression value, MemoryOrder mo) {
+            return newStoreWithMo(address, value, toRelTag(mo));
         }
 
-        public static Event newLoadExclusive(Register value, Expression address, MemoryOrder mo) {
-            return EventFactory.newRMWLoadExclusiveWithMo(value, address, toAcqTag(mo));
+        public Event newLoadExclusive(Register value, Expression address, MemoryOrder mo) {
+            return newRMWLoadExclusiveWithMo(value, address, toAcqTag(mo));
         }
 
-        public static Event newStoreExclusive(Register status, Expression address, Expression value, MemoryOrder mo) {
-            return EventFactory.Common.newExclusiveStore(status, address, value, toRelTag(mo));
+        public Event newStoreExclusive(Register status, Expression address, Expression value, MemoryOrder mo) {
+            return Common.newExclusiveStore(status, address, value, toRelTag(mo));
         }
 
-        public static Event newLoadOp(Register register, Expression address, IntBinaryOp operator, Expression operand,
+        public Event newLoadOp(Register register, Expression address, IntBinaryOp operator, Expression operand,
                 MemoryOrder mo) {
-            final Event ld = EventFactory.Common.newRmwFetchOp(register, address, operator, operand);
+            final Event ld = Common.newRmwFetchOp(register, address, operator, operand);
             ld.addTags(toAcqTag(mo), toRelTag(mo));
             ld.setMetadata(LDOP_PRINTING);
             return ld;
         }
 
-        public static Event newStoreOp(Expression address, IntBinaryOp operator, Expression operand, MemoryOrder mo) {
+        public Event newStoreOp(Expression address, IntBinaryOp operator, Expression operand, MemoryOrder mo) {
             checkArgument(mo.equals(MemoryOrder.PLAIN) || mo.equals(MemoryOrder.RELEASE),
                     "Invalid memory order '%s' for newStoreOp", mo);
-            final Event st = EventFactory.Common.newRmwOp(address, operator, operand);
+            final Event st = Common.newRmwOp(address, operator, operand);
             st.addTags(toRelTag(mo));
             st.setMetadata(STOP_PRINTING);
             return st;
         }
 
-        public static Event newSwap(Register register, Expression address, Expression value, MemoryOrder mo) {
-            final Event swp = EventFactory.Common.newXchg(register, address, value);
+        public Event newSwap(Register register, Expression address, Expression value, MemoryOrder mo) {
+            final Event swp = Common.newXchg(register, address, value);
             swp.addTags(toAcqTag(mo), toRelTag(mo));
             swp.setMetadata(SWP_PRINTING);
             return swp;
         }
 
-        public static Event newCas(Register register, Expression address, Expression expected, Expression desired,
+        public Event newCas(Register register, Expression address, Expression expected, Expression desired,
                 MemoryOrder mo) {
-            final Event cas = EventFactory.Common.newCAS(register, address, expected, desired);
+            final Event cas = Common.newCAS(register, address, expected, desired);
             cas.addTags(toAcqTag(mo), toRelTag(mo));
             cas.setMetadata(CAS_PRINTING);
             return cas;
         }
 
-        public static Event newBarrier(String type, String option) {
+        public Event newBarrier(String type, String option) {
             final String typeUpper = type.toUpperCase();
             final String optionUpper = option.toUpperCase();
             checkArgument(BARRIER_TYPE.contains(typeUpper), "Unknown barrier type '%s'.", type);

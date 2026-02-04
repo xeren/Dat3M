@@ -8,6 +8,7 @@ import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Tag;
 import com.dat3m.dartagnan.program.event.arch.*;
+import com.dat3m.dartagnan.program.event.arch.aarch64.AArch64;
 import com.dat3m.dartagnan.program.event.core.*;
 import com.dat3m.dartagnan.program.event.lang.catomic.*;
 import com.dat3m.dartagnan.program.event.lang.linux.*;
@@ -26,6 +27,7 @@ class VisitorArm8 extends VisitorBase {
     // we need to strength the compilation following the paper
     // "Outlawing Ghosts: Avoiding Out-of-Thin-Air Results"
     private final boolean useRC11Scheme;
+    private final AArch64 events = AArch64.newInstance();
 
     protected VisitorArm8(boolean useRC11Scheme) {
         this.useRC11Scheme = useRC11Scheme;
@@ -617,18 +619,18 @@ class VisitorArm8 extends VisitorBase {
     }
 
     private Event newDmbIsh() {
-        return AArch64.newBarrier("DMB", "ISH");
+        return events.newBarrier("DMB", "ISH");
     }
 
     private Event newDsbIsh() {
-        return AArch64.newBarrier("DSB", "ISH");
+        return events.newBarrier("DSB", "ISH");
     }
 
     private Event newDsbIshLd() {
-        return AArch64.newBarrier("DSB", "ISHLD");
+        return events.newBarrier("DSB", "ISHLD");
     }
 
     private Event newDsbIshSt() {
-        return AArch64.newBarrier("DSB", "ISHST");
+        return events.newBarrier("DSB", "ISHST");
     }
 }

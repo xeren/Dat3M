@@ -3,6 +3,7 @@ package com.dat3m.dartagnan.program.processing.compilation;
 import com.dat3m.dartagnan.expression.Expression;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Tag;
+import com.dat3m.dartagnan.program.event.arch.aarch64.AArch64;
 import com.dat3m.dartagnan.program.event.lang.catomic.*;
 import com.dat3m.dartagnan.program.event.arch.StoreExclusive;
 import com.dat3m.dartagnan.program.event.core.*;
@@ -13,6 +14,8 @@ import java.util.List;
 import static com.dat3m.dartagnan.program.event.EventFactory.*;
 
 class VisitorArm7 extends VisitorBase {
+
+    public final AArch64 events = AArch64.newInstance();
 
     protected VisitorArm7() {}
 
@@ -84,6 +87,6 @@ class VisitorArm7 extends VisitorBase {
     }
 
     private Event newDmbIsh() {
-        return AArch64.newBarrier("DMB", "ISH");
+        return events.newBarrier("DMB", "ISH");
     }
 }
