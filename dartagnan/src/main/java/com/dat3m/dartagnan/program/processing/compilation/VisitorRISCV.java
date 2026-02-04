@@ -30,6 +30,8 @@ class VisitorRISCV extends VisitorBase {
     // we use the same scheme as AMRv8
     private final boolean useRC11Scheme;
 
+    private final RISCV events = RISCV.newInstance();
+
     protected VisitorRISCV(boolean useRC11Scheme) {
         this.useRC11Scheme = useRC11Scheme;
     }
@@ -674,26 +676,26 @@ class VisitorRISCV extends VisitorBase {
     // The respective methods in EventFactory fit now, but may produce compilable barriers in the future.
 
     private Event newRRFence() {
-        return RISCV.newFence("r.r");
+        return events.newFence("r.r");
     }
 
     private Event newRRWFence() {
-        return RISCV.newFence("r.rw");
+        return events.newFence("r.rw");
     }
 
     private Event newRWWFence() {
-        return RISCV.newFence("rw.w");
+        return events.newFence("rw.w");
     }
 
     private Event newRWRWFence() {
-        return RISCV.newFence("rw.rw");
+        return events.newFence("rw.rw");
     }
 
     private Event newWWFence() {
-        return RISCV.newFence("w.w");
+        return events.newFence("w.w");
     }
 
     private Event newTsoFence() {
-        return RISCV.newFence("tso");
+        return events.newFence("tso");
     }
 }

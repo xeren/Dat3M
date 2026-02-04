@@ -771,49 +771,51 @@ public class EventFactory {
     // =============================================================================================
     // =========================================== RISCV ===========================================
     // =============================================================================================
-    public static class RISCV {
+    public static class RISCV extends EventFactory {
         private RISCV() {
         }
+
+        public static RISCV getInstance() { return new RISCV();}
 
         public enum MemoryOrder {
             PLAIN, ACQUIRE, RELEASE, ACQ_REL
         }
 
-        public static Event newLoad(Register value, Expression address, MemoryOrder mo) {
-            return EventFactory.newLoadWithMo(value, address, toTag(mo));
+        public Event newLoad(Register value, Expression address, MemoryOrder mo) {
+            return newLoadWithMo(value, address, toTag(mo));
         }
 
-        public static Event newStore(Expression address, Expression value, MemoryOrder mo) {
-            return EventFactory.newStoreWithMo(address, value, toTag(mo));
+        public Event newStore(Expression address, Expression value, MemoryOrder mo) {
+            return newStoreWithMo(address, value, toTag(mo));
         }
 
-        public static Event newLoadReserve(Register value, Expression address, MemoryOrder mo) {
-            return EventFactory.newRMWLoadExclusiveWithMo(value, address, toTag(mo));
+        public Event newLoadReserve(Register value, Expression address, MemoryOrder mo) {
+            return newRMWLoadExclusiveWithMo(value, address, toTag(mo));
         }
 
-        public static Event newStoreConditional(Register status, Expression address, Expression value, MemoryOrder mo) {
+        public Event newStoreConditional(Register status, Expression address, Expression value, MemoryOrder mo) {
             return Common.newExclusiveStore(status, address, value, toTag(mo));
         }
 
-        public static Event newAmoSwap(Register register, Expression address, Expression value, MemoryOrder mo) {
-            final Event swp = EventFactory.Common.newXchg(register, address, value);
+        public Event newAmoSwap(Register register, Expression address, Expression value, MemoryOrder mo) {
+            final Event swp = Common.newXchg(register, address, value);
             swp.addTags(toTag(mo));
             return swp;
         }
 
-        public static Event newAmoOr(Register register, Expression address, Expression value, MemoryOrder mo) {
-            final Event swp = EventFactory.Common.newRmwFetchOp(register, address, IntBinaryOp.OR, value);
+        public Event newAmoOr(Register register, Expression address, Expression value, MemoryOrder mo) {
+            final Event swp = Common.newRmwFetchOp(register, address, IntBinaryOp.OR, value);
             swp.addTags(toTag(mo));
             return swp;
         }
 
-        public static Event newAmoAdd(Register register, Expression address, Expression value, MemoryOrder mo) {
-            final Event swp = EventFactory.Common.newRmwFetchOp(register, address, IntBinaryOp.ADD, value);
+        public Event newAmoAdd(Register register, Expression address, Expression value, MemoryOrder mo) {
+            final Event swp = Common.newRmwFetchOp(register, address, IntBinaryOp.ADD, value);
             swp.addTags(toTag(mo));
             return swp;
         }
 
-        public static Event newFence(String mode) {
+        public Event newFence(String mode) {
             checkArgument(FENCE_MODE.contains(mode), "Invalid fence mode '%s'.", mode);
             final String name = "Fence." + mode;
             return newGenericVisibleEvent(name, Tag.FENCE, name);

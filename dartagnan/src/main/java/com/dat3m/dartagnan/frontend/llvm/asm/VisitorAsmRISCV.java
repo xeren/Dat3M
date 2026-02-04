@@ -17,6 +17,7 @@ import com.dat3m.dartagnan.program.Function;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.EventFactory;
+import com.dat3m.dartagnan.program.event.EventFactory;
 import com.dat3m.dartagnan.program.event.core.Label;
 import com.dat3m.dartagnan.program.event.core.Local;
 
@@ -31,6 +32,7 @@ public class VisitorAsmRISCV extends AsmRISCVBaseVisitor<Object> {
     private final Function llvmFunction;
     private final Register returnRegister;
     private final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private final EventFactory.RISCV events = EventFactory.RISCV.getInstance();
     // keeps track of all the labels defined in the the asm code
     private final HashMap<String, Label> labelsDefined = new HashMap<>();
     // used to keep track of which asm register should map to the llvm return register if it is an aggregate type
@@ -88,7 +90,7 @@ public class VisitorAsmRISCV extends AsmRISCVBaseVisitor<Object> {
         expectedType = address.getType();
         Expression offset = (Expression) ctx.value().accept(this);
         Expression newAddress = expressions.makeAdd(address,offset);
-        asmInstructions.add(EventFactory.RISCV.newLoad(register, newAddress, PLAIN));
+        asmInstructions.add(events.newLoad(register, newAddress, PLAIN));
         return null;
     }
 
@@ -105,7 +107,7 @@ public class VisitorAsmRISCV extends AsmRISCVBaseVisitor<Object> {
     public Object visitLoadExclusive(LoadExclusiveContext ctx) {
         Register register = (Register) ctx.register(0).accept(this);
         Register address = (Register) ctx.register(1).accept(this);
-        asmInstructions.add(EventFactory.RISCV.newLoadReserve(register, address, PLAIN));
+        asmInstructions.add(events.newLoadReserve(register, address, PLAIN));
         return null;
     }
 
@@ -113,7 +115,7 @@ public class VisitorAsmRISCV extends AsmRISCVBaseVisitor<Object> {
     public Object visitLoadAcquireExclusive(LoadAcquireExclusiveContext ctx) {
         Register register = (Register) ctx.register(0).accept(this);
         Register address = (Register) ctx.register(1).accept(this);
-        asmInstructions.add(EventFactory.RISCV.newLoadReserve(register, address, ACQUIRE));
+        asmInstructions.add(events.newLoadReserve(register, address, ACQUIRE));
         return null;
     }
 
@@ -144,7 +146,7 @@ public class VisitorAsmRISCV extends AsmRISCVBaseVisitor<Object> {
         expectedType = address.getType();
         Expression offset = (Expression) ctx.value().accept(this);
         Expression newAddress = expressions.makeAdd(address,offset);
-        asmInstructions.add(EventFactory.RISCV.newStore(newAddress, value, PLAIN));
+        asmInstructions.add(events.newStore(newAddress, value, PLAIN));
         return null;
     }
 
@@ -154,7 +156,7 @@ public class VisitorAsmRISCV extends AsmRISCVBaseVisitor<Object> {
         Register freshResultRegister = (Register) ctx.register(0).accept(this);
         Register value = (Register) ctx.register(1).accept(this);
         Register address = (Register) ctx.register(2).accept(this);
-        asmInstructions.add(EventFactory.RISCV.newStoreConditional(freshResultRegister, address, value, PLAIN));
+        asmInstructions.add(events.newStoreConditional(freshResultRegister, address, value, PLAIN));
         return null;
     }
 
@@ -163,7 +165,7 @@ public class VisitorAsmRISCV extends AsmRISCVBaseVisitor<Object> {
         Register freshResultRegister = (Register) ctx.register(0).accept(this);
         Register value = (Register) ctx.register(1).accept(this);
         Register address = (Register) ctx.register(2).accept(this);
-        asmInstructions.add(EventFactory.RISCV.newStoreConditional(freshResultRegister, address, value, RELEASE));
+        asmInstructions.add(events.newStoreConditional(freshResultRegister, address, value, RELEASE));
         return null;
     }
 
@@ -304,7 +306,7 @@ public class VisitorAsmRISCV extends AsmRISCVBaseVisitor<Object> {
     @Override
     public Object visitRiscvFence(RiscvFenceContext ctx) {
         final String mode = ctx.fenceOptions().mode.replace(" ", ".");
-        asmInstructions.add(EventFactory.RISCV.newFence(mode));
+        asmInstructions.add(events.newFence(mode));
         return null;
     }
 
