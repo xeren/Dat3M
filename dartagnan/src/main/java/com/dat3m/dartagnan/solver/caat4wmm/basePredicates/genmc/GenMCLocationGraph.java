@@ -27,18 +27,7 @@ public class GenMCLocationGraph extends StaticGenMCWMMGraph {
     @Override
     public void repopulate() {
         if (isRepopulateForbidden()) return;
-        addrEventsMap = new HashMap<>();
-        for (final EventData event : trace.getElements()) {
-            final Object address = event.getAccessedAddress();
-            if (address != null) {
-                List<EventData> addrEvents = addrEventsMap.get(address);
-                if (addrEvents == null) {
-                    addrEvents = new ArrayList<>();
-                    addrEventsMap.put(address, addrEvents);
-                }
-                addrEvents.add(event);
-            }
-        }
+        addrEventsMap = trace.getAddressEventsMap();
         size = -1;
     }
 
@@ -93,17 +82,6 @@ public class GenMCLocationGraph extends StaticGenMCWMMGraph {
 
     @Override
     public void forwardPropagate(final Collection<EventData> added) {
-        for (final EventData event : added) {
-            final Object address = event.getAccessedAddress();
-            if (address != null) {
-                List<EventData> addrEvents = addrEventsMap.get(address);
-                if (addrEvents == null) {
-                    addrEvents = new ArrayList<>();
-                    addrEventsMap.put(address, addrEvents);
-                }
-                addrEvents.add(event);
-            }
-        }
         size = -1;
     }
 }

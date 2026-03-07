@@ -169,7 +169,7 @@ public final class GenMCExecutionModel {
         porfPrefixes.clear();
 
         final GenMCEventDomain trace = new GenMCEventDomain(relevantThreads.size());
-        final GenMCWMMSolver solver = GenMCWMMSolver.fromConfig(task.getConfig(), task.getMemoryModel(), analysisContext, reasoningMethod);
+        final GenMCWMMSolver solver = GenMCWMMSolver.withTask(task, analysisContext, reasoningMethod);
         final ExpressionEvaluator exprEvaluator = ExpressionEvaluator.withContext(evalContext);
         exprEvaluator.setTrace(trace);
         Comparator<EventData> explorationOrder = null;
@@ -282,12 +282,11 @@ public final class GenMCExecutionModel {
 
     public Collection<EventData> getMayCoSet(final EventData write) {
         final Event writeEvent = write.getEvent();
-        final BigInteger writeAddress = (BigInteger) write.getAccessedAddress();
         final Set<Event> inSet = mayCoInMap.get(writeEvent);
         if (inSet == null) {
             return Collections.emptySet();
         }
-        final EventData addressInit = trace.getAddressInits().get(writeAddress);
+        final EventData addressInit = trace.getAddressInit(write.getAccessedAddress());
         if (addressInit == null) {
             return Collections.emptySet();
         }

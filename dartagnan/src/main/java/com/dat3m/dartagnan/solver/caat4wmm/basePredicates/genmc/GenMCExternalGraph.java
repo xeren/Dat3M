@@ -67,8 +67,19 @@ public class GenMCExternalGraph extends StaticGenMCWMMGraph {
     public void repopulate() {
         if (isRepopulateForbidden()) return;
         threadEventsMap = trace.getThreadEventsMap();
-        computeSize();
+        size = -1;
     }
+
+    @Override
+    public int size() {
+        if (size == -1) {
+            computeSize();
+        }
+        return size;
+    }
+
+    @Override
+    public int getEstimatedSize() { return size(); }
 
     private void computeSize() {
         size = 0;
@@ -81,7 +92,7 @@ public class GenMCExternalGraph extends StaticGenMCWMMGraph {
 
     @Override
     public void forwardPropagate(final Collection<EventData> added) {
-        computeSize();
+        size = -1;
     }
 
 }

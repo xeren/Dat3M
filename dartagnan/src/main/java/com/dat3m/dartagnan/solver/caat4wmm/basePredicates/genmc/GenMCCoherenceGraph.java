@@ -1,6 +1,7 @@
 package com.dat3m.dartagnan.solver.caat4wmm.basePredicates.genmc;
 
 
+import com.dat3m.dartagnan.program.event.core.Store;
 import com.dat3m.dartagnan.solver.caat.misc.EdgeDirection;
 import com.dat3m.dartagnan.solver.caat.predicates.relationGraphs.Edge;
 import com.dat3m.dartagnan.verification.model.EventData;
@@ -60,21 +61,15 @@ public class GenMCCoherenceGraph extends StaticGenMCWMMGraph {
     @Override
     public void repopulate() {
         if (isRepopulateForbidden()) return;
-        final Collection<EventData> addressInits = trace.getAddressInits().values();
-        coMap = new ArrayList<>(addressInits.size());
-        for (final EventData addressInit : addressInits) {
-            if (addressInit.getCoSuccessor() != null) {
-                coMap.add(addressInit);
-            }
-        }
+        coMap = new ArrayList<>(trace.getAddressInits());
         size = -1;
     }
 
     @Override
     public void forwardPropagate(final Collection<EventData> added) {
-        for (final EventData addressInit : trace.getAddressInits().values()) {
-            if (addressInit.getCoSuccessor() != null && !coMap.contains(addressInit)) {
-                coMap.add(addressInit);
+        for (final EventData event : added) {
+            if (event.getEvent() instanceof Store && event.getCoPredecessor() == null) {
+                coMap.add(event);
             }
         }
     }
@@ -170,14 +165,17 @@ public class GenMCCoherenceGraph extends StaticGenMCWMMGraph {
                 if (++low < curList.size() - 1) {
                     high = low + 1;
                 } else {
-                    if (coListIterator.hasNext()) {
+                    while (coListIterator.hasNext()) {
                         curList = coListIterator.next().getCoSuccessors();
-                        low = 0;
-                        high = 1;
-                    } else {
-                        edge = null;
-                        return;
+                        if (curList.size() > 1) {
+                            low = 0;
+                            high = 1;
+                            edge = new Edge(curList.get(low).getId(), curList.get(high).getId());
+                            return;
+                        }
                     }
+                    edge = null;
+                    return;
                 }
             }
             edge = new Edge(curList.get(low).getId(), curList.get(high).getId());

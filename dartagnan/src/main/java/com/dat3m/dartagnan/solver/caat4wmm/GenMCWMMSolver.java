@@ -15,6 +15,7 @@ import com.dat3m.dartagnan.solver.caat4wmm.coreReasoning.GenMCCoreReasoner;
 import com.dat3m.dartagnan.utils.logic.Conjunction;
 import com.dat3m.dartagnan.utils.logic.DNF;
 import com.dat3m.dartagnan.verification.Context;
+import com.dat3m.dartagnan.verification.VerificationTask;
 import com.dat3m.dartagnan.verification.model.EventData;
 import com.dat3m.dartagnan.wmm.Wmm;
 
@@ -33,8 +34,10 @@ public class GenMCWMMSolver {
     private final GenMCReasoning reasoningMethod;
     private final AbstractGenMCWMMPredicate[] basePredicates;
 
-    private GenMCWMMSolver(final Configuration config, final Wmm memoryModel, final Context analysisContext, final GenMCReasoning reasoningMethod)
+    private GenMCWMMSolver(final VerificationTask task, final Context analysisContext, final GenMCReasoning reasoningMethod)
             throws InvalidConfigurationException {
+        final Wmm memoryModel = task.getMemoryModel();
+        final Configuration config = task.getConfig();
         this.executionGraph = new GenMCExecutionGraph(memoryModel);
         this.reasoner = reasoningMethod.usesReasons() ? GenMCCoreReasoner.fromConfig(config, analysisContext, executionGraph) : null;
         this.solver = CAATSolver.create();
@@ -48,9 +51,9 @@ public class GenMCWMMSolver {
         }
     }
 
-    public static GenMCWMMSolver fromConfig(final Configuration config, final Wmm memoryModel, final Context analysisContext, final GenMCReasoning reasoningMethod)
+    public static GenMCWMMSolver withTask(final VerificationTask task, final Context analysisContext, final GenMCReasoning reasoningMethod)
             throws InvalidConfigurationException {
-        return new GenMCWMMSolver(config, memoryModel, analysisContext, reasoningMethod);
+        return new GenMCWMMSolver(task, analysisContext, reasoningMethod);
     }
 
     public GenMCExecutionGraph getExecutionGraph() {

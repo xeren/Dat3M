@@ -350,7 +350,6 @@ public final class GenMCSolver extends ModelChecker {
     private boolean visitCos(final GenMCExecutionModel model, final EventData write, final Collection<EventData> mayCoSet, final Event lastRead,
                              final boolean forBackwardRevisit) throws SolverException, InterruptedException, InvalidConfigurationException {
         if (mayCoSet.isEmpty()) {
-            model.getTrace().addAddressInit(write);
             return visit(model);
         }
         final boolean needsNewConsistencyCheck = model.needsNewConsistencyCheck();
