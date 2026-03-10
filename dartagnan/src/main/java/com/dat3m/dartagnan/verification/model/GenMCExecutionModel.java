@@ -548,11 +548,13 @@ public final class GenMCExecutionModel {
     public boolean checkFullConsistency() {
         if (reasoningMethod.usesReasoning()) {
             if (backtrackingPoint != null) {
+                isConsistent = false;
                 return false;
             }
         }
         boolean wasInitiallyPropagatedByPatterns = initiallyPropagatedByPatterns;
         if (reasonKnown() || hasPattern()) {
+            isConsistent = false;
             return false;
         }
 
