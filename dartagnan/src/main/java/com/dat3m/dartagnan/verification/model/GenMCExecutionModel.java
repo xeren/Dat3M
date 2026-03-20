@@ -4,15 +4,10 @@ import com.dat3m.dartagnan.configuration.GenMCReasoning;
 import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
 import com.dat3m.dartagnan.expression.Expression;
 import com.dat3m.dartagnan.expression.ExpressionFactory;
-import com.dat3m.dartagnan.expression.ExpressionVisitor;
 import com.dat3m.dartagnan.expression.Type;
-import com.dat3m.dartagnan.expression.base.ExpressionBase;
 import com.dat3m.dartagnan.expression.booleans.*;
-import com.dat3m.dartagnan.expression.floats.FloatCmpExpr;
 import com.dat3m.dartagnan.expression.integers.IntCmpExpr;
-import com.dat3m.dartagnan.expression.misc.ITEExpr;
 import com.dat3m.dartagnan.expression.processing.ExprSimplifier;
-import com.dat3m.dartagnan.expression.processing.ExprTransformer;
 import com.dat3m.dartagnan.expression.processing.evaluation.ExpressionEvaluator;
 import com.dat3m.dartagnan.expression.type.BooleanType;
 import com.dat3m.dartagnan.expression.type.IntegerType;
@@ -23,7 +18,6 @@ import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.event.core.*;
 import com.dat3m.dartagnan.program.event.core.annotations.StringAnnotation;
 import com.dat3m.dartagnan.program.event.core.threading.*;
-import com.dat3m.dartagnan.program.misc.NonDetValue;
 import com.dat3m.dartagnan.solver.caat.CAATSolver;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCWMMSolver;
@@ -1063,11 +1057,15 @@ public final class GenMCExecutionModel {
             if (jump.isGoto() || labelPost.equals(condition)) {
                 return reasoning(event.getPredecessor(), labelPost, executionEncodedIds, exclusionThread);
             }
-            if (labelPost instanceof final BoolLiteral bool && bool.getValue()) {
-                return reasoning(event.getPredecessor(), condition, executionEncodedIds, exclusionThread);
+            if (labelPost instanceof final BoolLiteral labelBool && labelBool.getValue()) {
+                if (!(condition instanceof BoolLiteral conditionBool && !conditionBool.getValue())) {
+                    return reasoning(event.getPredecessor(), condition, executionEncodedIds, exclusionThread);
+                }
             }
             if (condition instanceof final BoolLiteral bool && bool.getValue()) {
-                return reasoning(event.getPredecessor(), labelPost, executionEncodedIds, exclusionThread);
+                if (!(labelPost instanceof BoolLiteral)) {  // labelPost=true already covered by previous if
+                    return reasoning(event.getPredecessor(), labelPost, executionEncodedIds, exclusionThread);
+                }
             }
             final List<Map.Entry<Integer, Boolean>> executionIds = executionEncodedIds.get(event.getThread());
             final Map.Entry<Integer, Boolean> lastExecutionId;
