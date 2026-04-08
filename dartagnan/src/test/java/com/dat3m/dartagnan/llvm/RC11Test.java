@@ -47,6 +47,8 @@ public class RC11Test extends AbstractCTest {
     public static Iterable<Object[]> data() throws IOException {
         return Arrays.asList(new Object[][]{
                 {"2+2W", C11, PASS},
+                {"genmc_cas", C11, FAIL},
+                {"genmc_cas_nondet", C11, FAIL},
                 {"IRIW-acq-sc", C11, FAIL},
                 {"LB", C11, PASS},
                 {"LB+deps", C11, PASS},
