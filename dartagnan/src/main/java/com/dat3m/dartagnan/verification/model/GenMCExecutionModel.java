@@ -4,10 +4,15 @@ import com.dat3m.dartagnan.configuration.GenMCReasoning;
 import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
 import com.dat3m.dartagnan.expression.Expression;
 import com.dat3m.dartagnan.expression.ExpressionFactory;
+import com.dat3m.dartagnan.expression.ExpressionVisitor;
 import com.dat3m.dartagnan.expression.Type;
+import com.dat3m.dartagnan.expression.base.ExpressionBase;
 import com.dat3m.dartagnan.expression.booleans.*;
+import com.dat3m.dartagnan.expression.floats.FloatCmpExpr;
 import com.dat3m.dartagnan.expression.integers.IntCmpExpr;
+import com.dat3m.dartagnan.expression.misc.ITEExpr;
 import com.dat3m.dartagnan.expression.processing.ExprSimplifier;
+import com.dat3m.dartagnan.expression.processing.ExprTransformer;
 import com.dat3m.dartagnan.expression.processing.evaluation.ExpressionEvaluator;
 import com.dat3m.dartagnan.expression.type.BooleanType;
 import com.dat3m.dartagnan.expression.type.IntegerType;
@@ -18,6 +23,7 @@ import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.event.core.*;
 import com.dat3m.dartagnan.program.event.core.annotations.StringAnnotation;
 import com.dat3m.dartagnan.program.event.core.threading.*;
+import com.dat3m.dartagnan.program.misc.NonDetValue;
 import com.dat3m.dartagnan.solver.caat.CAATSolver;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCWMMSolver;
@@ -898,10 +904,10 @@ public final class GenMCExecutionModel {
         DNF<CoreLiteral> assertionReasons = DNF.TRUE();
         try {
             if (trace.getData(assertion).isPresent()) {
-                assertionReasons = reasoning(assertion.getPredecessor(), assertion.pre(expressions.makeTrue(), expressions), new HashMap<>(), assertion.getThread());
+                assertionReasons = assertion.pre(expressions.makeTrue(), expressions).accept(new SplitReasoner(assertion, new HashMap<>(), assertion.getThread()));
             } else {
                 for (Map.Entry<Event, Expression> entryEvent : getAssertionEntryPoints(assertion).entrySet()) {
-                    assertionReasons = assertionReasons.and(reasoning(entryEvent.getKey().getPredecessor(), entryEvent.getValue(), new HashMap<>(), assertion.getThread()),
+                    assertionReasons = assertionReasons.and(entryEvent.getValue().accept(new SplitReasoner(entryEvent.getKey(), new HashMap<>(), assertion.getThread())),
                             false);
                 }
             }
@@ -961,18 +967,6 @@ public final class GenMCExecutionModel {
                                        final Thread exclusionThread) {
         if (event == null) {
             return DNF.TRUE();
-        }
-        if (condition instanceof BoolLiteral lit) {
-            if (lit.getValue() && trace.getData(event).isPresent()) {
-                final Thread eventThread = event.getThread();
-                if (eventThread != exclusionThread) {
-                    final List<Map.Entry<Integer, Boolean>> executionIds = executionEncodedIds.get(eventThread);
-                    if (executionIds != null && !executionIds.isEmpty()) {
-                        executionIds.get(executionIds.size() - 1).setValue(true);
-                        return DNF.TRUE();
-                    }
-                }
-            }
         }
         if (event instanceof final Load read) {
             final Set<Register> conditionRegs = condition.getRegs();
@@ -1055,7 +1049,7 @@ public final class GenMCExecutionModel {
             final boolean labelExecuted = label.getPost() != null;
             final Expression labelPost = labelExecuted ? label.getPost() : expressions.makeTrue();
             if (jump.isGoto() || labelPost.equals(condition)) {
-                return reasoning(event.getPredecessor(), labelPost, executionEncodedIds, exclusionThread);
+                return labelPost.accept(new SplitReasoner(event, executionEncodedIds, exclusionThread));
             }
             if (labelPost instanceof final BoolLiteral labelBool && labelBool.getValue()) {
                 if (!(condition instanceof BoolLiteral conditionBool && !conditionBool.getValue())) {
@@ -1064,7 +1058,7 @@ public final class GenMCExecutionModel {
             }
             if (condition instanceof final BoolLiteral bool && bool.getValue()) {
                 if (!(labelPost instanceof BoolLiteral)) {  // labelPost=true already covered by previous if
-                    return reasoning(event.getPredecessor(), labelPost, executionEncodedIds, exclusionThread);
+                    return labelPost.accept(new SplitReasoner(event, executionEncodedIds, exclusionThread));
                 }
             }
             final List<Map.Entry<Integer, Boolean>> executionIds = executionEncodedIds.get(event.getThread());
@@ -1077,21 +1071,21 @@ public final class GenMCExecutionModel {
             final Optional<EventData> jumpEvent = trace.getData(jump);
             if (jumpEvent.isPresent()) {
                 if (jumpEvent.get().wasExecuted()) {
-                    return reasoning(event.getPredecessor(), expressions.makeAnd(jump.getGuard(), labelPost).accept(simplifier), executionEncodedIds, exclusionThread);
+                    return expressions.makeAnd(jump.getGuard(), labelPost).accept(simplifier).accept(new SplitReasoner(event, executionEncodedIds, exclusionThread));
                 } else {
-                    return reasoning(event.getPredecessor(), expressions.makeAnd(expressions.makeNot(jump.getGuard()), condition).accept(simplifier), executionEncodedIds,
-                            exclusionThread);
+                    return expressions.makeAnd(expressions.makeNot(jump.getGuard()), condition).accept(simplifier)
+                            .accept(new SplitReasoner(event, executionEncodedIds, exclusionThread));
                 }
             } else {
-                return reasoning(event.getPredecessor(), event.pre(condition, expressions).accept(simplifier), executionEncodedIds, exclusionThread);
+                return event.pre(condition, expressions).accept(simplifier).accept(new SplitReasoner(event, executionEncodedIds, exclusionThread));
             }
         }
         if (event instanceof Alloc alloc) {
-            return reasoning(event.getPredecessor(), alloc.getResultRegister().replaceIn(condition, alloc.getAllocatedObject().getAddress()).accept(simplifier),
-                    executionEncodedIds, exclusionThread);
+            return alloc.getResultRegister().replaceIn(condition, alloc.getAllocatedObject().getAddress()).accept(simplifier)
+                    .accept(new SplitReasoner(event, executionEncodedIds, exclusionThread));
         }
         if (event instanceof RegWriter || event instanceof Assume) {
-            return reasoning(event.getPredecessor(), event.pre(condition, expressions).accept(simplifier), executionEncodedIds, exclusionThread);
+            return event.pre(condition, expressions).accept(simplifier).accept(new SplitReasoner(event, executionEncodedIds, exclusionThread));
         }
         return reasoning(event.getPredecessor(), condition, executionEncodedIds, exclusionThread);
     }
@@ -1159,6 +1153,114 @@ public final class GenMCExecutionModel {
 
     private Conjunction<CoreLiteral> newRfLiteralIfNeeded(final Event e1, final Event e2) {
         return mayRfInMap.get(e2).length == 1 ? Conjunction.TRUE() : new Conjunction<>(new RfLiteral(e1, e2, true));
+    }
+
+    private class SplitReasoner implements ExpressionVisitor<DNF<CoreLiteral>> {
+
+        private final Event event;
+        private final Event previousEvent;
+        private final Map<Thread, List<Map.Entry<Integer, Boolean>>> executionEncodedIds;
+        private final Thread exclusionThread;
+
+        private SplitReasoner(final Event event, final Map<Thread, List<Map.Entry<Integer, Boolean>>> executionEncodedIds, final Thread exclusionThread) {
+            this.event = event;
+            this.previousEvent = event.getPredecessor();
+            this.executionEncodedIds = executionEncodedIds;
+            this.exclusionThread = exclusionThread;
+        }
+
+        @Override
+        public DNF<CoreLiteral> visitBoolBinaryExpression(BoolBinaryExpr expr) {
+            expr = ExprTransformer.transformIffExpression(expr, BoolBinaryOp.AND);
+            final Expression first = expr.getLeft();
+            final Expression second = expr.getRight();
+            if (expr.getKind() == BoolBinaryOp.AND) {
+                return visitSimpleBoolExpression(expr);
+            } else {
+                final Optional<EventData> eventData = trace.getData(event);
+                if (eventData.isPresent()) {
+                    final EventData e = eventData.get();
+                    if (bigIntToBool(evaluateSafely(first, e))) {
+                        final DNF<CoreLiteral> firstReasons = first.accept(this);
+                        if (bigIntToBool(evaluateSafely(second, e))) {
+                            return firstReasons.or(second.accept(this));
+                        } else {
+                            return firstReasons;
+                        }
+                    } else {
+                        return second.accept(this);
+                    }
+                } else {
+                    return first.accept(this).or(second.accept(this));
+                }
+            }
+        }
+        @Override
+        public DNF<CoreLiteral> visitBoolUnaryExpression(final BoolUnaryExpr expr) {
+            if (expr.getKind() == BoolUnaryOp.NOT) {
+                final Expression operand = expr.getOperand();
+                final Expression negation = ExprTransformer.negate(operand);
+                if (negation == null) {
+                    if (operand instanceof NonDetValue) {
+                        return DNF.FALSE();
+                    } else {
+                        assert operand instanceof Register;
+                        return visitSimpleBoolExpression(expr);
+                    }
+                }
+                return negation.accept(this);
+            }
+            return ExpressionVisitor.super.visitBoolUnaryExpression(expr);
+        }
+        @Override
+        public DNF<CoreLiteral> visitBoolLiteral(BoolLiteral lit) {
+            if (lit.getValue() && trace.getData(event).isPresent()) {
+                final Thread eventThread = event.getThread();
+                if (eventThread != exclusionThread) {
+                    final List<Map.Entry<Integer, Boolean>> executionIds = executionEncodedIds.get(eventThread);
+                    if (executionIds != null && !executionIds.isEmpty()) {
+                        executionIds.get(executionIds.size() - 1).setValue(true);
+                        return DNF.TRUE();
+                    }
+                }
+            }
+            return visitSimpleBoolExpression(lit);
+        }
+        @Override
+        public DNF<CoreLiteral> visitITEExpression(final ITEExpr expr) {
+            return ExprTransformer.transformITEExpression(expr, BoolBinaryOp.OR).accept(this);
+        }
+        @Override
+        public DNF<CoreLiteral> visitIntCmpExpression(final IntCmpExpr expr) {
+            return visitSimpleBoolExpression(expr);
+        }
+        @Override
+        public DNF<CoreLiteral> visitFloatCmpExpression(final FloatCmpExpr expr) {
+            return visitSimpleBoolExpression(expr);
+        }
+        @Override
+        public DNF<CoreLiteral> visitRegister(final Register reg) {
+            return isBoolean(reg) ? visitSimpleBoolExpression(reg) : ExpressionVisitor.super.visitRegister(reg);
+        }
+        @Override
+        public DNF<CoreLiteral> visitNonDetValue(final NonDetValue nonDet) {
+            return isBoolean(nonDet) ? visitSimpleBoolExpression(expressions.makeFalse()) : ExpressionVisitor.super.visitNonDetValue(nonDet);
+        }
+
+        private boolean bigIntToBool(final BigInteger value) {
+            return value == null || BigInteger.ONE.equals(value);
+        }
+
+        private boolean isBoolean(final Expression expr) {
+            if (expr instanceof final ExpressionBase<?> typedExpr) {
+                return typedExpr.getType() instanceof BooleanType;
+            }
+            return false;
+        }
+
+        private DNF<CoreLiteral> visitSimpleBoolExpression(final Expression boolExpr) {
+            return reasoning(previousEvent, boolExpr, executionEncodedIds, exclusionThread);
+        }
     }
 
     private void backtrackTrace(final EventData backtrackingPoint) {
