@@ -1,29 +1,18 @@
 package com.dat3m.dartagnan.verification.model;
 
+import com.dat3m.dartagnan.assertions.AssertionReasoner;
 import com.dat3m.dartagnan.configuration.GenMCReasoning;
 import com.dat3m.dartagnan.encoding.GenMCTraceEncoder;
 import com.dat3m.dartagnan.expression.Expression;
 import com.dat3m.dartagnan.expression.ExpressionFactory;
-import com.dat3m.dartagnan.expression.ExpressionVisitor;
-import com.dat3m.dartagnan.expression.Type;
-import com.dat3m.dartagnan.expression.base.ExpressionBase;
 import com.dat3m.dartagnan.expression.booleans.*;
-import com.dat3m.dartagnan.expression.floats.FloatCmpExpr;
-import com.dat3m.dartagnan.expression.integers.IntCmpExpr;
-import com.dat3m.dartagnan.expression.misc.ITEExpr;
-import com.dat3m.dartagnan.expression.processing.ExprSimplifier;
-import com.dat3m.dartagnan.expression.processing.ExprTransformer;
 import com.dat3m.dartagnan.expression.processing.evaluation.ExpressionEvaluator;
-import com.dat3m.dartagnan.expression.type.BooleanType;
-import com.dat3m.dartagnan.expression.type.IntegerType;
 import com.dat3m.dartagnan.program.Program;
-import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.Thread;
 import com.dat3m.dartagnan.program.event.*;
 import com.dat3m.dartagnan.program.event.core.*;
 import com.dat3m.dartagnan.program.event.core.annotations.StringAnnotation;
 import com.dat3m.dartagnan.program.event.core.threading.*;
-import com.dat3m.dartagnan.program.misc.NonDetValue;
 import com.dat3m.dartagnan.solver.caat.CAATSolver;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCEventDomain;
 import com.dat3m.dartagnan.solver.caat4wmm.GenMCWMMSolver;
@@ -67,7 +56,6 @@ public final class GenMCExecutionModel {
 
     private static final Logger logger = LogManager.getLogger(GenMCExecutionModel.class);
     private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
-    private static final ExprSimplifier simplifier = new ExprSimplifier(true);
 
     private static int consistencyChecks;
     private static DNF<CoreLiteral> allReasons;
@@ -106,6 +94,7 @@ public final class GenMCExecutionModel {
     private final PatternManager patterns;
     private final ExprEvaluationContext evalContext;
     private final ExpressionEvaluator exprEvaluator;
+    private final AssertionReasoner assertionReasoner;
     private final Relation rf;
     private final Relation co;
     private final Relation lxsx;
@@ -132,6 +121,7 @@ public final class GenMCExecutionModel {
         this.patterns = solver.getPatterns();
         this.evalContext = evalContext;
         this.exprEvaluator = exprEvaluator;
+        this.assertionReasoner = new AssertionReasoner(this, mayRfInMap, exprEvaluator);
         this.rf = rf;
         this.co = co;
         this.lxsx = lxsx;
@@ -548,11 +538,11 @@ public final class GenMCExecutionModel {
                 return false;
             }
         }
-        Map.Entry<Boolean, Boolean> assertionViolationResult = null;
-        if (assertionGuidance && (assertionViolationResult = assertionViolationImpossible(ignoreLast)).getKey()) {
+        AssertionReasonCheckResult assertionReasonCheckResult = null;
+        if (assertionGuidance && (assertionReasonCheckResult = assertionViolationImpossible(ignoreLast)).assertionViolationImpossible()) {
             return false;
         }
-        final boolean reasonsChecked = assertionViolationResult != null && assertionViolationResult.getValue();
+        final boolean reasonsChecked = assertionReasonCheckResult != null && assertionReasonCheckResult.reasonsChecked();
         if ((!needsNewConsistencyCheck && !ignoreLast) || (!lastNeedsNewConsistencyCheck && ignoreLast)) {
             return isConsistent;
         }
@@ -891,376 +881,13 @@ public final class GenMCExecutionModel {
     public void assertionReasoning() throws SolverException, InterruptedException, InvalidConfigurationException {
         logger.debug("Starting assertion reasoning");
         for (final Assert assertion : assertionReasons.keySet()) {
-            final DNF<CoreLiteral> newReasons = startAssertionReasoning(assertion);
+            final DNF<CoreLiteral> newReasons = assertionReasoner.startAssertionReasoning(assertion);
             assertionReasons.computeIfPresent(assertion, (a, reasons) ->
                     newReasons.isLessThan(reasons) || newReasons.equals(reasons) ? reasons : reasons.or(newReasons)
             );
         }
         logger.debug("Finished assertion reasoning. Current assertion reasons:");
         assertionReasons.forEach((assertion, reasons) -> logger.debug("{}: {} : {}", assertion.getGlobalId(), assertion, reasons));
-    }
-
-    private DNF<CoreLiteral> startAssertionReasoning(final Assert assertion) throws SolverException, InterruptedException, InvalidConfigurationException {
-        DNF<CoreLiteral> assertionReasons = DNF.TRUE();
-        try {
-            if (trace.getData(assertion).isPresent()) {
-                assertionReasons = assertion.pre(expressions.makeTrue(), expressions).accept(new SplitReasoner(assertion, new HashMap<>(), assertion.getThread()));
-            } else {
-                for (Map.Entry<Event, Expression> entryEvent : getAssertionEntryPoints(assertion).entrySet()) {
-                    assertionReasons = assertionReasons.and(entryEvent.getValue().accept(new SplitReasoner(entryEvent.getKey(), new HashMap<>(), assertion.getThread())),
-                            false);
-                }
-            }
-        } catch (IllegalStateException e) {
-            Throwable cause = e.getCause();
-            if (cause != null) {
-                if (cause instanceof SolverException solverException) {
-                    throw solverException;
-                }
-                if (cause instanceof InterruptedException interruptedException) {
-                    throw interruptedException;
-                }
-                if (cause instanceof InvalidConfigurationException invalidConfigurationException) {
-                    throw invalidConfigurationException;
-                }
-            }
-            throw e;
-        }
-        return assertionReasons;
-    }
-
-    private Map<Event, Expression> getAssertionEntryPoints(final Assert assertion) {
-        Event event = assertion;
-        Expression condition = assertion.pre(expressions.makeTrue(), expressions);
-        final Map<Event, Expression> entryPoints = new HashMap<>();
-        while ((event = event.getPredecessor()) != null) {
-            if (event instanceof final Load read && condition.getRegs().contains(read.getResultRegister())) {
-                condition = expressions.makeFalse();
-            } else if (event instanceof final Label label) {
-                label.resetInitPost();
-                if (!(condition instanceof final BoolLiteral bool && bool.getValue()) && trace.getData(label).isEmpty()) {
-                    for (final Event labelUser : event.getUsers()) {
-                        if (labelUser instanceof CondJump jumpToLabel && trace.getData(labelUser).isPresent()) {
-                            entryPoints.put(labelUser, expressions.makeOr(expressions.makeNot(jumpToLabel.getGuard()), condition).accept(simplifier));
-                        }
-                    }
-                }
-            } else if (event instanceof final CondJump jump && !jump.isGoto() && !(condition instanceof final BoolLiteral bool && bool.getValue())) {
-                final Optional<EventData> jumpExec;
-                if ((jumpExec = trace.getData(jump)).isPresent() && jumpExec.get().wasExecuted() && trace.getData(jump.getSuccessor()).isEmpty()) {
-                    entryPoints.put(jump, expressions.makeOr(jump.getGuard(), condition).accept(simplifier));
-                }
-            } else if (event instanceof final Assume joinAssume) {
-                if (joinAssume.getSuccessor() instanceof ThreadJoin && trace.getData(joinAssume).isEmpty() && trace.getData(joinAssume.getPredecessor()).isPresent()) {
-                    entryPoints.put(joinAssume, expressions.makeOr(expressions.makeNot(joinAssume.getExpr()), condition).accept(simplifier));
-                }
-            }
-            condition = event.pre(condition, expressions).accept(simplifier);
-        }
-        return entryPoints;
-    }
-
-    private static final Comparator<Map.Entry<Integer, Boolean>> executionIdComparator =
-            Comparator.<Map.Entry<Integer, Boolean>>comparingInt(Map.Entry::getKey).reversed();
-
-    private DNF<CoreLiteral> reasoning(final Event event, final Expression condition, final Map<Thread, List<Map.Entry<Integer, Boolean>>> executionEncodedIds,
-                                       final Thread exclusionThread) {
-        if (event == null) {
-            return DNF.TRUE();
-        }
-        if (event instanceof final Load read) {
-            final Set<Register> conditionRegs = condition.getRegs();
-            final Register readReg = read.getResultRegister();
-            if (conditionRegs.contains(readReg)) {
-                boolean allStoresFulfill = true;
-                for (final Event mayWrite : mayRfInMap.get(event)) {
-                    final Store mayStore = (Store) mayWrite;
-                    if (!(readReg.replaceIn(condition, mayStore.getMemValue()).accept(simplifier) instanceof final BoolLiteral bool && bool.getValue())) {
-                        allStoresFulfill = false;
-                        break;
-                    }
-                }
-                if (allStoresFulfill) {
-                    return reasoning(event.getPredecessor(), expressions.makeTrue(), executionEncodedIds, exclusionThread);
-                }
-                final Optional<EventData> traceRead = trace.getData(event);
-                if (traceRead.isPresent()) {
-                    final EventData loadEvent = traceRead.get();
-                    final EventData storeEvent = loadEvent.getReadFrom();
-                    final Store write = (Store) storeEvent.getEvent();
-                    if (condition instanceof final IntCmpExpr cmpExpr) {
-                        Register cmpReg = null;
-                        if (cmpExpr.getLeft() == readReg && cmpExpr.getRight() instanceof final Register otherReg) {
-                            cmpReg = otherReg;
-                        } else if (cmpExpr.getRight() == readReg && cmpExpr.getLeft() instanceof final Register otherReg) {
-                            cmpReg = otherReg;
-                        }
-                        if (cmpReg != null) {
-                            final EventData lastRegWriter = trace.getLastRegWriter(cmpReg, loadEvent);
-                            if (lastRegWriter.getEvent() instanceof final Load cmpLoad && (lastRegWriter.getReadFrom() == storeEvent)) {
-                                final DNF<CoreLiteral> reason = new DNF<>(newRfLiteralIfNeeded(lastRegWriter.getReadFrom().getEvent(), cmpLoad)
-                                        .and(newRfLiteralIfNeeded(write, event)));
-                                if (reason.isTriviallyTrue()) {
-                                    return reasoning(event.getPredecessor(), expressions.makeTrue(), executionEncodedIds, exclusionThread);
-                                } else {
-                                    return reason;
-                                }
-                            }
-                        }
-                    }
-                    Expression newCondition = condition;
-                    for (final Register reg : conditionRegs) {
-                        if (reg != readReg) {
-                            newCondition = reg.replaceIn(newCondition, evaluateRegister(reg, loadEvent));
-                        }
-                    }
-                    if (mayRfInMap.get(event).length == 1) {
-                        return reasoning(write, readReg.replaceIn(newCondition, write.getMemValue()), executionEncodedIds, exclusionThread)
-                                .and(reasoning(event.getPredecessor(),
-                                                readReg.replaceIn(condition, evaluateRegister(write.getMemValue(), storeEvent)).accept(simplifier), executionEncodedIds,
-                                                exclusionThread),
-                                        false);
-                    } else {
-                        addExecutionId(event, executionEncodedIds);
-                        addExecutionId(write, executionEncodedIds);
-                        final DNF<CoreLiteral> rfReasons = reasoning(write, readReg.replaceIn(newCondition, write.getMemValue()), executionEncodedIds, exclusionThread)
-                                .and(reasoning(event.getPredecessor(),
-                                                readReg.replaceIn(condition, evaluateRegister(write.getMemValue(), storeEvent)).accept(simplifier), executionEncodedIds,
-                                                exclusionThread),
-                                        false);
-                        final boolean storeEncodesExecution = removeExecutionId(write, executionEncodedIds);
-                        final boolean loadEncodesExecution = removeExecutionId(event, executionEncodedIds);
-                        return rfReasons.and(new DNF<>(newRfLiteral(write, event, storeEncodesExecution || loadEncodesExecution)));
-                    }
-                } else {
-                    return reasoning(event.getPredecessor(), expressions.makeFalse(), executionEncodedIds, exclusionThread);
-                }
-            } else {
-                return reasoning(event.getPredecessor(), condition, executionEncodedIds, exclusionThread);
-            }
-        }
-        if (event instanceof final Label label) {
-            final DNF<CoreLiteral> result = reasoning(event.getPredecessor(), event.pre(condition, expressions), executionEncodedIds, exclusionThread);
-            label.resetPost();
-            return result;
-        }
-        if (event instanceof final CondJump jump) {
-            final Label label = jump.getLabel();
-            final boolean labelExecuted = label.getPost() != null;
-            final Expression labelPost = labelExecuted ? label.getPost() : expressions.makeTrue();
-            if (jump.isGoto() || labelPost.equals(condition)) {
-                return labelPost.accept(new SplitReasoner(event, executionEncodedIds, exclusionThread));
-            }
-            if (labelPost instanceof final BoolLiteral labelBool && labelBool.getValue()) {
-                if (!(condition instanceof BoolLiteral conditionBool && !conditionBool.getValue())) {
-                    return reasoning(event.getPredecessor(), condition, executionEncodedIds, exclusionThread);
-                }
-            }
-            if (condition instanceof final BoolLiteral bool && bool.getValue()) {
-                if (!(labelPost instanceof BoolLiteral)) {  // labelPost=true already covered by previous if
-                    return labelPost.accept(new SplitReasoner(event, executionEncodedIds, exclusionThread));
-                }
-            }
-            final List<Map.Entry<Integer, Boolean>> executionIds = executionEncodedIds.get(event.getThread());
-            final Map.Entry<Integer, Boolean> lastExecutionId;
-            if (executionIds != null && !executionIds.isEmpty()
-                    && (lastExecutionId = executionIds.get(executionIds.size() - 1)).getKey() < label.getGlobalId()) {
-                lastExecutionId.setValue(true);
-                return reasoning(event.getPredecessor(), condition, executionEncodedIds, exclusionThread);
-            }
-            final Optional<EventData> jumpEvent = trace.getData(jump);
-            if (jumpEvent.isPresent()) {
-                if (jumpEvent.get().wasExecuted()) {
-                    return expressions.makeAnd(jump.getGuard(), labelPost).accept(simplifier).accept(new SplitReasoner(event, executionEncodedIds, exclusionThread));
-                } else {
-                    return expressions.makeAnd(expressions.makeNot(jump.getGuard()), condition).accept(simplifier)
-                            .accept(new SplitReasoner(event, executionEncodedIds, exclusionThread));
-                }
-            } else {
-                return event.pre(condition, expressions).accept(simplifier).accept(new SplitReasoner(event, executionEncodedIds, exclusionThread));
-            }
-        }
-        if (event instanceof Alloc alloc) {
-            return alloc.getResultRegister().replaceIn(condition, alloc.getAllocatedObject().getAddress()).accept(simplifier)
-                    .accept(new SplitReasoner(event, executionEncodedIds, exclusionThread));
-        }
-        if (event instanceof RegWriter || event instanceof Assume) {
-            return event.pre(condition, expressions).accept(simplifier).accept(new SplitReasoner(event, executionEncodedIds, exclusionThread));
-        }
-        return reasoning(event.getPredecessor(), condition, executionEncodedIds, exclusionThread);
-    }
-
-    private void addExecutionId(final Event event, final Map<Thread, List<Map.Entry<Integer, Boolean>>> executionIds) {
-        List<Map.Entry<Integer, Boolean>> eventExecutionIds = executionIds.computeIfAbsent(event.getThread(), t -> new ArrayList<>());
-        eventExecutionIds.add(new AbstractMap.SimpleEntry<>(event.getGlobalId(), false));
-        eventExecutionIds.sort(executionIdComparator);
-    }
-
-    private boolean removeExecutionId(final Event event, final Map<Thread, List<Map.Entry<Integer, Boolean>>> executionIds) {
-        final List<Map.Entry<Integer, Boolean>> eventExecutionIds = executionIds.get(event.getThread());
-        final int eventGid = event.getGlobalId();
-        boolean encodesExecution = false;
-        Map.Entry<Integer, Boolean> eventExecutionId = null;
-        for (final Map.Entry<Integer, Boolean> entry : eventExecutionIds) {
-            if (entry.getKey() == eventGid) {
-                encodesExecution = entry.getValue();
-                eventExecutionId = entry;
-                break;
-            }
-        }
-        eventExecutionIds.remove(eventExecutionId);
-        return encodesExecution;
-    }
-
-    private Expression evaluateRegister(final Expression expr, final EventData event) {
-        final BigInteger value = evaluateSafely(expr, event);
-        final Expression evalExpr;
-        if (value != null) {
-            final Type regType = expr.getType();
-            if (regType instanceof BooleanType) {
-                evalExpr = expressions.makeValue(BigInteger.ONE.equals(value));
-            } else if (regType instanceof final IntegerType intType) {
-                evalExpr = expressions.makeValue(value, intType);
-            } else {
-                throw new IllegalStateException();
-            }
-        } else {
-            throw new UnsupportedOperationException("Non-deterministic values for assertion guidance are not yet fully supported");
-        }
-        return evalExpr;
-    }
-
-    private BigInteger evaluateSafely(final Expression expr, final EventData event) {
-        try {
-            return exprEvaluator.evaluate(expr, event);
-        } catch (SolverException | InterruptedException | InvalidConfigurationException e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
-    private class RfLiteral extends RelLiteral {
-        private final boolean encodesExecution;
-
-        private RfLiteral(final Event e1, final Event e2, final boolean encodesExecution) {
-            super(rf, e1, e2, true);
-            this.encodesExecution = encodesExecution;
-        }
-    }
-
-    private RfLiteral newRfLiteral(final Event e1, final Event e2, final boolean encodesExecution) {
-        return new RfLiteral(e1, e2, encodesExecution);
-    }
-
-    private Conjunction<CoreLiteral> newRfLiteralIfNeeded(final Event e1, final Event e2) {
-        return mayRfInMap.get(e2).length == 1 ? Conjunction.TRUE() : new Conjunction<>(new RfLiteral(e1, e2, true));
-    }
-
-    private class SplitReasoner implements ExpressionVisitor<DNF<CoreLiteral>> {
-
-        private final Event event;
-        private final Event previousEvent;
-        private final Map<Thread, List<Map.Entry<Integer, Boolean>>> executionEncodedIds;
-        private final Thread exclusionThread;
-
-        private SplitReasoner(final Event event, final Map<Thread, List<Map.Entry<Integer, Boolean>>> executionEncodedIds, final Thread exclusionThread) {
-            this.event = event;
-            this.previousEvent = event.getPredecessor();
-            this.executionEncodedIds = executionEncodedIds;
-            this.exclusionThread = exclusionThread;
-        }
-
-        @Override
-        public DNF<CoreLiteral> visitBoolBinaryExpression(BoolBinaryExpr expr) {
-            expr = ExprTransformer.transformIffExpression(expr, BoolBinaryOp.AND);
-            final Expression first = expr.getLeft();
-            final Expression second = expr.getRight();
-            if (expr.getKind() == BoolBinaryOp.AND) {
-                return visitSimpleBoolExpression(expr);
-            } else {
-                final Optional<EventData> eventData = trace.getData(event);
-                if (eventData.isPresent()) {
-                    final EventData e = eventData.get();
-                    if (bigIntToBool(evaluateSafely(first, e))) {
-                        final DNF<CoreLiteral> firstReasons = first.accept(this);
-                        if (bigIntToBool(evaluateSafely(second, e))) {
-                            return firstReasons.or(second.accept(this));
-                        } else {
-                            return firstReasons;
-                        }
-                    } else {
-                        return second.accept(this);
-                    }
-                } else {
-                    return first.accept(this).or(second.accept(this));
-                }
-            }
-        }
-        @Override
-        public DNF<CoreLiteral> visitBoolUnaryExpression(final BoolUnaryExpr expr) {
-            if (expr.getKind() == BoolUnaryOp.NOT) {
-                final Expression operand = expr.getOperand();
-                final Expression negation = ExprTransformer.negate(operand);
-                if (negation == null) {
-                    if (operand instanceof NonDetValue) {
-                        return DNF.FALSE();
-                    } else {
-                        assert operand instanceof Register;
-                        return visitSimpleBoolExpression(expr);
-                    }
-                }
-                return negation.accept(this);
-            }
-            return ExpressionVisitor.super.visitBoolUnaryExpression(expr);
-        }
-        @Override
-        public DNF<CoreLiteral> visitBoolLiteral(BoolLiteral lit) {
-            if (lit.getValue() && trace.getData(event).isPresent()) {
-                final Thread eventThread = event.getThread();
-                if (eventThread != exclusionThread) {
-                    final List<Map.Entry<Integer, Boolean>> executionIds = executionEncodedIds.get(eventThread);
-                    if (executionIds != null && !executionIds.isEmpty()) {
-                        executionIds.get(executionIds.size() - 1).setValue(true);
-                        return DNF.TRUE();
-                    }
-                }
-            }
-            return visitSimpleBoolExpression(lit);
-        }
-        @Override
-        public DNF<CoreLiteral> visitITEExpression(final ITEExpr expr) {
-            return ExprTransformer.transformITEExpression(expr, BoolBinaryOp.OR).accept(this);
-        }
-        @Override
-        public DNF<CoreLiteral> visitIntCmpExpression(final IntCmpExpr expr) {
-            return visitSimpleBoolExpression(expr);
-        }
-        @Override
-        public DNF<CoreLiteral> visitFloatCmpExpression(final FloatCmpExpr expr) {
-            return visitSimpleBoolExpression(expr);
-        }
-        @Override
-        public DNF<CoreLiteral> visitRegister(final Register reg) {
-            return isBoolean(reg) ? visitSimpleBoolExpression(reg) : ExpressionVisitor.super.visitRegister(reg);
-        }
-        @Override
-        public DNF<CoreLiteral> visitNonDetValue(final NonDetValue nonDet) {
-            return isBoolean(nonDet) ? visitSimpleBoolExpression(expressions.makeFalse()) : ExpressionVisitor.super.visitNonDetValue(nonDet);
-        }
-
-        private boolean bigIntToBool(final BigInteger value) {
-            return value == null || BigInteger.ONE.equals(value);
-        }
-
-        private boolean isBoolean(final Expression expr) {
-            if (expr instanceof final ExpressionBase<?> typedExpr) {
-                return typedExpr.getType() instanceof BooleanType;
-            }
-            return false;
-        }
-
-        private DNF<CoreLiteral> visitSimpleBoolExpression(final Expression boolExpr) {
-            return reasoning(previousEvent, boolExpr, executionEncodedIds, exclusionThread);
-        }
     }
 
     private void backtrackTrace(final EventData backtrackingPoint) {
@@ -1326,10 +953,13 @@ public final class GenMCExecutionModel {
         }
     }
 
-    private Map.Entry<Boolean, Boolean> assertionViolationImpossible(final boolean ignoreLast) throws SolverException, InterruptedException, InvalidConfigurationException {
+    private record AssertionReasonCheckResult(boolean assertionViolationImpossible, boolean reasonsChecked) {
+    }
+
+    private AssertionReasonCheckResult assertionViolationImpossible(final boolean ignoreLast) throws SolverException, InterruptedException, InvalidConfigurationException {
         final EventData ignoredEvent = ignoreLast ? trace.removeLast() : null;
         assertionReasonEvaluationTimer.start();
-        final Map.Entry<Boolean, Boolean> assertionViolationImpossible = checkIfAssertionViolationImpossible();
+        final AssertionReasonCheckResult assertionViolationImpossible = checkIfAssertionViolationImpossible();
         assertionReasonEvaluationTimer.stop();
         if (ignoredEvent != null) {
             trace.addEvent(ignoredEvent);
@@ -1338,14 +968,23 @@ public final class GenMCExecutionModel {
         return assertionViolationImpossible;
     }
 
-    private Map.Entry<Boolean, Boolean> checkIfAssertionViolationImpossible() throws SolverException, InterruptedException, InvalidConfigurationException {
+    public class RfLiteral extends RelLiteral {
+        private final boolean encodesExecution;
+
+        public RfLiteral(final Event e1, final Event e2, final boolean encodesExecution) {
+            super(rf, e1, e2, true);
+            this.encodesExecution = encodesExecution;
+        }
+    }
+
+    private AssertionReasonCheckResult checkIfAssertionViolationImpossible() throws SolverException, InterruptedException, InvalidConfigurationException {
         final Map<Event, Set<Event>> missingReadsForCubes = new HashMap<>();
         final Set<Event> missingReadsToBeExecuted = new HashSet<>();
-        boolean checkedReasons = false;
-        final Map.Entry<Map<Event, List<Event>>, Map<Thread, Integer>> backwardRevisitExplorationData = exploreBackwardRevisitStores();
-        final Map<Event, List<Event>> mayBackwardRevisitStores = backwardRevisitExplorationData.getKey();
+        boolean reasonsChecked = false;
+        final BackwardRevisitStoreExploration backwardRevisitExplorationData = exploreBackwardRevisitStores();
+        final Map<Event, List<Event>> mayBackwardRevisitStores = backwardRevisitExplorationData.mayBackwardRevisitStores();
         final boolean needsBackwardRevisitCheck = !mayBackwardRevisitStores.isEmpty();
-        final Map<Thread, Integer> threadExplorationLimits = backwardRevisitExplorationData.getValue();
+        final Map<Thread, Integer> threadExplorationLimits = backwardRevisitExplorationData.threadExplorationLimits();
         int assertionsInTrace = 0;
         REASON_LOOP:
         for (final Map.Entry<Assert, DNF<CoreLiteral>> reasonsForAssertion : assertionReasons.entrySet()) {
@@ -1399,11 +1038,11 @@ public final class GenMCExecutionModel {
                     missingReadsForCubes.clear();
                     continue REASON_LOOP;
                 }
-                if (!checkedReasons) {
+                if (!reasonsChecked) {
                     if (reasonKnown()) {
-                        return Map.entry(true, true);
+                        return new AssertionReasonCheckResult(true, true);
                     } else {
-                        checkedReasons = true;
+                        reasonsChecked = true;
                     }
                 }
                 boolean othersInconsistent = true;
@@ -1431,15 +1070,18 @@ public final class GenMCExecutionModel {
                     continue REASON_LOOP;
                 }
             }
-            return Map.entry(false, checkedReasons);
+            return new AssertionReasonCheckResult(false, reasonsChecked);
         }
         if (assertionsInTrace == assertionReasons.size()) {
             assertionReasoning();
         }
-        return Map.entry(true, checkedReasons);
+        return new AssertionReasonCheckResult(true, reasonsChecked);
     }
 
-    private Map.Entry<Map<Event, List<Event>>, Map<Thread, Integer>> exploreBackwardRevisitStores() {
+    private record BackwardRevisitStoreExploration(Map<Event, List<Event>> mayBackwardRevisitStores, Map<Thread, Integer> threadExplorationLimits) {
+    }
+
+    private BackwardRevisitStoreExploration exploreBackwardRevisitStores() {
         final Map<Event, List<Event>> mayBackwardRevisitStores = new HashMap<>();
         final Map<Thread, Integer> threadExplorationLimits = new HashMap<>();
         final Map<Thread, List<EventData>> threadEventsMap = trace.getThreadEventsMap();
@@ -1509,7 +1151,7 @@ public final class GenMCExecutionModel {
                 }
             }
         }
-        return Map.entry(mayBackwardRevisitStores, threadExplorationLimits);
+        return new BackwardRevisitStoreExploration(mayBackwardRevisitStores, threadExplorationLimits);
     }
 
     private boolean isBackwardRevisitPossible(final Conjunction<CoreLiteral> cube, final Map<Thread, Integer> threadExplorationLimits,
