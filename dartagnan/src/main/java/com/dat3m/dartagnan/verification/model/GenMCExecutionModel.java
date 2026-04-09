@@ -726,8 +726,6 @@ public final class GenMCExecutionModel {
                         isConsistent = false;
                         return data;
                     }
-                    trace.addEvent(data);
-                    lastNeedsNewConsistencyCheck = needsNewConsistencyCheck;
                     final BigInteger result = exprEvaluator.evaluateNonDet(jump.getGuard());
                     if (result == null) {
                         isConsistent = false;
