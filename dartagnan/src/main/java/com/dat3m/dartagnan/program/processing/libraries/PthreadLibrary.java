@@ -134,6 +134,7 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
     // TODO: Once we need this in other libraries (stdlib?), we need to move the clib code
     //  into a unifying location (maybe have a root CLibrary with sublibraries like pthread).
     private CLibImplementation clib = null;
+    private static final EventFactory.Llvm events = EventFactory.Llvm.getInstance();
 
     private IntegerType archType;
     private FunctionType threadType;
@@ -596,7 +597,7 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         final IntegerType type = getPthreadMutexType();
         final Expression unlocked = expressions.makeZero(type);
         return List.of(
-                EventFactory.Llvm.newStore(lockAddress, unlocked, Tag.C11.MO_RELEASE),
+                events.newStore(lockAddress, unlocked, Tag.C11.MO_RELEASE),
                 assignSuccess(errorRegister)
         );
     }
@@ -712,17 +713,17 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
     private List<Event> newPthreadUnlock(Register oldValueRegister, Expression address) {
         final Expression unlocked = expressions.makeGeneralZero(oldValueRegister.getType());
         final boolean skipCheck = notToInline.contains(AssertionType.USER);
-        final Event load = skipCheck ? null : EventFactory.Llvm.newLoad(oldValueRegister, address, Tag.C11.MO_RELAXED);
+        final Event load = skipCheck ? null : events.newLoad(oldValueRegister, address, Tag.C11.MO_RELAXED);
         final Expression isLocked = skipCheck ? null : expressions.makeNEQ(oldValueRegister, unlocked);
         final Event check = skipCheck ? null : EventFactory.newAssert(isLocked, "Unlocking an already unlocked mutex");
-        final Event store = EventFactory.Llvm.newStore(address, unlocked, Tag.C11.MO_RELEASE);
+        final Event store = events.newStore(address, unlocked, Tag.C11.MO_RELEASE);
         return Arrays.asList(load, check, store);
     }
 
     private Event newPthreadTryLock(Register oldValueAndSuccess, Expression lockAddress) {
         final Expression unlocked = expressions.makeZero(getPthreadMutexType());
         final Expression locked = expressions.makeOne(getPthreadMutexType());
-        return Llvm.newCompareExchange(oldValueAndSuccess, lockAddress, unlocked, locked, Tag.C11.MO_ACQUIRE, true);
+        return events.newCompareExchange(oldValueAndSuccess, lockAddress, unlocked, locked, Tag.C11.MO_ACQUIRE, true);
     }
 
     private List<Event> newPthreadLock(Register oldValueSuccessRegister, Expression address) {
@@ -803,7 +804,7 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
     private Event newRwlockTryWrlock(Register oldValueAndSuccess, Expression lockAddress) {
         final Expression unlocked = getRwlockUnlockedValue();
         final Expression locked = getRwlockWriteLockedValue();
-        return Llvm.newCompareExchange(oldValueAndSuccess, lockAddress, unlocked, locked, Tag.C11.MO_ACQUIRE, true);
+        return events.newCompareExchange(oldValueAndSuccess, lockAddress, unlocked, locked, Tag.C11.MO_ACQUIRE, true);
     }
 
     private List<Event> inlinePthreadRwlockRdlock(FunctionCall call) {
@@ -858,7 +859,7 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         final Expression lockedOnce = expressions.makeValue(BigInteger.TWO, getRwlockDatatype());
         final Expression lockedMore = expressions.makeAdd(expected, expressions.makeOne(getRwlockDatatype()));
         final Expression locked = expressions.makeITE(wasUnlocked, lockedOnce, lockedMore);
-        return Llvm.newCompareExchange(oldValueAndSuccess, lockAddress, expected, locked, Tag.C11.MO_ACQUIRE, true);
+        return events.newCompareExchange(oldValueAndSuccess, lockAddress, expected, locked, Tag.C11.MO_ACQUIRE, true);
     }
 
     private List<Event> inlinePthreadRwlockUnlock(FunctionCall call) {
@@ -875,7 +876,7 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         return List.of(
                 // decreases the lock value by 1, if not the last reader, or else 2.
                 EventFactory.newNonDetChoice(decrementRegister),
-                EventFactory.Llvm.newRMW(oldValueRegister, lockAddress, decrementRegister, IntBinaryOp.SUB, Tag.C11.MO_RELEASE),
+                events.newRMW(oldValueRegister, lockAddress, decrementRegister, IntBinaryOp.SUB, Tag.C11.MO_RELEASE),
                 EventFactory.newAssume(expressions.makeEQ(decrementRegister, properDecrement)),
                 assignSuccess(errorRegister)
         );
@@ -948,16 +949,16 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         final FunctionType initRoutineType = types.getFunctionType(types.getVoidType(), List.of());
 
         return eventSequence(
-                Llvm.newCompareExchange(stateAndSuccess, controlAddress, uninitialized, running,
+                events.newCompareExchange(stateAndSuccess, controlAddress, uninitialized, running,
                         Tag.C11.MO_ACQUIRE, true),
                 newJump(expressions.makeExtract(stateAndSuccess, 1), runRoutine),
                 wait,
-                Llvm.newLoad(state, controlAddress, Tag.C11.MO_ACQUIRE),
+                events.newLoad(state, controlAddress, Tag.C11.MO_ACQUIRE),
                 newJump(expressions.makeEQ(state, complete), end),
                 newGoto(wait),
                 runRoutine,
                 newVoidFunctionCall(initRoutineType, initRoutine, List.of()),
-                Llvm.newStore(controlAddress, complete, Tag.C11.MO_RELEASE),
+                events.newStore(controlAddress, complete, Tag.C11.MO_RELEASE),
                 end,
                 assignSuccess(resultRegister)
         );

@@ -54,6 +54,7 @@ public class VisitorLlvm extends LLVMIRBaseVisitor<Expression> {
     private final Program program;
     private final TypeFactory types = TypeFactory.getInstance();
     private final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private final EventFactory.Llvm events = EventFactory.Llvm.getInstance();
     private final Type pointerType;
     private final IntegerType integerType;
     private final Map<String, Expression> constantMap = new HashMap<>();
@@ -566,7 +567,7 @@ public class VisitorLlvm extends LLVMIRBaseVisitor<Expression> {
         final Expression address = visitTypeValue(ctx.typeValue(1));
         check(address.getType().equals(pointerType), "Non-pointer type in %s.", ctx);
         final String mo = atomic ? parseMemoryOrder(ctx.atomicOrdering()) : "";
-        final Event store = atomic ? Llvm.newStore(address, value, mo) : newStore(address, value);
+        final Event store = atomic ? events.newStore(address, value, mo) : newStore(address, value);
         block.events.add(store);
         return null;
     }
@@ -574,7 +575,7 @@ public class VisitorLlvm extends LLVMIRBaseVisitor<Expression> {
     @Override
     public Expression visitFenceInst(FenceInstContext ctx) {
         final String mo = parseMemoryOrder(ctx.atomicOrdering());
-        block.events.add(Llvm.newFence(mo));
+        block.events.add(events.newFence(mo));
         return null;
     }
 
@@ -614,7 +615,7 @@ public class VisitorLlvm extends LLVMIRBaseVisitor<Expression> {
         final String mo = atomic ? parseMemoryOrder(ctx.atomicOrdering()) : "";
         checkPointerType(ctx.typeValue());
         final Expression address = checkPointerExpression(ctx.typeValue().value());
-        final Event load = atomic ? Llvm.newLoad(register, address, mo) : newLoad(register, address);
+        final Event load = atomic ? events.newLoad(register, address, mo) : newLoad(register, address);
         block.events.add(load);
         return register;
     }
@@ -871,7 +872,7 @@ public class VisitorLlvm extends LLVMIRBaseVisitor<Expression> {
         final Register register = currentRegisterName == null ? null :
                 getOrNewCurrentRegister(dataLayout.structType(List.of(
                         valueType, dataLayout.valueType(getIntegerType(1))), false).type());
-        block.events.add(Llvm.newCompareExchange(register, address, comparator, substitute, mo, strong));
+        block.events.add(events.newCompareExchange(register, address, comparator, substitute, mo, strong));
         return register;
     }
 
@@ -885,7 +886,7 @@ public class VisitorLlvm extends LLVMIRBaseVisitor<Expression> {
         final String mo = parseMemoryOrder(ctx.atomicOrdering());
         final Event event;
         if (operator.equals("xchg")) {
-            event = Llvm.newExchange(register, address, operand, mo);
+            event = events.newExchange(register, address, operand, mo);
         } else {
             final IntBinaryOp op = switch (operator) {
                 case "add" -> IntBinaryOp.ADD;
@@ -900,7 +901,7 @@ public class VisitorLlvm extends LLVMIRBaseVisitor<Expression> {
                 //TODO nand, uinc_wrap, udec_wrap, fadd, fsub, fmax, fmin
                 default -> throw new UnsupportedOperationException(String.format("Unknown atomic operand %s.", ctx.getText()));
             };
-            event = Llvm.newRMW(register, address, operand, op, mo);
+            event = events.newRMW(register, address, operand, op, mo);
         }
         block.events.add(event);
         return register;

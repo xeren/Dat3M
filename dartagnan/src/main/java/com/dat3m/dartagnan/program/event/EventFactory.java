@@ -470,32 +470,34 @@ public class EventFactory {
     // =========================================== LLVM ============================================
     // =============================================================================================
 
-    public static class Llvm {
+    public static class Llvm extends EventFactory {
         private Llvm() {
         }
 
-        public static LlvmLoad newLoad(Register register, Expression address, String mo) {
+        public static Llvm getInstance() { return new Llvm(); }
+
+        public LlvmLoad newLoad(Register register, Expression address, String mo) {
             return new LlvmLoad(register, address, mo);
         }
 
-        public static LlvmStore newStore(Expression address, Expression value, String mo) {
+        public LlvmStore newStore(Expression address, Expression value, String mo) {
             return new LlvmStore(address, value, mo);
         }
 
-        public static LlvmXchg newExchange(Register register, Expression address, Expression value, String mo) {
+        public LlvmXchg newExchange(Register register, Expression address, Expression value, String mo) {
             return new LlvmXchg(register, address, value, mo);
         }
 
-        public static LlvmCmpXchg newCompareExchange(Register oldValueAndSuccess, Expression address,
-                Expression expected, Expression newValue, String mo, boolean strong) {
+        public LlvmCmpXchg newCompareExchange(Register oldValueAndSuccess, Expression address, Expression expected,
+                Expression newValue, String mo, boolean strong) {
             return new LlvmCmpXchg(oldValueAndSuccess, address, expected, newValue, mo, strong);
         }
 
-        public static LlvmRMW newRMW(Register register, Expression address, Expression value, IntBinaryOp op, String mo) {
+        public LlvmRMW newRMW(Register register, Expression address, Expression value, IntBinaryOp op, String mo) {
             return new LlvmRMW(register, address, op, value, mo);
         }
 
-        public static LlvmFence newFence(String mo) {
+        public LlvmFence newFence(String mo) {
             return new LlvmFence(mo);
         }
 
