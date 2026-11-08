@@ -16,6 +16,8 @@ import static com.dat3m.dartagnan.program.event.EventFactory.*;
 
 public class VisitorSpirvOpenCL extends VisitorC11 {
 
+    private static final EventFactory.Atomic events = EventFactory.Atomic.getInstance();
+
     @Override
     public List<Event> visitLoad(Load e) {
         Event load = EventFactory.newLoad(e.getResultRegister(), e.getAddress());
@@ -53,8 +55,7 @@ public class VisitorSpirvOpenCL extends VisitorC11 {
     @Override
     public List<Event> visitSpirvXchg(SpirvXchg e) {
         String mo = moToOpenCLTag(Tag.Spirv.getMoTag(e.getTags()));
-        Event rmw = Atomic.newExchange(e.getResultRegister(), e.getAddress(),
-                e.getValue(), mo);
+        Event rmw = events.newExchange(e.getResultRegister(), e.getAddress(), e.getValue(), mo);
         rmw.addTags(toOpenCLTags(e.getTags()));
         rmw.setFunction(e.getFunction());
         return rmw.accept(this);
@@ -63,8 +64,7 @@ public class VisitorSpirvOpenCL extends VisitorC11 {
     @Override
     public List<Event> visitSpirvRMW(SpirvRmw e) {
         String mo = moToOpenCLTag(Tag.Spirv.getMoTag(e.getTags()));
-        Event rmwOp = Atomic.newFetchOp(e.getResultRegister(), e.getAddress(),
-                e.getOperand(), e.getOperator(), mo);
+        Event rmwOp = events.newFetchOp(e.getResultRegister(), e.getAddress(), e.getOperand(), e.getOperator(), mo);
         rmwOp.setFunction(e.getFunction());
         rmwOp.addTags(toOpenCLTags(e.getTags()));
         return rmwOp.accept(this);

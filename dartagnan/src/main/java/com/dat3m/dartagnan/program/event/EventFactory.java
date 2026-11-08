@@ -417,31 +417,36 @@ public class EventFactory {
     // ========================================== Atomics ==========================================
     // =============================================================================================
 
-    public static class Atomic {
+    public static class Atomic extends EventFactory {
         private Atomic() {
         }
 
-        public static AtomicCmpXchg newCompareExchange(Register register, Expression address, Expression expectedAddr, Expression desiredValue, String mo, boolean isStrong) {
+        public static Atomic getInstance() { return new Atomic(); }
+
+        public AtomicCmpXchg newCompareExchange(Register register, Expression address, Expression expectedAddr,
+                Expression desiredValue, String mo, boolean isStrong) {
             return new AtomicCmpXchg(register, address, expectedAddr, desiredValue, mo, isStrong);
         }
 
-        public static AtomicCmpXchg newCompareExchange(Register register, Expression address, Expression expectedAddr, Expression desiredValue, String mo) {
+        public AtomicCmpXchg newCompareExchange(Register register, Expression address, Expression expectedAddr,
+                Expression desiredValue, String mo) {
             return newCompareExchange(register, address, expectedAddr, desiredValue, mo, false);
         }
 
-        public static AtomicFetchOp newFetchOp(Register register, Expression address, Expression value, IntBinaryOp op, String mo) {
+        public AtomicFetchOp newFetchOp(Register register, Expression address, Expression value, IntBinaryOp op,
+                String mo) {
             return new AtomicFetchOp(register, address, op, value, mo);
         }
 
-        public static AtomicFetchOp newFADD(Register register, Expression address, Expression value, String mo) {
+        public AtomicFetchOp newFADD(Register register, Expression address, Expression value, String mo) {
             return newFetchOp(register, address, value, IntBinaryOp.ADD, mo);
         }
 
-        public static AtomicOp newRMWOp(Expression address, Expression value, IntBinaryOp op, String mo) {
+        public AtomicOp newRMWOp(Expression address, Expression value, IntBinaryOp op, String mo) {
             return new AtomicOp(address, op, value, mo);
         }
 
-        public static AtomicFetchOp newIncrement(Register register, Expression address, String mo) {
+        public AtomicFetchOp newIncrement(Register register, Expression address, String mo) {
             if (!(register.getType() instanceof IntegerType integerType)) {
                 throw new IllegalArgumentException(
                         String.format("Non-integer type %s for increment operation.", register.getType()));
@@ -449,19 +454,19 @@ public class EventFactory {
             return newFetchOp(register, address, expressions.makeOne(integerType), IntBinaryOp.ADD, mo);
         }
 
-        public static AtomicLoad newLoad(Register register, Expression address, String mo) {
+        public AtomicLoad newLoad(Register register, Expression address, String mo) {
             return new AtomicLoad(register, address, mo);
         }
 
-        public static AtomicStore newStore(Expression address, Expression value, String mo) {
+        public AtomicStore newStore(Expression address, Expression value, String mo) {
             return new AtomicStore(address, value, mo);
         }
 
-        public static AtomicThreadFence newFence(String mo) {
+        public AtomicThreadFence newFence(String mo) {
             return new AtomicThreadFence(mo);
         }
 
-        public static AtomicXchg newExchange(Register register, Expression address, Expression value, String mo) {
+        public AtomicXchg newExchange(Register register, Expression address, Expression value, String mo) {
             return new AtomicXchg(register, address, value, mo);
         }
     }

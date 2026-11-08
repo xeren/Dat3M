@@ -32,6 +32,7 @@ public class VisitorLitmusC extends LitmusCBaseVisitor<Object> {
     private final IntegerType archType = programBuilder.getArchType();
     private final int archSize = TypeFactory.getInstance().getMemorySizeInBytes(archType);
     private final EventFactory.Linux linux = EventFactory.Linux.getInstance();
+    private final EventFactory.Atomic atomic = EventFactory.Atomic.getInstance();
     private int currentThread;
     private int scope;
     private int ifId = 0;
@@ -290,7 +291,7 @@ public class VisitorLitmusC extends LitmusCBaseVisitor<Object> {
         Register register = getReturnRegister(true);
         Expression value = returnExpressionOrOne(ctx.value);
         Expression address = getAddress(ctx.address);
-        Event event = EventFactory.Atomic.newFetchOp(register, address, value, ctx.op, ctx.c11Mo().mo);
+        Event event = atomic.newFetchOp(register, address, value, ctx.op, ctx.c11Mo().mo);
         addScopeTag(event, ctx.openCLScope());
         append(event, ctx);
         return register;
@@ -321,7 +322,7 @@ public class VisitorLitmusC extends LitmusCBaseVisitor<Object> {
         Register register = getReturnRegister(true);
         Expression value = (Expression) ctx.value.accept(this);
         Expression address = getAddress(ctx.address);
-        Event event = EventFactory.Atomic.newExchange(register, address, value, Tag.C11.MO_SC);
+        Event event = atomic.newExchange(register, address, value, Tag.C11.MO_SC);
         addScopeTag(event, null);
         append(event, ctx);
         return register;
@@ -332,7 +333,7 @@ public class VisitorLitmusC extends LitmusCBaseVisitor<Object> {
         Register register = getReturnRegister(true);
         Expression value = (Expression) ctx.value.accept(this);
         Expression address = getAddress(ctx.address);
-        Event event = EventFactory.Atomic.newExchange(register, address, value, ctx.c11Mo().mo);
+        Event event = atomic.newExchange(register, address, value, ctx.c11Mo().mo);
         addScopeTag(event, ctx.openCLScope());
         append(event, ctx);
         return register;
@@ -391,7 +392,7 @@ public class VisitorLitmusC extends LitmusCBaseVisitor<Object> {
 
     private void addCmpXchg(Register register, Expression address, Expression expectedAddress, Expression value,
             String mo, boolean strong, OpenCLScopeContext scope, ParserRuleContext ctx) {
-        final Event event = EventFactory.Atomic.newCompareExchange(register, address, expectedAddress, value, mo, strong);
+        final Event event = atomic.newCompareExchange(register, address, expectedAddress, value, mo, strong);
         addScopeTag(event, scope);
         append(event, ctx);
     }
@@ -410,7 +411,7 @@ public class VisitorLitmusC extends LitmusCBaseVisitor<Object> {
     public Expression visitReC11LoadExplicit(ReC11LoadExplicitContext ctx) {
         Register register = getReturnRegister(true);
         Expression address = getAddress(ctx.address);
-        Event event = EventFactory.Atomic.newLoad(register, address, ctx.c11Mo().mo);
+        Event event = atomic.newLoad(register, address, ctx.c11Mo().mo);
         addScopeTag(event, ctx.openCLScope());
         append(event, ctx);
         return register;
@@ -420,7 +421,7 @@ public class VisitorLitmusC extends LitmusCBaseVisitor<Object> {
     public Expression visitReC11Load(ReC11LoadContext ctx) {
         Register register = getReturnRegister(true);
         Expression address = getAddress(ctx.address);
-        Event event = EventFactory.Atomic.newLoad(register, address, C11.DEFAULT_MO);
+        Event event = atomic.newLoad(register, address, C11.DEFAULT_MO);
         addScopeTag(event, null);
         append(event, ctx);
         return register;
@@ -540,7 +541,7 @@ public class VisitorLitmusC extends LitmusCBaseVisitor<Object> {
     @Override
     public Object visitNreC11AtomicOp(NreC11AtomicOpContext ctx){
         Expression value = returnExpressionOrOne(ctx.value);
-        Event event = EventFactory.Atomic.newRMWOp(getAddress(ctx.address), value, ctx.op, ctx.c11Mo().mo);
+        Event event = atomic.newRMWOp(getAddress(ctx.address), value, ctx.op, ctx.c11Mo().mo);
         return append(event, ctx);
     }
 
@@ -562,7 +563,7 @@ public class VisitorLitmusC extends LitmusCBaseVisitor<Object> {
     public Object visitNreC11StoreExplicit(NreC11StoreExplicitContext ctx) {
         Expression value = (Expression)ctx.value.accept(this);
         Expression address = getAddress(ctx.address);
-        Event event = EventFactory.Atomic.newStore(address, value, ctx.c11Mo().mo);
+        Event event = atomic.newStore(address, value, ctx.c11Mo().mo);
         addScopeTag(event, ctx.openCLScope());
         return append(event, ctx);
     }
@@ -571,7 +572,7 @@ public class VisitorLitmusC extends LitmusCBaseVisitor<Object> {
     public Object visitNreC11Store(NreC11StoreContext ctx) {
         Expression value = (Expression)ctx.value.accept(this);
         Expression address = getAddress(ctx.address);
-        Event event = EventFactory.Atomic.newStore(address, value, C11.DEFAULT_MO);
+        Event event = atomic.newStore(address, value, C11.DEFAULT_MO);
         addScopeTag(event, null);
         return append(event, ctx);
     }
@@ -615,7 +616,7 @@ public class VisitorLitmusC extends LitmusCBaseVisitor<Object> {
 
     @Override
     public Object visitNreC11Fence(NreC11FenceContext ctx) {
-        Event fence = EventFactory.Atomic.newFence(ctx.c11Mo().mo);
+        Event fence = atomic.newFence(ctx.c11Mo().mo);
         return append(fence, ctx);
     }
 
@@ -626,7 +627,7 @@ public class VisitorLitmusC extends LitmusCBaseVisitor<Object> {
 
     @Override
     public Object visitNreOpenCLFence(NreOpenCLFenceContext ctx){
-        Event fence = EventFactory.Atomic.newFence(ctx.c11Mo().mo);
+        Event fence = atomic.newFence(ctx.c11Mo().mo);
         if (ctx.openCLScope() != null) {
             fence.addTags(ctx.openCLScope().scope);
         }
