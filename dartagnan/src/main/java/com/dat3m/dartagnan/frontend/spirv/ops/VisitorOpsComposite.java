@@ -22,8 +22,9 @@ import static com.dat3m.dartagnan.expression.utils.ExpressionHelper.isAggregateL
 public class VisitorOpsComposite extends VisitorOps<Void> {
 
     private final ProgramBuilder builder;
-    private final ExpressionFactory expressions = ExpressionFactory.getInstance();
     private final TypeFactory types = TypeFactory.getInstance();
+    private final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private final EventFactory events = EventFactory.getInstance();
 
     public VisitorOpsComposite(ProgramBuilder builder) {
         this.builder = builder;
@@ -155,7 +156,7 @@ public class VisitorOpsComposite extends VisitorOps<Void> {
             throw new ParsingException("Type mismatch in OpCopyObject for '%s'", id);
         }
         Register register = builder.addRegister(id, type);
-        builder.addEvent(EventFactory.newLocal(register, operand));
+        builder.addEvent(events.newLocal(register, operand));
         return null;
     }
 

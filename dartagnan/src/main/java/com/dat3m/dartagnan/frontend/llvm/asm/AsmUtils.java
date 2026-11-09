@@ -18,6 +18,8 @@ import java.util.List;
 // and are used in every asm visitor
 public class AsmUtils {
 
+    private static final EventFactory events = EventFactory.getInstance();
+
     // Returns the size of the return register
     // null / void -> 0
     // i32 / bool -> 1
@@ -50,7 +52,7 @@ public class AsmUtils {
     // Given a string of a label, it either creates a new label, or returns the existing one if it was already defined
     public static Label getOrNewLabel(HashMap<String, Label> labelsDefined, String labelName) {
         if (!labelsDefined.containsKey(labelName)) {
-            labelsDefined.put(labelName, EventFactory.newLabel(labelName));
+            labelsDefined.put(labelName, events.newLabel(labelName));
         }
         return labelsDefined.get(labelName);
     }

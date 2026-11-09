@@ -78,6 +78,7 @@ public class NormalizeLoops implements FunctionProcessor {
 
     private final TypeFactory types = TypeFactory.getInstance();
     private final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private final EventFactory events = EventFactory.getInstance();
 
     public static NormalizeLoops newInstance() {
         return new NormalizeLoops();
@@ -107,11 +108,11 @@ public class NormalizeLoops implements FunctionProcessor {
 
             final CondJump last = backJumps.getLast();
 
-            final Label forwardLabel = EventFactory.newLabel("__repeatLoop_#" + counter);
-            final CondJump gotoRepeat = EventFactory.newGoto(label);
+            final Label forwardLabel = events.newLabel("__repeatLoop_#" + counter);
+            final CondJump gotoRepeat = events.newGoto(label);
 
-            final Label breakLabel = EventFactory.newLabel("__breakLoop_#" + counter);
-            final CondJump gotoBreak = EventFactory.newGoto(breakLabel);
+            final Label breakLabel = events.newLabel("__breakLoop_#" + counter);
+            final CondJump gotoBreak = events.newGoto(breakLabel);
 
             last.insertAfter(List.of(gotoBreak, forwardLabel, gotoRepeat, breakLabel));
 
@@ -148,9 +149,9 @@ public class NormalizeLoops implements FunctionProcessor {
             final IntegerType entryPointType = types.getByteType();
             final Register entryPointReg = function.newRegister(String.format("__loopEntryPoint_%s#%s", loopBegin, loopCounter), entryPointType);
             final Register forwarderReg = function.newRegister(String.format("__forwardTo_%s#%s", loopBegin, loopCounter), entryPointType);
-            final Local initEntryPointReg = EventFactory.newLocal(entryPointReg, expressions.makeZero(entryPointType));
-            final Local assignForwarderReg = EventFactory.newLocal(forwarderReg, entryPointReg);
-            final Local resetEntryPointReg = EventFactory.newLocal(entryPointReg, expressions.makeZero(entryPointType));
+            final Local initEntryPointReg = events.newLocal(entryPointReg, expressions.makeZero(entryPointType));
+            final Local assignForwarderReg = events.newLocal(forwarderReg, entryPointReg);
+            final Local resetEntryPointReg = events.newLocal(entryPointReg, expressions.makeZero(entryPointType));
             function.getEntry().insertAfter(initEntryPointReg);
 
             final List<Event> forwardingInstrumentation = new ArrayList<>();
@@ -179,11 +180,11 @@ public class NormalizeLoops implements FunctionProcessor {
                                 enteringJump.getLocalId(), enteringJump, SyntacticContextAnalysis.getSourceLocationString(enteringJump));
                         throw new UnsupportedOperationException(error);
                     }
-                    enteringJump.insertBefore(EventFactory.newLocal(entryPointReg, entryPointValue));
+                    enteringJump.insertBefore(events.newLocal(entryPointReg, entryPointValue));
                     enteringJump.updateReferences(Map.of(entryPoint, loopBegin));
                 }
 
-                final CondJump forwardingJump = EventFactory.newJump(expressions.makeEQ(forwarderReg, entryPointValue), entryPoint);
+                final CondJump forwardingJump = events.newJump(expressions.makeEQ(forwarderReg, entryPointValue), entryPoint);
                 forwardingInstrumentation.add(forwardingJump);
             }
 

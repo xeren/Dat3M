@@ -11,6 +11,8 @@ import com.dat3m.dartagnan.program.event.lang.dat3m.NonDetChoice;
 
 public class ResolveNonDetChoices implements ProgramProcessor {
 
+    private static final EventFactory events = EventFactory.getInstance();
+
     private ResolveNonDetChoices() { }
 
     public static ResolveNonDetChoices newInstance() {
@@ -28,7 +30,7 @@ public class ResolveNonDetChoices implements ProgramProcessor {
             final Type valueType = choice.getResultRegister().getType();
             final Expression constant = prog.newConstant(valueType);
 
-            final Local assignment = EventFactory.newLocal(choice.getResultRegister(), constant);
+            final Local assignment = events.newLocal(choice.getResultRegister(), constant);
             IRHelper.replaceWithMetadata(choice, assignment);
         }
     }

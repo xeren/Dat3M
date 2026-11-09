@@ -42,6 +42,7 @@ public class MemToReg implements FunctionProcessor {
 
     private static final TypeFactory types = TypeFactory.getInstance();
     private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private static final EventFactory events = EventFactory.getInstance();
 
     private MemToReg() {
     }
@@ -87,7 +88,7 @@ public class MemToReg implements FunctionProcessor {
             final Alloc alloc = (Alloc) entry.getKey();
             final List<Event> replacement = alloc.doesZeroOutMemory() ?
                     entry.getValue().replacingRegisters.values().stream()
-                            .map(reg -> (Event) EventFactory.newLocal(reg, expressions.makeGeneralZero(reg.getType())))
+                            .map(reg -> (Event) events.newLocal(reg, expressions.makeGeneralZero(reg.getType())))
                             .toList()
                     : List.of();
             replacement.forEach(e -> e.copyAllMetadataFrom(alloc));
@@ -162,11 +163,11 @@ public class MemToReg implements FunctionProcessor {
             case Load load -> {
                 final Register reg = load.getResultRegister();
                 assert load.getUsers().isEmpty();
-                replacement.add(EventFactory.newLocal(reg, expressions.makeCastOverMemory(memreg, reg.getType(), true)));
+                replacement.add(events.newLocal(reg, expressions.makeCastOverMemory(memreg, reg.getType(), true)));
             }
             case Store store -> {
                 assert store.getUsers().isEmpty();
-                replacement.add(EventFactory.newLocal(memreg, expressions.makeCastOverMemory(store.getMemValue(), accessType, true)));
+                replacement.add(events.newLocal(memreg, expressions.makeCastOverMemory(store.getMemValue(), accessType, true)));
                 updateMixedRegisters(memreg, field, object, replacement);
             }
             default -> { }
@@ -205,7 +206,7 @@ public class MemToReg implements FunctionProcessor {
             final List<Expression> operands = Arrays.asList(lowBits, truncated, highBits);
             final List<Expression> filteredOperands = operands.stream().filter(Objects::nonNull).toList();
             final Expression extended = expressions.makeMemoryConcat(filteredOperands);
-            replacement.add(EventFactory.newLocal(otherRegister, expressions.makeFromMemoryCast(extended, otherType)));
+            replacement.add(events.newLocal(otherRegister, expressions.makeFromMemoryCast(extended, otherType)));
         }
     }
 

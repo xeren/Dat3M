@@ -146,7 +146,7 @@ public class VisitorLitmusPTX extends LitmusPTXBaseVisitor<Object> {
     public Object visitLocalValue(LocalValueContext ctx) {
         Register register = (Register) ctx.register().accept(this);
         Expression value = (Expression) ctx.value().accept(this);
-        return append(EventFactory.newLocal(register, value), ctx);
+        return append(events.newLocal(register, value), ctx);
     }
 
     @Override
@@ -155,7 +155,7 @@ public class VisitorLitmusPTX extends LitmusPTXBaseVisitor<Object> {
         Expression lhs = (Expression) ctx.value(0).accept(this);
         Expression rhs = (Expression) ctx.value(1).accept(this);
         Expression exp = expressions.makeAdd(lhs, rhs);
-        return append(EventFactory.newLocal(rd, exp), ctx);
+        return append(events.newLocal(rd, exp), ctx);
     }
 
     @Override
@@ -164,7 +164,7 @@ public class VisitorLitmusPTX extends LitmusPTXBaseVisitor<Object> {
         Expression lhs = (Expression) ctx.value(0).accept(this);
         Expression rhs = (Expression) ctx.value(1).accept(this);
         Expression exp = expressions.makeSub(lhs, rhs);
-        return append(EventFactory.newLocal(rd, exp), ctx);
+        return append(events.newLocal(rd, exp), ctx);
     }
 
     @Override
@@ -173,7 +173,7 @@ public class VisitorLitmusPTX extends LitmusPTXBaseVisitor<Object> {
         Expression lhs = (Expression) ctx.value(0).accept(this);
         Expression rhs = (Expression) ctx.value(1).accept(this);
         Expression exp = expressions.makeMul(lhs, rhs);
-        return append(EventFactory.newLocal(rd, exp), ctx);
+        return append(events.newLocal(rd, exp), ctx);
     }
 
     @Override
@@ -182,7 +182,7 @@ public class VisitorLitmusPTX extends LitmusPTXBaseVisitor<Object> {
         Expression lhs = (Expression) ctx.value(0).accept(this);
         Expression rhs = (Expression) ctx.value(1).accept(this);
         Expression exp = expressions.makeDiv(lhs, rhs, true);
-        return append(EventFactory.newLocal(rd, exp), ctx);
+        return append(events.newLocal(rd, exp), ctx);
     }
 
     @Override
@@ -298,14 +298,14 @@ public class VisitorLitmusPTX extends LitmusPTXBaseVisitor<Object> {
         String instanceId = ctx.constant().getText();
         Event barrier;
         if (ctx.barrierId() == null) {
-            barrier = EventFactory.newControlBarrier(name, instanceId, Tag.PTX.CTA);
+            barrier = events.newControlBarrier(name, instanceId, Tag.PTX.CTA);
         } else {
             Expression id = (Expression) ctx.barrierId().accept(this);
             Expression quorum = null;
             if (ctx.barrierQuorum() != null) {
                 quorum = (Expression) ctx.barrierQuorum().accept(this);
             }
-            barrier = EventFactory.newNamedBarrier(name, instanceId, Tag.PTX.CTA, id, quorum);
+            barrier = events.newNamedBarrier(name, instanceId, Tag.PTX.CTA, id, quorum);
         }
         if(ctx.barrierMode().Arrive() != null) {
             barrier.addTags(Tag.PTX.ARRIVE);
@@ -324,13 +324,13 @@ public class VisitorLitmusPTX extends LitmusPTXBaseVisitor<Object> {
         Expression lhs = (Expression) ctx.value(0).accept(this);
         Expression rhs = (Expression) ctx.value(1).accept(this);
         Expression expr = expressions.makeIntCmp(lhs, ctx.cond().op, rhs);
-        return append(EventFactory.newJump(expr, label), ctx);
+        return append(events.newJump(expr, label), ctx);
     }
 
     @Override
     public Object visitJump(JumpContext ctx) {
         Label label = programBuilder.getOrCreateLabel(mainThread, ctx.Label().getText());
-        return append(EventFactory.newGoto(label), ctx);
+        return append(events.newGoto(label), ctx);
     }
 
     private Event append(Event event, ParserRuleContext ctx) {

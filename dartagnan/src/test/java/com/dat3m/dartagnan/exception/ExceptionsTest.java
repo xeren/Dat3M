@@ -24,6 +24,7 @@ public class ExceptionsTest {
 
     private static final TypeFactory types = TypeFactory.getInstance();
     private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private static final EventFactory events = EventFactory.getInstance();
 
     @Test(expected = MalformedProgramException.class)
     public void noThread() {
@@ -61,12 +62,12 @@ public class ExceptionsTest {
 
     @Test(expected = NullPointerException.class)
     public void JumpWithNullLabel() {
-        EventFactory.newJump(expressions.makeFalse(), null);
+        events.newJump(expressions.makeFalse(), null);
     }
 
     @Test(expected = NullPointerException.class)
     public void JumpWithNullExpr() {
-        EventFactory.newJump(null, EventFactory.newLabel("DUMMY"));
+        events.newJump(null, events.newLabel("DUMMY"));
     }
 
     @Test(expected = ParsingException.class)

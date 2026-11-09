@@ -56,6 +56,8 @@ public class NonterminationDetection implements ProgramProcessor {
             secure = true)
     private Mode mode = Mode.FULL;
 
+    private static final EventFactory events = EventFactory.getInstance();
+
     private NonterminationDetection() { }
 
     public static NonterminationDetection newInstance() {
@@ -107,7 +109,7 @@ public class NonterminationDetection implements ProgramProcessor {
 
         for (LoopAnalysis.LoopIterationInfo iter : iters) {
             final Expression guess = program.newConstant(boolType);
-            final Event nonterm = EventFactory.newJump(guess, endOfT);
+            final Event nonterm = events.newJump(guess, endOfT);
             nonterm.addTags(Tag.NONTERMINATION);
             nonterm.copyMetadataFrom(loopHeader, SourceLocation.class);
 

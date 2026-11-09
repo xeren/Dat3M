@@ -16,11 +16,10 @@ import com.dat3m.dartagnan.program.event.functions.Return;
 
 import java.util.*;
 
-import static com.dat3m.dartagnan.program.event.EventFactory.newFunctionReturn;
-
 public class VisitorOpsControlFlow extends VisitorOps<Event> {
 
     private static final TypeFactory types = TypeFactory.getInstance();
+    private static final EventFactory events = EventFactory.getInstance();
     private final ProgramBuilder builder;
     private final ControlFlowBuilder cfBuilder;
     private String continueLabelId;
@@ -119,7 +118,7 @@ public class VisitorOpsControlFlow extends VisitorOps<Event> {
     public Event visitOpReturn(SpirvParser.OpReturnContext ctx) {
         Type returnType = builder.getCurrentFunctionType().getReturnType();
         if (types.getVoidType().equals(returnType)) {
-            Return event = newFunctionReturn(null);
+            Return event = events.newFunctionReturn(null);
             builder.addEvent(event);
             return cfBuilder.endBlock(event);
         }
@@ -133,7 +132,7 @@ public class VisitorOpsControlFlow extends VisitorOps<Event> {
         if (!types.getVoidType().equals(returnType)) {
             String valueId = ctx.valueIdRef().getText();
             Expression expression = builder.getExpression(valueId);
-            Event event = newFunctionReturn(expression);
+            Event event = events.newFunctionReturn(expression);
             builder.addEvent(event);
             return cfBuilder.endBlock(event);
         }
@@ -143,7 +142,7 @@ public class VisitorOpsControlFlow extends VisitorOps<Event> {
 
     private Event visitGoto(String labelId) {
         Label label = cfBuilder.getOrCreateLabel(labelId);
-        Event event = EventFactory.newGoto(label);
+        Event event = events.newGoto(label);
         builder.addEvent(event);
         return cfBuilder.endBlock(event);
     }
@@ -167,8 +166,8 @@ public class VisitorOpsControlFlow extends VisitorOps<Event> {
         }
         Label trueLabel = cfBuilder.getOrCreateLabel(trueLabelId);
         Label falseLabel = cfBuilder.getOrCreateLabel(falseLabelId);
-        Event trueJump = builder.addEvent(EventFactory.newJump(guard, trueLabel));
-        builder.addEvent(EventFactory.newGoto(falseLabel));
+        Event trueJump = builder.addEvent(events.newJump(guard, trueLabel));
+        builder.addEvent(events.newGoto(falseLabel));
         return cfBuilder.endBlock(trueJump);
     }
 
@@ -205,7 +204,7 @@ public class VisitorOpsControlFlow extends VisitorOps<Event> {
 
     @Override
     public Event visitOpUnreachable(SpirvParser.OpUnreachableContext ctx) {
-        Event event = EventFactory.newUnreachable();
+        Event event = events.newUnreachable();
         builder.addEvent(event);
         return cfBuilder.endBlock(event);
     }

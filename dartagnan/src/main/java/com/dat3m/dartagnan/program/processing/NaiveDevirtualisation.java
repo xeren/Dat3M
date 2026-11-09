@@ -34,6 +34,8 @@ public class NaiveDevirtualisation implements ProgramProcessor {
 
     private static final Logger logger = LoggerFactory.getLogger(NaiveDevirtualisation.class);
 
+    private static final EventFactory events = EventFactory.getInstance();
+
     private NaiveDevirtualisation() {
     }
 
@@ -97,26 +99,26 @@ public class NaiveDevirtualisation implements ProgramProcessor {
             final Expression funcPtr = call.getCallTarget();
             // Construct call table
             for (Function possibleTarget : possibleTargets) {
-                final Label caseLabel = EventFactory.newLabel(String.format("__Ldevirt_%s#%s", possibleTarget.getName(), devirtCounter));
-                final CondJump caseJump = EventFactory.newJump(expressions.makeEQ(funcPtr, possibleTarget), caseLabel);
+                final Label caseLabel = events.newLabel(String.format("__Ldevirt_%s#%s", possibleTarget.getName(), devirtCounter));
+                final CondJump caseJump = events.newJump(expressions.makeEQ(funcPtr, possibleTarget), caseLabel);
                 caseLabels.add(caseLabel);
                 caseJumps.add(caseJump);
             }
 
-            final Event noMatch = EventFactory.newAssert(expressions.makeFalse(), "Invalid function pointer");
-            final Label endLabel = EventFactory.newLabel(String.format("__Ldevirt_end#%s", devirtCounter));
+            final Event noMatch = events.newAssert(expressions.makeFalse(), "Invalid function pointer");
+            final Label endLabel = events.newLabel(String.format("__Ldevirt_end#%s", devirtCounter));
 
             final List<Event> callReplacement = new ArrayList<>();
-            callReplacement.add(EventFactory.newStringAnnotation("=== Devirtualized call ==="));
+            callReplacement.add(events.newStringAnnotation("=== Devirtualized call ==="));
             callReplacement.addAll(caseJumps);
             callReplacement.add(noMatch);
             for (int i = 0; i < caseLabels.size(); i++) {
                 callReplacement.add(caseLabels.get(i));
                 callReplacement.add(devirtualiseCall(call, possibleTargets.get(i)));
-                callReplacement.add(EventFactory.newGoto(endLabel));
+                callReplacement.add(events.newGoto(endLabel));
             }
             callReplacement.add(endLabel);
-            callReplacement.add(EventFactory.newStringAnnotation("=== End of devirtualized call ==="));
+            callReplacement.add(events.newStringAnnotation("=== End of devirtualized call ==="));
 
             IRHelper.replaceWithMetadata(call, callReplacement);
             devirtCounter++;

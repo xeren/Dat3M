@@ -51,6 +51,7 @@ public class WitnessResolverTest {
 
     private static final TypeFactory types = TypeFactory.getInstance();
     private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private static final EventFactory events = EventFactory.getInstance();
     private static final IntegerType INT = types.getIntegerType(32);
 
     // Source lines of the test program, see build().
@@ -86,17 +87,17 @@ public class WitnessResolverTest {
             final Function worker = builder.newFunction("worker", 1, workerType, List.of());
             for (int i = 0; i < workers; i++) {
                 final Register id = builder.getOrNewRegister(0, "id" + i);
-                add(builder, 0, CREATE_LINE, EventFactory.newDynamicThreadCreate(id, workerType, worker, List.of()));
+                add(builder, 0, CREATE_LINE, events.newDynamicThreadCreate(id, workerType, worker, List.of()));
             }
             final Register value = builder.getOrNewRegister(0, "value", INT);
-            add(builder, 0, READ_LINE, EventFactory.newLoad(value, x));
-            add(builder, 0, READ_LINE, EventFactory.newStore(y, value));
-            add(builder, 0, WRITE_LINE, EventFactory.newStore(x, expressions.makeValue(2, INT)));
-            add(builder, 0, CHECK_CALL_LINE, EventFactory.newFunctionCallMarker("check"));
-            add(builder, 0, ASSERT_LINE, EventFactory.newAssert(
+            add(builder, 0, READ_LINE, events.newLoad(value, x));
+            add(builder, 0, READ_LINE, events.newStore(y, value));
+            add(builder, 0, WRITE_LINE, events.newStore(x, expressions.makeValue(2, INT)));
+            add(builder, 0, CHECK_CALL_LINE, events.newFunctionCallMarker("check"));
+            add(builder, 0, ASSERT_LINE, events.newAssert(
                     expressions.makeNEQ(value, expressions.makeValue(1, INT)), "assertion"));
-            add(builder, 0, CHECK_CALL_LINE, EventFactory.newFunctionReturnMarker("check"));
-            add(builder, 1, WORKER_LINE, EventFactory.newStore(x, expressions.makeValue(1, INT)));
+            add(builder, 0, CHECK_CALL_LINE, events.newFunctionReturnMarker("check"));
+            add(builder, 1, WORKER_LINE, events.newStore(x, expressions.makeValue(1, INT)));
             final Program program = builder.build();
             program.setEntrypoint(new Entrypoint.Simple(main));
             ThreadCreation.fromConfig(Configuration.defaultConfiguration()).run(program);

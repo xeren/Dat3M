@@ -51,6 +51,7 @@ public class LoopRotation implements FunctionProcessor {
     private static final Logger logger = LoggerFactory.getLogger(LoopRotation.class);
 
     private final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private final EventFactory events = EventFactory.getInstance();
 
     private LoopRotation() { }
 
@@ -144,7 +145,7 @@ public class LoopRotation implements FunctionProcessor {
 
         // ---------- Transformation ----------
         final List<Event> latch = new ArrayList<>(headerEvents.stream().map(Event::getCopy).toList());
-        final CondJump exitJump = EventFactory.newJump(exitCondition, exit);
+        final CondJump exitJump = events.newJump(exitCondition, exit);
         exitJump.copyAllMetadataFrom(loopCondition);
         latch.add(exitJump);
         backJump.insertBefore(latch);

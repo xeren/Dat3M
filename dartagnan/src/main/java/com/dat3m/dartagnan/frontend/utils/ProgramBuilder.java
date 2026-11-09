@@ -40,6 +40,7 @@ public class ProgramBuilder {
 
     private static final TypeFactory types = TypeFactory.getInstance();
     private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private static final EventFactory events = EventFactory.getInstance();
     private final int archSize;
     private static final FunctionType DEFAULT_THREAD_TYPE =
             types.getFunctionType(types.getVoidType(), List.of());
@@ -112,7 +113,7 @@ public class ProgramBuilder {
                     }
                 }
                 // This comes after the loop to avoid the renaming in the initialization event
-                Event initToZero = EventFactory.newLocal(zr, expressions.makeGeneralZero(zr.getType()));
+                Event initToZero = events.newLocal(zr, expressions.makeGeneralZero(zr.getType()));
                 func.getEntry().insertAfter(initToZero);
             }
         }
@@ -158,7 +159,7 @@ public class ProgramBuilder {
         if(id2FunctionsMap.containsKey(tid)) {
             throw new MalformedProgramException("Function or thread with id " + tid + " already exists.");
         }
-        final Thread thread = new Thread(name, DEFAULT_THREAD_TYPE, List.of(), tid, EventFactory.newThreadStart(null));
+        final Thread thread = new Thread(name, DEFAULT_THREAD_TYPE, List.of(), tid, events.newThreadStart(null));
         id2FunctionsMap.put(tid, thread);
         program.addThread(thread);
         return thread;
@@ -270,17 +271,17 @@ public class ProgramBuilder {
     public void initRegEqLocPtr(int regThread, String regName, String locName, Type type, int lineOfCode) {
         MemoryObject object = getOrNewMemoryObject(locName);
         Register reg = getOrNewRegister(regThread, regName, type);
-        addChild(regThread, EventFactory.newLocal(reg, object), lineOfCode);
+        addChild(regThread, events.newLocal(reg, object), lineOfCode);
     }
 
     public void initRegEqLocVal(int regThread, String regName, String locName, Type type, int lineOfCode) {
         Register reg = getOrNewRegister(regThread, regName, type);
-        addChild(regThread, EventFactory.newLocal(reg,getInitialValue(locName)), lineOfCode);
+        addChild(regThread, events.newLocal(reg,getInitialValue(locName)), lineOfCode);
     }
 
     public void initRegEqConst(int regThread, String regName, Expression value, int lineOfCode){
         Preconditions.checkArgument(value.getRegs().isEmpty());
-        addChild(regThread, EventFactory.newLocal(getOrNewRegister(regThread, regName, value.getType()), value), lineOfCode);
+        addChild(regThread, events.newLocal(getOrNewRegister(regThread, regName, value.getType()), value), lineOfCode);
     }
 
     private Expression getInitialValue(String name) {
@@ -315,7 +316,7 @@ public class ProgramBuilder {
     public Label getOrCreateLabel(int funcId, String name){
         return fid2LabelsMap
                 .computeIfAbsent(funcId, _ -> new HashMap<>())
-                .computeIfAbsent(name, EventFactory::newLabel);
+                .computeIfAbsent(name, events::newLabel);
     }
 
     public Label getEndOfThreadLabel(int tid) {
@@ -336,7 +337,7 @@ public class ProgramBuilder {
             throw new MalformedProgramException("Function or thread with id " + id + " already exists.");
         }
         // Litmus threads run unconditionally (have no creator) and have no parameters/return types.
-        ThreadStart threadEntry = EventFactory.newThreadStart(null);
+        ThreadStart threadEntry = events.newThreadStart(null);
         Thread scopedThread = new Thread(name, DEFAULT_THREAD_TYPE, List.of(), id, threadEntry, scopeHierarchy, new HashSet<>());
         id2FunctionsMap.put(id, scopedThread);
         program.addThread(scopedThread);

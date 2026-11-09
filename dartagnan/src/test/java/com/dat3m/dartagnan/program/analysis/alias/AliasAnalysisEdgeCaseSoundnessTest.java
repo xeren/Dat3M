@@ -46,7 +46,6 @@ import java.util.Map;
 import java.util.Set;
 
 import static com.dat3m.dartagnan.configuration.OptionNames.ALIAS_METHOD;
-import static com.dat3m.dartagnan.program.event.EventFactory.newJump;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -56,6 +55,7 @@ public class AliasAnalysisEdgeCaseSoundnessTest {
 
     private static final TypeFactory types = TypeFactory.getInstance();
     private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private static final EventFactory events = EventFactory.getInstance();
 
     @Parameterized.Parameters(name = "{0}")
     public static Collection<Alias> methods() {
@@ -83,18 +83,18 @@ public class AliasAnalysisEdgeCaseSoundnessTest {
         Register condition = builder.getOrNewRegister(0, "condition", type);
         Register carried = builder.getOrNewRegister(0, "carried", type);
         Register pointer = builder.getOrNewRegister(0, "pointer", type);
-        Local conditionWriter = EventFactory.newLocal(condition, builder.newConstant(type));
-        Local initialWriter = EventFactory.newLocal(carried, x);
+        Local conditionWriter = events.newLocal(condition, builder.newConstant(type));
+        Local initialWriter = events.newLocal(carried, x);
         builder.addChildWithoutSourceLoc(0, conditionWriter);
         builder.addChildWithoutSourceLoc(0, initialWriter);
         Label loop = builder.getOrCreateLabel(0, "loop");
         builder.addChildWithoutSourceLoc(0, loop);
-        Local pointerWriter = EventFactory.newLocal(pointer, carried);
-        Local loopWriter = EventFactory.newLocal(carried, y);
+        Local pointerWriter = events.newLocal(pointer, carried);
+        Local loopWriter = events.newLocal(carried, y);
         builder.addChildWithoutSourceLoc(0, pointerWriter);
         builder.addChildWithoutSourceLoc(0, loopWriter);
         builder.addChildWithoutSourceLoc(0,
-                newJump(expressions.makeNEQ(condition, expressions.makeZero(type)), loop));
+                events.newJump(expressions.makeNEQ(condition, expressions.makeZero(type)), loop));
         Store indirect = addStore(builder, pointer);
         Store atX = addStore(builder, x);
         Store atY = addStore(builder, y);
@@ -166,15 +166,13 @@ public class AliasAnalysisEdgeCaseSoundnessTest {
         Register lastOrOutOfBounds = builder.getOrNewRegister(0, "lastOrOutOfBounds", type);
         Register interior = builder.getOrNewRegister(0, "interior", type);
         Register recoveredBase = builder.getOrNewRegister(0, "recoveredBase", type);
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLocal(index, builder.newConstant(type)));
+        builder.addChildWithoutSourceLoc(0, events.newLocal(index, builder.newConstant(type)));
         Expression stride = expressions.makeMul(index, expressions.makeValue(16, type));
-        builder.addChildWithoutSourceLoc(0,
-                EventFactory.newLocal(firstOrOutOfBounds, expressions.makeAdd(x, stride)));
+        builder.addChildWithoutSourceLoc(0, events.newLocal(firstOrOutOfBounds, expressions.makeAdd(x, stride)));
         Expression last = expressions.makeAdd(x, expressions.makeValue(8, type));
-        builder.addChildWithoutSourceLoc(0,
-                EventFactory.newLocal(lastOrOutOfBounds, expressions.makeAdd(last, stride)));
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLocal(interior, last));
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLocal(
+        builder.addChildWithoutSourceLoc(0, events.newLocal(lastOrOutOfBounds, expressions.makeAdd(last, stride)));
+        builder.addChildWithoutSourceLoc(0, events.newLocal(interior, last));
+        builder.addChildWithoutSourceLoc(0, events.newLocal(
                 recoveredBase, expressions.makeSub(interior, expressions.makeValue(8, type))));
         Store throughFirst = addStore(builder, firstOrOutOfBounds);
         Store throughLast = addStore(builder, lastOrOutOfBounds);
@@ -208,14 +206,12 @@ public class AliasAnalysisEdgeCaseSoundnessTest {
         IntegerType type = builder.getArchType();
         Register address = builder.getOrNewRegister(0, "address", type);
         Register loadedPointer = builder.getOrNewRegister(0, "loadedPointer", type);
-        Load load = EventFactory.newLoad(loadedPointer, address);
-        Local addressWriter = EventFactory.newLocal(
-                address, expressions.makeAdd(slot, expressions.makeValue(8, type)));
+        Load load = events.newLoad(loadedPointer, address);
+        Local addressWriter = events.newLocal(address, expressions.makeAdd(slot, expressions.makeValue(8, type)));
         builder.addChildWithoutSourceLoc(0, load);
         builder.addChildWithoutSourceLoc(0, addressWriter);
         Store indirect = addStore(builder, loadedPointer);
-        Store pointerStore = EventFactory.newStore(
-                expressions.makeAdd(slot, expressions.makeValue(8, type)), target);
+        Store pointerStore = events.newStore(expressions.makeAdd(slot, expressions.makeValue(8, type)), target);
         builder.addChildWithoutSourceLoc(0, pointerStore);
         Store atTarget = addStore(builder, target);
 
@@ -244,21 +240,20 @@ public class AliasAnalysisEdgeCaseSoundnessTest {
         Thread spawnedThread = builder.newThread(1);
 
         IntegerType type = builder.getArchType();
-        ThreadCreate create = EventFactory.newThreadCreate(List.of(argumentTarget));
+        ThreadCreate create = events.newThreadCreate(List.of(argumentTarget));
         create.setSpawnedThread(spawnedThread);
         builder.addChildWithoutSourceLoc(0, create);
         Register argument = builder.getOrNewRegister(1, "argument", type);
-        ThreadArgument threadArgument = EventFactory.newThreadArgument(argument, create, 0);
+        ThreadArgument threadArgument = events.newThreadArgument(argument, create, 0);
         builder.addChildWithoutSourceLoc(1, threadArgument);
-        Store throughArgument = EventFactory.newStore(argument, expressions.makeZero(type));
+        Store throughArgument = events.newStore(argument, expressions.makeZero(type));
         builder.addChildWithoutSourceLoc(1, throughArgument);
 
         Register allocatedPointer = builder.getOrNewRegister(0, "allocatedPointer", builder.getPointerType());
-        Alloc alloc = EventFactory.newAlloc(
-                allocatedPointer, type, expressions.makeValue(1, type), false, false);
+        Alloc alloc = events.newAlloc(allocatedPointer, type, expressions.makeValue(1, type), false, false);
         alloc.setAllocatedObject(allocated);
         builder.addChildWithoutSourceLoc(0, alloc);
-        Store throughAllocation = EventFactory.newStore(allocatedPointer, expressions.makeZero(type));
+        Store throughAllocation = events.newStore(allocatedPointer, expressions.makeZero(type));
         builder.addChildWithoutSourceLoc(0, throughAllocation);
         Store atArgumentTarget = addStore(builder, argumentTarget);
         Store atAllocation = addStore(builder, allocated);
@@ -288,13 +283,13 @@ public class AliasAnalysisEdgeCaseSoundnessTest {
         IntegerType type = builder.getArchType();
         Register loaded = builder.getOrNewRegister(0, "loaded", type);
         Register condition = builder.getOrNewRegister(0, "condition", type);
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLocal(condition, builder.newConstant(type)));
-        Load load = EventFactory.newLoad(loaded, slot);
-        Store scalarStore = EventFactory.newStore(slot, expressions.makeZero(type));
-        Store directPointerStore = EventFactory.newStore(slot, x);
-        Store choiceStore = EventFactory.newStore(slot, expressions.makeITE(
-                expressions.makeEQ(condition, expressions.makeZero(type)), x, y));
-        Dealloc dealloc = EventFactory.newDealloc(x);
+        builder.addChildWithoutSourceLoc(0, events.newLocal(condition, builder.newConstant(type)));
+        Load load = events.newLoad(loaded, slot);
+        Store scalarStore = events.newStore(slot, expressions.makeZero(type));
+        Store directPointerStore = events.newStore(slot, x);
+        Store choiceStore = events.newStore(slot,
+                expressions.makeITE(expressions.makeEQ(condition, expressions.makeZero(type)), x, y));
+        Dealloc dealloc = events.newDealloc(x);
         builder.addChildWithoutSourceLoc(0, load);
         builder.addChildWithoutSourceLoc(0, scalarStore);
         builder.addChildWithoutSourceLoc(0, directPointerStore);
@@ -326,11 +321,11 @@ public class AliasAnalysisEdgeCaseSoundnessTest {
         IntegerType type = builder.getArchType();
         Register condition = builder.getOrNewRegister(0, "condition", type);
         Register pointer = builder.getOrNewRegister(0, "pointer", type);
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLocal(condition, builder.newConstant(type)));
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLocal(pointer, expressions.makeITE(
+        builder.addChildWithoutSourceLoc(0, events.newLocal(condition, builder.newConstant(type)));
+        builder.addChildWithoutSourceLoc(0, events.newLocal(pointer, expressions.makeITE(
                 expressions.makeEQ(condition, expressions.makeZero(type)), x, y)));
-        Store wide = EventFactory.newStore(pointer, expressions.makeZero(type));
-        Store narrow = EventFactory.newStore(
+        Store wide = events.newStore(pointer, expressions.makeZero(type));
+        Store narrow = events.newStore(
                 expressions.makeAdd(x, expressions.makeValue(4, type)), expressions.makeFalse());
         builder.addChildWithoutSourceLoc(0, wide);
         builder.addChildWithoutSourceLoc(0, narrow);
@@ -362,9 +357,9 @@ public class AliasAnalysisEdgeCaseSoundnessTest {
         Expression innerY = expressions.makeArray(innerType, List.of(y, y));
         Register aggregate = builder.getOrNewRegister(0, "aggregate", outerType);
         Register pointer = builder.getOrNewRegister(0, "pointer", type);
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLocal(
+        builder.addChildWithoutSourceLoc(0, events.newLocal(
                 aggregate, expressions.makeArray(outerType, List.of(innerX, innerY))));
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLocal(
+        builder.addChildWithoutSourceLoc(0, events.newLocal(
                 pointer, expressions.makeExtract(aggregate, List.of(0, 1))));
         Store indirect = addStore(builder, pointer);
         Store atX = addStore(builder, x);
@@ -394,14 +389,13 @@ public class AliasAnalysisEdgeCaseSoundnessTest {
         Register index = builder.getOrNewRegister(0, "index", type);
         Register address = builder.getOrNewRegister(0, "address", type);
         Register pointer = builder.getOrNewRegister(0, "pointer", type);
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLocal(index, builder.newConstant(type)));
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLocal(address, expressions.makeAdd(
+        builder.addChildWithoutSourceLoc(0, events.newLocal(index, builder.newConstant(type)));
+        builder.addChildWithoutSourceLoc(0, events.newLocal(address, expressions.makeAdd(
                 slot, expressions.makeMul(index, expressions.makeValue(8, type)))));
-        Load load = EventFactory.newLoad(pointer, address);
+        Load load = events.newLoad(pointer, address);
         builder.addChildWithoutSourceLoc(0, load);
         Store indirect = addStore(builder, pointer);
-        Store pointerStore = EventFactory.newStore(
-                expressions.makeAdd(slot, expressions.makeValue(8, type)), target);
+        Store pointerStore = events.newStore(expressions.makeAdd(slot, expressions.makeValue(8, type)), target);
         builder.addChildWithoutSourceLoc(0, pointerStore);
         Store atTarget = addStore(builder, target);
 
@@ -430,10 +424,10 @@ public class AliasAnalysisEdgeCaseSoundnessTest {
 
         Register r0 = builder.getOrNewRegister(0, "r0", types.getAggregateType(List.of(type, type)));
         Register workerId = builder.getOrNewRegister(0, "workerId");
-        builder.addChildWithoutSourceLoc(0, EventFactory.newDynamicThreadCreate(workerId, workerType, worker, List.of()));
-        builder.addChildWithoutSourceLoc(0, EventFactory.newDynamicThreadJoin(r0, workerId));
+        builder.addChildWithoutSourceLoc(0, events.newDynamicThreadCreate(workerId, workerType, worker, List.of()));
+        builder.addChildWithoutSourceLoc(0, events.newDynamicThreadJoin(r0, workerId));
         Store indirect = addStore(builder, expressions.makeExtract(r0, 0));
-        builder.addChildWithoutSourceLoc(1, EventFactory.newThreadReturn(x));
+        builder.addChildWithoutSourceLoc(1, events.newThreadReturn(x));
 
         Program program = builder.build();
         program.setEntrypoint(new Entrypoint.Simple(main));
@@ -473,23 +467,23 @@ public class AliasAnalysisEdgeCaseSoundnessTest {
         Register p0Result = builder.getOrNewRegister(0, "p0Result", types.getAggregateType(List.of(type, type)));
         Register p1Result = builder.getOrNewRegister(1, "p1Result", type);
         Register p2Result = builder.getOrNewRegister(2, "p2Result", types.getAggregateType(List.of(type, type)));
-        Label p0End = EventFactory.newLabel("p0End");
-        Label p2End = EventFactory.newLabel("p2End");
-        Store p0Indirect = EventFactory.newStore(expressions.makeExtract(p0Result, 1), expressions.makeZero(type));
-        Store p2Indirect = EventFactory.newStore(expressions.makeExtract(p2Result, 1), expressions.makeZero(type));
-        Store direct = EventFactory.newStore(x, expressions.makeZero(type));
+        Label p0End = events.newLabel("p0End");
+        Label p2End = events.newLabel("p2End");
+        Store p0Indirect = events.newStore(expressions.makeExtract(p0Result, 1), expressions.makeZero(type));
+        Store p2Indirect = events.newStore(expressions.makeExtract(p2Result, 1), expressions.makeZero(type));
+        Store direct = events.newStore(x, expressions.makeZero(type));
 
         p0.append(List.of(
-                EventFactory.newDynamicThreadCreate(p1Id, p1Type, p1, List.of()),
-                EventFactory.newDynamicThreadCreate(p2Id, p2Type, p2, List.of(p1Id)),
-                EventFactory.newJump(choice, p0End),
-                EventFactory.newDynamicThreadJoin(p0Result, p1Id),
-                EventFactory.newAssume(expressions.makeEQ(expressions.makeExtract(p0Result, 0), expressions.makeZero(type))),
+                events.newDynamicThreadCreate(p1Id, p1Type, p1, List.of()),
+                events.newDynamicThreadCreate(p2Id, p2Type, p2, List.of(p1Id)),
+                events.newJump(choice, p0End),
+                events.newDynamicThreadJoin(p0Result, p1Id),
+                events.newAssume(expressions.makeEQ(expressions.makeExtract(p0Result, 0), expressions.makeZero(type))),
                 p0Indirect, p0End));
-        p1.append(List.of(EventFactory.newLoad(p1Result, slot), EventFactory.newThreadReturn(p1Result)));
-        p2.append(List.of(EventFactory.newJump(expressions.makeNot(choice), p2End),
-                EventFactory.newDynamicThreadJoin(p2Result, p2.getParameterRegisters().get(0)),
-                EventFactory.newAssume(expressions.makeEQ(expressions.makeExtract(p2Result, 0), expressions.makeZero(type))),
+        p1.append(List.of(events.newLoad(p1Result, slot), events.newThreadReturn(p1Result)));
+        p2.append(List.of(events.newJump(expressions.makeNot(choice), p2End),
+                events.newDynamicThreadJoin(p2Result, p2.getParameterRegisters().get(0)),
+                events.newAssume(expressions.makeEQ(expressions.makeExtract(p2Result, 0), expressions.makeZero(type))),
                 p2Indirect, direct, p2End));
 
         Program program = builder.build();
@@ -523,8 +517,8 @@ public class AliasAnalysisEdgeCaseSoundnessTest {
         Expression worker = builder.newFunction("worker", 1, workerType, List.of());
 
         Register workerId = builder.getOrNewRegister(0, "workerId");
-        builder.addChildWithoutSourceLoc(0, EventFactory.newDynamicThreadCreate(workerId, workerType, worker, List.of()));
-        Store store = EventFactory.newStore(x, expressions.makeZero(builder.getArchType()));
+        builder.addChildWithoutSourceLoc(0, events.newDynamicThreadCreate(workerId, workerType, worker, List.of()));
+        Store store = events.newStore(x, expressions.makeZero(builder.getArchType()));
         builder.addChildWithoutSourceLoc(1, store);
 
         Program program = builder.build();
@@ -546,12 +540,12 @@ public class AliasAnalysisEdgeCaseSoundnessTest {
             IntegerType targetType, boolean signed) {
         Register register = builder.getOrNewRegister(0, name, targetType);
         builder.addChildWithoutSourceLoc(0,
-                EventFactory.newLocal(register, expressions.makeIntegerCast(operand, targetType, signed)));
+                events.newLocal(register, expressions.makeIntegerCast(operand, targetType, signed)));
         return register;
     }
 
     private Store addStore(ProgramBuilder builder, Expression address) {
-        Store store = EventFactory.newStore(address, expressions.makeZero(builder.getArchType()));
+        Store store = events.newStore(address, expressions.makeZero(builder.getArchType()));
         builder.addChildWithoutSourceLoc(0, store);
         return store;
     }

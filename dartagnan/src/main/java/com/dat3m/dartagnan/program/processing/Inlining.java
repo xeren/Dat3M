@@ -37,6 +37,8 @@ public class Inlining implements ProgramProcessor {
             secure = true)
     private int bound = 1;
 
+    private static final EventFactory events = EventFactory.getInstance();
+
     private Inlining() {}
 
     public static Inlining fromConfig(Configuration config) throws InvalidConfigurationException {
@@ -86,7 +88,7 @@ public class Inlining implements ProgramProcessor {
             exitToCallMap.computeIfAbsent(call.getSuccessor(), _ -> new ArrayList<>()).add(callTarget);
             final long depth = exitToCallMap.values().stream().filter(c -> c.contains(callTarget)).count();
             if (depth > bound) {
-                final Event boundEvent = EventFactory.newAbort(Tag.BOUND, Tag.NONTERMINATION, Tag.NOOPT);
+                final Event boundEvent = events.newAbort(Tag.BOUND, Tag.NONTERMINATION, Tag.NOOPT);
                 event = IRHelper.replaceWithMetadata(call, boundEvent);
             } else {
                 if (callTarget instanceof Thread) {
@@ -114,8 +116,8 @@ public class Inlining implements ProgramProcessor {
     // Returns the first event of the inlined code, from where to continue from
     private static Event inlineBody(FunctionCall call, Snapshot callTarget, int scope) {
         // ================================ Add marker events ================================
-        final Event callMarker = EventFactory.newFunctionCallMarker(callTarget.name);
-        final Event returnMarker = EventFactory.newFunctionReturnMarker(callTarget.name);
+        final Event callMarker = events.newFunctionCallMarker(callTarget.name);
+        final Event returnMarker = events.newFunctionReturnMarker(callTarget.name);
         callMarker.copyAllMetadataFrom(call);
         returnMarker.copyAllMetadataFrom(call);
         call.insertBefore(callMarker);
@@ -142,7 +144,7 @@ public class Inlining implements ProgramProcessor {
         final ArrayList<Event> parameterAssignments = new ArrayList<>();
         for (int j = 0; j < callTarget.parameters.size(); j++) {
             final Register register = registerMap.get(callTarget.parameters.get(j));
-            parameterAssignments.add(newLocal(register, arguments.get(j)));
+            parameterAssignments.add(events.newLocal(register, arguments.get(j)));
         }
 
         // --------- Inline call ---------
@@ -157,7 +159,7 @@ public class Inlining implements ProgramProcessor {
                     }
                 });
         final List<Event> inlinedBody = IRHelper.copyEvents(callTarget.events, copyUpdater, new HashMap<>());
-        final Label returnLabel = newLabel("EXIT_OF_CALL_" + callTarget.name + "_" + scope);
+        final Label returnLabel = events.newLabel("EXIT_OF_CALL_" + callTarget.name + "_" + scope);
         call.insertAfter(eventSequence(
                 parameterAssignments,
                 inlinedBody,
@@ -171,8 +173,8 @@ public class Inlining implements ProgramProcessor {
             final Expression expression = returnEvent.getValue().orElse(null);
             checkReturnType(resultReg, expression);
             final List<Event> replacement = eventSequence(
-                    expression != null ? newLocal(resultReg, expression) : null,
-                    newGoto(returnLabel)
+                    expression != null ? events.newLocal(resultReg, expression) : null,
+                    events.newGoto(returnLabel)
             );
             IRHelper.replaceWithMetadata(returnEvent, replacement);
         });

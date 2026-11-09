@@ -41,7 +41,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.dat3m.dartagnan.expression.utils.ExpressionHelper.isAggregateLike;
-import static com.dat3m.dartagnan.program.event.EventFactory.*;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
 
@@ -264,7 +263,7 @@ public class VisitorLlvm extends LLVMIRBaseVisitor<Expression> {
                     event.copyAllMetadataFrom(terminator);
                     function.append(event);
                 }
-                final Event gotoTargetBlock = newGoto(basicBlocks.get(phiNode.getKey()).label);
+                final Event gotoTargetBlock = events.newGoto(basicBlocks.get(phiNode.getKey()).label);
                 gotoTargetBlock.copyAllMetadataFrom(terminator);
                 function.append(gotoTargetBlock);
             }
@@ -342,7 +341,7 @@ public class VisitorLlvm extends LLVMIRBaseVisitor<Expression> {
     private Block getBlock(String label) {
         return basicBlocks.computeIfAbsent(label,
                 k -> {
-                    final Label l = newLabel("l" + k);
+                    final Label l = events.newLabel("l" + k);
                     l.setFunction(function);
                     return new Block(k, l, new ArrayList<>());
                 });
@@ -386,7 +385,7 @@ public class VisitorLlvm extends LLVMIRBaseVisitor<Expression> {
 
     @Override
     public Expression visitBrTerm(BrTermContext ctx) {
-        block.events.add(newGoto(getJumpLabel(ctx.label())));
+        block.events.add(events.newGoto(getJumpLabel(ctx.label())));
         return null;
     }
 
@@ -395,8 +394,8 @@ public class VisitorLlvm extends LLVMIRBaseVisitor<Expression> {
         final Type type = parseIntType(ctx.IntType());
         final Expression guard = checkExpression(type, ctx.value());
         final Expression cast = expressions.makeBooleanCast(guard);
-        block.events.add(newJump(cast, getJumpLabel(ctx.label(0))));
-        block.events.add(newGoto(getJumpLabel(ctx.label(1))));
+        block.events.add(events.newJump(cast, getJumpLabel(ctx.label(0))));
+        block.events.add(events.newGoto(getJumpLabel(ctx.label(1))));
         return null;
     }
 
@@ -407,9 +406,9 @@ public class VisitorLlvm extends LLVMIRBaseVisitor<Expression> {
         for (LlvmcaseContext caseCtx : ctx.llvmcase()) {
             final Label jumpTarget = getJumpLabel(caseCtx.label());
             final Expression caseCheck = expressions.makeEQ(switchValue, visitTypeConst(caseCtx.typeConst()));
-            block.events.add(newJump(caseCheck, jumpTarget));
+            block.events.add(events.newJump(caseCheck, jumpTarget));
         }
-        block.events.add(newGoto(defaultTarget));
+        block.events.add(events.newGoto(defaultTarget));
 
         return null;
     }
@@ -459,7 +458,7 @@ public class VisitorLlvm extends LLVMIRBaseVisitor<Expression> {
                 } catch (UnsupportedOperationException e) {
                     logger.warn("Support for inline assembly instruction '{}' is not available for parser '{}'. Setting non deterministic value ", e.getMessage(), parser.getClass().getSimpleName());
                     if(resultRegister != null){
-                        Event nonDeterministicValue = EventFactory.newNonDetChoice(resultRegister);
+                        Event nonDeterministicValue = this.events.newNonDetChoice(resultRegister);
                         events = Optional.of(List.of(nonDeterministicValue));
                     }
                     unsupportedEncountered = true;
@@ -469,7 +468,7 @@ public class VisitorLlvm extends LLVMIRBaseVisitor<Expression> {
             if(!unsupportedEncountered && events.isEmpty()){
                 String msg = "Ignoring call.";
                 if(resultRegister != null){
-                    block.events.add(EventFactory.newNonDetChoice(resultRegister));
+                    block.events.add(this.events.newNonDetChoice(resultRegister));
                     msg = "Setting non deterministic value.";
                 }
                 logger.warn("None of the parsers succeeded for inline assembly '{}'. {}", getSourceTextForContext(ctx), msg);
@@ -488,8 +487,8 @@ public class VisitorLlvm extends LLVMIRBaseVisitor<Expression> {
                 types.getFunctionType(returnType, Lists.transform(arguments, Expression::getType));
 
         final Event call = currentRegisterName == null ?
-                newVoidFunctionCall(funcType, callTarget, arguments) :
-                newValueFunctionCall(resultRegister, funcType, callTarget, arguments);
+                events.newVoidFunctionCall(funcType, callTarget, arguments) :
+                events.newValueFunctionCall(resultRegister, funcType, callTarget, arguments);
         block.events.add(call);
         return resultRegister;
     }
@@ -504,13 +503,13 @@ public class VisitorLlvm extends LLVMIRBaseVisitor<Expression> {
         } else {
             value = null;
         }
-        block.events.add(newFunctionReturn(value));
+        block.events.add(events.newFunctionReturn(value));
         return null;
     }
 
     @Override
     public Expression visitUnreachableTerm(UnreachableTermContext ctx) {
-        block.events.add(newAbort());
+        block.events.add(events.newAbort());
         return null;
     }
 
@@ -528,7 +527,7 @@ public class VisitorLlvm extends LLVMIRBaseVisitor<Expression> {
             return find;
         }
         final var newNode = new ArrayList<Event>();
-        newNode.add(newLabel(from.name + "." + to.name));
+        newNode.add(events.newLabel(from.name + "." + to.name));
         phiNodesFrom.put(to.name, newNode);
         return newNode;
     }
@@ -556,7 +555,7 @@ public class VisitorLlvm extends LLVMIRBaseVisitor<Expression> {
 
     private Register assignToRegister(Expression expression) {
         Register register = getOrNewCurrentRegister(expression.getType());
-        block.events.add(newLocal(register, expression));
+        block.events.add(events.newLocal(register, expression));
         return register;
     }
 
@@ -567,7 +566,7 @@ public class VisitorLlvm extends LLVMIRBaseVisitor<Expression> {
         final Expression address = visitTypeValue(ctx.typeValue(1));
         check(address.getType().equals(pointerType), "Non-pointer type in %s.", ctx);
         final String mo = atomic ? parseMemoryOrder(ctx.atomicOrdering()) : "";
-        final Event store = atomic ? events.newStore(address, value, mo) : newStore(address, value);
+        final Event store = atomic ? events.newStore(address, value, mo) : events.newStore(address, value);
         block.events.add(store);
         return null;
     }
@@ -598,7 +597,7 @@ public class VisitorLlvm extends LLVMIRBaseVisitor<Expression> {
         }
         final long alignment = getAllocationAlignment(elementType, ctx.align());
         final Expression alignmentExpression = expressions.makeValue(alignment, integerType);
-        final Event alloc = EventFactory.newAlignedAlloc(register, elementType.allocationType(), sizeExpression,
+        final Event alloc = events.newAlignedAlloc(register, elementType.allocationType(), sizeExpression,
                 alignmentExpression, false, false);
         //final int addressSpace = parseAddressSpace(ctx.addrSpace());
         block.events.add(alloc);
@@ -615,7 +614,7 @@ public class VisitorLlvm extends LLVMIRBaseVisitor<Expression> {
         final String mo = atomic ? parseMemoryOrder(ctx.atomicOrdering()) : "";
         checkPointerType(ctx.typeValue());
         final Expression address = checkPointerExpression(ctx.typeValue().value());
-        final Event load = atomic ? events.newLoad(register, address, mo) : newLoad(register, address);
+        final Event load = atomic ? events.newLoad(register, address, mo) : events.newLoad(register, address);
         block.events.add(load);
         return register;
     }
@@ -627,7 +626,7 @@ public class VisitorLlvm extends LLVMIRBaseVisitor<Expression> {
         for (final IncContext inc : ctx.inc()) {
             final Block target = getBlock(localIdent(inc.LocalIdent()));
             final Expression expression = checkExpression(type, inc.value());
-            getPhiNode(target, block).add(newLocal(register, expression));
+            getPhiNode(target, block).add(events.newLocal(register, expression));
         }
         return register;
     }

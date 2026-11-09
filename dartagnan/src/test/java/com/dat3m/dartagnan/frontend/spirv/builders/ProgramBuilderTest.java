@@ -8,18 +8,19 @@ import com.dat3m.dartagnan.frontend.spirv.builders.ProgramBuilder;
 import com.dat3m.dartagnan.program.Function;
 import com.dat3m.dartagnan.program.ThreadGrid;
 import com.dat3m.dartagnan.program.event.Event;
+import com.dat3m.dartagnan.program.event.EventFactory;
 import com.dat3m.dartagnan.program.event.core.Skip;
 import org.junit.Test;
 
 import java.util.List;
 
-import static com.dat3m.dartagnan.program.event.EventFactory.newVoidFunctionCall;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 public class ProgramBuilderTest {
 
     private static final TypeFactory types = TypeFactory.getInstance();
+    private static final EventFactory events = EventFactory.getInstance();
 
     private final ProgramBuilder builder = new ProgramBuilder(new ThreadGrid(1, 1, 1, 1, 1));
     private final ControlFlowBuilder cfBuilder = builder.getControlFlowBuilder();
@@ -69,7 +70,7 @@ public class ProgramBuilderTest {
         builder.startCurrentFunction(new Function("test_func", type, List.of(), 0, null));
         cfBuilder.getOrCreateLabel("test_label");
         cfBuilder.startBlock("test_label");
-        builder.addEvent(newVoidFunctionCall(called, List.of()));
+        builder.addEvent(events.newVoidFunctionCall(called, List.of()));
         cfBuilder.endBlock(new Skip());
         builder.endCurrentFunction();
 

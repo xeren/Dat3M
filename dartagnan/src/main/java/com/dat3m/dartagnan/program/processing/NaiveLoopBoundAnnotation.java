@@ -46,6 +46,8 @@ import java.util.List;
 */
 public class NaiveLoopBoundAnnotation implements FunctionProcessor {
 
+    private static final EventFactory events = EventFactory.getInstance();
+
     private final ReachingDefinitionsAnalysis.Config reachingDefinitionsAnalysis;
 
     private NaiveLoopBoundAnnotation(ReachingDefinitionsAnalysis.Config c) {
@@ -120,7 +122,7 @@ public class NaiveLoopBoundAnnotation implements FunctionProcessor {
                 final Expression boundExpr = computeLoopBound(loopBody, r, counterReg,
                         initValExpr.getValueAsInt(), useDefAnalysis, preDominatorTree);
                 if (boundExpr != null) {
-                    label.insertBefore(EventFactory.newLoopBound(boundExpr));
+                    label.insertBefore(events.newLoopBound(boundExpr));
                     break;
                 }
             }

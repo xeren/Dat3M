@@ -34,6 +34,7 @@ public class PointerWidthVerificationTest {
 
     private static final TypeFactory types = TypeFactory.getInstance();
     private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private static final EventFactory events = EventFactory.getInstance();
 
     @Parameterized.Parameters(name = "pointer width: {0}")
     public static List<Integer> pointerWidths() {
@@ -65,9 +66,9 @@ public class PointerWidthVerificationTest {
         final Expression alignment = expressions.makeValue(8, types.getIntegerType(16));
         final Expression gep = expressions.makeGetElementPointer(types.getByteType(), address, List.of(count));
         final Alloc allocation = new Alloc(address, types.getByteType(), count, alignment, false, false);
-        final Load load = EventFactory.newLoad(value, gep);
-        final Store store = EventFactory.newStore(gep, value);
-        final Dealloc deallocation = EventFactory.newDealloc(address);
+        final Load load = events.newLoad(value, gep);
+        final Store store = events.newStore(gep, value);
+        final Dealloc deallocation = events.newDealloc(address);
         function.append(List.of(allocation, load, store, deallocation));
         final MemoryObject object = program.getMemory().allocate(8);
         final Expression initialValue = expressions.makeGetElementPointer(types.getByteType(), object, List.of(count));
@@ -86,7 +87,7 @@ public class PointerWidthVerificationTest {
     @Test
     public void rejectsWrongAllocationResultWidth() {
         final Register address = function.newRegister("address", wrongWidthType);
-        function.append(EventFactory.newAlloc(address, types.getByteType(),
+        function.append(events.newAlloc(address, types.getByteType(),
                 expressions.makeValue(1, wrongWidthType), false, false));
 
         assertRejected("Allocation result");
@@ -105,14 +106,14 @@ public class PointerWidthVerificationTest {
     @Test
     public void rejectsWrongLoadAddressWidth() {
         final Register value = function.newRegister("value", types.getByteType());
-        function.append(EventFactory.newLoad(value, expressions.makeZero(wrongWidthType)));
+        function.append(events.newLoad(value, expressions.makeZero(wrongWidthType)));
 
         assertRejected("Memory address");
     }
 
     @Test
     public void rejectsWrongStoreAddressWidth() {
-        function.append(EventFactory.newStore(expressions.makeZero(wrongWidthType),
+        function.append(events.newStore(expressions.makeZero(wrongWidthType),
                 expressions.makeValue(1, types.getByteType())));
 
         assertRejected("Memory address");
@@ -120,7 +121,7 @@ public class PointerWidthVerificationTest {
 
     @Test
     public void rejectsWrongDeallocationAddressWidth() {
-        function.append(EventFactory.newDealloc(expressions.makeZero(wrongWidthType)));
+        function.append(events.newDealloc(expressions.makeZero(wrongWidthType)));
 
         assertRejected("Memory address");
     }
@@ -128,7 +129,7 @@ public class PointerWidthVerificationTest {
     @Test
     public void rejectsWrongGepBaseInsideCast() {
         final Register address = function.newRegister("address", addressType);
-        function.append(EventFactory.newLocal(address, expressions.makeCast(wrongGep(), addressType)));
+        function.append(events.newLocal(address, expressions.makeCast(wrongGep(), addressType)));
 
         assertRejected("GEP base");
     }
@@ -158,9 +159,9 @@ public class PointerWidthVerificationTest {
     @Test
     public void rejectsWrongAddressInThread() {
         final Thread thread = new Thread("thread", function.getFunctionType(), List.of(), 1,
-                EventFactory.newThreadStart(null));
+                events.newThreadStart(null));
         program.addThread(thread);
-        thread.append(EventFactory.newStore(expressions.makeZero(wrongWidthType),
+        thread.append(events.newStore(expressions.makeZero(wrongWidthType),
                 expressions.makeValue(1, types.getByteType())));
 
         assertRejected("Memory address");
@@ -169,7 +170,7 @@ public class PointerWidthVerificationTest {
     @Test
     public void processingRejectsWrongGepBeforeLowering() throws InvalidConfigurationException {
         final Register address = function.newRegister("address", addressType);
-        function.append(EventFactory.newLocal(address, expressions.makeCast(wrongGep(), addressType)));
+        function.append(events.newLocal(address, expressions.makeCast(wrongGep(), addressType)));
         final ProcessingManager processing = ProcessingManager.fromConfig(Configuration.defaultConfiguration());
 
         final MalformedProgramException error = assertThrows(MalformedProgramException.class,

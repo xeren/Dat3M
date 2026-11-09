@@ -21,6 +21,7 @@ public class ControlFlowBuilder {
     protected final Map<String, Map<Register, String>> phiDefinitionIds = new HashMap<>();
     protected final Map<String, Expression> expressions;
     protected SourceLocation currentLocation;
+    private static final EventFactory events = EventFactory.getInstance();
 
     public ControlFlowBuilder(Map<String, Expression> expressions) {
         this.expressions = expressions;
@@ -38,7 +39,7 @@ public class ControlFlowBuilder {
         validateBeforeBuild();
         phiDefinitions.forEach((blockId, def) ->
                 def.forEach((k, v) -> {
-                    Event event = EventFactory.newLocal(k, expressions.get(v));
+                    Event event = events.newLocal(k, expressions.get(v));
                     SourceLocation loc = getPhiLocation(blockId, k);
                     if (loc != null) { event.setMetadata(loc); }
                     lastBlockEvents.get(blockId).insertBefore(event);
@@ -62,7 +63,7 @@ public class ControlFlowBuilder {
     }
 
     public Label getOrCreateLabel(String id) {
-        return blockLabels.computeIfAbsent(id, EventFactory::newLabel);
+        return blockLabels.computeIfAbsent(id, events::newLabel);
     }
 
     public void addPhiDefinition(String blockId, Register register, String expressionId) {

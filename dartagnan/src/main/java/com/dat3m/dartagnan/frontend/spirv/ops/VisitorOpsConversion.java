@@ -19,6 +19,7 @@ import java.util.Set;
 public class VisitorOpsConversion extends VisitorOps<Event> {
 
     private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private static final EventFactory events = EventFactory.getInstance();
     private final ProgramBuilder builder;
 
     public VisitorOpsConversion(ProgramBuilder builder) {
@@ -46,7 +47,7 @@ public class VisitorOpsConversion extends VisitorOps<Event> {
 
         Expression convertedExpr = expressions.makeCast(operandExpr, resultType);
         Register reg = builder.addRegister(id, typeId);
-        return builder.addEvent(EventFactory.newLocal(reg, convertedExpr));
+        return builder.addEvent(events.newLocal(reg, convertedExpr));
     }
 
     @Override
@@ -64,7 +65,7 @@ public class VisitorOpsConversion extends VisitorOps<Event> {
         }
         Expression convertedPointer = expressions.makeCast(pointer, type, false);
         Register register = builder.addRegister(id, type);
-        return builder.addEvent(EventFactory.newLocal(register, convertedPointer));
+        return builder.addEvent(events.newLocal(register, convertedPointer));
     }
 
     @Override
@@ -83,7 +84,7 @@ public class VisitorOpsConversion extends VisitorOps<Event> {
         }
         Expression pointer = expressions.makeCast(value, type, false);
         Register register = builder.addRegister(id, type);
-        return builder.addEvent(EventFactory.newLocal(register, pointer));
+        return builder.addEvent(events.newLocal(register, pointer));
     }
 
     @Override
@@ -134,7 +135,7 @@ public class VisitorOpsConversion extends VisitorOps<Event> {
         }
         Expression convertedExpr = expressions.makeCast(operandExpr, targetType, isSigned);
         Register reg = builder.addRegister(id, typeId);
-        return builder.addEvent(EventFactory.newLocal(reg, convertedExpr));
+        return builder.addEvent(events.newLocal(reg, convertedExpr));
     }
 
     @Override

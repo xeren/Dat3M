@@ -43,6 +43,7 @@ public abstract class AbstractLibrary<TSelf extends Library> implements Library 
 
     protected static final TypeFactory types = TypeFactory.getInstance();
     protected static final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    protected static final EventFactory events = EventFactory.getInstance();
 
     protected AbstractLibrary(Configuration config) throws InvalidConfigurationException {
         config.inject(this, AbstractLibrary.class);
@@ -88,10 +89,10 @@ public abstract class AbstractLibrary<TSelf extends Library> implements Library 
                     } else {
                         // NOTE: We deliberately do not use the call markers to avoid the inlined call being on the call stack.
                         // We may want to change this behaviour though.
-                        call.insertBefore(EventFactory.newStringAnnotation(
+                        call.insertBefore(events.newStringAnnotation(
                                 String.format("=== Calling inlined library function %s ===", call.getCalledFunction().getName())
                         ));
-                        call.insertAfter(EventFactory.newStringAnnotation(
+                        call.insertAfter(events.newStringAnnotation(
                                 String.format("=== Returning from inlined library function %s ===", call.getCalledFunction().getName())
                         ));
                         IRHelper.replaceWithMetadata(call, replacement);
@@ -126,7 +127,7 @@ public abstract class AbstractLibrary<TSelf extends Library> implements Library 
             final Register reg = valueCall.getResultRegister();
             final Expression zero = expressions.makeGeneralZero(reg.getType());
             logger.debug("Replaced (unsupported) call to \"{}\" by zero.", call.getCalledFunction().getName());
-            return List.of(EventFactory.newLocal(reg, zero));
+            return List.of(events.newLocal(reg, zero));
         } else {
             return List.of();
         }
@@ -134,15 +135,15 @@ public abstract class AbstractLibrary<TSelf extends Library> implements Library 
 
     protected List<Event> inlineCallAsNonDet(FunctionCall call) {
         return List.of(
-                EventFactory.newNonDetChoice(getResultRegister(call))
+                events.newNonDetChoice(getResultRegister(call))
         );
     }
 
     protected List<Event> inlineAssert(Expression condition, boolean abortOnFailure, AssertionType type, String errorMsg) {
-        final Event assertion = notToInline.contains(type) ? null : EventFactory.newAssert(condition, errorMsg);
+        final Event assertion = notToInline.contains(type) ? null : events.newAssert(condition, errorMsg);
         Event abort = null;
         if (abortOnFailure) {
-            abort = EventFactory.newAbortIf(expressions.makeNot(condition), Tag.EXCEPTIONAL_TERMINATION);
+            abort = events.newAbortIf(expressions.makeNot(condition), Tag.EXCEPTIONAL_TERMINATION);
         }
         return eventSequence(assertion, abort);
     }

@@ -33,6 +33,8 @@ public class ResolveLLVMObjectSizeCalls implements FunctionProcessor {
 
     private ResolveLLVMObjectSizeCalls() {}
 
+    private static final EventFactory events = EventFactory.getInstance();
+
     public static ResolveLLVMObjectSizeCalls fromConfig(Configuration config) {
         return new ResolveLLVMObjectSizeCalls();
     }
@@ -53,7 +55,7 @@ public class ResolveLLVMObjectSizeCalls implements FunctionProcessor {
         // TODO: We treat all pointers as unknown for now.
         final ExpressionFactory exprs = ExpressionFactory.getInstance();
         final BigInteger value = zeroIfUnknown.isOne() ? BigInteger.ZERO : BigInteger.ONE.negate();
-        final Event constAssignment = EventFactory.newLocal(
+        final Event constAssignment = events.newLocal(
                 call.getResultRegister(), exprs.makeValue(value, (IntegerType) call.getResultRegister().getType())
         );
         constAssignment.setLocalId(call.getLocalId());

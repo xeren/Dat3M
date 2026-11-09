@@ -143,7 +143,7 @@ public class VisitorLitmusVulkan extends LitmusVulkanBaseVisitor<Object> {
     public Object visitStoreInstruction(StoreInstructionContext ctx) {
         MemoryObject object = programBuilder.getOrNewVirtualMemoryObject(ctx.location().getText());
         Expression value = (Expression) ctx.value().accept(this);
-        Store store = EventFactory.newStore(object, value);
+        Store store = events.newStore(object, value);
         store.addTags(ctx.sc().content);
         if (ctx.nonpriv() != null) {
             store.addTags(Tag.Vulkan.NON_PRIVATE);
@@ -160,7 +160,7 @@ public class VisitorLitmusVulkan extends LitmusVulkanBaseVisitor<Object> {
     public Object visitLoadInstruction(LoadInstructionContext ctx) {
         Register register = (Register) ctx.register().accept(this);
         MemoryObject location = programBuilder.getOrNewVirtualMemoryObject(ctx.location().getText());
-        Load load = EventFactory.newLoad(register, location);
+        Load load = events.newLoad(register, location);
         load.addTags(ctx.sc().content);
         if (ctx.nonpriv() != null) {
             load.addTags(Tag.Vulkan.NON_PRIVATE);
@@ -254,14 +254,14 @@ public class VisitorLitmusVulkan extends LitmusVulkanBaseVisitor<Object> {
         String instanceId = ctx.constant().getText();
         Event barrier;
         if (ctx.barrierId() == null) {
-            barrier = EventFactory.newControlBarrier(name, instanceId, Tag.Vulkan.WORK_GROUP);
+            barrier = events.newControlBarrier(name, instanceId, Tag.Vulkan.WORK_GROUP);
         } else {
             Expression id = (Expression) ctx.barrierId().accept(this);
             Expression quorum = null;
             if (ctx.barrierQuorum() != null) {
                 quorum = (Expression) ctx.barrierQuorum().accept(this);
             }
-            barrier = EventFactory.newNamedBarrier(name, instanceId, Tag.Vulkan.WORK_GROUP, id, quorum);
+            barrier = events.newNamedBarrier(name, instanceId, Tag.Vulkan.WORK_GROUP, id, quorum);
         }
         barrier.addTags(Tag.Vulkan.CBAR, ctx.scope().content);
         String mo = getMemoryOrderOrDefault(ctx, null);
@@ -286,7 +286,7 @@ public class VisitorLitmusVulkan extends LitmusVulkanBaseVisitor<Object> {
         Expression lhs = (Expression) ctx.value(0).accept(this);
         Expression rhs = (Expression) ctx.value(1).accept(this);
         Expression exp = expressions.makeIntBinary(lhs, ctx.operation().op, rhs);
-        return append(EventFactory.newLocal(rd, exp), ctx);
+        return append(events.newLocal(rd, exp), ctx);
     }
 
     @Override
@@ -297,7 +297,7 @@ public class VisitorLitmusVulkan extends LitmusVulkanBaseVisitor<Object> {
     @Override
     public Object visitJumpInstruction(JumpInstructionContext ctx) {
         Label label = programBuilder.getOrCreateLabel(mainThread, ctx.Label().getText());
-        return append(EventFactory.newGoto(label), ctx);
+        return append(events.newGoto(label), ctx);
     }
 
     @Override
@@ -306,7 +306,7 @@ public class VisitorLitmusVulkan extends LitmusVulkanBaseVisitor<Object> {
         Expression lhs = (Expression) ctx.value(0).accept(this);
         Expression rhs = (Expression) ctx.value(1).accept(this);
         Expression expr = expressions.makeIntCmp(lhs, ctx.cond().op, rhs);
-        return append(EventFactory.newJump(expr, label), ctx);
+        return append(events.newJump(expr, label), ctx);
     }
 
     @Override

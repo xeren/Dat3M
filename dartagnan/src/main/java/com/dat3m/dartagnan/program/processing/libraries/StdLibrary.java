@@ -6,7 +6,6 @@ import com.dat3m.dartagnan.expression.type.IntegerType;
 import com.dat3m.dartagnan.program.Function;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.EventFactory;
 import com.dat3m.dartagnan.program.event.Tag;
 import com.dat3m.dartagnan.program.event.functions.FunctionCall;
 import org.sosy_lab.common.configuration.Configuration;
@@ -18,7 +17,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-import static com.dat3m.dartagnan.program.event.EventFactory.newDealloc;
 import static com.google.common.base.Preconditions.checkArgument;
 
 @Options
@@ -88,7 +86,7 @@ public class StdLibrary extends AbstractLibrary<StdLibrary> {
         final Type allocType = types.getByteType();
         final Expression totalSize = call.getArguments().get(0);
         return List.of(
-                EventFactory.newAlloc(resultRegister, allocType, totalSize, true, false)
+                events.newAlloc(resultRegister, allocType, totalSize, true, false)
         );
     }
 
@@ -99,7 +97,7 @@ public class StdLibrary extends AbstractLibrary<StdLibrary> {
         final Expression elementSize = call.getArguments().get(1);
         final Expression totalSize = expressions.makeMul(elementCount, elementSize);
         return List.of(
-                EventFactory.newAlloc(resultRegister, allocType, totalSize, true, true)
+                events.newAlloc(resultRegister, allocType, totalSize, true, true)
         );
     }
 
@@ -109,13 +107,13 @@ public class StdLibrary extends AbstractLibrary<StdLibrary> {
         final Expression alignment = call.getArguments().get(0);
         final Expression totalSize = call.getArguments().get(1);
         return List.of(
-                EventFactory.newAlignedAlloc(resultRegister, allocType, totalSize, alignment, true, false)
+                events.newAlignedAlloc(resultRegister, allocType, totalSize, alignment, true, false)
         );
     }
 
     private List<Event> inlineFree(FunctionCall call) {
         final Expression address = call.getArguments().get(0);
-        return List.of(newDealloc(address));
+        return List.of(events.newDealloc(address));
     }
 
     private List<Event> inlineUserAssert(FunctionCall call) {
@@ -123,7 +121,7 @@ public class StdLibrary extends AbstractLibrary<StdLibrary> {
     }
 
     private List<Event> inlineExit(FunctionCall ignored) {
-        return List.of(EventFactory.newAbort(Tag.EXCEPTIONAL_TERMINATION));
+        return List.of(events.newAbort(Tag.EXCEPTIONAL_TERMINATION));
     }
 
     private List<Event> inlineFfs(FunctionCall call) {
@@ -142,7 +140,7 @@ public class StdLibrary extends AbstractLibrary<StdLibrary> {
         final Expression count = expressions.makeAdd(cttz, expressions.makeOne(inputType));
         final Expression ite = expressions.makeITE(expressions.makeEQ(cttz, widthExpr), expressions.makeZero(inputType), count);
         final Expression cast = expressions.makeCast(ite, outputType, false);
-        final Event assignment = EventFactory.newLocal(resultReg, cast);
+        final Event assignment = events.newLocal(resultReg, cast);
         return List.of(assignment);
     }
 

@@ -3,7 +3,6 @@ package com.dat3m.dartagnan.program.processing.compilation;
 import com.dat3m.dartagnan.expression.Expression;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.Tag;
-import com.dat3m.dartagnan.program.event.arch.aarch64.AArch64;
 import com.dat3m.dartagnan.program.event.lang.catomic.*;
 import com.dat3m.dartagnan.program.event.arch.StoreExclusive;
 import com.dat3m.dartagnan.program.event.core.*;
@@ -15,17 +14,15 @@ import static com.dat3m.dartagnan.program.event.EventFactory.*;
 
 class VisitorArm7 extends VisitorBase {
 
-    public final AArch64 events = AArch64.newInstance();
-
     protected VisitorArm7() {}
 
     @Override
     public List<Event> visitStoreExclusive(StoreExclusive e) {
-        Store store = newRMWStoreExclusiveWithMo(e.getAddress(), e.getMemValue(), false, false, e.getMo());
+        Store store = events.newRMWStoreExclusiveWithMo(e.getAddress(), e.getMemValue(), false, false, e.getMo());
 
         return eventSequence(
                 store,
-                newExecutionStatus(e.getResultRegister(), store)
+                events.newExecutionStatus(e.getResultRegister(), store)
         );
     }
 
@@ -35,7 +32,7 @@ class VisitorArm7 extends VisitorBase {
     @Override
     public List<Event> visitAtomicLoad(AtomicLoad e) {
         return eventSequence(
-                newLoad(e.getResultRegister(), e.getAddress()),
+                events.newLoad(e.getResultRegister(), e.getAddress()),
                 isAtomicAcquire(e.getMo()) ? newDmbIsh() : null
         );
     }
@@ -44,29 +41,29 @@ class VisitorArm7 extends VisitorBase {
     public List<Event> visitAtomicStore(AtomicStore e) {
         return eventSequence(
                 isAtomicRelease(e.getMo()) ? newDmbIsh() : null,
-                newStore(e.getAddress(), e.getMemValue())
+                events.newStore(e.getAddress(), e.getMemValue())
         );
     }
 
     @Override
     public List<Event> visitAtomicFetchOp(AtomicFetchOp e) {
         final Expression value = expressions.makeIntBinary(e.getResultRegister(), e.getOperator(), e.getOperand());
-        final Load load = newRMWLoad(e.getResultRegister(), e.getAddress());
+        final Load load = events.newRMWLoad(e.getResultRegister(), e.getAddress());
         return eventSequence(
                 load,
                 isAtomicAcquire(e.getMo()) || isAtomicRelease(e.getMo()) ? newDmbIsh() : null,
-                newRMWStore(load, e.getAddress(), value)
+                events.newRMWStore(load, e.getAddress(), value)
         );
     }
 
     @Override
     public List<Event> visitLKMMFetchOp(LKMMFetchOp e) {
         final Expression value = expressions.makeIntBinary(e.getResultRegister(), e.getOperator(), e.getOperand());
-        final Load load = newRMWLoad(e.getResultRegister(), e.getAddress());
+        final Load load = events.newRMWLoad(e.getResultRegister(), e.getAddress());
         return eventSequence(
                 load,
                 isAtomicAcquire(e.getMo()) || isAtomicRelease(e.getMo()) ? newDmbIsh() : null,
-                newRMWStore(load, e.getAddress(), value)
+                events.newRMWStore(load, e.getAddress(), value)
         );
     }
 
@@ -87,6 +84,6 @@ class VisitorArm7 extends VisitorBase {
     }
 
     private Event newDmbIsh() {
-        return events.newBarrier("DMB", "ISH");
+        return events.newGenericVisibleEvent("DMB.ISH", "DMB", "DMB.ISH");
     }
 }

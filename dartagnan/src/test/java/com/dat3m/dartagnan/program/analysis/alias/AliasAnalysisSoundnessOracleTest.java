@@ -38,6 +38,7 @@ import static org.junit.Assert.assertTrue;
 public class AliasAnalysisSoundnessOracleTest {
 
     private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private static final EventFactory events = EventFactory.getInstance();
 
     @Parameterized.Parameters(name = "{0}")
     public static Collection<Alias> methods() {
@@ -130,8 +131,8 @@ public class AliasAnalysisSoundnessOracleTest {
             Set<PointerValue> values, String description) {
         IntegerType type = builder.getArchType();
         Register pointer = builder.getOrNewRegister(0, "pointer" + nextId(), type);
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLocal(pointer, address));
-        Store store = EventFactory.newStore(pointer, expressions.makeZero(type));
+        builder.addChildWithoutSourceLoc(0, events.newLocal(pointer, address));
+        Store store = events.newStore(pointer, expressions.makeZero(type));
         builder.addChildWithoutSourceLoc(0, store);
         return new AccessCase(store, values, description);
     }
@@ -139,7 +140,7 @@ public class AliasAnalysisSoundnessOracleTest {
     private Expression makeChoice(ProgramBuilder builder, Expression first, Expression second) {
         IntegerType type = builder.getArchType();
         Register condition = builder.getOrNewRegister(0, "condition" + nextId(), type);
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLocal(condition, builder.newConstant(type)));
+        builder.addChildWithoutSourceLoc(0, events.newLocal(condition, builder.newConstant(type)));
         return expressions.makeITE(expressions.makeEQ(condition, expressions.makeZero(type)), first, second);
     }
 

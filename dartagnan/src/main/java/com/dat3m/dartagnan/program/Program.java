@@ -32,6 +32,7 @@ public class Program extends MetadataCarrierBase<Program> {
 
     private static final TypeFactory types = TypeFactory.getInstance();
     private static final FunctionType initThreadType = types.getFunctionType(types.getVoidType(), List.of());
+    private static final EventFactory events = EventFactory.getInstance();
 
     public enum SourceLanguage { LITMUS, LLVM, SPV }
 
@@ -273,13 +274,13 @@ public class Program extends MetadataCarrierBase<Program> {
         // NOTE: We use different names to avoid symmetry detection treating all inits as symmetric.
         final String threadName = "Init_" + nextThreadId;
         final Thread thread = new Thread(threadName, initThreadType, paramNames, nextThreadId,
-                EventFactory.newThreadStart(null));
-        final Event init = EventFactory.newInit(object, offset);
+                events.newThreadStart(null));
+        final Event init = events.newInit(object, offset);
         thread.append(init);
         if (isC11) {
             init.addTags(Tag.C11.NONATOMIC);
         }
-        thread.append(EventFactory.newLabel("END_OF_T" + thread.getId()));
+        thread.append(events.newLabel("END_OF_T" + thread.getId()));
         addThread(thread);
     }
 

@@ -7,7 +7,6 @@ import com.dat3m.dartagnan.expression.type.IntegerType;
 import com.dat3m.dartagnan.program.Function;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.EventFactory;
 import com.dat3m.dartagnan.program.event.functions.FunctionCall;
 import com.dat3m.dartagnan.program.event.functions.ValueFunctionCall;
 import com.dat3m.dartagnan.program.memory.MemoryObject;
@@ -130,7 +129,7 @@ public class LLVMLibrary extends AbstractLibrary<LLVMLibrary> {
         checkArgument(input.getType().equals(type),
                 "Return type %s of \"llvm.ctlz\" must match argument type %s.", type, input.getType());
         final Expression resultExpression = expressions.makeCTLZ(input);
-        final Event assignment = EventFactory.newLocal(resultReg, resultExpression);
+        final Event assignment = events.newLocal(resultReg, resultExpression);
         return List.of(assignment);
     }
 
@@ -147,7 +146,7 @@ public class LLVMLibrary extends AbstractLibrary<LLVMLibrary> {
         checkArgument(input.getType().equals(type),
                 "Return type %s of \"llvm.cttz\" must match argument type %s.", type, input.getType());
         final Expression resultExpression = expressions.makeCTTZ(input);
-        final Event assignment = EventFactory.newLocal(resultReg, resultExpression);
+        final Event assignment = events.newLocal(resultReg, resultExpression);
         return List.of(assignment);
     }
 
@@ -160,7 +159,7 @@ public class LLVMLibrary extends AbstractLibrary<LLVMLibrary> {
         final Expression increment = expressions.makeAdd(resultReg, expressions.makeOne(type));
 
         final List<Event> replacement = new ArrayList<>();
-        replacement.add(EventFactory.newLocal(resultReg, expressions.makeZero(type)));
+        replacement.add(events.newLocal(resultReg, expressions.makeZero(type)));
         //TODO: There might be more efficient ways to count bits set, though it is not clear
         // if they are also more friendly for the SMT backend.
         for (int i = type.getBitWidth() - 1; i >= 0; i--) {
@@ -170,7 +169,7 @@ public class LLVMLibrary extends AbstractLibrary<LLVMLibrary> {
             final Expression testBit = expressions.makeEQ(expressions.makeIntAnd(input, testMask), testMask);
 
             replacement.add(
-                    EventFactory.newLocal(resultReg, expressions.makeITE(testBit, increment, resultReg))
+                    events.newLocal(resultReg, expressions.makeITE(testBit, increment, resultReg))
             );
         }
 
@@ -188,11 +187,11 @@ public class LLVMLibrary extends AbstractLibrary<LLVMLibrary> {
         final boolean isFloat = name.startsWith("llvm.fmax.") || name.startsWith("llvm.fmin.") || name.startsWith("llvm.maxnum.") || name.startsWith("llvm.minnum.");
         if (isFloat) {
             final Expression result = isMax ? expressions.makeFMax(left, right) : expressions.makeFMin(left, right);
-            return List.of(EventFactory.newLocal(call.getResultRegister(), result));
+            return List.of(events.newLocal(call.getResultRegister(), result));
         }
         final Expression isLess = expressions.makeLT(left, right, signed);
         final Expression result = expressions.makeITE(isLess, isMax ? right : left, isMax ? left : right);
-        return List.of(EventFactory.newLocal(call.getResultRegister(), result));
+        return List.of(events.newLocal(call.getResultRegister(), result));
     }
 
     private List<Event> inlineLLVMFAbs(ValueFunctionCall call) {
@@ -200,7 +199,7 @@ public class LLVMLibrary extends AbstractLibrary<LLVMLibrary> {
         final List<Expression> arguments = call.getArguments();
         final Expression operand = arguments.get(0);
 
-        return List.of(EventFactory.newLocal(call.getResultRegister(), expressions.makeFAbs(operand)));
+        return List.of(events.newLocal(call.getResultRegister(), expressions.makeFAbs(operand)));
     }
 
     private List<Event> inlineLLVMSaturatedSub(ValueFunctionCall call) {
@@ -236,14 +235,14 @@ public class LLVMLibrary extends AbstractLibrary<LLVMLibrary> {
             );
 
             return List.of(
-                    EventFactory.newLocal(resultReg, expressions.makeITE(leftIsNegative, min, max)),
-                    EventFactory.newLocal(resultReg, expressions.makeITE(noOverflow, expressions.makeSub(x, y), resultReg))
+                    events.newLocal(resultReg, expressions.makeITE(leftIsNegative, min, max)),
+                    events.newLocal(resultReg, expressions.makeITE(noOverflow, expressions.makeSub(x, y), resultReg))
             );
         } else {
             final Expression noUnderflow = expressions.makeGT(x, y, false);
             final Expression zero = expressions.makeZero(type);
             return List.of(
-                    EventFactory.newLocal(resultReg, expressions.makeITE(noUnderflow, expressions.makeSub(x, y), zero))
+                    events.newLocal(resultReg, expressions.makeITE(noUnderflow, expressions.makeSub(x, y), zero))
             );
         }
     }
@@ -279,8 +278,8 @@ public class LLVMLibrary extends AbstractLibrary<LLVMLibrary> {
         );
 
         return List.of(
-                EventFactory.newLocal(resultReg, expressions.makeITE(leftIsNegative, min, max)),
-                EventFactory.newLocal(resultReg, expressions.makeITE(noOverflow, expressions.makeAdd(x, y), resultReg))
+                events.newLocal(resultReg, expressions.makeITE(leftIsNegative, min, max)),
+                events.newLocal(resultReg, expressions.makeITE(noOverflow, expressions.makeAdd(x, y), resultReg))
         );
     }
 
@@ -329,7 +328,7 @@ public class LLVMLibrary extends AbstractLibrary<LLVMLibrary> {
         );
         // Reuse the parsed result type: its size follows the data layout, which may differ from the natural layout.
         return List.of(
-                EventFactory.newLocal(resultReg, expressions.makeConstruct(resultReg.getType(), List.of(result, flag)))
+                events.newLocal(resultReg, expressions.makeConstruct(resultReg.getType(), List.of(result, flag)))
         );
     }
 
@@ -344,14 +343,14 @@ public class LLVMLibrary extends AbstractLibrary<LLVMLibrary> {
 
     private List<Event> inlineLLVMAssume(FunctionCall call) {
         //see https://llvm.org/docs/LangRef.html#llvm-assume-intrinsic
-        return List.of(EventFactory.newAssume(expressions.makeBooleanCast(call.getArguments().get(0))));
+        return List.of(events.newAssume(expressions.makeBooleanCast(call.getArguments().get(0))));
     }
 
     private List<Event> inlineLLVMExpect(FunctionCall call) {
         assert call instanceof ValueFunctionCall;
         final Register retReg = ((ValueFunctionCall) call).getResultRegister();
         final Expression value = call.getArguments().get(0);
-        return List.of(EventFactory.newLocal(retReg, value));
+        return List.of(events.newLocal(retReg, value));
     }
 
     private List<Event> inlineLLVMThreadLocal(FunctionCall call) {
@@ -359,7 +358,7 @@ public class LLVMLibrary extends AbstractLibrary<LLVMLibrary> {
         final Expression exp = call.getArguments().get(0);
         checkArgument(exp instanceof MemoryObject object && object.isThreadLocal(), "Calling thread-local intrinsic on a non-thread-local object \"%s\"", call);
         return List.of(
-                EventFactory.newLocal(resultReg, exp)
+                events.newLocal(resultReg, exp)
         );
     }
 

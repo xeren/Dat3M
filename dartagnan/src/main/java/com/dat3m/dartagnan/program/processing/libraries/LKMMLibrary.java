@@ -94,7 +94,7 @@ public class LKMMLibrary extends AbstractLibrary<LKMMLibrary> {
                 final String mo = toLKMMMemoryOrder(p2);
                 final Register dummy = call.getFunction().newUniqueRegister("__lkmm_temp", bytes);
                 result.add(events.newLoad(dummy, p0, mo));
-                result.add(EventFactory.newLocal(reg, expressions.makeCast(dummy, reg.getType())));
+                result.add(events.newLocal(reg, expressions.makeCast(dummy, reg.getType())));
             }
             case "__LKMM_store" -> {
                 checkArguments(4, call);
@@ -110,7 +110,7 @@ public class LKMMLibrary extends AbstractLibrary<LKMMLibrary> {
                 final Register dummy = call.getFunction().newUniqueRegister("__lkmm_temp", bytes);
                 final Expression value = expressions.makeCast(p2, bytes);
                 result.add(events.newRMWExchange(p0, dummy, value, mo));
-                result.add(EventFactory.newLocal(reg, expressions.makeCast(dummy, reg.getType())));
+                result.add(events.newLocal(reg, expressions.makeCast(dummy, reg.getType())));
             }
             case "__LKMM_cmpxchg" -> {
                 checkArguments(6, call);
@@ -120,7 +120,7 @@ public class LKMMLibrary extends AbstractLibrary<LKMMLibrary> {
                 final Expression expectation = expressions.makeCast(p2, bytes);
                 final Expression value = expressions.makeCast(p3, bytes);
                 result.add(events.newRMWCompareExchange(p0, dummy, expectation, value, mo));
-                result.add(EventFactory.newLocal(reg, expressions.makeCast(dummy, reg.getType())));
+                result.add(events.newLocal(reg, expressions.makeCast(dummy, reg.getType())));
             }
             case "__LKMM_atomic_fetch_op" -> {
                 checkArguments(5, call);
@@ -130,7 +130,7 @@ public class LKMMLibrary extends AbstractLibrary<LKMMLibrary> {
                 final Register dummy = call.getFunction().newUniqueRegister("__lkmm_temp", bytes);
                 final Expression value = expressions.makeCast(p2, bytes);
                 result.add(events.newRMWFetchOp(p0, dummy, value, op, mo));
-                result.add(EventFactory.newLocal(reg, expressions.makeCast(dummy, reg.getType())));
+                result.add(events.newLocal(reg, expressions.makeCast(dummy, reg.getType())));
             }
             case "__LKMM_atomic_op_return" -> {
                 checkArguments(5, call);
@@ -140,7 +140,7 @@ public class LKMMLibrary extends AbstractLibrary<LKMMLibrary> {
                 final Register dummy = call.getFunction().newUniqueRegister("__lkmm_temp", bytes);
                 final Expression value = expressions.makeCast(p2, bytes);
                 result.add(events.newRMWOpReturn(p0, dummy, value, op, mo));
-                result.add(EventFactory.newLocal(reg, expressions.makeCast(dummy, reg.getType())));
+                result.add(events.newLocal(reg, expressions.makeCast(dummy, reg.getType())));
             }
             case "__LKMM_atomic_op" -> {
                 checkArguments(4, call);

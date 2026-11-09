@@ -42,6 +42,7 @@ public final class Tearing implements ProgramProcessor {
 
     private static final TypeFactory types = TypeFactory.getInstance();
     private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private static final EventFactory events = EventFactory.getInstance();
 
     private final Configuration configuration;
 
@@ -199,7 +200,7 @@ public final class Tearing implements ProgramProcessor {
                     types.getMemoryType(8 * (end - start))));
         }
         assert bytes == smallerRegisters.stream().mapToInt(t -> types.getMemorySizeInBytes(t.getType())).sum();
-        final InstructionBoundary begin = load.hasTag(Tag.NO_INSTRUCTION) ? null : EventFactory.newInstructionBegin();
+        final InstructionBoundary begin = load.hasTag(Tag.NO_INSTRUCTION) ? null : events.newInstructionBegin();
         if (begin != null) {
             replacement.add(begin);
         }
@@ -215,11 +216,11 @@ public final class Tearing implements ProgramProcessor {
             replacement.add(byteLoad);
         }
         if (begin != null) {
-            final Event end = EventFactory.newInstructionEnd(begin);
+            final Event end = events.newInstructionEnd(begin);
             replacement.add(end);
         }
         final Expression combination = expressions.makeMemoryConcat(smallerRegisters);
-        final Event computeResult = EventFactory.newLocal(load.getResultRegister(), expressions.makeFromMemoryCast(combination, load.getAccessType()));
+        final Event computeResult = events.newLocal(load.getResultRegister(), expressions.makeFromMemoryCast(combination, load.getAccessType()));
         replacement.add(computeResult);
         return replacement;
     }
@@ -235,7 +236,7 @@ public final class Tearing implements ProgramProcessor {
         final Register valueRegister = toRegister(store.getMemValue(), function, replacement);
         final List<Load> loads = store instanceof RMWStore st ? map.get(st.getLoadEvent()).stream()
                 .filter(Load.class::isInstance).map(Load.class::cast).toList() : null;
-        final InstructionBoundary begin = store.hasTag(Tag.NO_INSTRUCTION) ? null : EventFactory.newInstructionBegin();
+        final InstructionBoundary begin = store.hasTag(Tag.NO_INSTRUCTION) ? null : events.newInstructionBegin();
         if (begin != null) {
             replacement.add(begin);
         }
@@ -258,7 +259,7 @@ public final class Tearing implements ProgramProcessor {
             replacement.add(byteStore);
         }
         if (begin != null) {
-            final Event end = EventFactory.newInstructionEnd(begin);
+            final Event end = events.newInstructionEnd(begin);
             replacement.add(end);
         }
         return replacement;
@@ -282,7 +283,7 @@ public final class Tearing implements ProgramProcessor {
             return r;
         }
         final Register r = newRegister(function, expression.getType());
-        final Event e = EventFactory.newLocal(r, expression);
+        final Event e = events.newLocal(r, expression);
         replacement.add(e);
         return r;
     }

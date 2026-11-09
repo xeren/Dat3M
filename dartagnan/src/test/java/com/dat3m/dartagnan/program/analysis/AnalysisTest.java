@@ -47,7 +47,6 @@ import java.util.List;
 import static com.dat3m.dartagnan.configuration.Alias.*;
 import static com.dat3m.dartagnan.configuration.OptionNames.*;
 import static com.dat3m.dartagnan.configuration.Property.PROGRAM_SPEC;
-import static com.dat3m.dartagnan.program.event.EventFactory.*;
 import static com.dat3m.dartagnan.test.ResourceHelper.getRootPath;
 import static com.dat3m.dartagnan.test.ResourceHelper.getTestResourcePath;
 import static com.dat3m.dartagnan.test.TestHelper.parseProgram;
@@ -66,14 +65,15 @@ public class AnalysisTest {
 
     private static final TypeFactory types = TypeFactory.getInstance();
     private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private static final EventFactory events = EventFactory.getInstance();
 
     @Test
     public void branchEquivalenceIsSymmetricOnUnreachableCode() throws InvalidConfigurationException {
         final ProgramBuilder b = ProgramBuilder.forLanguage(SourceLanguage.LITMUS);
         b.newThread(0);
         final Label skip = b.getOrCreateLabel(0, "skip");
-        b.addChildWithoutSourceLoc(0, newGoto(skip));
-        b.addChildWithoutSourceLoc(0, newGoto(skip)); // unreachable
+        b.addChildWithoutSourceLoc(0, events.newGoto(skip));
+        b.addChildWithoutSourceLoc(0, events.newGoto(skip)); // unreachable
         b.addChildWithoutSourceLoc(0, skip);
 
         final Configuration config = Configuration.defaultConfiguration();
@@ -139,22 +139,22 @@ public class AnalysisTest {
         Register r1 = b.getOrNewRegister(0, "r1");
         Register r2 = b.getOrNewRegister(0, "r2");
         Label alt = b.getOrCreateLabel(0, "alt");
-        b.addChildWithoutSourceLoc(0, newJump(b.newConstant(types.getBooleanType()), alt));
-        Local e0 = newLocal(r0, value(1));
+        b.addChildWithoutSourceLoc(0, events.newJump(b.newConstant(types.getBooleanType()), alt));
+        Local e0 = events.newLocal(r0, value(1));
         b.addChildWithoutSourceLoc(0, e0);
-        Local e1 = newLocal(r1, r0);
+        Local e1 = events.newLocal(r1, r0);
         b.addChildWithoutSourceLoc(0, e1);
         Label join = b.getOrCreateLabel(0, "join");
-        b.addChildWithoutSourceLoc(0, newGoto(join));
+        b.addChildWithoutSourceLoc(0, events.newGoto(join));
         b.addChildWithoutSourceLoc(0, alt);
-        Local e2 = newLocal(r1, value(2));
+        Local e2 = events.newLocal(r1, value(2));
         b.addChildWithoutSourceLoc(0, e2);
         b.addChildWithoutSourceLoc(0, join);
-        Local e3 = newLocal(r2, r0);
+        Local e3 = events.newLocal(r2, r0);
         b.addChildWithoutSourceLoc(0, e3);
-        Local e4 = newLocal(r2, r1);
+        Local e4 = events.newLocal(r2, r1);
         b.addChildWithoutSourceLoc(0, e4);
-        Local e5 = newLocal(r0, r2);
+        Local e5 = events.newLocal(r0, r2);
         b.addChildWithoutSourceLoc(0, e5);
 
         Program program = b.build();
@@ -199,67 +199,67 @@ public class AnalysisTest {
         Register r3 = b.getOrNewRegister(0, "r3");
         //  if * {
         Label skip0 = b.getOrCreateLabel(0, "skip0");
-        b.addChildWithoutSourceLoc(0, newJump(b.newConstant(types.getBooleanType()), skip0));
+        b.addChildWithoutSourceLoc(0, events.newJump(b.newConstant(types.getBooleanType()), skip0));
         //      r0 = r0
-        Local r00 = newLocal(r0, r0);
+        Local r00 = events.newLocal(r0, r0);
         b.addChildWithoutSourceLoc(0, r00);
         //  }
         b.addChildWithoutSourceLoc(0, skip0);
         //  r1 = r0
-        Local r10 = newLocal(r1, r0);
+        Local r10 = events.newLocal(r1, r0);
         b.addChildWithoutSourceLoc(0, r10);
         //  r2 = r0
-        Local r20 = newLocal(r2, r0);
+        Local r20 = events.newLocal(r2, r0);
         b.addChildWithoutSourceLoc(0, r20);
         //  r3 = 0
-        Local r30 = newLocal(r3, expressions.makeZero(b.getArchType()));
+        Local r30 = events.newLocal(r3, expressions.makeZero(b.getArchType()));
         b.addChildWithoutSourceLoc(0, r30);
         //  do {
         Label begin = b.getOrCreateLabel(0, "begin");
         b.addChildWithoutSourceLoc(0, begin);
         //      if * {
         Label skip1 = b.getOrCreateLabel(0, "skip1");
-        b.addChildWithoutSourceLoc(0, newJump(b.newConstant(types.getBooleanType()), skip1));
+        b.addChildWithoutSourceLoc(0, events.newJump(b.newConstant(types.getBooleanType()), skip1));
         //          r0 = r1
-        Local r01 = newLocal(r0, r1);
+        Local r01 = events.newLocal(r0, r1);
         b.addChildWithoutSourceLoc(0, r01);
         //          r1 = r1
-        Local r11 = newLocal(r1, r1);
+        Local r11 = events.newLocal(r1, r1);
         b.addChildWithoutSourceLoc(0, r11);
         //          r2 = r1
-        Local r21 = newLocal(r2, r1);
+        Local r21 = events.newLocal(r2, r1);
         b.addChildWithoutSourceLoc(0, r21);
         //      }
         b.addChildWithoutSourceLoc(0, skip1);
         //      r3 = r1
-        Local r31 = newLocal(r3, r1);
+        Local r31 = events.newLocal(r3, r1);
         b.addChildWithoutSourceLoc(0, r31);
         //  } while *
-        b.addChildWithoutSourceLoc(0, newJump(b.newConstant(types.getBooleanType()), begin));
+        b.addChildWithoutSourceLoc(0, events.newJump(b.newConstant(types.getBooleanType()), begin));
         //  if * {
         Label skip2 = b.getOrCreateLabel(0, "skip2");
-        b.addChildWithoutSourceLoc(0, newJump(b.newConstant(types.getBooleanType()), skip2));
+        b.addChildWithoutSourceLoc(0, events.newJump(b.newConstant(types.getBooleanType()), skip2));
         //      r0 = r2
-        Local r02 = newLocal(r0, r2);
+        Local r02 = events.newLocal(r0, r2);
         b.addChildWithoutSourceLoc(0, r02);
         //      r1 = r2
-        Local r12 = newLocal(r1, r2);
+        Local r12 = events.newLocal(r1, r2);
         b.addChildWithoutSourceLoc(0, r12);
         //  }
         b.addChildWithoutSourceLoc(0, skip2);
         //  r2 = r2
-        Local r22 = newLocal(r2, r2);
+        Local r22 = events.newLocal(r2, r2);
         b.addChildWithoutSourceLoc(0, r22);
         //  if * {
         Label skip3 = b.getOrCreateLabel(0, "skip3");
-        b.addChildWithoutSourceLoc(0, newJump(b.newConstant(types.getBooleanType()), skip3));
+        b.addChildWithoutSourceLoc(0, events.newJump(b.newConstant(types.getBooleanType()), skip3));
         //      r3 = r2
-        Local r32 = newLocal(r3, r2);
+        Local r32 = events.newLocal(r3, r2);
         b.addChildWithoutSourceLoc(0, r32);
         //  }
         b.addChildWithoutSourceLoc(0, skip3);
         //  return (r0 + r1) ^ (r2 | r3)
-        Return ret = newFunctionReturn(
+        Return ret = events.newFunctionReturn(
                 expressions.makeIntXor(expressions.makeAdd(r0, r1), expressions.makeIntOr(r2, r3)));
         b.addChildWithoutSourceLoc(0, ret);
 
@@ -332,7 +332,7 @@ public class AnalysisTest {
         b.newThread(0);
         Register r0 = b.getOrNewRegister(0, "r0");
         //In C11, this is well-defined: ((uint64_t*) ((uintptr_t) x * 1))
-        b.addChildWithoutSourceLoc(0, newLocal(r0, mult(x, 1)));
+        b.addChildWithoutSourceLoc(0, events.newLocal(r0, mult(x, 1)));
         Store e0 = newStore(r0);
         b.addChildWithoutSourceLoc(0, e0);
         Store e1 = newStore(plus(r0, 8));
@@ -425,9 +425,9 @@ public class AnalysisTest {
 
         b.newThread(0);
         Register r0 = b.getOrNewRegister(0, "r0");
-        b.addChildWithoutSourceLoc(0, newLocal(r0, b.newConstant(type)));
+        b.addChildWithoutSourceLoc(0, events.newLocal(r0, b.newConstant(type)));
         Label l0 = b.getOrCreateLabel(0,"l0");
-        b.addChildWithoutSourceLoc(0, newJump(expressions.makeOr(
+        b.addChildWithoutSourceLoc(0, events.newJump(expressions.makeOr(
                 expressions.makeGT(r0, expressions.makeOne(type), true),
                 expressions.makeLT(r0, expressions.makeZero(type), true)), l0));
         Store e0 = newStore(x);
@@ -437,10 +437,8 @@ public class AnalysisTest {
         Store e2 = newStore(plus(x, 16));
         b.addChildWithoutSourceLoc(0, e2);
         Register r1 = b.getOrNewRegister(0, "r1");
-        b.addChildWithoutSourceLoc(0, newLocal(r1, expressions.makeZero(type)));
-        Store e3 = newStore(expressions.makeAdd(
-                expressions.makeAdd(x, mult(r0, 16)),
-                mult(r1, 32)));
+        b.addChildWithoutSourceLoc(0, events.newLocal(r1, expressions.makeZero(type)));
+        Store e3 = newStore(expressions.makeAdd(expressions.makeAdd(x, mult(r0, 16)), mult(r1, 32)));
         b.addChildWithoutSourceLoc(0, e3);
         b.addChildWithoutSourceLoc(0, l0);
 
@@ -528,8 +526,8 @@ public class AnalysisTest {
 
         b.newThread(0);
         Register r0 = b.getOrNewRegister(0, "r0");
-        b.addChildWithoutSourceLoc(0, newLocal(r0, mult(x, 0)));
-        b.addChildWithoutSourceLoc(0, newLocal(r0, y));
+        b.addChildWithoutSourceLoc(0, events.newLocal(r0, mult(x, 0)));
+        b.addChildWithoutSourceLoc(0, events.newLocal(r0, y));
         Store e0 = newStore(r0);
         b.addChildWithoutSourceLoc(0, e0);
         Store e1 = newStore(x);
@@ -577,10 +575,10 @@ public class AnalysisTest {
 
         b.newThread(0);
         Register r0 = b.getOrNewRegister(0, "r0");
-        b.addChildWithoutSourceLoc(0, newLocal(r0, y));
+        b.addChildWithoutSourceLoc(0, events.newLocal(r0, y));
         Store e0 = newStore(r0);
         b.addChildWithoutSourceLoc(0, e0);
-        b.addChildWithoutSourceLoc(0, newLocal(r0, mult(x, 0)));
+        b.addChildWithoutSourceLoc(0, events.newLocal(r0, mult(x, 0)));
         Store e1 = newStore(x);
         b.addChildWithoutSourceLoc(0, e1);
         Store e2 = newStore(y);
@@ -647,8 +645,8 @@ public class AnalysisTest {
         Register r2 = b.getOrNewRegister(0, "r2");
         Load e0 = newLoad(r0, y); // reads x
         b.addChildWithoutSourceLoc(0, e0);
-        Label l0 = newLabel("l0");
-        b.addChildWithoutSourceLoc(0, newJump(expressions.makeEQ(r0, x), l0));
+        Label l0 = events.newLabel("l0");
+        b.addChildWithoutSourceLoc(0, events.newJump(expressions.makeEQ(r0, x), l0));
         Load e1 = newLoad(r0, x); // reads y
         b.addChildWithoutSourceLoc(0, e1);
         b.addChildWithoutSourceLoc(0, l0);
@@ -672,7 +670,7 @@ public class AnalysisTest {
     }
 
     private Load newLoad(Register value, Expression address) {
-        return EventFactory.newLoad(value, address);
+        return events.newLoad(value, address);
     }
 
     private Store newStore(Expression address) {
@@ -680,7 +678,7 @@ public class AnalysisTest {
     }
 
     private Store newStore(Expression address, Expression value) {
-        return EventFactory.newStore(address, value);
+        return events.newStore(address, value);
     }
 
     private Expression value(long v) {
@@ -848,9 +846,9 @@ public class AnalysisTest {
         IntegerType u32 = types.getIntegerType(32);
         IntegerType u64 = types.getIntegerType(64);
         Register r64 = b.getOrNewRegister(0, "r64", u64);
-        b.addChildWithoutSourceLoc(0, newRMWLoadExclusive(r64, x));
-        b.addChildWithoutSourceLoc(0, newRMWStoreExclusive(x, expressions.makeValue(0, u64), true, false));
-        b.addChildWithoutSourceLoc(1, newStore(x, expressions.makeValue(0, u32)));
+        b.addChildWithoutSourceLoc(0, events.newRMWLoadExclusive(r64, x));
+        b.addChildWithoutSourceLoc(0, events.newRMWStoreExclusive(x, expressions.makeValue(0, u64), true, false));
+        b.addChildWithoutSourceLoc(1, events.newStore(x, expressions.makeValue(0, u32)));
 
         Program program = b.build();
         Wmm wmm = new Wmm();

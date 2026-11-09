@@ -17,7 +17,6 @@ import com.dat3m.dartagnan.program.Function;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.EventFactory;
-import com.dat3m.dartagnan.program.event.EventFactory;
 import com.dat3m.dartagnan.program.event.core.Label;
 import com.dat3m.dartagnan.program.event.core.Local;
 
@@ -99,7 +98,7 @@ public class VisitorAsmRISCV extends AsmRISCVBaseVisitor<Object> {
         Register register = (Register) ctx.register().accept(this);
         expectedType = register.getType();
         Expression value = (Expression) ctx.value().accept(this);
-        asmInstructions.add(EventFactory.newLocal(register, value));
+        asmInstructions.add(events.newLocal(register, value));
         return null;
     }
 
@@ -125,7 +124,7 @@ public class VisitorAsmRISCV extends AsmRISCVBaseVisitor<Object> {
         Register leftRegister = (Register) ctx.register(1).accept(this);
         Register rightRegister = (Register) ctx.register(2).accept(this);
         Expression exp = expressions.makeAdd(leftRegister, rightRegister);
-        asmInstructions.add(EventFactory.newLocal(resultRegister, exp));
+        asmInstructions.add(events.newLocal(resultRegister, exp));
         return null;
     }
 
@@ -135,7 +134,7 @@ public class VisitorAsmRISCV extends AsmRISCVBaseVisitor<Object> {
         Register leftRegister = (Register) ctx.register(1).accept(this);
         Register rightRegister = (Register) ctx.register(2).accept(this);
         Expression exp = expressions.makeSub(leftRegister, rightRegister);
-        asmInstructions.add(EventFactory.newLocal(resultRegister, exp));
+        asmInstructions.add(events.newLocal(resultRegister, exp));
         return null;
     }
 
@@ -173,7 +172,7 @@ public class VisitorAsmRISCV extends AsmRISCVBaseVisitor<Object> {
     public Object visitMove(MoveContext ctx) {
         Register toRegister = (Register) ctx.register(0).accept(this);
         Register fromRegister = (Register) ctx.register(1).accept(this);
-        asmInstructions.add(EventFactory.newLocal(toRegister, fromRegister));
+        asmInstructions.add(events.newLocal(toRegister, fromRegister));
         return null;
     }
 
@@ -183,7 +182,7 @@ public class VisitorAsmRISCV extends AsmRISCVBaseVisitor<Object> {
         Register firstRegister = (Register) ctx.register(0).accept(this);
         Register secondRegister = (Register) ctx.register(1).accept(this);
         Expression expr = expressions.makeIntCmp(firstRegister, IntCmpOp.NEQ, secondRegister);
-        asmInstructions.add(EventFactory.newJump(expr, label));
+        asmInstructions.add(events.newJump(expr, label));
         return null;
     }
 
@@ -193,7 +192,7 @@ public class VisitorAsmRISCV extends AsmRISCVBaseVisitor<Object> {
         Register firstRegister = (Register) ctx.register().accept(this);
         Expression zero = expressions.makeZero((IntegerType) firstRegister.getType());
         Expression expr = expressions.makeIntCmp(firstRegister, IntCmpOp.NEQ, zero);
-        asmInstructions.add(EventFactory.newJump(expr, label));
+        asmInstructions.add(events.newJump(expr, label));
         return null;
     }
 
@@ -212,7 +211,7 @@ public class VisitorAsmRISCV extends AsmRISCVBaseVisitor<Object> {
         Register sourceRegister = (Register) ctx.register(1).accept(this);
         Expression zero = expressions.makeZero((IntegerType) sourceRegister.getType());
         Expression exp = expressions.makeSub(zero, sourceRegister);
-        asmInstructions.add(EventFactory.newLocal(destinationRegister,exp));
+        asmInstructions.add(events.newLocal(destinationRegister,exp));
         return null;
     }
 
@@ -276,7 +275,7 @@ public class VisitorAsmRISCV extends AsmRISCVBaseVisitor<Object> {
             if (!isOutputRegistersInitialized) {
                 isOutputRegistersInitialized = true;
                 if (i == 1) {
-                    outputAssignments.add(EventFactory.newLocal(returnRegister, asmRegisters.get(0)));
+                    outputAssignments.add(events.newLocal(returnRegister, asmRegisters.get(0)));
                 } else {
                     Type aggregateType = returnRegister.getType();
                     // %16 = call { ptr, i32, i64 } asm sideeffect "asm code", "=&r,=&r,=r,r,r,2,~{memory}"(ptr %13, i64 %15, i64 %12)
@@ -284,7 +283,7 @@ public class VisitorAsmRISCV extends AsmRISCVBaseVisitor<Object> {
                     // we can do it only once here where we create the output assignment
                     this.pendingRegisters.sort(Comparator.comparing(Register::getName));
                     Expression finalAssignExpression = expressions.makeConstruct(aggregateType, this.pendingRegisters);
-                    outputAssignments.add(EventFactory.newLocal(this.returnRegister, finalAssignExpression));
+                    outputAssignments.add(events.newLocal(this.returnRegister, finalAssignExpression));
                 }
             }
             if (isConstraintInputConstraint(constraint)) {
@@ -293,11 +292,11 @@ public class VisitorAsmRISCV extends AsmRISCVBaseVisitor<Object> {
                     continue;
                 }
                 Expression llvmRegister = argsRegisters.get(i - AsmUtils.getNumASMReturnRegisters(this.returnRegister));
-                inputAssignments.add(EventFactory.newLocal(asmRegister, llvmRegister));
+                inputAssignments.add(events.newLocal(asmRegister, llvmRegister));
             }
             if (isConstraintNumeric(constraint)) {
                 int constraintValue = Integer.parseInt(constraint.getText());
-                inputAssignments.add(EventFactory.newLocal(asmRegisters.get(constraintValue), argsRegisters.get(i - AsmUtils.getNumASMReturnRegisters(this.returnRegister))));
+                inputAssignments.add(events.newLocal(asmRegisters.get(constraintValue), argsRegisters.get(i - AsmUtils.getNumASMReturnRegisters(this.returnRegister))));
             }
         }
         return null;

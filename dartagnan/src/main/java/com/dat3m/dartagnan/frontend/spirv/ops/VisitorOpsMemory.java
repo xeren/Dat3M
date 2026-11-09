@@ -35,6 +35,7 @@ public class VisitorOpsMemory extends VisitorOps<Event> {
 
     private static final TypeFactory types = TypeFactory.getInstance();
     private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private static final EventFactory events = EventFactory.getInstance();
     private final ProgramBuilder builder;
     private final BuiltIn builtIn;
 
@@ -49,12 +50,12 @@ public class VisitorOpsMemory extends VisitorOps<Event> {
         String valueId = ctx.object().getText();
         Expression value = builder.getExpression(valueId);
         Type type = value.getType();
-        List<Event> events = visitMemoryAccess(valueId, type, pointer, (i, exp) ->
+        List<Event> e = visitMemoryAccess(valueId, type, pointer, (i, exp) ->
             i == -1 ?
-            EventFactory.newStore(exp, value) :
-            EventFactory.newStore(exp, expressions.makeExtract(value, i)));
+            events.newStore(exp, value) :
+            events.newStore(exp, expressions.makeExtract(value, i)));
         Set<String> tags = parseMemoryAccessTags(ctx.memoryAccess());
-        checkAndPropagateTags(events, tags, Tag.Spirv.MEM_VISIBLE, ctx.pointer().getText(), "OpStore");
+        checkAndPropagateTags(e, tags, Tag.Spirv.MEM_VISIBLE, ctx.pointer().getText(), "OpStore");
         return null;
     }
 
@@ -63,7 +64,7 @@ public class VisitorOpsMemory extends VisitorOps<Event> {
         String resultId = ctx.idResult().getText();
         Expression pointer = builder.getExpression(ctx.pointer().getText());
         Type type = builder.getType(ctx.idResultType().getText());
-        List<Event> events = visitMemoryAccess(resultId, type, pointer, (i, exp) -> {
+        List<Event> e = visitMemoryAccess(resultId, type, pointer, (i, exp) -> {
             String regId = resultId;
             Type regType = type;
             if (i != -1) {
@@ -75,16 +76,16 @@ public class VisitorOpsMemory extends VisitorOps<Event> {
                 };
             }
             Register register = builder.addRegister(regId, regType);
-            return EventFactory.newLoad(register, exp);
+            return events.newLoad(register, exp);
             });
-        List<Expression> registers = events.stream().map(Load.class::cast).map(Load::getResultRegister).collect(Collectors.toList());
+        List<Expression> registers = e.stream().map(Load.class::cast).map(Load::getResultRegister).collect(Collectors.toList());
         switch (type) {
             case AggregateType _ -> builder.addExpression(resultId, expressions.makeConstruct(type, registers));
             case ArrayType arrayType -> builder.addExpression(resultId, expressions.makeArray(arrayType, registers));
             default -> { }
         }
         Set<String> tags = parseMemoryAccessTags(ctx.memoryAccess());
-        checkAndPropagateTags(events, tags, Tag.Spirv.MEM_AVAILABLE, ctx.pointer().getText(), "OpLoad");
+        checkAndPropagateTags(e, tags, Tag.Spirv.MEM_AVAILABLE, ctx.pointer().getText(), "OpLoad");
         return null;
     }
 

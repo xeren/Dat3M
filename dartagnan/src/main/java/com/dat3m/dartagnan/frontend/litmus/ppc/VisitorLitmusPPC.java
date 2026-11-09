@@ -13,7 +13,6 @@ import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.EventFactory;
-import com.dat3m.dartagnan.program.event.EventFactory;
 import com.dat3m.dartagnan.program.event.core.Label;
 import org.antlr.v4.runtime.ParserRuleContext;
 
@@ -108,14 +107,14 @@ public class VisitorLitmusPPC extends LitmusPPCBaseVisitor<Object> {
     public Object visitLi(LiContext ctx) {
         Register register = (Register) ctx.register().accept(this);
         IntLiteral constant = expressions.parseValue(ctx.constant().getText(), archType);
-        return append(EventFactory.newLocal(register, constant), ctx);
+        return append(events.newLocal(register, constant), ctx);
     }
 
     @Override
     public Object visitLwz(LwzContext ctx) {
         Register r1 = (Register) ctx.register(0).accept(this);
         Register ra = (Register) ctx.register(1).accept(this);
-        return append(EventFactory.newLoad(r1, ra), ctx);
+        return append(events.newLoad(r1, ra), ctx);
     }
 
     @Override
@@ -136,7 +135,7 @@ public class VisitorLitmusPPC extends LitmusPPCBaseVisitor<Object> {
     public Object visitStw(StwContext ctx) {
         Register r1 = (Register) ctx.register(0).accept(this);
         Register ra = (Register) ctx.register(1).accept(this);
-        return append(EventFactory.newStore(ra, r1), ctx);
+        return append(events.newStore(ra, r1), ctx);
     }
 
     @Override
@@ -161,7 +160,7 @@ public class VisitorLitmusPPC extends LitmusPPCBaseVisitor<Object> {
     public Object visitMr(MrContext ctx) {
         Register r1 = (Register) ctx.register(0).accept(this);
         Register r2 = (Register) ctx.register(1).accept(this);
-        return append(EventFactory.newLocal(r1, r2), ctx);
+        return append(events.newLocal(r1, r2), ctx);
     }
 
     @Override
@@ -169,7 +168,7 @@ public class VisitorLitmusPPC extends LitmusPPCBaseVisitor<Object> {
         Register r1 = (Register) ctx.register(0).accept(this);
         Register r2 = (Register) ctx.register(1).accept(this);
         IntLiteral constant = expressions.parseValue(ctx.constant().getText(), archType);
-        return append(EventFactory.newLocal(r1, expressions.makeAdd(r2, constant)), ctx);
+        return append(events.newLocal(r1, expressions.makeAdd(r2, constant)), ctx);
     }
 
     @Override
@@ -177,7 +176,7 @@ public class VisitorLitmusPPC extends LitmusPPCBaseVisitor<Object> {
         Register r1 = (Register) ctx.register(0).accept(this);
         Register r2 = (Register) ctx.register(1).accept(this);
         Register r3 = (Register) ctx.register(2).accept(this);
-        return append(EventFactory.newLocal(r1, expressions.makeIntXor(r2, r3)), ctx);
+        return append(events.newLocal(r1, expressions.makeIntXor(r2, r3)), ctx);
     }
 
     @Override
@@ -197,7 +196,7 @@ public class VisitorLitmusPPC extends LitmusPPCBaseVisitor<Object> {
             // the value of r0 is used as the branching condition
             expressions.makeBooleanCast(programBuilder.getOrNewRegister(mainThread, "r0")) :
             expressions.makeIntCmp(cmp.left, ctx.cond().op, cmp.right);
-        return append(EventFactory.newJump(expr, label), ctx);
+        return append(events.newJump(expr, label), ctx);
     }
 
     @Override

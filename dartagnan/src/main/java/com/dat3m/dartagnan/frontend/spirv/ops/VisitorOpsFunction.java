@@ -21,13 +21,11 @@ import com.dat3m.dartagnan.program.memory.ScopedPointerVariable;
 import java.util.*;
 import java.util.stream.IntStream;
 
-import static com.dat3m.dartagnan.program.event.EventFactory.newValueFunctionCall;
-import static com.dat3m.dartagnan.program.event.EventFactory.newVoidFunctionCall;
-
 public class VisitorOpsFunction extends VisitorOps<Void> {
 
     private static final int DEFAULT_INPUT_SIZE = 10;
     private static final TypeFactory types = TypeFactory.getInstance();
+    private static final EventFactory events = EventFactory.getInstance();
     private final Map<String, Function> forwardFunctions = new HashMap<>();
     private final Map<String, Set<FunctionCall>> forwardCalls = new HashMap<>();
     private final Map<String, Expression> parameters = new HashMap<>();
@@ -116,10 +114,10 @@ public class VisitorOpsFunction extends VisitorOps<Void> {
         Function function = getCalledFunction(functionId, functionType);
         FunctionCall event;
         if (returnType instanceof VoidType) {
-            event = newVoidFunctionCall(function, args);
+            event = events.newVoidFunctionCall(function, args);
         } else {
             Register register = builder.addRegister(id, typeId);
-            event = newValueFunctionCall(register, function, args);
+            event = events.newValueFunctionCall(register, function, args);
         }
         if (!builder.hasDefinition(functionId)) {
             forwardCalls.computeIfAbsent(functionId, _ -> new HashSet<>()).add(event);
@@ -134,7 +132,7 @@ public class VisitorOpsFunction extends VisitorOps<Void> {
         function.getParameterRegisters().forEach(r -> builder.addExpression(r.getName(), r));
         if (currentId.equals(builder.getEntryPointId())) {
             function.getParameterRegisters().forEach(r -> {
-                Local local = EventFactory.newLocal(r, parameters.get(r.getName()));
+                Local local = events.newLocal(r, parameters.get(r.getName()));
                 local.addTags(Tag.NOOPT);
                 function.append(local);
             });

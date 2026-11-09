@@ -33,7 +33,6 @@ import java.util.Collection;
 import java.util.List;
 
 import static com.dat3m.dartagnan.configuration.OptionNames.ALIAS_METHOD;
-import static com.dat3m.dartagnan.program.event.EventFactory.newJump;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -42,6 +41,7 @@ public class AliasAnalysisSoundnessTest {
 
     private static final TypeFactory types = TypeFactory.getInstance();
     private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private static final EventFactory events = EventFactory.getInstance();
 
     @Parameterized.Parameters(name = "{0}")
     public static Collection<Alias> methods() {
@@ -67,19 +67,19 @@ public class AliasAnalysisSoundnessTest {
         IntegerType type = builder.getArchType();
         Register condition = builder.getOrNewRegister(0, "condition", type);
         Register pointer = builder.getOrNewRegister(0, "pointer", type);
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLocal(condition, builder.newConstant(type)));
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLocal(pointer, x));
-        Store before = EventFactory.newStore(pointer, expressions.makeZero(type));
+        builder.addChildWithoutSourceLoc(0, events.newLocal(condition, builder.newConstant(type)));
+        builder.addChildWithoutSourceLoc(0, events.newLocal(pointer, x));
+        Store before = events.newStore(pointer, expressions.makeZero(type));
         builder.addChildWithoutSourceLoc(0, before);
         Label use = builder.getOrCreateLabel(0, "use");
         builder.addChildWithoutSourceLoc(0,
-                newJump(expressions.makeEQ(condition, expressions.makeZero(type)), use));
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLocal(pointer, y));
+                events.newJump(expressions.makeEQ(condition, expressions.makeZero(type)), use));
+        builder.addChildWithoutSourceLoc(0, events.newLocal(pointer, y));
         builder.addChildWithoutSourceLoc(0, use);
-        Store after = EventFactory.newStore(pointer, expressions.makeZero(type));
+        Store after = events.newStore(pointer, expressions.makeZero(type));
         builder.addChildWithoutSourceLoc(0, after);
-        Store atX = EventFactory.newStore(x, expressions.makeZero(type));
-        Store atY = EventFactory.newStore(y, expressions.makeZero(type));
+        Store atX = events.newStore(x, expressions.makeZero(type));
+        Store atY = events.newStore(y, expressions.makeZero(type));
         builder.addChildWithoutSourceLoc(0, atX);
         builder.addChildWithoutSourceLoc(0, atY);
 
@@ -111,15 +111,15 @@ public class AliasAnalysisSoundnessTest {
         builder.newThread(1);
 
         Register pointer = builder.getOrNewRegister(0, "pointer", builder.getArchType());
-        Load load = EventFactory.newLoad(pointer, slot);
+        Load load = events.newLoad(pointer, slot);
         builder.addChildWithoutSourceLoc(0, load);
-        Store indirect = EventFactory.newStore(pointer, expressions.makeZero(builder.getArchType()));
+        Store indirect = events.newStore(pointer, expressions.makeZero(builder.getArchType()));
         builder.addChildWithoutSourceLoc(0, indirect);
-        Store atX = EventFactory.newStore(x, expressions.makeZero(builder.getArchType()));
-        Store atY = EventFactory.newStore(y, expressions.makeZero(builder.getArchType()));
+        Store atX = events.newStore(x, expressions.makeZero(builder.getArchType()));
+        Store atY = events.newStore(y, expressions.makeZero(builder.getArchType()));
         builder.addChildWithoutSourceLoc(0, atX);
         builder.addChildWithoutSourceLoc(0, atY);
-        builder.addChildWithoutSourceLoc(1, EventFactory.newStore(slot, y));
+        builder.addChildWithoutSourceLoc(1, events.newStore(slot, y));
 
         AnalysisResult result = analyze(builder.build(), indirect, atX, atY);
         MemoryCoreEvent processedIndirect = result.event(0);
@@ -149,17 +149,17 @@ public class AliasAnalysisSoundnessTest {
         IntegerType type = builder.getArchType();
         Expression elementSize = expressions.makeValue(8, type);
         Register storeIndex = builder.getOrNewRegister(0, "storeIndex", type);
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLocal(storeIndex, builder.newConstant(type)));
+        builder.addChildWithoutSourceLoc(0, events.newLocal(storeIndex, builder.newConstant(type)));
         Expression storeAddress = expressions.makeAdd(slots, expressions.makeMul(storeIndex, elementSize));
-        builder.addChildWithoutSourceLoc(0, EventFactory.newStore(storeAddress, x));
+        builder.addChildWithoutSourceLoc(0, events.newStore(storeAddress, x));
 
         Register loadIndex = builder.getOrNewRegister(1, "loadIndex", type);
         Register pointer = builder.getOrNewRegister(1, "pointer", type);
-        builder.addChildWithoutSourceLoc(1, EventFactory.newLocal(loadIndex, builder.newConstant(type)));
+        builder.addChildWithoutSourceLoc(1, events.newLocal(loadIndex, builder.newConstant(type)));
         Expression loadAddress = expressions.makeAdd(slots, expressions.makeMul(loadIndex, elementSize));
-        builder.addChildWithoutSourceLoc(1, EventFactory.newLoad(pointer, loadAddress));
-        Store indirect = EventFactory.newStore(pointer, expressions.makeZero(type));
-        Store direct = EventFactory.newStore(x, expressions.makeZero(type));
+        builder.addChildWithoutSourceLoc(1, events.newLoad(pointer, loadAddress));
+        Store indirect = events.newStore(pointer, expressions.makeZero(type));
+        Store direct = events.newStore(x, expressions.makeZero(type));
         builder.addChildWithoutSourceLoc(1, indirect);
         builder.addChildWithoutSourceLoc(1, direct);
 
@@ -184,14 +184,13 @@ public class AliasAnalysisSoundnessTest {
         IntegerType type = builder.getArchType();
         Register condition = builder.getOrNewRegister(0, "condition", type);
         Register pointer = builder.getOrNewRegister(0, "pointer", type);
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLocal(condition, builder.newConstant(type)));
-        Expression choice = expressions.makeITE(
-                expressions.makeEQ(condition, expressions.makeZero(type)), x, y);
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLocal(pointer, choice));
-        Store indirect = EventFactory.newStore(pointer, expressions.makeZero(type));
-        Store atX = EventFactory.newStore(x, expressions.makeZero(type));
-        Store atY = EventFactory.newStore(y, expressions.makeZero(type));
-        Store valueStore = EventFactory.newStore(destination, pointer);
+        builder.addChildWithoutSourceLoc(0, events.newLocal(condition, builder.newConstant(type)));
+        Expression choice = expressions.makeITE(expressions.makeEQ(condition, expressions.makeZero(type)), x, y);
+        builder.addChildWithoutSourceLoc(0, events.newLocal(pointer, choice));
+        Store indirect = events.newStore(pointer, expressions.makeZero(type));
+        Store atX = events.newStore(x, expressions.makeZero(type));
+        Store atY = events.newStore(y, expressions.makeZero(type));
+        Store valueStore = events.newStore(destination, pointer);
         builder.addChildWithoutSourceLoc(0, indirect);
         builder.addChildWithoutSourceLoc(0, atX);
         builder.addChildWithoutSourceLoc(0, atY);
@@ -223,10 +222,10 @@ public class AliasAnalysisSoundnessTest {
         IntegerType type = builder.getArchType();
         Register mask = builder.getOrNewRegister(0, "mask", type);
         Register pointer = builder.getOrNewRegister(0, "pointer", type);
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLocal(mask, builder.newConstant(type)));
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLocal(pointer, expressions.makeIntAnd(x, mask)));
-        Store indirect = EventFactory.newStore(pointer, expressions.makeZero(type));
-        Store direct = EventFactory.newStore(x, expressions.makeZero(type));
+        builder.addChildWithoutSourceLoc(0, events.newLocal(mask, builder.newConstant(type)));
+        builder.addChildWithoutSourceLoc(0, events.newLocal(pointer, expressions.makeIntAnd(x, mask)));
+        Store indirect = events.newStore(pointer, expressions.makeZero(type));
+        Store direct = events.newStore(x, expressions.makeZero(type));
         builder.addChildWithoutSourceLoc(0, indirect);
         builder.addChildWithoutSourceLoc(0, direct);
 
@@ -254,20 +253,19 @@ public class AliasAnalysisSoundnessTest {
         Register condition = builder.getOrNewRegister(0, "condition", type);
         Register aggregate = builder.getOrNewRegister(0, "aggregate", aggregateType);
         Register pointer = builder.getOrNewRegister(0, "pointer", type);
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLocal(condition, builder.newConstant(type)));
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLocal(
+        builder.addChildWithoutSourceLoc(0, events.newLocal(condition, builder.newConstant(type)));
+        builder.addChildWithoutSourceLoc(0, events.newLocal(
                 aggregate, expressions.makeArray(aggregateType, List.of(x, y))));
         Label use = builder.getOrCreateLabel(0, "use");
         builder.addChildWithoutSourceLoc(0,
-                newJump(expressions.makeEQ(condition, expressions.makeZero(type)), use));
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLocal(
+                events.newJump(expressions.makeEQ(condition, expressions.makeZero(type)), use));
+        builder.addChildWithoutSourceLoc(0, events.newLocal(
                 aggregate, expressions.makeArray(aggregateType, List.of(y, x))));
         builder.addChildWithoutSourceLoc(0, use);
-        builder.addChildWithoutSourceLoc(0,
-                EventFactory.newLocal(pointer, expressions.makeExtract(aggregate, 0)));
-        Store indirect = EventFactory.newStore(pointer, expressions.makeZero(type));
-        Store atX = EventFactory.newStore(x, expressions.makeZero(type));
-        Store atY = EventFactory.newStore(y, expressions.makeZero(type));
+        builder.addChildWithoutSourceLoc(0, events.newLocal(pointer, expressions.makeExtract(aggregate, 0)));
+        Store indirect = events.newStore(pointer, expressions.makeZero(type));
+        Store atX = events.newStore(x, expressions.makeZero(type));
+        Store atY = events.newStore(y, expressions.makeZero(type));
         builder.addChildWithoutSourceLoc(0, indirect);
         builder.addChildWithoutSourceLoc(0, atX);
         builder.addChildWithoutSourceLoc(0, atY);
@@ -293,13 +291,12 @@ public class AliasAnalysisSoundnessTest {
         IntegerType type = builder.getArchType();
         Register index = builder.getOrNewRegister(0, "index", type);
         Register pointer = builder.getOrNewRegister(0, "pointer", type);
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLocal(index, builder.newConstant(type)));
+        builder.addChildWithoutSourceLoc(0, events.newLocal(index, builder.newConstant(type)));
         Expression offset = expressions.makeMul(index, expressions.makeValue(8, type));
-        builder.addChildWithoutSourceLoc(0,
-                EventFactory.newLocal(pointer, expressions.makeAdd(x, offset)));
-        Store indirect = EventFactory.newStore(pointer, expressions.makeZero(type));
-        Store first = EventFactory.newStore(x, expressions.makeZero(type));
-        Store second = EventFactory.newStore(
+        builder.addChildWithoutSourceLoc(0, events.newLocal(pointer, expressions.makeAdd(x, offset)));
+        Store indirect = events.newStore(pointer, expressions.makeZero(type));
+        Store first = events.newStore(x, expressions.makeZero(type));
+        Store second = events.newStore(
                 expressions.makeAdd(x, expressions.makeValue(8, type)), expressions.makeZero(type));
         builder.addChildWithoutSourceLoc(0, indirect);
         builder.addChildWithoutSourceLoc(0, first);
@@ -324,9 +321,9 @@ public class AliasAnalysisSoundnessTest {
         builder.newThread(0);
 
         IntegerType type = builder.getArchType();
-        Store unknown = EventFactory.newStore(expressions.makeZero(type), expressions.makeZero(type));
-        Store atX = EventFactory.newStore(x, expressions.makeZero(type));
-        Store atY = EventFactory.newStore(y, expressions.makeZero(type));
+        Store unknown = events.newStore(expressions.makeZero(type), expressions.makeZero(type));
+        Store atX = events.newStore(x, expressions.makeZero(type));
+        Store atY = events.newStore(y, expressions.makeZero(type));
         // builder.addChildWithoutSourceLoc(0, unknown);
         builder.addChildWithoutSourceLoc(0, atX);
         builder.addChildWithoutSourceLoc(0, atY);
@@ -350,8 +347,8 @@ public class AliasAnalysisSoundnessTest {
 
         final Register p = builder.getOrNewRegister(0, "p", type);
         final Register q = builder.getOrNewRegister(0, "q", type);
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLoad(p, slot));
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLoad(q, slot));
+        builder.addChildWithoutSourceLoc(0, events.newLoad(p, slot));
+        builder.addChildWithoutSourceLoc(0, events.newLoad(q, slot));
 
         // Both loads read y: there are no other writes to slot.
         // Integer address arithmetic: p + 2*x - q - x == x.
@@ -360,8 +357,8 @@ public class AliasAnalysisSoundnessTest {
         final Expression address = expressions.makeSub(
                         expressions.makeAdd(expressions.makeMul(x, expressions.makeValue(2, type)), p),
                         expressions.makeAdd(q, x));
-        final Store indirect = EventFactory.newStore(address, expressions.makeZero(type));
-        final Store direct = EventFactory.newStore(x, expressions.makeZero(type));
+        final Store indirect = events.newStore(address, expressions.makeZero(type));
+        final Store direct = events.newStore(x, expressions.makeZero(type));
         builder.addChildWithoutSourceLoc(0, indirect);
         builder.addChildWithoutSourceLoc(0, direct);
 

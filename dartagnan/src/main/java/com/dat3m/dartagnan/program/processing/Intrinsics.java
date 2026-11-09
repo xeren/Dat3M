@@ -17,7 +17,6 @@ import com.dat3m.dartagnan.program.event.Tag;
 import com.dat3m.dartagnan.program.event.core.*;
 import com.dat3m.dartagnan.program.event.functions.FunctionCall;
 import com.dat3m.dartagnan.program.event.functions.ValueFunctionCall;
-import com.dat3m.dartagnan.program.event.lang.linux.Linux;
 import com.google.common.collect.ImmutableList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +25,6 @@ import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.stream.IntStream;
 
-import static com.dat3m.dartagnan.program.event.EventFactory.*;
 import static com.google.common.base.Preconditions.checkArgument;
 
 /**
@@ -43,7 +41,7 @@ public class Intrinsics {
 
     private static final TypeFactory types = TypeFactory.getInstance();
     private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
-    private final Linux linux = Linux.newInstance();
+    private final EventFactory events = EventFactory.getInstance();
 
 
     private Intrinsics(boolean msa) {
@@ -172,10 +170,10 @@ public class Intrinsics {
             // NOTE: We deliberately do not use the call markers, because (1) we want to distinguish between
             // intrinsics and normal calls, and (2) we do not want to have intrinsics in the call stack.
             // We may want to change this behaviour though.
-            call.insertBefore(EventFactory.newStringAnnotation(
+            call.insertBefore(events.newStringAnnotation(
                     String.format("=== Calling intrinsic %s ===", call.getCalledFunction().getName())
             ));
-            call.insertAfter(EventFactory.newStringAnnotation(
+            call.insertAfter(events.newStringAnnotation(
                     String.format("=== Returning from intrinsic %s ===", call.getCalledFunction().getName())
             ));
             IRHelper.replaceWithMetadata(call, replacement);
@@ -210,7 +208,7 @@ public class Intrinsics {
         final Register resultRegister = getResultRegister(call);
         final Expression tidExpr = call.getThread().getRegister(ThreadCreation.THREAD_SELF_REGISTER_NAME);
         assert tidExpr != null : "Non-POSIX thread %s".formatted(call.getThread());
-        return List.of(newLocal(resultRegister, expressions.makeCast(tidExpr, resultRegister.getType())));
+        return List.of(events.newLocal(resultRegister, expressions.makeCast(tidExpr, resultRegister.getType())));
     }
 
 
@@ -227,7 +225,7 @@ public class Intrinsics {
         insertMemCopy(replacement, src, dest, countExpr, caller, call);
         if (call instanceof ValueFunctionCall valueCall) {
             // std.memcpy returns the destination address, llvm.memcpy has no return value
-            replacement.add(EventFactory.newLocal(valueCall.getResultRegister(), dest));
+            replacement.add(events.newLocal(valueCall.getResultRegister(), dest));
         }
 
         return replacement;
@@ -265,22 +263,22 @@ public class Intrinsics {
 
         final List<Event> replacement = new ArrayList<>();
         
-        final Label check1 = EventFactory.newLabel("__memcpy_s_check_1");
-        final Label check1fail = EventFactory.newLabel("__memcpy_s_fail_1");
-        final Label check2 = EventFactory.newLabel("__memcpy_s_check_2");
-        final Label check2fail = EventFactory.newLabel("__memcpy_s_fail_2");
-        final Label success = EventFactory.newLabel("__memcpy_s_success");
-        final Label end = EventFactory.newLabel("__memcpy_s_end");
+        final Label check1 = events.newLabel("__memcpy_s_check_1");
+        final Label check1fail = events.newLabel("__memcpy_s_fail_1");
+        final Label check2 = events.newLabel("__memcpy_s_check_2");
+        final Label check2fail = events.newLabel("__memcpy_s_fail_2");
+        final Label success = events.newLabel("__memcpy_s_success");
+        final Label end = events.newLabel("__memcpy_s_end");
 
         final Expression returnCodeFail = expressions.makeOne((IntegerType)resultRegister.getType());
         final Expression returnCodeSuccess = expressions.makeZero((IntegerType)resultRegister.getType());
 
         // If dest == NULL or destsz > RSIZE_MAX,
         // return error > 0.
-        final CondJump check1part1 = EventFactory.newJump(destIsNull, check1fail);
-        final CondJump check1part2 = EventFactory.newJumpUnless(invalidDestsz, check2);
-        final CondJump skipRest1 = EventFactory.newGoto(end);
-        final Local retError1 = EventFactory.newLocal(resultRegister, returnCodeFail);
+        final CondJump check1part1 = events.newJump(destIsNull, check1fail);
+        final CondJump check1part2 = events.newJumpUnless(invalidDestsz, check2);
+        final CondJump skipRest1 = events.newGoto(end);
+        final Local retError1 = events.newLocal(resultRegister, returnCodeFail);
         replacement.addAll(List.of(
             check1,
             check1part1,
@@ -292,11 +290,11 @@ public class Intrinsics {
 
         // Otherwise, if src == NULL || count > destsz || overlap(src, dest),
         // return error > 0 and zero out [dest, dest+destsz).
-        final CondJump check2part1 = EventFactory.newJump(srcIsNull, check2fail);
-        final CondJump check2part2 = EventFactory.newJump(invalidCount, check2fail);
-        final CondJump check2part3 = EventFactory.newJumpUnless(overlap, success);
-        final CondJump skipRest2 = EventFactory.newGoto(end);
-        final Local retError2 = EventFactory.newLocal(resultRegister, returnCodeFail);
+        final CondJump check2part1 = events.newJump(srcIsNull, check2fail);
+        final CondJump check2part2 = events.newJump(invalidCount, check2fail);
+        final CondJump check2part3 = events.newJumpUnless(overlap, success);
+        final CondJump skipRest2 = events.newGoto(end);
+        final Local retError2 = events.newLocal(resultRegister, returnCodeFail);
         replacement.addAll(List.of(
             check2,
             check2part1,
@@ -309,14 +307,14 @@ public class Intrinsics {
         forEachMemSpan(replacement, destszExpr, call, (offset, type) -> {
             final Expression destAddr = addByteOffset(dest, offset);
             final Expression zero = expressions.makeZero(type);
-            replacement.add(EventFactory.newStore(destAddr, zero));
+            replacement.add(events.newStore(destAddr, zero));
         });
         replacement.addAll(List.of(
             retError2,
             skipRest2
         ));
 
-        final Local retSuccess = EventFactory.newLocal(resultRegister, returnCodeSuccess);
+        final Local retSuccess = events.newLocal(resultRegister, returnCodeSuccess);
         replacement.add(success);
         insertMemCopy(replacement, src, dest, countExpr, caller, call);
         replacement.addAll(List.of(
@@ -333,8 +331,8 @@ public class Intrinsics {
             final Expression srcAddr = addByteOffset(src, offset);
             final Expression destAddr = addByteOffset(dest, offset);
             final Register register = caller.newUniqueRegister("__memcpy", type);
-            final Event load = EventFactory.newLoad(register, srcAddr);
-            final Event store = EventFactory.newStore(destAddr, register);
+            final Event load = events.newLoad(register, srcAddr);
+            final Event store = events.newStore(destAddr, register);
             replacement.addAll(List.of(load, store));
         });
     }
@@ -351,29 +349,29 @@ public class Intrinsics {
         final Register cmpReg = caller.newUniqueRegister("__memcmp_cmp", types.getByteType());
 
         final List<Event> replacement = new ArrayList<>();
-        final Label endCmp = EventFactory.newLabel("__memcmp_end");
+        final Label endCmp = events.newLabel("__memcmp_end");
         // Initialize the register for when `countExpr` is zero.
-        replacement.add(EventFactory.newLocal(cmpReg, expressions.makeZero(types.getByteType())));
+        replacement.add(events.newLocal(cmpReg, expressions.makeZero(types.getByteType())));
         // Compare all bytes in order.
         forEachMemSpan(replacement, countExpr, call, (offset, type) -> {
             final Expression src1Addr = addByteOffset(src1, offset);
             final Expression src2Addr = addByteOffset(src2, offset);
             final Register regSrc1 = caller.newUniqueRegister("__memcmp_src1", type);
             final Register regSrc2 = caller.newUniqueRegister("__memcmp_src2", type);
-            replacement.add(EventFactory.newLoad(regSrc1, src1Addr));
-            replacement.add(EventFactory.newLoad(regSrc2, src2Addr));
+            replacement.add(events.newLoad(regSrc1, src1Addr));
+            replacement.add(events.newLoad(regSrc2, src2Addr));
             // Iterate in byte order.
             final int bitWidth = type.getBitWidth();
             for (int cmpByte = 0; cmpByte < bitWidth; cmpByte += 8) {
                 final int cmpOffset = bigEndian ? bitWidth - 8 - cmpByte : cmpByte;
                 final Expression byte1 = expressions.makeIntExtract(regSrc1, cmpOffset, cmpOffset + 8 - 1);
                 final Expression byte2 = expressions.makeIntExtract(regSrc2, cmpOffset, cmpOffset + 8 - 1);
-                replacement.add(EventFactory.newLocal(cmpReg, expressions.makeSub(byte1, byte2)));
-                replacement.add(EventFactory.newJump(expressions.makeNEQ(byte1, byte2), endCmp));
+                replacement.add(events.newLocal(cmpReg, expressions.makeSub(byte1, byte2)));
+                replacement.add(events.newJump(expressions.makeNEQ(byte1, byte2), endCmp));
             }
         });
         replacement.add(endCmp);
-        replacement.add(EventFactory.newLocal(returnReg, expressions.makeCast(cmpReg, returnReg.getType())));
+        replacement.add(events.newLocal(returnReg, expressions.makeCast(cmpReg, returnReg.getType())));
 
         return replacement;
     }
@@ -404,12 +402,12 @@ public class Intrinsics {
             final Expression fill = fillByBitWidth.computeIfAbsent(type.getBitWidth(),
                     n -> expressions.makeIntConcat(IntStream.range(0, n / 8).mapToObj(x -> fillByte).toList()));
 
-            replacement.add(newStore(destAddr, fill));
+            replacement.add(events.newStore(destAddr, fill));
         });
 
         if (call instanceof ValueFunctionCall valueCall) {
             // `std.memset` returns the destination address, `llvm.memset` has no return value.
-            replacement.add(EventFactory.newLocal(valueCall.getResultRegister(), dest));
+            replacement.add(events.newLocal(valueCall.getResultRegister(), dest));
         }
 
         return replacement;
@@ -444,15 +442,15 @@ public class Intrinsics {
             final Expression stepExpr = expressions.makeValue(count.step, countType);
             final Expression countReached = expressions.makeLTE(countExpr, offsetRegister, false);
             final Expression loopBound = expressions.makeValue((count.end - count.start) / count.step, countType);
-            final Label loopEntry = EventFactory.newLabel("__start");
-            final Label loopExit = EventFactory.newLabel("__end");
-            replacement.add(EventFactory.newLocal(offsetRegister, expressions.makeValue(count.start, countType)));
-            replacement.add(EventFactory.newLoopBound(loopBound));
+            final Label loopEntry = events.newLabel("__start");
+            final Label loopExit = events.newLabel("__end");
+            replacement.add(events.newLocal(offsetRegister, expressions.makeValue(count.start, countType)));
+            replacement.add(events.newLoopBound(loopBound));
             replacement.add(loopEntry);
-            replacement.add(EventFactory.newIfJump(countReached, loopExit, loopExit));
+            replacement.add(events.newIfJump(countReached, loopExit, loopExit));
             translateMemSpan(offsetRegister, count.step, countType, action);
-            replacement.add(EventFactory.newLocal(offsetRegister, expressions.makeAdd(offsetRegister, stepExpr)));
-            replacement.add(EventFactory.newGoto(loopEntry));
+            replacement.add(events.newLocal(offsetRegister, expressions.makeAdd(offsetRegister, stepExpr)));
+            replacement.add(events.newGoto(loopEntry));
             replacement.add(loopExit);
         }
         // Mark all events to not generate `si`-pairs if torn with mixed-sized accesses.

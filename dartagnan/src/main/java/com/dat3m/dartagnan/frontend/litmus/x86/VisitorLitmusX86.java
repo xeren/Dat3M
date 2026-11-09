@@ -12,7 +12,6 @@ import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.EventFactory;
-import com.dat3m.dartagnan.program.event.EventFactory;
 import com.dat3m.dartagnan.program.memory.MemoryObject;
 import org.antlr.v4.runtime.ParserRuleContext;
 
@@ -101,28 +100,28 @@ public class VisitorLitmusX86 extends LitmusX86BaseVisitor<Object> {
     public Object visitLoadValueToRegister(LoadValueToRegisterContext ctx) {
         Register register = programBuilder.getOrNewRegister(mainThread, ctx.register().getText(), archType);
         IntLiteral constant = expressions.parseValue(ctx.constant().getText(), archType);
-        return append(EventFactory.newLocal(register, constant), ctx);
+        return append(events.newLocal(register, constant), ctx);
     }
 
     @Override
     public Object visitLoadLocationToRegister(LoadLocationToRegisterContext ctx) {
         Register register = programBuilder.getOrNewRegister(mainThread, ctx.register().getText(), archType);
         MemoryObject object = programBuilder.getOrNewMemoryObject(ctx.location().getText());
-        return append(EventFactory.newLoad(register, object), ctx);
+        return append(events.newLoad(register, object), ctx);
     }
 
     @Override
     public Object visitStoreValueToLocation(StoreValueToLocationContext ctx) {
         MemoryObject object = programBuilder.getOrNewMemoryObject(ctx.location().getText());
         IntLiteral constant = expressions.parseValue(ctx.constant().getText(), archType);
-        return append(EventFactory.newStore(object, constant), ctx);
+        return append(events.newStore(object, constant), ctx);
     }
 
     @Override
     public Object visitStoreRegisterToLocation(StoreRegisterToLocationContext ctx) {
         Register register = programBuilder.getOrErrorRegister(mainThread, ctx.register().getText());
         MemoryObject object = programBuilder.getOrNewMemoryObject(ctx.location().getText());
-        return append(EventFactory.newStore(object, register), ctx);
+        return append(events.newStore(object, register), ctx);
     }
 
     @Override

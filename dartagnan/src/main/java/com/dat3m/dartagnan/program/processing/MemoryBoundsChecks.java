@@ -56,6 +56,7 @@ public final class MemoryBoundsChecks implements ProgramProcessor {
 
     private static final TypeFactory types = TypeFactory.getInstance();
     private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private static final EventFactory events = EventFactory.getInstance();
 
     // Same message as for UBSan's invalid dereferences, so violations are reported as such.
     private static final String ERROR_MESSAGE = "invalid dereference";
@@ -100,7 +101,7 @@ public final class MemoryBoundsChecks implements ProgramProcessor {
             if (objects.isEmpty()) {
                 continue;
             }
-            final Assert check = EventFactory.newAssert(inBounds(program, access, objects), ERROR_MESSAGE);
+            final Assert check = events.newAssert(inBounds(program, access, objects), ERROR_MESSAGE);
             check.copyAllMetadataFrom(access);
             access.insertBefore(check);
             numChecks++;

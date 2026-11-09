@@ -43,7 +43,7 @@ import java.math.BigInteger;
 import java.util.*;
 
 import static com.dat3m.dartagnan.configuration.OptionNames.ARGC_MAX;
-import static com.dat3m.dartagnan.program.event.EventFactory.*;
+import static com.dat3m.dartagnan.program.event.EventFactory.eventSequence;
 import static com.dat3m.dartagnan.program.event.lang.dat3m.DynamicThreadJoin.Status.*;
 
 /*
@@ -82,6 +82,7 @@ public class ThreadCreation implements ProgramProcessor {
 
     private final TypeFactory types = TypeFactory.getInstance();
     private final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private final EventFactory events = EventFactory.getInstance();
     // The thread state consists of two flags: ALIVE and JOINABLE.
     private final IntegerType threadStateType = types.getIntegerType(2);
     private final EventFactory.Linux linux = EventFactory.Linux.getInstance();
@@ -161,7 +162,7 @@ public class ThreadCreation implements ProgramProcessor {
                 final Function targetFunction = create.getDirectCallTarget();
                 final List<Expression> arguments = create.getArguments();
 
-                final ThreadCreate createEvent = newThreadCreate(arguments);
+                final ThreadCreate createEvent = events.newThreadCreate(arguments);
                 final ThreadData spawnedThread = createLLVMThreadFromFunction(targetFunction, nextTid, createEvent);
                 assert spawnedThread.isDynamic();
                 workingQueue.add(spawnedThread);
@@ -171,10 +172,10 @@ public class ThreadCreation implements ProgramProcessor {
                 //  so the spawned thread (and threads synchronizing with it) observe the stored tid.
                 final Expression tid = new TIdExpr(archType, spawnedThread.thread());
                 final List<Event> replacement = eventSequence(
-                        create.hasTidAddress() ? newStore(create.getTidAddress(), tid) : null,
+                        create.hasTidAddress() ? events.newStore(create.getTidAddress(), tid) : null,
                         newReleaseStore(spawnedThread.comAddress(), threadState(ALIVE | JOINABLE)),
                         createEvent,
-                        newLocal(tidRegister, tid)
+                        events.newLocal(tidRegister, tid)
                 );
                 IRHelper.replaceWithMetadata(create, replacement);
 
@@ -226,10 +227,10 @@ public class ThreadCreation implements ProgramProcessor {
                 expressions.makeMul(argcArch, expressions.makeValue(pointerBytes, archType)));
 
         main.getEntry().insertAfter(eventSequence(
-                newLocal(argc, program.newConstant(argcType)),
-                newAssume(argcInRange),
-                newAlloc(argv, pointerType, arraySize, false, false),
-                newStore(lastEntry, expressions.makeGeneralZero(pointerType))
+                events.newLocal(argc, program.newConstant(argcType)),
+                events.newAssume(argcInRange),
+                events.newAlloc(argv, pointerType, arraySize, false, false),
+                events.newStore(lastEntry, expressions.makeGeneralZero(pointerType))
         ));
     }
 
@@ -260,7 +261,7 @@ public class ThreadCreation implements ProgramProcessor {
             final Register threadStateRegister = caller.newRegister("__joinThreadState#" + joinCounter, threadStateType);
 
             // ----- Construct a switch case for each possible tid -----
-            final Label joinEnd = EventFactory.newLabel("__joinEnd#" + joinCounter);
+            final Label joinEnd = events.newLabel("__joinEnd#" + joinCounter);
             final Map<Expression, List<Event>> tid2joinCases = new LinkedHashMap<>();
             for (ThreadData data : joinableThreads) {
                 if (data.thread() == caller) {
@@ -276,14 +277,14 @@ public class ThreadCreation implements ProgramProcessor {
                     continue;
                 }
 
-                final Label joinCase = EventFactory.newLabel("__joinWithT" + tid + "#" + joinCounter);
+                final Label joinCase = events.newLabel("__joinWithT" + tid + "#" + joinCounter);
                 final List<Event> caseBody;
                 if (!data.thread().getFunctionType().getReturnType().equals(retValType)) {
                     // Wrong return type
                     caseBody = eventSequence(
                             joinCase,
-                            newLocal(statusRegister, invalidRetType),
-                            EventFactory.newGoto(joinEnd)
+                            events.newLocal(statusRegister, invalidRetType),
+                            events.newGoto(joinEnd)
                     );
                 } else {
                     final Expression isAlive = threadStateFlag(threadStateRegister, ALIVE);
@@ -291,14 +292,14 @@ public class ThreadCreation implements ProgramProcessor {
                     // Successful join
                     caseBody = eventSequence(
                             joinCase,
-                            newLocal(statusRegister, detachedThread),
-                            newLocal(retValRegister, expressions.makeGeneralZero(retValType)),
+                            events.newLocal(statusRegister, detachedThread),
+                            events.newLocal(retValRegister, expressions.makeGeneralZero(retValType)),
                             newAcquireAnd(threadStateRegister, data.comAddress, threadState(ALIVE)),
-                            newJumpUnless(expressions.makeBooleanCast(isJoinable), joinEnd),
-                            newThreadJoin(retValRegister, data.thread()),
-                            newAssume(expressions.makeNot(expressions.makeBooleanCast(isAlive))),
-                            newLocal(statusRegister, successValue),
-                            EventFactory.newGoto(joinEnd)
+                            events.newJumpUnless(expressions.makeBooleanCast(isJoinable), joinEnd),
+                            events.newThreadJoin(retValRegister, data.thread()),
+                            events.newAssume(expressions.makeNot(expressions.makeBooleanCast(isAlive))),
+                            events.newLocal(statusRegister, successValue),
+                            events.newGoto(joinEnd)
                     );
                 }
                 tid2joinCases.put(new TIdExpr((IntegerType) tidExpr.getType(), data.thread()), caseBody);
@@ -307,20 +308,20 @@ public class ThreadCreation implements ProgramProcessor {
             // ----- Construct the actual switch (a simple jump table) -----
             final List<Event> switchJumpTable = new ArrayList<>();
             for (Expression tid : tid2joinCases.keySet()) {
-                switchJumpTable.add(EventFactory.newJump(
+                switchJumpTable.add(events.newJump(
                         expressions.makeEQ(tidExpr, tid), (Label)tid2joinCases.get(tid).getFirst())
                 );
             }
             // In the case where no tid matches, we return an error status.
-            switchJumpTable.add(EventFactory.newLocal(statusRegister, invalidTidValue));
-            switchJumpTable.add(EventFactory.newGoto(joinEnd));
+            switchJumpTable.add(events.newLocal(statusRegister, invalidTidValue));
+            switchJumpTable.add(events.newGoto(joinEnd));
 
             // ----- Generate actual replacement for the DynamicJoinEvent -----
             final List<Event> replacement = eventSequence(
                     switchJumpTable,
                     tid2joinCases.values(),
                     joinEnd,
-                    newLocal(joinRegister, expressions.makeConstruct(joinRegister.getType(), List.of(statusRegister, retValRegister)))
+                    events.newLocal(joinRegister, expressions.makeConstruct(joinRegister.getType(), List.of(statusRegister, retValRegister)))
             );
             IRHelper.replaceWithMetadata(join, replacement);
             joinCounter++;
@@ -343,7 +344,7 @@ public class ThreadCreation implements ProgramProcessor {
             final Register threadState = caller.newRegister("__detachThreadState#" + detachCounter, threadStateType);
 
             // ----- Construct a switch case for each possible tid -----
-            final Label detachEnd = EventFactory.newLabel("__detachEnd#" + detachCounter);
+            final Label detachEnd = events.newLabel("__detachEnd#" + detachCounter);
             final Map<Expression, List<Event>> tid2detachCases = new LinkedHashMap<>();
             for (ThreadData data : threadData) {
                 if (!data.isDetachable()) {
@@ -356,14 +357,14 @@ public class ThreadCreation implements ProgramProcessor {
                     continue;
                 }
 
-                final Label detachCase = EventFactory.newLabel("__detachT" + tid + "#" + detachCounter);
+                final Label detachCase = events.newLabel("__detachT" + tid + "#" + detachCounter);
                 final Expression isJoinable = threadStateFlag(threadState, JOINABLE);
                 final Expression isJoinableBoolean = expressions.makeBooleanCast(isJoinable);
                 final List<Event> caseBody = eventSequence(
                         detachCase,
                         newRelaxedAnd(threadState, data.comAddress, threadState(ALIVE)),
-                        newLocal(statusRegister, expressions.makeITE(isJoinableBoolean, successValue, detachedThread)),
-                        EventFactory.newGoto(detachEnd)
+                        events.newLocal(statusRegister, expressions.makeITE(isJoinableBoolean, successValue, detachedThread)),
+                        events.newGoto(detachEnd)
                 );
                 tid2detachCases.put(new TIdExpr((IntegerType) tidExpr.getType(), data.thread()), caseBody);
             }
@@ -373,11 +374,11 @@ public class ThreadCreation implements ProgramProcessor {
             for (Expression tid : tid2detachCases.keySet()) {
                 final Expression eqTid = expressions.makeEQ(tidExpr, tid);
                 final var label = (Label) tid2detachCases.get(tid).getFirst();
-                switchJumpTable.add(EventFactory.newJump(eqTid, label));
+                switchJumpTable.add(events.newJump(eqTid, label));
             }
             // In the case where no tid matches, we return an error status.
-            switchJumpTable.add(EventFactory.newLocal(statusRegister, invalidTidValue));
-            switchJumpTable.add(EventFactory.newGoto(detachEnd));
+            switchJumpTable.add(events.newLocal(statusRegister, invalidTidValue));
+            switchJumpTable.add(events.newGoto(detachEnd));
 
             // ----- Generate actual replacement for the DynamicDetachEvent -----
             final List<Event> replacement = eventSequence(
@@ -400,7 +401,7 @@ public class ThreadCreation implements ProgramProcessor {
                 assert resultRegister.getType() instanceof IntegerType;
                 assert call.getArguments().isEmpty();
                 final Expression tidExpr = new TIdExpr((IntegerType) resultRegister.getType(), call.getThread());
-                final Local tidAssignment = newLocal(resultRegister, tidExpr);
+                final Local tidAssignment = events.newLocal(resultRegister, tidExpr);
                 IRHelper.replaceWithMetadata(call, tidAssignment);
             }
         }
@@ -409,7 +410,7 @@ public class ThreadCreation implements ProgramProcessor {
     private ThreadData createLLVMThreadFromFunction(Function function, int tid, ThreadCreate creator) {
         final IntegerType archType = function.getProgram().getArchType();
         // ------------------- Create new thread -------------------
-        final ThreadStart start = EventFactory.newThreadStart(creator);
+        final ThreadStart start = events.newThreadStart(creator);
         final Thread thread = new Thread(function.getName(), function.getFunctionType(),
                 Lists.transform(function.getParameterRegisters(), Register::getName), tid, start);
         thread.copyUniqueIdsFrom(function);
@@ -423,7 +424,7 @@ public class ThreadCreation implements ProgramProcessor {
 
         // ------------------- Define runtime thread id -------------------
         final var tidExpr = new TIdExpr(archType, thread);
-        thread.getEntry().insertAfter(newLocal(thread.getOrNewRegister(THREAD_SELF_REGISTER_NAME, tidExpr.getType()), tidExpr));
+        thread.getEntry().insertAfter(events.newLocal(thread.getOrNewRegister(THREAD_SELF_REGISTER_NAME, tidExpr.getType()), tidExpr));
 
         // ------------------- Create thread-local variables -------------------
         replaceThreadLocalsWithStackalloc(function.getProgram().getMemory(), thread);
@@ -431,7 +432,7 @@ public class ThreadCreation implements ProgramProcessor {
         // ------------------- Add end & return label -------------------
         final Register returnRegister = function.hasReturnValue() ?
                 thread.newRegister("__retval", function.getFunctionType().getReturnType()) : null;
-        final Label threadReturnLabel = EventFactory.newLabel("RETURN_OF_T" + tid);
+        final Label threadReturnLabel = events.newLabel("RETURN_OF_T" + tid);
 
         // ------------------- Replace (Thread)Return -------------------
         for (Event e : thread.getEvents()) {
@@ -440,14 +441,14 @@ public class ThreadCreation implements ProgramProcessor {
                 final Expression retVal = (e instanceof Return ret) ? ret.getValue().orElse(null)
                         : ((ThreadReturn)e).getValue().orElse(null);
                 final List<Event> replacement = eventSequence(
-                        returnRegister != null ? EventFactory.newLocal(returnRegister, retVal) : null,
-                        EventFactory.newGoto(threadReturnLabel)
+                        returnRegister != null ? events.newLocal(returnRegister, retVal) : null,
+                        events.newGoto(threadReturnLabel)
                 );
                 IRHelper.replaceWithMetadata(e, replacement);
             }
         }
 
-        final Event threadReturn = EventFactory.newThreadReturn(returnRegister);
+        final Event threadReturn = events.newThreadReturn(returnRegister);
         thread.append(List.of(
                 threadReturnLabel,
                 threadReturn
@@ -458,7 +459,7 @@ public class ThreadCreation implements ProgramProcessor {
             // Arguments
             final List<Register> params = thread.getParameterRegisters();
             for (int i = 0; i < params.size(); i++) {
-                thread.getEntry().insertAfter(newThreadArgument(params.get(i), creator, i));
+                thread.getEntry().insertAfter(events.newThreadArgument(params.get(i), creator, i));
             }
 
             // We use accesses to a common memory object to synchronize creator and thread.
@@ -471,7 +472,7 @@ public class ThreadCreation implements ProgramProcessor {
             final Expression isAlive = threadStateFlag(threadState, ALIVE);
             thread.getEntry().insertAfter(eventSequence(
                     newAcquireLoad(threadState, comAddress),
-                    newAssume(expressions.makeBooleanCast(isAlive))
+                    events.newAssume(expressions.makeBooleanCast(isAlive))
             ));
 
             // End
@@ -509,7 +510,7 @@ public class ThreadCreation implements ProgramProcessor {
 
             // Allocate single object of memory type
             final Register reg = thread.newUniqueRegister("__threadLocal_" + memoryObject, pointerType);
-            final Event localAlloc = EventFactory.newAlignedAlloc(
+            final Event localAlloc = events.newAlignedAlloc(
                     reg, memoryType, expressions.makeOne(archType),
                     memoryObject.alignment(), false, true
             );
@@ -517,7 +518,7 @@ public class ThreadCreation implements ProgramProcessor {
             // Initialize allocated object with regular stores.
             final List<Event> initialization = new ArrayList<>();
             for (Integer initOffset : memoryObject.getInitializedFields()) {
-                initialization.add(EventFactory.newStore(
+                initialization.add(events.newStore(
                         expressions.makeAdd(reg, expressions.makeValue(initOffset, archType)),
                         memoryObject.getInitialValue(initOffset)
                 ));
@@ -579,10 +580,10 @@ public class ThreadCreation implements ProgramProcessor {
             data.setInitialValue(0, nil);
             storage.add(new Storage(id, data, destructor));
             create.replaceBy(List.of(
-                    newFunctionCallMarker("__dat3m_dynamic_thread_create"),
-                    newStore(destructor, create.getDestructor()),
-                    newLocal(create.getResultRegister(), expressions.makeValue(id, t)),
-                    newFunctionReturnMarker("__dat3m_dynamic_thread_create")
+                    events.newFunctionCallMarker("__dat3m_dynamic_thread_create"),
+                    events.newStore(destructor, create.getDestructor()),
+                    events.newLocal(create.getResultRegister(), expressions.makeValue(id, t)),
+                    events.newFunctionReturnMarker("__dat3m_dynamic_thread_create")
             ));
         }
         final Match match = (field, key) -> {
@@ -597,42 +598,42 @@ public class ThreadCreation implements ProgramProcessor {
         for (DynamicThreadLocalDelete delete : program.getThreadEvents(DynamicThreadLocalDelete.class)) {
             // Set the destructor to null.
             final Register destructor = delete.getThread().newUniqueRegister("__thread_local_delete_destructor", type);
-            final Label end = newLabel("__thread_local_delete_end");
+            final Label end = events.newLabel("__thread_local_delete_end");
             delete.replaceBy(List.of(
-                    newFunctionCallMarker("__dat3m_dynamic_thread_delete"),
-                    newLocal(destructor, match.compute(Storage::destructor, delete.getKey())),
-                    newIfJump(expressions.makeEQ(destructor, nil), end, end),
-                    newStore(destructor, nil),
+                    events.newFunctionCallMarker("__dat3m_dynamic_thread_delete"),
+                    events.newLocal(destructor, match.compute(Storage::destructor, delete.getKey())),
+                    events.newIfJump(expressions.makeEQ(destructor, nil), end, end),
+                    events.newStore(destructor, nil),
                     end,
-                    newFunctionReturnMarker("__dat3m_dynamic_thread_delete")
+                    events.newFunctionReturnMarker("__dat3m_dynamic_thread_delete")
             ));
         }
         for (DynamicThreadLocalGet get : program.getThreadEvents(DynamicThreadLocalGet.class)) {
             final Register data = get.getThread().newUniqueRegister("__thread_local_get_key", type);
-            final Label end = newLabel("__thread_local_get_end");
+            final Label end = events.newLabel("__thread_local_get_end");
             get.replaceBy(List.of(
-                    newFunctionCallMarker("__dat3m_dynamic_thread_get"),
-                    newLocal(data, match.compute(Storage::data, get.getKey())),
+                    events.newFunctionCallMarker("__dat3m_dynamic_thread_get"),
+                    events.newLocal(data, match.compute(Storage::data, get.getKey())),
                     // pthread_getspecific returns NULL for invalid keys.
-                    newLocal(get.getResultRegister(), expressions.makeGeneralZero(get.getResultRegister().getType())),
-                    newIfJump(expressions.makeEQ(data, nil), end, end),
-                    newLoad(get.getResultRegister(), data),
+                    events.newLocal(get.getResultRegister(), expressions.makeGeneralZero(get.getResultRegister().getType())),
+                    events.newIfJump(expressions.makeEQ(data, nil), end, end),
+                    events.newLoad(get.getResultRegister(), data),
                     end,
-                    newFunctionReturnMarker("__dat3m_dynamic_thread_get")
+                    events.newFunctionReturnMarker("__dat3m_dynamic_thread_get")
             ));
         }
         for (DynamicThreadLocalSet set : program.getThreadEvents(DynamicThreadLocalSet.class)) {
             final Register data = set.getThread().newUniqueRegister("__thread_local_set_key", type);
-            final Label end = newLabel("__thread_local_set_end");
+            final Label end = events.newLabel("__thread_local_set_end");
             set.replaceBy(List.of(
-                    newFunctionCallMarker("__dat3m_dynamic_thread_set"),
-                    newLocal(data, match.compute(Storage::data, set.getKey())),
+                    events.newFunctionCallMarker("__dat3m_dynamic_thread_set"),
+                    events.newLocal(data, match.compute(Storage::data, set.getKey())),
                     // Signals success, unless the key is invalid.
-                    newLocal(set.getResultRegister(), expressions.makeNEQ(data, nil)),
-                    newIfJump(expressions.makeEQ(data, nil), end, end),
-                    newStore(data, set.getValue()),
+                    events.newLocal(set.getResultRegister(), expressions.makeNEQ(data, nil)),
+                    events.newIfJump(expressions.makeEQ(data, nil), end, end),
+                    events.newStore(data, set.getValue()),
                     end,
-                    newFunctionReturnMarker("__dat3m_dynamic_thread_set")
+                    events.newFunctionReturnMarker("__dat3m_dynamic_thread_set")
             ));
         }
         // Call destructors at the end of the thread.
@@ -644,12 +645,12 @@ public class ThreadCreation implements ProgramProcessor {
             final Register value = thread.thread.newUniqueRegister("__thread_exit_value", type);
             int index = 0;
             for (Storage s : storage) {
-                final Label end = newLabel("__thread_exit_destructor_%d".formatted(++index));
+                final Label end = events.newLabel("__thread_exit_destructor_%d".formatted(++index));
                 exit.addAll(List.of(
-                        newLoad(destructor, s.destructor),
-                        newIfJump(expressions.makeEQ(destructor, nil), end, end),
-                        newLoad(value, s.data),
-                        newVoidFunctionCall(destructorType, destructor, List.of(value)),
+                        events.newLoad(destructor, s.destructor),
+                        events.newIfJump(expressions.makeEQ(destructor, nil), end, end),
+                        events.newLoad(value, s.data),
+                        events.newVoidFunctionCall(destructorType, destructor, List.of(value)),
                         end
                 ));
             }
@@ -727,7 +728,7 @@ public class ThreadCreation implements ProgramProcessor {
         String name = function.getName();
         FunctionType type = function.getFunctionType();
         List<String> args = Lists.transform(function.getParameterRegisters(), Register::getName);
-        ThreadStart start = EventFactory.newThreadStart(null);
+        ThreadStart start = events.newThreadStart(null);
         Arch arch = function.getProgram().getArch();
         ScopeHierarchy scope;
         if (arch == Arch.VULKAN) {
@@ -739,11 +740,11 @@ public class ThreadCreation implements ProgramProcessor {
         }
         Thread thread = new Thread(name, type, args, tid, start, scope, Set.of());
         thread.copyUniqueIdsFrom(function);
-        Label returnLabel = EventFactory.newLabel("RETURN_OF_T" + thread.getId());
-        Label endLabel = EventFactory.newLabel("END_OF_T" + thread.getId());
+        Label returnLabel = events.newLabel("RETURN_OF_T" + thread.getId());
+        Label endLabel = events.newLabel("END_OF_T" + thread.getId());
         copyThreadEvents(function, thread, transformer, endLabel);
         for (Return event : thread.getEvents(Return.class)) {
-            event.replaceBy(EventFactory.newGoto(returnLabel));
+            event.replaceBy(events.newGoto(returnLabel));
         }
         thread.append(returnLabel);
         thread.append(endLabel);
@@ -768,7 +769,7 @@ public class ThreadCreation implements ProgramProcessor {
                 regWriter.setResultRegister(transformer.getRegisterMapping(regWriter.getResultRegister()));
             }
             if (copy instanceof AbortIf abort) {
-                final Event jumpToEnd = EventFactory.newJump(abort.getCondition(), threadEnd);
+                final Event jumpToEnd = events.newJump(abort.getCondition(), threadEnd);
                 jumpToEnd.addTags(abort.getTags());
                 jumpToEnd.copyAllMetadataFrom(abort);
                 body.set(i, jumpToEnd);

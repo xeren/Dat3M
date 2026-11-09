@@ -29,6 +29,8 @@ import java.util.Map;
  */
 public class ComplexBlockSplitting implements FunctionProcessor {
 
+    private static final EventFactory events = EventFactory.getInstance();
+
     private ComplexBlockSplitting() {}
 
     public static ComplexBlockSplitting newInstance() { return new ComplexBlockSplitting(); }
@@ -50,8 +52,8 @@ public class ComplexBlockSplitting implements FunctionProcessor {
             final String targetLabelName = condJump.getLabel().getName();
             final String newLabelName = String.format("%s_else_%d", targetLabelName,
                     labelName2OccurrenceMap.compute(targetLabelName, (k, v) -> v == null ? 1 : v + 1));
-            final Label blockLabel = EventFactory.newLabel(newLabelName);
-            final CondJump gotoLabel = EventFactory.newGoto(blockLabel);
+            final Label blockLabel = events.newLabel(newLabelName);
+            final CondJump gotoLabel = events.newGoto(blockLabel);
 
             blockLabel.copyAllMetadataFrom(condJump);
             gotoLabel.copyAllMetadataFrom(condJump);

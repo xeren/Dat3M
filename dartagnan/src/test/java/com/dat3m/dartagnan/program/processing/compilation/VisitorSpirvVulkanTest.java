@@ -58,7 +58,7 @@ public class VisitorSpirvVulkanTest {
         // given
         Register register = mock(Register.class);
         MemoryObject address = mock(MemoryObject.class);
-        Load e = EventFactory.newLoad(register, address);
+        Load e = events.newLoad(register, address);
         e.setFunction(mock(Function.class));
         e.addTags(spvTags);
 
@@ -96,7 +96,7 @@ public class VisitorSpirvVulkanTest {
         // given
         Expression value = mock(Expression.class);
         MemoryObject address = mock(MemoryObject.class);
-        Store e = EventFactory.newStore(address, value);
+        Store e = events.newStore(address, value);
         e.setFunction(mock(Function.class));
         e.addTags(spvTags);
 
@@ -397,7 +397,7 @@ public class VisitorSpirvVulkanTest {
 
     private void doTestSpirvMemoryBarrier(Set<String> spvTags, Set<String> expected) {
         // given
-        Event e = EventFactory.newGenericVisibleEvent("membar", Tag.FENCE);
+        Event e = events.newGenericVisibleEvent("membar", Tag.FENCE);
         e.setFunction(mock(Function.class));
         e.addTags(spvTags);
 
@@ -437,7 +437,7 @@ public class VisitorSpirvVulkanTest {
 
     private void doTestSpirvControlBarrier(Set<String> spvTags, Set<String> expected) {
         // given
-        ControlBarrier e = EventFactory.newControlBarrier("test", "test", Tag.Spirv.WORKGROUP);
+        ControlBarrier e = events.newControlBarrier("test", "test", Tag.Spirv.WORKGROUP);
         e.setFunction(mock(Function.class));
         e.addTags(Tag.Spirv.CONTROL);
         if (!spvTags.isEmpty()) {
@@ -464,7 +464,7 @@ public class VisitorSpirvVulkanTest {
 
     public void toTestSpirvControlBarrierExecScope(String spvScope, String expected) {
         // given
-        ControlBarrier e = EventFactory.newControlBarrier("test-wg", "test-wg", spvScope);
+        ControlBarrier e = events.newControlBarrier("test-wg", "test-wg", spvScope);
         e.setFunction(mock(Function.class));
 
         // when

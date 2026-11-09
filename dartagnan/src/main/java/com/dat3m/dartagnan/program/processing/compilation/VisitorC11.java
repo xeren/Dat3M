@@ -6,7 +6,6 @@ import com.dat3m.dartagnan.expression.Type;
 import com.dat3m.dartagnan.expression.type.BooleanType;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.EventFactory;
 import com.dat3m.dartagnan.program.event.MemoryEvent;
 import com.dat3m.dartagnan.program.event.Tag;
 import com.dat3m.dartagnan.program.event.core.*;
@@ -45,18 +44,18 @@ public class VisitorC11 extends VisitorBase {
         Register booleanResultRegister = type instanceof BooleanType ? resultRegister :
                 e.getFunction().newRegister(types.getBooleanType());
         Local castResult = type instanceof BooleanType ? null :
-                newLocal(resultRegister, expressions.makeCast(booleanResultRegister, type));
+                events.newLocal(resultRegister, expressions.makeCast(booleanResultRegister, type));
         Register regExpected = e.getFunction().newRegister(type);
         Register regValue = e.getFunction().newRegister(type);
-        Load loadExpected = newLoad(regExpected, expectedAddr);
-        Store storeExpected = newStore(expectedAddr, regValue);
-        Label casFail = newLabel("CAS_fail");
-        Label casEnd = newLabel("CAS_end");
-        Local casCmpResult = newLocal(booleanResultRegister, expressions.makeEQ(regValue, regExpected));
-        CondJump branchOnCasCmpResult = newJumpUnless(booleanResultRegister, casFail);
-        CondJump gotoCasEnd = newGoto(casEnd);
-        Load loadValue = newRMWLoadWithMo(regValue, address, loadMO(mo));
-        Store storeValue = newRMWStoreWithMo(loadValue, address, e.getStoreValue(), storeMO(mo));
+        Load loadExpected = events.newLoad(regExpected, expectedAddr);
+        Store storeExpected = events.newStore(expectedAddr, regValue);
+        Label casFail = events.newLabel("CAS_fail");
+        Label casEnd = events.newLabel("CAS_end");
+        Local casCmpResult = events.newLocal(booleanResultRegister, expressions.makeEQ(regValue, regExpected));
+        CondJump branchOnCasCmpResult = events.newJumpUnless(booleanResultRegister, casFail);
+        CondJump gotoCasEnd = events.newGoto(casEnd);
+        Load loadValue = events.newRMWLoadWithMo(regValue, address, loadMO(mo));
+        Store storeValue = events.newRMWStoreWithMo(loadValue, address, e.getStoreValue(), storeMO(mo));
 
         return tagList(e, eventSequence(
                 loadExpected,
@@ -79,9 +78,9 @@ public class VisitorC11 extends VisitorBase {
         String mo = e.getMo();
 
         Register dummyReg = e.getFunction().newRegister(resultRegister.getType());
-        Load load = newRMWLoadWithMo(resultRegister, address, loadMO(mo));
-        Local localOp = newLocal(dummyReg, expressions.makeIntBinary(resultRegister, e.getOperator(), e.getOperand()));
-        RMWStore store = newRMWStoreWithMo(load, address, dummyReg, storeMO(mo));
+        Load load = events.newRMWLoadWithMo(resultRegister, address, loadMO(mo));
+        Local localOp = events.newLocal(dummyReg, expressions.makeIntBinary(resultRegister, e.getOperator(), e.getOperand()));
+        RMWStore store = events.newRMWStoreWithMo(load, address, dummyReg, storeMO(mo));
 
         return tagList(e, eventSequence(
                 load,
@@ -96,9 +95,9 @@ public class VisitorC11 extends VisitorBase {
         String mo = e.getMo();
 
         Register dummyReg = e.getFunction().newRegister(e.getAccessType());
-        Load load = newRMWLoad(dummyReg, address);
-        Local localOp = newLocal(dummyReg, expressions.makeIntBinary(dummyReg, e.getOperator(), e.getOperand()));
-        RMWStore store = newRMWStoreWithMo(load, address, dummyReg, Tag.C11.storeMO(mo));
+        Load load = events.newRMWLoad(dummyReg, address);
+        Local localOp = events.newLocal(dummyReg, expressions.makeIntBinary(dummyReg, e.getOperator(), e.getOperand()));
+        RMWStore store = events.newRMWStoreWithMo(load, address, dummyReg, Tag.C11.storeMO(mo));
 
         load.addTags(Tag.C11.ATOMIC, Tag.C11.NORETURN); // Note that the load has no mo, but is still atomic!
         store.addTags(Tag.C11.NORETURN);
@@ -113,14 +112,14 @@ public class VisitorC11 extends VisitorBase {
     @Override
     public List<Event> visitAtomicLoad(AtomicLoad e) {
         return tagList(e, eventSequence(
-                newLoadWithMo(e.getResultRegister(), e.getAddress(), loadMO(e.getMo()))
+                events.newLoadWithMo(e.getResultRegister(), e.getAddress(), loadMO(e.getMo()))
         ));
     }
 
     @Override
     public List<Event> visitAtomicStore(AtomicStore e) {
         return tagList(e, eventSequence(
-                newStoreWithMo(e.getAddress(), e.getMemValue(), storeMO(e.getMo()))
+                events.newStoreWithMo(e.getAddress(), e.getMemValue(), storeMO(e.getMo()))
         ));
     }
 
@@ -136,8 +135,8 @@ public class VisitorC11 extends VisitorBase {
         Expression address = e.getAddress();
         String mo = e.getMo();
 
-        Load load = newRMWLoadWithMo(e.getResultRegister(), address, loadMO(mo));
-        RMWStore store = newRMWStoreWithMo(load, address, e.getValue(), storeMO(mo));
+        Load load = events.newRMWLoadWithMo(e.getResultRegister(), address, loadMO(mo));
+        RMWStore store = events.newRMWStoreWithMo(load, address, e.getValue(), storeMO(mo));
 
         return tagList(e, eventSequence(
                 load,
@@ -147,7 +146,7 @@ public class VisitorC11 extends VisitorBase {
 
     @Override
     public List<Event> visitControlBarrier(ControlBarrier e) {
-        Event barrier = EventFactory.newControlBarrier(e.getName(), e.getInstanceId(), e.getExecScope());
+        Event barrier = events.newControlBarrier(e.getName(), e.getInstanceId(), e.getExecScope());
         barrier.addTags(MO_ACQUIRE_RELEASE);
         return tagList(e, eventSequence(barrier));
     }
@@ -159,14 +158,14 @@ public class VisitorC11 extends VisitorBase {
     @Override
     public List<Event> visitLlvmLoad(LlvmLoad e) {
         return tagList(eventSequence(
-                newLoadWithMo(e.getResultRegister(), e.getAddress(), loadMO(e.getMo()))
+                events.newLoadWithMo(e.getResultRegister(), e.getAddress(), loadMO(e.getMo()))
         ));
     }
 
     @Override
     public List<Event> visitLlvmStore(LlvmStore e) {
         return tagList(eventSequence(
-                newStoreWithMo(e.getAddress(), e.getMemValue(), storeMO(e.getMo()))
+                events.newStoreWithMo(e.getAddress(), e.getMemValue(), storeMO(e.getMo()))
         ));
     }
 
@@ -176,8 +175,8 @@ public class VisitorC11 extends VisitorBase {
         Expression address = e.getAddress();
         String mo = e.getMo();
 
-        Load load = newRMWLoadWithMo(resultRegister, address, loadMO(mo));
-        Store store = newRMWStoreWithMo(load, address, e.getValue(), storeMO(mo));
+        Load load = events.newRMWLoadWithMo(resultRegister, address, loadMO(mo));
+        Store store = events.newRMWStoreWithMo(load, address, e.getValue(), storeMO(mo));
 
         return tagList(eventSequence(
                 load,
@@ -192,10 +191,10 @@ public class VisitorC11 extends VisitorBase {
         String mo = e.getMo();
 
         Register dummyReg = e.getFunction().newRegister(resultRegister.getType());
-        Local localOp = newLocal(dummyReg, expressions.makeIntBinary(resultRegister, e.getOperator(), e.getOperand()));
+        Local localOp = events.newLocal(dummyReg, expressions.makeIntBinary(resultRegister, e.getOperator(), e.getOperand()));
 
-        Load load = newRMWLoadWithMo(resultRegister, address, loadMO(mo));
-        Store store = newRMWStoreWithMo(load, address, dummyReg, storeMO(mo));
+        Load load = events.newRMWLoadWithMo(resultRegister, address, loadMO(mo));
+        Store store = events.newRMWStoreWithMo(load, address, dummyReg, storeMO(mo));
 
         return tagList(eventSequence(
                 load,
@@ -209,20 +208,20 @@ public class VisitorC11 extends VisitorBase {
             Expression newValue, String mo, boolean strong) {
         verify(success.getType() instanceof BooleanType, "Non-boolean success register.");
 
-        Local casCmpResult = newLocal(success, expressions.makeEQ(oldValue, expected));
-        Label casEnd = newLabel("CAS_end");
-        CondJump branchOnCasCmpResult = newJumpUnless(success, casEnd);
+        Local casCmpResult = events.newLocal(success, expressions.makeEQ(oldValue, expected));
+        Label casEnd = events.newLabel("CAS_end");
+        CondJump branchOnCasCmpResult = events.newJumpUnless(success, casEnd);
 
-        Load load = newRMWLoadExclusiveWithMo(oldValue, address, loadMO(mo));
-        Store store = newRMWStoreExclusiveWithMo(address, newValue, strong, false, storeMO(mo));
+        Load load = events.newRMWLoadExclusiveWithMo(oldValue, address, loadMO(mo));
+        Store store = events.newRMWStoreExclusiveWithMo(address, newValue, strong, false, storeMO(mo));
 
         return tagList(eventSequence(
                 load,
                 casCmpResult,
                 branchOnCasCmpResult,
                 store,
-                strong ? null : newExecutionStatus(success, store),
-                strong ? null : newLocal(success, expressions.makeNot(success)),
+                strong ? null : events.newExecutionStatus(success, store),
+                strong ? null : events.newLocal(success, expressions.makeNot(success)),
                 casEnd
         ));
     }
@@ -245,7 +244,7 @@ public class VisitorC11 extends VisitorBase {
     }
 
     private Event newFence(String name) {
-        return newGenericVisibleEvent(name, Tag.FENCE, name);
+        return events.newGenericVisibleEvent(name, Tag.FENCE, name);
     }
 
     private void tagEvent(Event originalEvent, Event e) {

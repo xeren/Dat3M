@@ -12,7 +12,7 @@ import com.dat3m.dartagnan.program.event.lang.llvm.*;
 
 import java.util.List;
 
-import static com.dat3m.dartagnan.program.event.EventFactory.*;
+import static com.dat3m.dartagnan.program.event.EventFactory.eventSequence;
 import static com.dat3m.dartagnan.program.event.Tag.IMM.extractLoadMo;
 import static com.dat3m.dartagnan.program.event.Tag.IMM.extractStoreMo;
 import static com.google.common.base.Verify.verify;
@@ -25,7 +25,7 @@ class VisitorIMM extends VisitorBase {
         final MemoryCoreEvent.MemoryOrder mo = e.getMetadata(MemoryCoreEvent.MemoryOrder.class);
         final boolean isNonAtomic = (mo == null || mo.value().equals(Tag.C11.NONATOMIC));
         return eventSequence(
-                newLoadWithMo(e.getResultRegister(), e.getAddress(), isNonAtomic ? Tag.C11.MO_RELAXED : mo.value())
+                events.newLoadWithMo(e.getResultRegister(), e.getAddress(), isNonAtomic ? Tag.C11.MO_RELAXED : mo.value())
         );
     }
 
@@ -35,7 +35,7 @@ class VisitorIMM extends VisitorBase {
         final MemoryCoreEvent.MemoryOrder mo = e.getMetadata(MemoryCoreEvent.MemoryOrder.class);
         final boolean isNonAtomic = (mo == null || mo.value().equals(Tag.C11.NONATOMIC));
         return eventSequence(
-                newStoreWithMo(e.getAddress(), e.getMemValue(), isNonAtomic ? Tag.C11.MO_RELAXED : mo.value())
+                events.newStoreWithMo(e.getAddress(), e.getMemValue(), isNonAtomic ? Tag.C11.MO_RELAXED : mo.value())
         );
     }
 
@@ -53,19 +53,19 @@ class VisitorIMM extends VisitorBase {
         Register booleanResultRegister = type instanceof BooleanType ? resultRegister :
                 e.getFunction().newRegister(types.getBooleanType());
         Local castResult = type instanceof BooleanType ? null :
-                newLocal(resultRegister, expressions.makeCast(booleanResultRegister, type));
+                events.newLocal(resultRegister, expressions.makeCast(booleanResultRegister, type));
         Register regExpected = e.getFunction().newRegister(type);
         Register regValue = e.getFunction().newRegister(type);
-        Load loadExpected = newLoad(regExpected, expectedAddr);
+        Load loadExpected = events.newLoad(regExpected, expectedAddr);
         loadExpected.addTags(Tag.IMM.CASDEPORIGIN);
-        Store storeExpected = newStore(expectedAddr, regValue);
-        Label casFail = newLabel("CAS_fail");
-        Label casEnd = newLabel("CAS_end");
-        Local casCmpResult = newLocal(booleanResultRegister, expressions.makeEQ(regValue, regExpected));
-        CondJump branchOnCasCmpResult = newJumpUnless(booleanResultRegister, casFail);
-        CondJump gotoCasEnd = newGoto(casEnd);
-        Load loadValue = newRMWLoadWithMo(regValue, address, extractLoadMo(mo));
-        Store storeValue = newRMWStoreWithMo(loadValue, address, e.getStoreValue(), extractStoreMo(mo));
+        Store storeExpected = events.newStore(expectedAddr, regValue);
+        Label casFail = events.newLabel("CAS_fail");
+        Label casEnd = events.newLabel("CAS_end");
+        Local casCmpResult = events.newLocal(booleanResultRegister, expressions.makeEQ(regValue, regExpected));
+        CondJump branchOnCasCmpResult = events.newJumpUnless(booleanResultRegister, casFail);
+        CondJump gotoCasEnd = events.newGoto(casEnd);
+        Load loadValue = events.newRMWLoadWithMo(regValue, address, extractLoadMo(mo));
+        Store storeValue = events.newRMWStoreWithMo(loadValue, address, e.getStoreValue(), extractStoreMo(mo));
 
         return eventSequence(
                 loadExpected,
@@ -90,14 +90,14 @@ class VisitorIMM extends VisitorBase {
         String mo = e.getMo();
 
         Register dummyReg = e.getFunction().newRegister(resultRegister.getType());
-        Load load = newRMWLoadWithMo(resultRegister, address, extractLoadMo(mo));
+        Load load = events.newRMWLoadWithMo(resultRegister, address, extractLoadMo(mo));
 
         return eventSequence(
                 optionalFence(mo),
                 load,
-                newLocal(dummyReg, expressions.makeIntBinary(resultRegister, e.getOperator(), e.getOperand())),
+                events.newLocal(dummyReg, expressions.makeIntBinary(resultRegister, e.getOperator(), e.getOperand())),
                 optionalFence(mo),
-                newRMWStoreWithMo(load, address, dummyReg, extractStoreMo(mo))
+                events.newRMWStoreWithMo(load, address, dummyReg, extractStoreMo(mo))
         );
     }
 
@@ -106,7 +106,7 @@ class VisitorIMM extends VisitorBase {
         String mo = e.getMo();
         return eventSequence(
                 optionalFence(mo),
-                newLoadWithMo(e.getResultRegister(), e.getAddress(), extractLoadMo(mo))
+                events.newLoadWithMo(e.getResultRegister(), e.getAddress(), extractLoadMo(mo))
         );
     }
 
@@ -115,7 +115,7 @@ class VisitorIMM extends VisitorBase {
         String mo = e.getMo();
         return eventSequence(
                 optionalFence(mo),
-                newStoreWithMo(e.getAddress(), e.getMemValue(), extractStoreMo(mo))
+                events.newStoreWithMo(e.getAddress(), e.getMemValue(), extractStoreMo(mo))
         );
     }
 
@@ -131,13 +131,13 @@ class VisitorIMM extends VisitorBase {
         Expression address = e.getAddress();
         String mo = e.getMo();
 
-        Load load = newRMWLoadWithMo(e.getResultRegister(), address, mo);
+        Load load = events.newRMWLoadWithMo(e.getResultRegister(), address, mo);
 
         return eventSequence(
                 optionalFence(mo),
                 load,
                 optionalFence(mo),
-                newRMWStoreWithMo(load, address, e.getValue(), extractStoreMo(mo))
+                events.newRMWStoreWithMo(load, address, e.getValue(), extractStoreMo(mo))
         );
     }
 
@@ -152,14 +152,14 @@ class VisitorIMM extends VisitorBase {
     @Override
     public List<Event> visitLlvmLoad(LlvmLoad e) {
         return eventSequence(
-                newLoadWithMo(e.getResultRegister(), e.getAddress(), extractLoadMo(e.getMo()))
+                events.newLoadWithMo(e.getResultRegister(), e.getAddress(), extractLoadMo(e.getMo()))
         );
     }
 
     @Override
     public List<Event> visitLlvmStore(LlvmStore e) {
         return eventSequence(
-                newStoreWithMo(e.getAddress(), e.getMemValue(), extractStoreMo(e.getMo()))
+                events.newStoreWithMo(e.getAddress(), e.getMemValue(), extractStoreMo(e.getMo()))
         );
     }
 
@@ -169,12 +169,12 @@ class VisitorIMM extends VisitorBase {
         Expression address = e.getAddress();
         String mo = e.getMo();
 
-        Load load = newRMWLoadExclusiveWithMo(resultRegister, address, extractLoadMo(mo));
-        Store store = newRMWStoreExclusiveWithMo(address, e.getValue(), true, false, extractStoreMo(mo));
+        Load load = events.newRMWLoadExclusiveWithMo(resultRegister, address, extractLoadMo(mo));
+        Store store = events.newRMWStoreExclusiveWithMo(address, e.getValue(), true, false, extractStoreMo(mo));
 
         return eventSequence(
                 load,
-                newFakeCtrlDep(resultRegister),
+                events.newFakeCtrlDep(resultRegister),
                 store
         );
     }
@@ -186,14 +186,14 @@ class VisitorIMM extends VisitorBase {
         String mo = e.getMo();
 
         Register dummyReg = e.getFunction().newRegister(resultRegister.getType());
-        Local localOp = newLocal(dummyReg, expressions.makeIntBinary(resultRegister, e.getOperator(), e.getOperand()));
+        Local localOp = events.newLocal(dummyReg, expressions.makeIntBinary(resultRegister, e.getOperator(), e.getOperand()));
 
-        Load load = newRMWLoadExclusiveWithMo(resultRegister, address, extractLoadMo(mo));
-        Store store = newRMWStoreExclusiveWithMo(address, dummyReg, true, false, extractStoreMo(mo));
+        Load load = events.newRMWLoadExclusiveWithMo(resultRegister, address, extractLoadMo(mo));
+        Store store = events.newRMWStoreExclusiveWithMo(address, dummyReg, true, false, extractStoreMo(mo));
 
         return eventSequence(
                 load,
-                newFakeCtrlDep(resultRegister),
+                events.newFakeCtrlDep(resultRegister),
                 localOp,
                 store
         );
@@ -204,20 +204,20 @@ class VisitorIMM extends VisitorBase {
             Expression newValue, String mo, boolean strong) {
         verify(success.getType() instanceof BooleanType, "Non-boolean success register.");
 
-        Local casCmpResult = newLocal(success, expressions.makeEQ(oldValue, expected));
-        Label casEnd = newLabel("CAS_end");
-        CondJump branchOnCasCmpResult = newJumpUnless(success, casEnd);
+        Local casCmpResult = events.newLocal(success, expressions.makeEQ(oldValue, expected));
+        Label casEnd = events.newLabel("CAS_end");
+        CondJump branchOnCasCmpResult = events.newJumpUnless(success, casEnd);
 
-        Load load = newRMWLoadExclusiveWithMo(oldValue, address, extractLoadMo(mo));
-        Store store = newRMWStoreExclusiveWithMo(address, newValue, strong, false, extractStoreMo(mo));
+        Load load = events.newRMWLoadExclusiveWithMo(oldValue, address, extractLoadMo(mo));
+        Store store = events.newRMWStoreExclusiveWithMo(address, newValue, strong, false, extractStoreMo(mo));
 
         return eventSequence(
                 load,
                 casCmpResult,
                 branchOnCasCmpResult,
                 store,
-                strong ? null : newExecutionStatus(success, store),
-                strong ? null : newLocal(success, expressions.makeNot(success)),
+                strong ? null : events.newExecutionStatus(success, store),
+                strong ? null : events.newLocal(success, expressions.makeNot(success)),
                 casEnd
         );
     }
@@ -229,5 +229,5 @@ class VisitorIMM extends VisitorBase {
         );
     }
 
-    private Event newFence(String mo) { return newGenericVisibleEvent(mo, Tag.FENCE, mo); }
+    private Event newFence(String mo) { return events.newGenericVisibleEvent(mo, Tag.FENCE, mo); }
 }

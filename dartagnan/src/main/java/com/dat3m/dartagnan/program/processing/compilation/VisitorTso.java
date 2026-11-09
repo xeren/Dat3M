@@ -8,19 +8,16 @@ import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.MemoryEvent;
 import com.dat3m.dartagnan.program.event.Tag;
 import com.dat3m.dartagnan.program.event.arch.tso.TSOXchg;
-import com.dat3m.dartagnan.program.event.arch.x86.X86;
 import com.dat3m.dartagnan.program.event.core.*;
 import com.dat3m.dartagnan.program.event.lang.catomic.*;
 import com.dat3m.dartagnan.program.event.lang.llvm.*;
 
 import java.util.List;
 
-import static com.dat3m.dartagnan.program.event.EventFactory.*;
+import static com.dat3m.dartagnan.program.event.EventFactory.eventSequence;
 import static com.google.common.base.Verify.verify;
 
 class VisitorTso extends VisitorBase {
-
-    private final X86 events = X86.newInstance();
 
     @Override
     public List<Event> visitTSOXchg(TSOXchg e) {
@@ -28,12 +25,12 @@ class VisitorTso extends VisitorBase {
         Expression address = e.getAddress();
 
         Register dummyReg = e.getFunction().newRegister(resultRegister.getType());
-        Load load = newRMWLoad(dummyReg, address);
+        Load load = events.newRMWLoad(dummyReg, address);
 
         return tagList(eventSequence(
                 load,
-                newRMWStore(load, address, resultRegister),
-                newLocal(resultRegister, dummyReg)
+                events.newRMWStore(load, address, resultRegister),
+                events.newLocal(resultRegister, dummyReg)
         ));
     }
 
@@ -44,14 +41,14 @@ class VisitorTso extends VisitorBase {
     @Override
     public List<Event> visitLlvmLoad(LlvmLoad e) {
         return eventSequence(
-                newLoad(e.getResultRegister(), e.getAddress())
+                events.newLoad(e.getResultRegister(), e.getAddress())
         );
     }
 
     @Override
     public List<Event> visitLlvmStore(LlvmStore e) {
         return eventSequence(
-                newStore(e.getAddress(), e.getMemValue()),
+                events.newStore(e.getAddress(), e.getMemValue()),
                 optionalMFence(e.getMo())
         );
     }
@@ -59,11 +56,11 @@ class VisitorTso extends VisitorBase {
     @Override
     public List<Event> visitLlvmXchg(LlvmXchg e) {
         Expression address = e.getAddress();
-        Load load = newRMWLoad(e.getResultRegister(), address);
+        Load load = events.newRMWLoad(e.getResultRegister(), address);
 
         return tagList(eventSequence(
                 load,
-                newRMWStore(load, address, e.getValue())
+                events.newRMWStore(load, address, e.getValue())
         ));
     }
 
@@ -73,12 +70,12 @@ class VisitorTso extends VisitorBase {
         Register dummyReg = e.getFunction().newRegister(resultRegister.getType());
 
         Expression address = e.getAddress();
-        Load load = newRMWLoad(resultRegister, address);
+        Load load = events.newRMWLoad(resultRegister, address);
 
         return tagList(eventSequence(
                 load,
-                newLocal(dummyReg, expressions.makeIntBinary(resultRegister, e.getOperator(), e.getOperand())),
-                newRMWStore(load, address, dummyReg)
+                events.newLocal(dummyReg, expressions.makeIntBinary(resultRegister, e.getOperator(), e.getOperand())),
+                events.newRMWStore(load, address, dummyReg)
         ));
     }
 
@@ -87,12 +84,12 @@ class VisitorTso extends VisitorBase {
             Expression newValue, String mo, boolean strong) {
         verify(success.getType() instanceof BooleanType, "Non-boolean success register.");
 
-        Local casCmpResult = newLocal(success, expressions.makeEQ(oldValue, expected));
-        Label casEnd = newLabel("CAS_end");
-        CondJump branchOnCasCmpResult = newJumpUnless(success, casEnd);
+        Local casCmpResult = events.newLocal(success, expressions.makeEQ(oldValue, expected));
+        Label casEnd = events.newLabel("CAS_end");
+        CondJump branchOnCasCmpResult = events.newJumpUnless(success, casEnd);
 
-        Load load = newRMWLoad(oldValue, address);
-        Store store = newRMWStore(load, address, newValue);
+        Load load = events.newRMWLoad(oldValue, address);
+        Store store = events.newRMWStore(load, address, newValue);
 
         return tagList(eventSequence(
                 load,
@@ -124,18 +121,18 @@ class VisitorTso extends VisitorBase {
         Register booleanResultRegister = type instanceof BooleanType ? resultRegister :
                 e.getFunction().newRegister(types.getBooleanType());
         Local castResult = booleanResultRegister == resultRegister ? null :
-                newLocal(resultRegister, expressions.makeCast(booleanResultRegister, type));
+                events.newLocal(resultRegister, expressions.makeCast(booleanResultRegister, type));
         Register regExpected = e.getFunction().newRegister(type);
-        Load loadExpected = newLoad(regExpected, expectedAddr);
+        Load loadExpected = events.newLoad(regExpected, expectedAddr);
         Register regValue = e.getFunction().newRegister(type);
-        Load loadValue = newRMWLoad(regValue, address);
-        Local casCmpResult = newLocal(booleanResultRegister, expressions.makeEQ(regValue, regExpected));
-        Label casFail = newLabel("CAS_fail");
-        CondJump branchOnCasCmpResult = newJumpUnless(booleanResultRegister, casFail);
-        Store storeValue = newRMWStore(loadValue, address, value);
-        Label casEnd = newLabel("CAS_end");
-        CondJump gotoCasEnd = newGoto(casEnd);
-        Store storeExpected = newStore(expectedAddr, regValue);
+        Load loadValue = events.newRMWLoad(regValue, address);
+        Local casCmpResult = events.newLocal(booleanResultRegister, expressions.makeEQ(regValue, regExpected));
+        Label casFail = events.newLabel("CAS_fail");
+        CondJump branchOnCasCmpResult = events.newJumpUnless(booleanResultRegister, casFail);
+        Store storeValue = events.newRMWStore(loadValue, address, value);
+        Label casEnd = events.newLabel("CAS_end");
+        CondJump gotoCasEnd = events.newGoto(casEnd);
+        Store storeExpected = events.newStore(expectedAddr, regValue);
         return tagList(eventSequence(
                 loadExpected,
                 loadValue,
@@ -156,26 +153,26 @@ class VisitorTso extends VisitorBase {
         Register dummyReg = e.getFunction().newRegister(resultRegister.getType());
 
         Expression address = e.getAddress();
-        Load load = newRMWLoad(resultRegister, address);
+        Load load = events.newRMWLoad(resultRegister, address);
 
         return tagList(eventSequence(
                 load,
-                newLocal(dummyReg, expressions.makeIntBinary(resultRegister, e.getOperator(), e.getOperand())),
-                newRMWStore(load, address, dummyReg)
+                events.newLocal(dummyReg, expressions.makeIntBinary(resultRegister, e.getOperator(), e.getOperand())),
+                events.newRMWStore(load, address, dummyReg)
         ));
     }
 
     @Override
     public List<Event> visitAtomicLoad(AtomicLoad e) {
         return eventSequence(
-                newLoad(e.getResultRegister(), e.getAddress())
+                events.newLoad(e.getResultRegister(), e.getAddress())
         );
     }
 
     @Override
     public List<Event> visitAtomicStore(AtomicStore e) {
         return eventSequence(
-                newStore(e.getAddress(), e.getMemValue()),
+                events.newStore(e.getAddress(), e.getMemValue()),
                 optionalMFence(e.getMo())
         );
     }
@@ -190,16 +187,16 @@ class VisitorTso extends VisitorBase {
     @Override
     public List<Event> visitAtomicXchg(AtomicXchg e) {
         Expression address = e.getAddress();
-        Load load = newRMWLoad(e.getResultRegister(), address);
+        Load load = events.newRMWLoad(e.getResultRegister(), address);
 
         return tagList(eventSequence(
                 load,
-                newRMWStore(load, address, e.getValue())
+                events.newRMWStore(load, address, e.getValue())
         ));
     }
 
     private Event optionalMFence(String mo) {
-        return mo.equals(Tag.C11.MO_SC) ? events.newMemoryFence("mfence") : null;
+        return mo.equals(Tag.C11.MO_SC) ? events.newGenericVisibleEvent("mfence", "mfence") : null;
     }
 
     private List<Event> tagList(List<Event> in) {

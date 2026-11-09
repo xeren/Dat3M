@@ -44,6 +44,8 @@ public class EventFactory {
     protected EventFactory() {
     }
 
+    public static EventFactory getInstance() { return new EventFactory(); }
+
     // =============================================================================================
     // ========================================= Utility ===========================================
     // =============================================================================================
@@ -82,14 +84,14 @@ public class EventFactory {
 
     // ------------------------------------------ Memory events ------------------------------------------
 
-    public static Alloc newAlloc(Register register, Type allocType, Expression arraySize,
+    public Alloc newAlloc(Register register, Type allocType, Expression arraySize,
                                  boolean isHeapAlloc, boolean doesZeroOutMemory) {
         final IntegerType archType = types.getIntegerType(types.getMemorySizeInBits(register.getType()));
         final Expression defaultAlignment = expressions.makeValue(Memory.DEFAULT_ALIGNMENT, archType);
         return newAlignedAlloc(register, allocType, arraySize, defaultAlignment, isHeapAlloc, doesZeroOutMemory);
     }
 
-    public static Alloc newAlignedAlloc(Register register, Type allocType, Expression arraySize, Expression alignment,
+    public Alloc newAlignedAlloc(Register register, Type allocType, Expression arraySize, Expression alignment,
                                  boolean isHeapAlloc, boolean doesZeroOutMemory) {
         final IntegerType archType = types.getIntegerType(types.getMemorySizeInBits(register.getType()));
         arraySize = expressions.makeCast(arraySize, archType, false);
@@ -97,44 +99,44 @@ public class EventFactory {
         return new Alloc(register, allocType, arraySize, alignment, isHeapAlloc, doesZeroOutMemory);
     }
 
-    public static Dealloc newDealloc(Expression address) {
+    public Dealloc newDealloc(Expression address) {
         // Accesses zero bytes to avoid Tearing.
         return new Dealloc(address, types.getUnitType());
     }
 
-    public static Load newLoad(Register register, Expression address) {
+    public Load newLoad(Register register, Expression address) {
         return new Load(register, address);
     }
 
-    public static Load newLoadWithMo(Register register, Expression address, String mo) {
+    public Load newLoadWithMo(Register register, Expression address, String mo) {
         Load load = newLoad(register, address);
         load.setMemoryOrder(mo);
         return load;
     }
 
-    public static Store newStore(Expression address, Expression value) {
+    public Store newStore(Expression address, Expression value) {
         return new Store(address, value);
     }
 
-    public static Store newStoreWithMo(Expression address, Expression value, String mo) {
+    public Store newStoreWithMo(Expression address, Expression value, String mo) {
         Store store = newStore(address, value);
         store.setMemoryOrder(mo);
         return store;
     }
 
-    public static GenericVisibleEvent newGenericVisibleEvent(String name, String... tags) {
+    public GenericVisibleEvent newGenericVisibleEvent(String name, String... tags) {
         return new GenericVisibleEvent(name, tags);
     }
 
-    public static ControlBarrier newControlBarrier(String name, String instanceId, String execScope) {
+    public ControlBarrier newControlBarrier(String name, String instanceId, String execScope) {
         return new ControlBarrier(name, instanceId, execScope);
     }
 
-    public static NamedBarrier newNamedBarrier(String name, String instanceId, String execScope, Expression id, Expression quorum) {
+    public NamedBarrier newNamedBarrier(String name, String instanceId, String execScope, Expression id, Expression quorum) {
         return new NamedBarrier(name, instanceId, execScope, id, quorum);
     }
 
-    public static Init newInit(MemoryObject base, int offset) {
+    public Init newInit(MemoryObject base, int offset) {
         //TODO: We simplify here because virtual aliasing currently fails when pointer arithmetic is involved
         // meaning that <addr> and <addr + 0> are treated differently.
         final Expression address = offset == 0 ? base :
@@ -144,37 +146,37 @@ public class EventFactory {
         return init;
     }
 
-    public static ValueFunctionCall newValueFunctionCall(Register resultRegister, Function function, List<Expression> arguments) {
+    public ValueFunctionCall newValueFunctionCall(Register resultRegister, Function function, List<Expression> arguments) {
         return new ValueFunctionCall(resultRegister, function.getFunctionType(), function, arguments);
     }
 
-    public static ValueFunctionCall newValueFunctionCall(Register resultRegister, FunctionType funcType,
+    public ValueFunctionCall newValueFunctionCall(Register resultRegister, FunctionType funcType,
                                                          Expression funcPtr, List<Expression> arguments) {
         return new ValueFunctionCall(resultRegister, funcType, funcPtr, arguments);
     }
 
-    public static VoidFunctionCall newVoidFunctionCall(Function function, List<Expression> arguments) {
+    public VoidFunctionCall newVoidFunctionCall(Function function, List<Expression> arguments) {
         return new VoidFunctionCall(function.getFunctionType(), function, arguments);
     }
-    public static VoidFunctionCall newVoidFunctionCall(FunctionType funcType, Expression funcPtr, List<Expression> arguments) {
+    public VoidFunctionCall newVoidFunctionCall(FunctionType funcType, Expression funcPtr, List<Expression> arguments) {
         return new VoidFunctionCall(funcType, funcPtr, arguments);
     }
 
-    public static Return newFunctionReturn(Expression returnExpression) {
+    public Return newFunctionReturn(Expression returnExpression) {
         return new Return(returnExpression);
     }
 
-    public static AbortIf newAbort(String... tags) {
+    public AbortIf newAbort(String... tags) {
         return newAbortIf(expressions.makeTrue(), tags);
     }
 
-    public static AbortIf newAbortIf(Expression condition, String... tags) {
+    public AbortIf newAbortIf(Expression condition, String... tags) {
         final var event = new AbortIf(condition);
         event.addTags(tags);
         return event;
     }
 
-    public static GenericVisibleEvent newUnreachable() {
+    public GenericVisibleEvent newUnreachable() {
         return new GenericVisibleEvent("Unreachable", Tag.UB);
     }
 
@@ -182,203 +184,197 @@ public class EventFactory {
 
     // TODO: Unused, but "new Skip()" calls are used in several unit tests
     //  Generally, this event is pointless and could be deleted entirely
-    public static Skip newSkip() {
+    public Skip newSkip() {
         return new Skip();
     }
 
-    public static FunCallMarker newFunctionCallMarker(String funName) {
+    public FunCallMarker newFunctionCallMarker(String funName) {
         return new FunCallMarker(funName);
     }
 
-    public static FunReturnMarker newFunctionReturnMarker(String funName) {
+    public FunReturnMarker newFunctionReturnMarker(String funName) {
         return new FunReturnMarker(funName);
     }
 
-    public static StringAnnotation newStringAnnotation(String annotation) {
+    public StringAnnotation newStringAnnotation(String annotation) {
         return new StringAnnotation(annotation);
     }
 
-    public static InstructionBoundary newInstructionBegin() {
+    public InstructionBoundary newInstructionBegin() {
         return new InstructionBoundary(null, null);
     }
 
-    public static InstructionBoundary newInstructionEnd(InstructionBoundary begin) {
+    public InstructionBoundary newInstructionEnd(InstructionBoundary begin) {
         return new InstructionBoundary(null, begin);
     }
 
-    public static Local newLocal(Register register, Expression expr) {
+    public Local newLocal(Register register, Expression expr) {
         return new Local(register, expr);
     }
 
-    public static NonDetChoice newNonDetChoice(Register register) {
+    public NonDetChoice newNonDetChoice(Register register) {
         return new NonDetChoice(register);
     }
 
-    public static Label newLabel(String name) {
+    public Label newLabel(String name) {
         return new Label(name);
     }
 
-    public static CondJump newJump(Expression cond, Label target) {
+    public CondJump newJump(Expression cond, Label target) {
         return new CondJump(cond, target);
     }
 
-    public static CondJump newJumpUnless(Expression cond, Label target) {
+    public CondJump newJumpUnless(Expression cond, Label target) {
         if (cond instanceof BoolLiteral constant && !constant.getValue()) {
             return newGoto(target);
         }
         return new CondJump(expressions.makeNot(cond), target);
     }
 
-    public static IfAsJump newIfJump(Expression expr, Label label, Label end) {
+    public IfAsJump newIfJump(Expression expr, Label label, Label end) {
         return new IfAsJump(expr, label, end);
     }
 
-    public static IfAsJump newIfJumpUnless(Expression expr, Label label, Label end) {
+    public IfAsJump newIfJumpUnless(Expression expr, Label label, Label end) {
         return newIfJump(expressions.makeNot(expr), label, end);
     }
 
-    public static CondJump newGoto(Label target) {
+    public CondJump newGoto(Label target) {
         return newJump(expressions.makeTrue(), target);
     }
 
-    public static List<Event> newFakeCtrlDep(Register reg) {
+    public List<Event> newFakeCtrlDep(Register reg) {
         final Label label = newLabel("FakeDep");
         CondJump jump = newJump(expressions.makeEQ(reg, reg), label);
         jump.addTags(Tag.NOOPT);
         return List.of(jump, label);
     }
 
-    public static Assume newAssume(Expression expr) {
+    public Assume newAssume(Expression expr) {
         return new Assume(expr);
     }
 
-    public static Assert newAssert(Expression expr, String errorMessage) {
+    public Assert newAssert(Expression expr, String errorMessage) {
         return new Assert(expr, errorMessage);
     }
 
-    public static LoopBound newLoopBound(Expression bound) {
+    public LoopBound newLoopBound(Expression bound) {
         return new LoopBound(bound);
     }
 
     // ------------------------------------------ RMW events ------------------------------------------
 
-    public static Load newRMWLoad(Register reg, Expression address) {
+    public Load newRMWLoad(Register reg, Expression address) {
         Load load = newLoad(reg, address);
         load.addTags(Tag.RMW);
         return load;
     }
 
-    public static Load newRMWLoadWithMo(Register reg, Expression address, String mo) {
+    public Load newRMWLoadWithMo(Register reg, Expression address, String mo) {
         Load load = newLoadWithMo(reg, address, mo);
         load.addTags(Tag.RMW);
         return load;
     }
 
-    public static RMWStore newRMWStore(Load loadEvent, Expression address, Expression value) {
+    public RMWStore newRMWStore(Load loadEvent, Expression address, Expression value) {
         return new RMWStore(loadEvent, address, value);
     }
 
-    public static RMWStore newRMWStoreWithMo(Load loadEvent, Expression address, Expression value, String mo) {
+    public RMWStore newRMWStoreWithMo(Load loadEvent, Expression address, Expression value, String mo) {
         RMWStore store = newRMWStore(loadEvent, address, value);
         store.setMemoryOrder(mo);
         return store;
     }
 
-    public static Load newRMWLoadExclusive(Register reg, Expression address) {
+    public Load newRMWLoadExclusive(Register reg, Expression address) {
         Load load = newLoad(reg, address);
         load.addTags(Tag.RMW, Tag.EXCL);
         return load;
     }
 
-    public static Load newRMWLoadExclusiveWithMo(Register reg, Expression address, String mo) {
+    public Load newRMWLoadExclusiveWithMo(Register reg, Expression address, String mo) {
         Load load = newRMWLoadExclusive(reg, address);
         load.setMemoryOrder(mo);
         return load;
     }
 
-    public static RMWStoreExclusive newRMWStoreExclusive(Expression address, Expression value, boolean isStrong,
+    public RMWStoreExclusive newRMWStoreExclusive(Expression address, Expression value, boolean isStrong,
             boolean requiresMatchingAddresses) {
         return new RMWStoreExclusive(address, value, isStrong, requiresMatchingAddresses);
     }
 
-    public static RMWStoreExclusive newRMWStoreExclusiveWithMo(Expression address, Expression value, boolean isStrong,
+    public RMWStoreExclusive newRMWStoreExclusiveWithMo(Expression address, Expression value, boolean isStrong,
             boolean requiresMatchingAddresses, String mo) {
         final RMWStoreExclusive store = newRMWStoreExclusive(address, value, isStrong, requiresMatchingAddresses);
         store.setMemoryOrder(mo);
         return store;
     }
 
-    public static ExecutionStatus newExecutionStatus(Register register, Event event) {
+    public ExecutionStatus newExecutionStatus(Register register, Event event) {
         return new ExecutionStatus(register, event, false);
     }
 
-    public static ExecutionStatus newExecutionStatusWithDependencyTracking(Register register, Event event) {
+    public ExecutionStatus newExecutionStatusWithDependencyTracking(Register register, Event event) {
         return new ExecutionStatus(register, event, true);
     }
 
     // ------------------------------------------ Threading events ------------------------------------------
 
-    public static DynamicThreadCreate newDynamicThreadCreate(Register tidRegister, FunctionType funcType, Expression functionPtr, List<Expression> arguments) {
+    public DynamicThreadCreate newDynamicThreadCreate(Register tidRegister, FunctionType funcType, Expression functionPtr, List<Expression> arguments) {
         return new DynamicThreadCreate(tidRegister, funcType, functionPtr, arguments);
     }
 
-    public static DynamicThreadCreate newDynamicThreadCreate(Register tidRegister, Expression tidAddress, FunctionType funcType,
+    public DynamicThreadCreate newDynamicThreadCreate(Register tidRegister, Expression tidAddress, FunctionType funcType,
                                                              Expression functionPtr, List<Expression> arguments) {
         return new DynamicThreadCreate(tidRegister, tidAddress, funcType, functionPtr, arguments);
     }
 
-    public static DynamicThreadJoin newDynamicThreadJoin(Register resultRegister, Expression tidExpr) {
+    public DynamicThreadJoin newDynamicThreadJoin(Register resultRegister, Expression tidExpr) {
         return new DynamicThreadJoin(resultRegister, tidExpr);
     }
 
-    public static DynamicThreadDetach newDynamicThreadDetach(Register statusReg, Expression tidExpr) {
+    public DynamicThreadDetach newDynamicThreadDetach(Register statusReg, Expression tidExpr) {
         return new DynamicThreadDetach(statusReg, tidExpr);
     }
 
-    public static DynamicThreadLocalCreate newDynamicThreadLocalCreate(Register key, Expression destructor) {
+    public DynamicThreadLocalCreate newDynamicThreadLocalCreate(Register key, Expression destructor) {
         return new DynamicThreadLocalCreate(key, destructor);
     }
 
-    public static DynamicThreadLocalDelete newDynamicThreadLocalDelete(Expression key) {
+    public DynamicThreadLocalDelete newDynamicThreadLocalDelete(Expression key) {
         return new DynamicThreadLocalDelete(key);
     }
 
-    public static DynamicThreadLocalGet newDynamicThreadLocalGet(Register value, Expression key) {
+    public DynamicThreadLocalGet newDynamicThreadLocalGet(Register value, Expression key) {
         return new DynamicThreadLocalGet(value, key);
     }
 
-    public static DynamicThreadLocalSet newDynamicThreadLocalSet(Register success, Expression key, Expression value) {
+    public DynamicThreadLocalSet newDynamicThreadLocalSet(Register success, Expression key, Expression value) {
         return new DynamicThreadLocalSet(success, key, value);
     }
 
-    public static ThreadCreate newThreadCreate(List<Expression> arguments) {
+    public ThreadCreate newThreadCreate(List<Expression> arguments) {
         return new ThreadCreate(arguments);
     }
 
-    public static ThreadJoin newThreadJoin(Register resultRegister, Thread thread) {
+    public ThreadJoin newThreadJoin(Register resultRegister, Thread thread) {
         return new ThreadJoin(resultRegister, thread);
     }
 
-    public static ThreadArgument newThreadArgument(Register resultReg, ThreadCreate creator, int argIndex) {
+    public ThreadArgument newThreadArgument(Register resultReg, ThreadCreate creator, int argIndex) {
         return new ThreadArgument(resultReg, creator, argIndex);
     }
 
-    public static ThreadStart newThreadStart(ThreadCreate creator) {
+    public ThreadStart newThreadStart(ThreadCreate creator) {
         return new ThreadStart(creator);
     }
 
-    public static ThreadReturn newThreadReturn(Expression value) {
+    public ThreadReturn newThreadReturn(Expression value) {
         return new ThreadReturn(value);
     }
 
-    public static class Special {
-        private Special() {
-        }
-
-
-        public static StateSnapshot newStateSnapshot(List<? extends Expression> expressions) {
-            return new StateSnapshot(expressions);
-        }
+    public StateSnapshot newStateSnapshot(List<? extends Expression> expressions) {
+        return new StateSnapshot(expressions);
     }
 
     // =============================================================================================

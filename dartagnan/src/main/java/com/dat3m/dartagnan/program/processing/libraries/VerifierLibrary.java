@@ -85,12 +85,12 @@ public class VerifierLibrary extends AbstractLibrary<VerifierLibrary> {
 
     private List<Event> inlineLoopBound(FunctionCall call) {
         final Expression boundExpression = call.getArguments().get(0);
-        return List.of(EventFactory.newLoopBound(boundExpression));
+        return List.of(events.newLoopBound(boundExpression));
     }
 
     private List<Event> inlineAssume(FunctionCall call) {
         final Expression assumption = call.getArguments().get(0);
-        return List.of(EventFactory.newAssume(expressions.makeBooleanCast(assumption)));
+        return List.of(events.newAssume(expressions.makeBooleanCast(assumption)));
     }
 
     private List<Event> inlineAtomicBegin(FunctionCall ignored) {
@@ -156,8 +156,8 @@ public class VerifierLibrary extends AbstractLibrary<VerifierLibrary> {
 
         final Register nonDetReg = call.getFunction().getOrNewRegister("__r_nondet_" + suffix, nonDetType);
         return List.of(
-                EventFactory.newNonDetChoice(nonDetReg),
-                EventFactory.newLocal(result, expressions.makeCast(nonDetReg, result.getType(), signed))
+                events.newNonDetChoice(nonDetReg),
+                events.newLocal(result, expressions.makeCast(nonDetReg, result.getType(), signed))
         );
     }
 

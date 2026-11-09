@@ -13,6 +13,7 @@ import java.util.Set;
 public class VisitorOpsBarrier extends VisitorOps<Event> {
 
     private final ProgramBuilder builder;
+    private static final EventFactory events = EventFactory.getInstance();
     private int nextBarrierId = 0;
 
     public VisitorOpsBarrier(ProgramBuilder builder) {
@@ -25,7 +26,7 @@ public class VisitorOpsBarrier extends VisitorOps<Event> {
         if (!Tag.Spirv.WORKGROUP.equals(execScope) && !Tag.Spirv.SUBGROUP.equals(execScope)) {
             throw new ParsingException("Unsupported execution scope '%s'", execScope);
         }
-        Event barrier = EventFactory.newControlBarrier("cbar", Integer.toString(nextBarrierId++), execScope);
+        Event barrier = events.newControlBarrier("cbar", Integer.toString(nextBarrierId++), execScope);
         barrier.addTags(Tag.Spirv.CONTROL);
         barrier.addTags(getScopeTag(ctx.memory().getText()));
         Set<String> tags = getMemorySemanticsTags(ctx.semantics().getText());
@@ -41,7 +42,7 @@ public class VisitorOpsBarrier extends VisitorOps<Event> {
     public Event visitOpMemoryBarrier(SpirvParser.OpMemoryBarrierContext ctx) {
         Set<String> tags = getMemorySemanticsTags(ctx.semantics().getText());
         if (!Set.of(Tag.Spirv.RELAXED).equals(tags)) {
-            Event fence = EventFactory.newGenericVisibleEvent(Tag.FENCE, Tag.FENCE);
+            Event fence = events.newGenericVisibleEvent(Tag.FENCE, Tag.FENCE);
             fence.addTags(getScopeTag(ctx.memory().getText()));
             fence.addTags(tags);
             return builder.addEvent(fence);

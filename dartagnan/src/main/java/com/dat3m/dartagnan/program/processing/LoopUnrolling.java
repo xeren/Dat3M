@@ -71,6 +71,8 @@ public class LoopUnrolling implements ProgramProcessor {
 
     // =====================================================================
 
+    private static final EventFactory events = EventFactory.getInstance();
+
     // We use this once for loading bounds from files (if any), and then to track
     // all computed loop bounds for later storing them into a file (if desired).
     private Map<Function, Map<CondJump, Integer>> globalLoopBoundsMap = new HashMap<>();
@@ -186,12 +188,12 @@ public class LoopUnrolling implements ProgramProcessor {
                 loopBegin.addTags(Tag.NOOPT);
 
                 // This is the last iteration, so we replace the back jump by a bound event.
-                final Event boundEvent = EventFactory.newAbort(Tag.BOUND, Tag.NONTERMINATION, Tag.NOOPT);
+                final Event boundEvent = events.newAbort(Tag.BOUND, Tag.NONTERMINATION, Tag.NOOPT);
                 IRHelper.replaceWithMetadata(loopBackJump, boundEvent);
                 boundEvent.setMetadata(new Event.UnrollingBound(bound));
 
                 // Mark end of loop, so we can find it later again
-                final Label endOfLoopMarker = EventFactory.newLabel(String.format("%s%s%s", loopName, LOOP_INFO_SEPARATOR, LOOP_INFO_BOUND_SUFFIX));
+                final Label endOfLoopMarker = events.newLabel(String.format("%s%s%s", loopName, LOOP_INFO_SEPARATOR, LOOP_INFO_BOUND_SUFFIX));
                 endOfLoopMarker.addTags(Tag.NOOPT);
                 endOfLoopMarker.copyAllMetadataFrom(loopBackJump);
                 boundEvent.insertBefore(endOfLoopMarker);

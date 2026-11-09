@@ -15,7 +15,6 @@ import com.dat3m.dartagnan.frontend.spirv.builders.ProgramBuilder;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.EventFactory;
-import com.dat3m.dartagnan.program.event.core.Local;
 
 import java.util.Set;
 import java.util.function.Function;
@@ -23,6 +22,7 @@ import java.util.function.Function;
 public class VisitorOpsLogical extends VisitorOps<Event> {
 
     private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private static final EventFactory events = EventFactory.getInstance();
 
     private final ProgramBuilder builder;
 
@@ -59,7 +59,7 @@ public class VisitorOpsLogical extends VisitorOps<Event> {
                     id, type, op1.getType(), op2.getType());
         }
         if (op1.getType() instanceof IntegerType || op1.getType() instanceof BooleanType) {
-            return builder.addEvent(EventFactory.newLocal(register, expressions.makeITE(cond, op1, op2)));
+            return builder.addEvent(events.newLocal(register, expressions.makeITE(cond, op1, op2)));
         }
         throw new ParsingException("Illegal definition for '%s', " +
                 "operands must be integers or arrays of booleans", id);
@@ -164,8 +164,7 @@ public class VisitorOpsLogical extends VisitorOps<Event> {
         Type type = builder.getType(typeId);
         Register register = builder.addRegister(id, typeId);
         if (type instanceof BooleanType bType) {
-            Local event = EventFactory.newLocal(register, f.apply(bType));
-            return builder.addEvent(event);
+            return builder.addEvent(events.newLocal(register, f.apply(bType)));
         }
         if (type instanceof ArrayType) {
             throw new ParsingException("Unsupported result type for '%s', " +

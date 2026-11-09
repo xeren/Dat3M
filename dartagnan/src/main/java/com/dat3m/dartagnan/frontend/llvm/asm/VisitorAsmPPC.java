@@ -11,7 +11,6 @@ import com.dat3m.dartagnan.program.Function;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
 import com.dat3m.dartagnan.program.event.EventFactory;
-import com.dat3m.dartagnan.program.event.EventFactory;
 import com.dat3m.dartagnan.program.event.core.Label;
 import com.dat3m.dartagnan.program.event.core.Local;
 
@@ -129,7 +128,7 @@ public class VisitorAsmPPC extends AsmPPCBaseVisitor<Object> {
     public Object visitBranchNotEqual(BranchNotEqualContext ctx) {
         Label label = AsmUtils.getOrNewLabel(labelsDefined, ctx.Numbers().getText());
         Expression expr = expressions.makeIntCmp(comparator.left(), IntCmpOp.NEQ, comparator.right());
-        asmInstructions.add(EventFactory.newJump(expr, label));
+        asmInstructions.add(events.newJump(expr, label));
         return null;
     }
 
@@ -145,7 +144,7 @@ public class VisitorAsmPPC extends AsmPPCBaseVisitor<Object> {
         Register leftRegister = (Register) ctx.register(1).accept(this);
         Register rightRegister = (Register) ctx.register(2).accept(this);
         Expression exp = expressions.makeAdd(leftRegister, rightRegister);
-        asmInstructions.add(EventFactory.newLocal(resultRegister, exp));
+        asmInstructions.add(events.newLocal(resultRegister, exp));
         return null;
     }
     
@@ -159,7 +158,7 @@ public class VisitorAsmPPC extends AsmPPCBaseVisitor<Object> {
         expectedType = registerToSum.getType();
         Expression value = (Expression) ctx.value().accept(this);
         Expression exp = expressions.makeAdd(registerToSum, value);
-        asmInstructions.add(EventFactory.newLocal(resultRegister, exp));
+        asmInstructions.add(events.newLocal(resultRegister, exp));
         return null;
     }
     
@@ -169,7 +168,7 @@ public class VisitorAsmPPC extends AsmPPCBaseVisitor<Object> {
         Register leftRegister = (Register) ctx.register(1).accept(this);
         Register rightRegister = (Register) ctx.register(2).accept(this);
         Expression exp = expressions.makeSub(leftRegister, rightRegister);
-        asmInstructions.add(EventFactory.newLocal(resultRegister, exp));
+        asmInstructions.add(events.newLocal(resultRegister, exp));
         return null;
     }
 
@@ -237,11 +236,11 @@ public class VisitorAsmPPC extends AsmPPCBaseVisitor<Object> {
             if (!isOutputRegistersInitialized) {
                 isOutputRegistersInitialized = true;
                 if (i == 1) {
-                    outputAssignments.add(EventFactory.newLocal(returnRegister, asmRegisters.get(0)));
+                    outputAssignments.add(events.newLocal(returnRegister, asmRegisters.get(0)));
                 } else {
                     Type aggregateType = returnRegister.getType();
                     Expression finalAssignExpression = expressions.makeConstruct(aggregateType, this.pendingRegisters);
-                    outputAssignments.add(EventFactory.newLocal(this.returnRegister, finalAssignExpression));
+                    outputAssignments.add(events.newLocal(this.returnRegister, finalAssignExpression));
                 }
             }
             if (isConstraintInputConstraint(constraint)) {
@@ -250,11 +249,11 @@ public class VisitorAsmPPC extends AsmPPCBaseVisitor<Object> {
                     continue;
                 }
                 Expression llvmRegister = argsRegisters.get(i - AsmUtils.getNumASMReturnRegisters(this.returnRegister));
-                inputAssignments.add(EventFactory.newLocal(asmRegister, llvmRegister));
+                inputAssignments.add(events.newLocal(asmRegister, llvmRegister));
             }
             if (isConstraintNumeric(constraint)) {
                 int constraintValue = Integer.parseInt(constraint.getText());
-                inputAssignments.add(EventFactory.newLocal(asmRegisters.get(constraintValue), argsRegisters.get(i - AsmUtils.getNumASMReturnRegisters(this.returnRegister))));
+                inputAssignments.add(events.newLocal(asmRegisters.get(constraintValue), argsRegisters.get(i - AsmUtils.getNumASMReturnRegisters(this.returnRegister))));
             }
         }
         return null;

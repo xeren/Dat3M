@@ -26,6 +26,7 @@ class VisitorBase implements EventVisitor<List<Event>> {
 
     protected final TypeFactory types = TypeFactory.getInstance();
     protected final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    protected final EventFactory events = EventFactory.getInstance();
 
     protected Function funcToBeCompiled;
 
@@ -104,7 +105,7 @@ class VisitorBase implements EventVisitor<List<Event>> {
         final Expression newValue = e.getStoreValue();
         return EventFactory.eventSequence(
                 newLlvmCmpXchg(oldValue, success, e.getAddress(), expected, newValue, e.getMo(), e.isStrong()),
-                EventFactory.newLocal(e.getResultRegister(), expressions.makeConstruct(type, List.of(r0, r1)))
+                events.newLocal(e.getResultRegister(), expressions.makeConstruct(type, List.of(r0, r1)))
         );
     }
 

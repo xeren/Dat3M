@@ -8,6 +8,7 @@ import com.dat3m.dartagnan.expression.type.TypeFactory;
 import com.dat3m.dartagnan.frontend.utils.ProgramBuilder;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Register;
+import com.dat3m.dartagnan.program.event.EventFactory;
 import com.dat3m.dartagnan.program.event.core.*;
 import com.dat3m.dartagnan.program.memory.MemoryObject;
 import com.dat3m.dartagnan.program.processing.ProcessingManager;
@@ -24,7 +25,6 @@ import java.util.EnumSet;
 
 import static com.dat3m.dartagnan.configuration.OptionNames.INTERVAL_ANALYSIS_METHOD;
 import static com.dat3m.dartagnan.configuration.Property.PROGRAM_SPEC;
-import static com.dat3m.dartagnan.program.event.EventFactory.*;
 import static com.dat3m.dartagnan.test.ResourceHelper.getRootPath;
 import static com.dat3m.dartagnan.test.TestHelper.parseWmm;
 import static com.dat3m.dartagnan.task.SMTModelChecker.*;
@@ -32,8 +32,11 @@ import static org.junit.Assert.assertEquals;
 
 
 public class IntervalAnalysisTest {
+
     private static final TypeFactory types = TypeFactory.getInstance();
     private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private static final EventFactory events = EventFactory.getInstance();
+
     private IntervalAnalysis runIntervalAnalysis(Program p, IntervalAnalysisMethod method) throws InvalidConfigurationException, IOException {
         final String modelPath = "cat/sc.cat";
         Configuration config = Configuration.builder()
@@ -99,9 +102,9 @@ public class IntervalAnalysisTest {
         Label trueb = b.getOrCreateLabel(0, "true");
         Label join = b.getOrCreateLabel(0, "join");
         Label exit = b.getOrCreateLabel(0, "exit");
-        CondJump jump = newJump(b.newConstant(types.getBooleanType()), trueb);
-        CondJump goto1 = newGoto(join);
-        CondJump goto2 = newGoto(join);
+        CondJump jump = events.newJump(b.newConstant(types.getBooleanType()), trueb);
+        CondJump goto1 = events.newGoto(join);
+        CondJump goto2 = events.newGoto(join);
 
         Local assignment0 = new Local(r0, expressions.makeZero(type));
         Local assignment1 = new Local(r0, expressions.makeValue(42, type));
@@ -132,12 +135,12 @@ public class IntervalAnalysisTest {
         Label branch2 = b.getOrCreateLabel(0, "branch2");
         Label join = b.getOrCreateLabel(0, "join");
         Label exit = b.getOrCreateLabel(0, "exit");
-        CondJump jump1 = newJump(b.newConstant(types.getBooleanType()), branch1);
-        CondJump jump2 = newJump(b.newConstant(types.getBooleanType()), branch2);
+        CondJump jump1 = events.newJump(b.newConstant(types.getBooleanType()), branch1);
+        CondJump jump2 = events.newJump(b.newConstant(types.getBooleanType()), branch2);
 
-        CondJump goto1 = newGoto(join);
-        CondJump goto2 = newGoto(join);
-        CondJump goto3 = newGoto(join);
+        CondJump goto1 = events.newGoto(join);
+        CondJump goto2 = events.newGoto(join);
+        CondJump goto3 = events.newGoto(join);
 
         Local assignment0 = new Local(r0, expressions.makeZero(type));
         Local assignment1 = new Local(r0, expressions.makeValue(42, type));
@@ -171,9 +174,9 @@ public class IntervalAnalysisTest {
         Register r1 = b.getOrNewRegister(0, "r1");
         Register r2 = b.getOrNewRegister(0, "r2");
 
-        Local loc1 = newLocal(r0, expressions.makeZero(type));
-        Local loc2 = newLocal(r1, r0);
-        Local loc3 = newLocal(r1, r2);
+        Local loc1 = events.newLocal(r0, expressions.makeZero(type));
+        Local loc2 = events.newLocal(r1, r0);
+        Local loc3 = events.newLocal(r1, r2);
 
         Label exit = b.getOrCreateLabel(0, "exit");
 
@@ -197,9 +200,9 @@ public class IntervalAnalysisTest {
         Register r0 = b.getOrNewRegister(0, "r0");
         Register r1 = b.getOrNewRegister(0, "r1");
 
-        Local loc1 = newLocal(r0, expressions.makeZero(type));
-        Local loc2 = newLocal(r0, expressions.makeAdd(r0, expressions.makeValue(1, type)));
-        Local loc3 = newLocal(r1, expressions.makeAdd(r0, r0));
+        Local loc1 = events.newLocal(r0, expressions.makeZero(type));
+        Local loc2 = events.newLocal(r0, expressions.makeAdd(r0, expressions.makeValue(1, type)));
+        Local loc3 = events.newLocal(r1, expressions.makeAdd(r0, r0));
         Label exit = b.getOrCreateLabel(0, "exit");
 
         b.addChildWithoutSourceLoc(0, loc1);
@@ -223,9 +226,9 @@ public class IntervalAnalysisTest {
         Register r0 = b.getOrNewRegister(0, "r0");
         Register r1 = b.getOrNewRegister(0, "r1");
 
-        Local loc1 = newLocal(r0, expressions.makeZero(type));
-        Local loc2 = newLocal(r0, expressions.makeAdd(r0, expressions.makeValue(1, type)));
-        Local loc3 = newLocal(r1, expressions.makeAdd(r0, r1));
+        Local loc1 = events.newLocal(r0, expressions.makeZero(type));
+        Local loc2 = events.newLocal(r0, expressions.makeAdd(r0, expressions.makeValue(1, type)));
+        Local loc3 = events.newLocal(r1, expressions.makeAdd(r0, r1));
         Label exit = b.getOrCreateLabel(0, "exit");
 
         b.addChildWithoutSourceLoc(0, loc1);
@@ -251,9 +254,9 @@ public class IntervalAnalysisTest {
         Register r0 = b.getOrNewRegister(0, "r0", wordType);
         Register r1 = b.getOrNewRegister(0, "r1", byteType);
         Register r2 = b.getOrNewRegister(0, "r2", intType);
-        Local loc1 = newLocal(r0, expressions.makeValue(200, wordType));
-        Local loc2 = newLocal(r1, expressions.makeIntegerCast(r0, byteType, true));
-        Local loc3 = newLocal(r2, expressions.makeIntegerCast(r0, intType, true));
+        Local loc1 = events.newLocal(r0, expressions.makeValue(200, wordType));
+        Local loc2 = events.newLocal(r1, expressions.makeIntegerCast(r0, byteType, true));
+        Local loc3 = events.newLocal(r2, expressions.makeIntegerCast(r0, intType, true));
         Label exit = b.getOrCreateLabel(0, "exit");
 
         b.addChildWithoutSourceLoc(0, loc1);
@@ -278,8 +281,8 @@ public class IntervalAnalysisTest {
         Register r0 = b.getOrNewRegister(0, "r0", wordType);
         Register r1 = b.getOrNewRegister(0, "r1", byteType);
 
-        Local loc1  = newLocal(r0, expressions.makeValue(1000, wordType));
-        Local loc2  = newLocal(r1, expressions.makeIntegerCast(r0, byteType, true));
+        Local loc1 = events.newLocal(r0, expressions.makeValue(1000, wordType));
+        Local loc2 = events.newLocal(r1, expressions.makeIntegerCast(r0, byteType, true));
         Label exit = b.getOrCreateLabel(0, "exit");
 
         b.addChildWithoutSourceLoc(0, loc1);
@@ -301,7 +304,7 @@ public class IntervalAnalysisTest {
         IntegerType type = b.getArchType();
         Register r0 = b.getOrNewRegister(0, "r0", type);
 
-        Local loc1 = newLocal(r0, expressions.makeITE(b.newConstant(types.getBooleanType()), expressions.makeZero(type), expressions.makeOne(type)));
+        Local loc1 = events.newLocal(r0, expressions.makeITE(b.newConstant(types.getBooleanType()), expressions.makeZero(type), expressions.makeOne(type)));
         Label exit = b.getOrCreateLabel(0, "exit");
 
         b.addChildWithoutSourceLoc(0, loc1);
@@ -340,16 +343,16 @@ public class IntervalAnalysisTest {
         // New load values propagated to RegReader
         Register r4 = b.getOrNewRegister(0, "r4");
 
-        Local loc0 = newLocal(r4, r0);
+        Local loc0 = events.newLocal(r4, r0);
 
-        Load l0 = newLoad(r0, x);
-        Load l1 = newLoad(r1, y);
-        Load l2 = newLoad(r2, y);
+        Load l0 = events.newLoad(r0, x);
+        Load l1 = events.newLoad(r1, y);
+        Load l2 = events.newLoad(r2, y);
 
-        Store s0 = newStore(x, r1);
-        Store s1 = newStore(y, expressions.makeValue(1, type));
-        Store s2 = newStore(y, expressions.makeValue(2, type));
-        Store s3 = newStore(y, expressions.makeValue(3, type));
+        Store s0 = events.newStore(x, r1);
+        Store s1 = events.newStore(y, expressions.makeValue(1, type));
+        Store s2 = events.newStore(y, expressions.makeValue(2, type));
+        Store s3 = events.newStore(y, expressions.makeValue(3, type));
 
         Label exit0 =  b.getOrCreateLabel(0, "exit0");
         Label exit1 =  b.getOrCreateLabel(1, "exit1");

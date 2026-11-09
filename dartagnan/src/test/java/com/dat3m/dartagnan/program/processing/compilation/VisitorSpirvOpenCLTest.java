@@ -58,7 +58,7 @@ public class VisitorSpirvOpenCLTest {
         // given
         Register register = mock(Register.class);
         MemoryObject address = mock(MemoryObject.class);
-        Load e = EventFactory.newLoad(register, address);
+        Load e = events.newLoad(register, address);
         e.addTags(spvTags);
 
         // when
@@ -95,7 +95,7 @@ public class VisitorSpirvOpenCLTest {
         // given
         Expression value = mock(Expression.class);
         MemoryObject address = mock(MemoryObject.class);
-        Store e = EventFactory.newStore(address, value);
+        Store e = events.newStore(address, value);
         e.addTags(spvTags);
 
         // when
@@ -437,7 +437,7 @@ public class VisitorSpirvOpenCLTest {
 
     private void doTestSpirvMemoryBarrier(Set<String> spvTags, Set<String> expected) {
         // given
-        Event e = EventFactory.newGenericVisibleEvent("membar", Tag.FENCE);
+        Event e = events.newGenericVisibleEvent("membar", Tag.FENCE);
         e.addTags(spvTags);
 
         // when
@@ -464,7 +464,7 @@ public class VisitorSpirvOpenCLTest {
 
     private void doTestSpirvControlBarrier(Set<String> spvTags, Set<String> expectedTags) {
         // given
-        ControlBarrier e = EventFactory.newControlBarrier("cbar", "test", Tag.Spirv.SC_WORKGROUP);
+        ControlBarrier e = events.newControlBarrier("cbar", "test", Tag.Spirv.SC_WORKGROUP);
         e.addTags(Tag.Spirv.CONTROL);
         if (!spvTags.isEmpty()) {
             e.addTags(spvTags);
@@ -485,7 +485,7 @@ public class VisitorSpirvOpenCLTest {
     @Test
     public void testSpirvControlBarrierExecScope() {
         // given
-        ControlBarrier e = EventFactory.newControlBarrier("test-wg", "test-wg", Tag.Spirv.WORKGROUP);
+        ControlBarrier e = events.newControlBarrier("test-wg", "test-wg", Tag.Spirv.WORKGROUP);
         e.setFunction(mock(Function.class));
 
         // when

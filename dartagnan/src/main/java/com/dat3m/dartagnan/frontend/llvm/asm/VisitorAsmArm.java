@@ -193,7 +193,7 @@ public class VisitorAsmArm extends AsmArmBaseVisitor<Object> {
         expectedType = lhs.getType();
         Expression rhs = (Expression) ctx.expr().accept(this);
         Expression exp = expressions.makeAdd(lhs, rhs);
-        asmInstructions.add(EventFactory.newLocal(resultRegister, exp));
+        asmInstructions.add(events.newLocal(resultRegister, exp));
         return null;
     }
 
@@ -204,7 +204,7 @@ public class VisitorAsmArm extends AsmArmBaseVisitor<Object> {
         expectedType = lhs.getType();
         Expression rhs = (Expression) ctx.expr().accept(this);
         Expression exp = expressions.makeAdd(lhs, rhs);
-        asmInstructions.add(EventFactory.newLocal(resultRegister, exp));
+        asmInstructions.add(events.newLocal(resultRegister, exp));
         return null;
     }
 
@@ -214,7 +214,7 @@ public class VisitorAsmArm extends AsmArmBaseVisitor<Object> {
         Register leftRegister = (Register) ctx.register(1).accept(this);
         Register rightRegister = (Register) ctx.register(2).accept(this);
         Expression exp = expressions.makeIntOr(leftRegister, rightRegister);
-        asmInstructions.add(EventFactory.newLocal(resultRegister, exp));
+        asmInstructions.add(events.newLocal(resultRegister, exp));
         return null;
     }
 
@@ -224,7 +224,7 @@ public class VisitorAsmArm extends AsmArmBaseVisitor<Object> {
         Register leftRegister = (Register) ctx.register(1).accept(this);
         Register rightRegister = (Register) ctx.register(2).accept(this);
         Expression exp = expressions.makeIntAnd(leftRegister, rightRegister);
-        asmInstructions.add(EventFactory.newLocal(resultRegister, exp));
+        asmInstructions.add(events.newLocal(resultRegister, exp));
         return null;
     }
 
@@ -277,7 +277,7 @@ public class VisitorAsmArm extends AsmArmBaseVisitor<Object> {
         Register firstRegister = (Register) ctx.register().accept(this);
         Expression zero = expressions.makeZero((IntegerType) firstRegister.getType());
         Expression expr = expressions.makeIntCmp(firstRegister, IntCmpOp.NEQ, zero);
-        asmInstructions.add(EventFactory.newJump(expr, label));
+        asmInstructions.add(events.newJump(expr, label));
         return null;
     }
 
@@ -285,7 +285,7 @@ public class VisitorAsmArm extends AsmArmBaseVisitor<Object> {
     public Object visitMove(MoveContext ctx) {
         Register toRegister = (Register) ctx.register(0).accept(this);
         Register fromRegister = (Register) ctx.register(1).accept(this);
-        asmInstructions.add(EventFactory.newLocal(toRegister, fromRegister));
+        asmInstructions.add(events.newLocal(toRegister, fromRegister));
         return null;
     }
 
@@ -293,7 +293,7 @@ public class VisitorAsmArm extends AsmArmBaseVisitor<Object> {
     public Object visitBranchEqual(BranchEqualContext ctx) {
         Label label = AsmUtils.getOrNewLabel(labelsDefined, ctx.Numbers().getText());
         Expression expr = expressions.makeIntCmp(comparator.left(), IntCmpOp.EQ, comparator.right());
-        asmInstructions.add(EventFactory.newJump(expr, label));
+        asmInstructions.add(events.newJump(expr, label));
         return null;
     }
 
@@ -301,7 +301,7 @@ public class VisitorAsmArm extends AsmArmBaseVisitor<Object> {
     public Object visitBranchNotEqual(BranchNotEqualContext ctx) {
         Label label = AsmUtils.getOrNewLabel(labelsDefined, ctx.Numbers().getText());
         Expression expr = expressions.makeIntCmp(comparator.left(), IntCmpOp.NEQ, comparator.right());
-        asmInstructions.add(EventFactory.newJump(expr, label));
+        asmInstructions.add(events.newJump(expr, label));
         return null;
     }
 
@@ -363,11 +363,11 @@ public class VisitorAsmArm extends AsmArmBaseVisitor<Object> {
             if (!isOutputRegistersInitialized) {
                 isOutputRegistersInitialized = true;
                 if (i == 1) {
-                    outputAssignments.add(EventFactory.newLocal(returnRegister, asmRegisters.get(0)));
+                    outputAssignments.add(events.newLocal(returnRegister, asmRegisters.get(0)));
                 } else {
                     Type aggregateType = returnRegister.getType();
                     Expression finalAssignExpression = expressions.makeConstruct(aggregateType, this.pendingRegisters);
-                    outputAssignments.add(EventFactory.newLocal(this.returnRegister, finalAssignExpression));
+                    outputAssignments.add(events.newLocal(this.returnRegister, finalAssignExpression));
                 }
             }
             if (isConstraintInputConstraint(constraint)) {
@@ -376,11 +376,11 @@ public class VisitorAsmArm extends AsmArmBaseVisitor<Object> {
                     continue;
                 }
                 Expression llvmRegister = argsRegisters.get(i - AsmUtils.getNumASMReturnRegisters(this.returnRegister));
-                inputAssignments.add(EventFactory.newLocal(asmRegister, llvmRegister));
+                inputAssignments.add(events.newLocal(asmRegister, llvmRegister));
             }
             if (isConstraintNumeric(constraint)) {
                 int constraintValue = Integer.parseInt(constraint.getText());
-                inputAssignments.add(EventFactory.newLocal(asmRegisters.get(constraintValue), argsRegisters.get(i - AsmUtils.getNumASMReturnRegisters(this.returnRegister))));
+                inputAssignments.add(events.newLocal(asmRegisters.get(constraintValue), argsRegisters.get(i - AsmUtils.getNumASMReturnRegisters(this.returnRegister))));
             }
         }
         return null;

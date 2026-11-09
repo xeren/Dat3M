@@ -22,6 +22,8 @@ import java.util.stream.Collectors;
 // Scalar Replacement of Aggregates
 public class SROA implements FunctionProcessor {
 
+    private static final EventFactory events = EventFactory.getInstance();
+
     private SROA() {}
 
     public static SROA newInstance() {
@@ -72,7 +74,7 @@ public class SROA implements FunctionProcessor {
 
         switch (reg) {
             case SimpleReg simpleReg -> {
-                final Local local = EventFactory.newLocal(simpleReg.reg, expr);
+                final Local local = events.newLocal(simpleReg.reg, expr);
                 local.copyAllMetadataFrom(orig);
                 orig.insertAfter(local);
             }

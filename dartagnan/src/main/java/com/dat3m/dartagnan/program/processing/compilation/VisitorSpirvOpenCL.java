@@ -12,7 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static com.dat3m.dartagnan.program.event.EventFactory.*;
+import static com.dat3m.dartagnan.program.event.EventFactory.eventSequence;
 
 public class VisitorSpirvOpenCL extends VisitorC11 {
 
@@ -20,14 +20,14 @@ public class VisitorSpirvOpenCL extends VisitorC11 {
 
     @Override
     public List<Event> visitLoad(Load e) {
-        Event load = EventFactory.newLoad(e.getResultRegister(), e.getAddress());
+        Event load = events.newLoad(e.getResultRegister(), e.getAddress());
         load.addTags(toOpenCLTags(e.getTags()));
         return eventSequence(load);
     }
 
     @Override
     public List<Event> visitStore(Store e) {
-        Event store = EventFactory.newStore(e.getAddress(), e.getMemValue());
+        Event store = events.newStore(e.getAddress(), e.getMemValue());
         store.addTags(toOpenCLTags(e.getTags()));
         return eventSequence(store);
     }
@@ -35,7 +35,7 @@ public class VisitorSpirvOpenCL extends VisitorC11 {
     @Override
     public List<Event> visitSpirvLoad(SpirvLoad e) {
         String mo = moToOpenCLTag(Tag.Spirv.getMoTag(e.getTags()));
-        Load load = newLoadWithMo(e.getResultRegister(), e.getAddress(), mo);
+        Load load = events.newLoadWithMo(e.getResultRegister(), e.getAddress(), mo);
         load.setFunction(e.getFunction());
         load.addTags(Tag.C11.ATOMIC);
         load.addTags(toOpenCLTags(e.getTags()));
@@ -45,7 +45,7 @@ public class VisitorSpirvOpenCL extends VisitorC11 {
     @Override
     public List<Event> visitSpirvStore(SpirvStore e) {
         String mo = moToOpenCLTag(Tag.Spirv.getMoTag(e.getTags()));
-        Store store = newStoreWithMo(e.getAddress(), e.getMemValue(), mo);
+        Store store = events.newStoreWithMo(e.getAddress(), e.getMemValue(), mo);
         store.setFunction(e.getFunction());
         store.addTags(Tag.C11.ATOMIC);
         store.addTags(toOpenCLTags(e.getTags()));
@@ -96,11 +96,11 @@ public class VisitorSpirvOpenCL extends VisitorC11 {
         Expression expected = e.getExpectedValue();
         Expression value = e.getStoreValue();
         Register cmpResultRegister = e.getFunction().newRegister(types.getBooleanType());
-        Label casEnd = newLabel("CAS_end");
-        Load load = newRMWLoadWithMo(resultRegister, address, Tag.C11.loadMO(mo));
-        RMWStore store = newRMWStoreWithMo(load, address, value, Tag.C11.storeMO(mo));
-        Local local = newLocal(cmpResultRegister, expressions.makeEQ(resultRegister, expected));
-        CondJump condJump = newJumpUnless(cmpResultRegister, casEnd);
+        Label casEnd = events.newLabel("CAS_end");
+        Load load = events.newRMWLoadWithMo(resultRegister, address, Tag.C11.loadMO(mo));
+        RMWStore store = events.newRMWStoreWithMo(load, address, value, Tag.C11.storeMO(mo));
+        Local local = events.newLocal(cmpResultRegister, expressions.makeEQ(resultRegister, expected));
+        CondJump condJump = events.newJumpUnless(cmpResultRegister, casEnd);
         return tagList(e, eventSequence(
                 load,
                 local,
@@ -112,7 +112,7 @@ public class VisitorSpirvOpenCL extends VisitorC11 {
 
     @Override
     public List<Event> visitGenericVisibleEvent(GenericVisibleEvent e) {
-        Event fence = newGenericVisibleEvent(e.getName(), Tag.FENCE);
+        Event fence = events.newGenericVisibleEvent(e.getName(), Tag.FENCE);
         fence.removeTags(fence.getTags());
         fence.addTags(toOpenCLTags(e.getTags()));
         return eventSequence(fence);

@@ -21,6 +21,7 @@ import static com.dat3m.dartagnan.expression.utils.ExpressionHelper.isScalar;
 public class VisitorOpsBits extends VisitorOps<Event> {
 
     private final ProgramBuilder builder;
+    private static final EventFactory events = EventFactory.getInstance();
 
     public VisitorOpsBits(ProgramBuilder builder) {
         this.builder = builder;
@@ -62,8 +63,8 @@ public class VisitorOpsBits extends VisitorOps<Event> {
                 ctx.operand1().getText(), ctx.operand2().getText(), IntBinaryOp.XOR);
     }
 
-     @Override
-     public Event visitOpNot(SpirvParser.OpNotContext ctx) {
+    @Override
+    public Event visitOpNot(SpirvParser.OpNotContext ctx) {
         return visitExpression(ctx.idResult().getText(), ctx.idResultType().getText(),
                 ctx.operand().getText(), IntUnaryOp.NOT);
     }
@@ -89,7 +90,7 @@ public class VisitorOpsBits extends VisitorOps<Event> {
         }
         Expression expression = HelperTypes.createResultExpression(id, type, op1, op2, op);
         Register register = builder.addRegister(id, typeId);
-        Local event = EventFactory.newLocal(register, expression);
+        Local event = events.newLocal(register, expression);
         return builder.addEvent(event);
     }
 
@@ -107,7 +108,7 @@ public class VisitorOpsBits extends VisitorOps<Event> {
         }
         Expression expression = HelperTypes.createResultExpression(id, type, operand, op);
         Register register = builder.addRegister(id, typeId);
-        Local event = EventFactory.newLocal(register, expression);
+        Local event = events.newLocal(register, expression);
         return builder.addEvent(event);
     }
 

@@ -15,8 +15,8 @@ import com.dat3m.dartagnan.frontend.utils.ProgramBuilder;
 import com.dat3m.dartagnan.program.Program;
 import com.dat3m.dartagnan.program.Register;
 import com.dat3m.dartagnan.program.event.Event;
-import com.dat3m.dartagnan.program.event.EventFactory;
 import com.dat3m.dartagnan.program.event.MemoryEvent;
+import com.dat3m.dartagnan.program.event.EventFactory;
 import com.dat3m.dartagnan.program.event.RegWriter;
 import com.dat3m.dartagnan.program.event.core.Label;
 import com.google.common.base.Preconditions;
@@ -165,7 +165,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object> {
     public Object visitMov(MovContext ctx) {
         final Register r64 = parseRegister64(ctx.r32, ctx.r64);
         final Expression expr = parseExpression(ctx.expr32(), ctx.expr64());
-        return append(EventFactory.newLocal(r64, expressions.makeIntegerCast(expr, i64, false)), ctx);
+        return append(events.newLocal(r64, expressions.makeIntegerCast(expr, i64, false)), ctx);
     }
 
     @Override
@@ -188,7 +188,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object> {
         final Expression left = expressions.makeIntegerCast(operand, type, false);
         final Expression right = expressions.makeIntegerCast(expr, type, false);
         final Expression result = expressions.makeIntBinary(left, ctx.arithmeticInstruction().op, right);
-        return append(EventFactory.newLocal(r64, expressions.makeIntegerCast(result, i64, false)), ctx);
+        return append(events.newLocal(r64, expressions.makeIntegerCast(result, i64, false)), ctx);
     }
 
     @Override
@@ -249,8 +249,8 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object> {
         final Expression address0 = parseAddress(ctx.address());
         final Expression address1 = expressions.makeAdd(address0, expressions.makeValue(extended ? 8 : 4, i64));
         final int lineOfCode = ctx.getStart().getLine();
-        add(EventFactory.newStore(address0, value0), lineOfCode);
-        return add(EventFactory.newStore(address1, value1), lineOfCode);
+        add(events.newStore(address0, value0), lineOfCode);
+        return add(events.newStore(address1, value1), lineOfCode);
     }
 
     @Override
@@ -384,14 +384,14 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object> {
     public Object visitBranch(BranchContext ctx) {
         Label label = programBuilder.getOrCreateLabel(mainThread, ctx.label().getText());
         if(ctx.branchCondition() == null){
-            return append(EventFactory.newGoto(label), ctx);
+            return append(events.newGoto(label), ctx);
         }
         CmpInstruction cmp = lastCmpInstructionPerThread.put(mainThread, null);
         if(cmp == null){
             throw new ParsingException("Invalid syntax near " + ctx.getText());
         }
         Expression expr = expressions.makeIntCmp(cmp.left, ctx.branchCondition().op, cmp.right);
-        return append(EventFactory.newJump(expr, label), ctx);
+        return append(events.newJump(expr, label), ctx);
     }
 
     @Override
@@ -403,7 +403,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object> {
         IntLiteral zero = expressions.makeZero(integerType);
         Expression expr = expressions.makeIntCmp(register, ctx.branchRegInstruction().op, zero);
         Label label = programBuilder.getOrCreateLabel(mainThread, ctx.label().getText());
-        return append(EventFactory.newJump(expr, label), ctx);
+        return append(events.newJump(expr, label), ctx);
     }
 
     @Override
@@ -419,7 +419,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object> {
     @Override
     public Object visitReturn(ReturnContext ctx) {
         Label end = programBuilder.getEndOfThreadLabel(mainThread);
-        return append(EventFactory.newGoto(end), ctx);
+        return append(events.newGoto(end), ctx);
     }
 
     @Override
@@ -550,7 +550,7 @@ public class VisitorLitmusAArch64 extends LitmusAArch64BaseVisitor<Object> {
     private void addRegister64Update(Register r64, Register value, int lineOfCode) {
         checkArgument(r64.getType().equals(i64), "Unexpectedly-typed register %s", r64);
         if (r64 != value) {
-            add(EventFactory.newLocal(r64, expressions.makeIntegerCast(value, i64, false)), lineOfCode);
+            add(events.newLocal(r64, expressions.makeIntegerCast(value, i64, false)), lineOfCode);
         }
     }
 

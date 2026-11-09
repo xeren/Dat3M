@@ -34,6 +34,7 @@ import static com.dat3m.dartagnan.configuration.OptionNames.ALIAS_METHOD;
 public class AliasAnalysisTerminationTest {
 
     private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private static final EventFactory events = EventFactory.getInstance();
 
     @Rule
     public final Timeout timeout = Timeout.seconds(1);
@@ -107,13 +108,13 @@ public class AliasAnalysisTerminationTest {
             MemoryObject source, MemoryObject destination) {
         Register pointer = builder.getOrNewRegister(threadId, name, builder.getArchType());
         Expression next = expressions.makeAdd(pointer, expressions.makeValue(8, builder.getArchType()));
-        builder.addChildWithoutSourceLoc(threadId, EventFactory.newLoad(pointer, source));
-        builder.addChildWithoutSourceLoc(threadId, EventFactory.newStore(destination, next));
+        builder.addChildWithoutSourceLoc(threadId, events.newLoad(pointer, source));
+        builder.addChildWithoutSourceLoc(threadId, events.newStore(destination, next));
         return pointer;
     }
 
     private Store addStore(ProgramBuilder builder, int threadId, Expression address) {
-        Store store = EventFactory.newStore(address, expressions.makeZero(builder.getArchType()));
+        Store store = events.newStore(address, expressions.makeZero(builder.getArchType()));
         builder.addChildWithoutSourceLoc(threadId, store);
         return store;
     }

@@ -14,15 +14,17 @@ public class ResolveAborts implements FunctionProcessor {
 
     private ResolveAborts() {}
 
+    private static final EventFactory events = EventFactory.getInstance();
+
     public static ResolveAborts newInstance() { return new ResolveAborts(); }
 
     @Override
     public void run(Function function) {
         checkArgument(function instanceof Thread,
                 "Called %s with non-thread function '%s'.", getClass(), function.getName());
-        final Label threadEnd = EventFactory.newLabel("END_OF_T%d".formatted(function.getId()));
+        final Label threadEnd = events.newLabel("END_OF_T%d".formatted(function.getId()));
         for (AbortIf abort : function.getEvents(AbortIf.class)) {
-            final Event jumpToEnd = EventFactory.newJump(abort.getCondition(), threadEnd);
+            final Event jumpToEnd = events.newJump(abort.getCondition(), threadEnd);
             jumpToEnd.addTags(abort.getTags());
             IRHelper.replaceWithMetadata(abort, jumpToEnd);
         }

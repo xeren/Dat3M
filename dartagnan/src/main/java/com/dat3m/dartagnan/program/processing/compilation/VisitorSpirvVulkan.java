@@ -15,7 +15,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static com.dat3m.dartagnan.program.event.EventFactory.*;
+import static com.dat3m.dartagnan.program.event.EventFactory.eventSequence;
 
 public class VisitorSpirvVulkan extends VisitorVulkan {
 
@@ -23,20 +23,20 @@ public class VisitorSpirvVulkan extends VisitorVulkan {
 
     @Override
     public List<Event> visitLoad(Load e) {
-        Event load = EventFactory.newLoad(e.getResultRegister(), e.getAddress());
+        Event load = events.newLoad(e.getResultRegister(), e.getAddress());
         return eventSequence(addVulkanTags(e, load));
     }
 
     @Override
     public List<Event> visitStore(Store e) {
-        Event store = EventFactory.newStore(e.getAddress(), e.getMemValue());
+        Event store = events.newStore(e.getAddress(), e.getMemValue());
         return eventSequence(addVulkanTags(e, store));
     }
 
     @Override
     public List<Event> visitSpirvLoad(SpirvLoad e) {
         String mo = moToVulkanTag(Tag.Spirv.getMoTag(e.getTags()));
-        Load load = newLoadWithMo(e.getResultRegister(), e.getAddress(), mo);
+        Load load = events.newLoadWithMo(e.getResultRegister(), e.getAddress(), mo);
         load.addTags(Tag.Vulkan.ATOM, Tag.Vulkan.NON_PRIVATE, Tag.Vulkan.VISIBLE);
         return eventSequence(addVulkanTags(e, load));
     }
@@ -44,14 +44,14 @@ public class VisitorSpirvVulkan extends VisitorVulkan {
     @Override
     public List<Event> visitSpirvStore(SpirvStore e) {
         String mo = moToVulkanTag(Tag.Spirv.getMoTag(e.getTags()));
-        Store store = newStoreWithMo(e.getAddress(), e.getMemValue(), mo);
+        Store store = events.newStoreWithMo(e.getAddress(), e.getMemValue(), mo);
         store.addTags(Tag.Vulkan.ATOM, Tag.Vulkan.NON_PRIVATE, Tag.Vulkan.AVAILABLE);
         return eventSequence(addVulkanTags(e, store));
     }
 
     @Override
     public List<Event> visitGenericVisibleEvent(GenericVisibleEvent e) {
-        GenericVisibleEvent fence = newGenericVisibleEvent(e.getName(), Tag.FENCE);
+        GenericVisibleEvent fence = events.newGenericVisibleEvent(e.getName(), Tag.FENCE);
         addVulkanTags(e, fence);
         return super.visitGenericVisibleEvent(fence);
     }
@@ -59,7 +59,7 @@ public class VisitorSpirvVulkan extends VisitorVulkan {
     @Override
     public List<Event> visitControlBarrier(ControlBarrier e) {
         String execScope = Tag.Spirv.toVulkanTag(e.getExecScope());
-        ControlBarrier barrier = EventFactory.newControlBarrier(e.getName(), e.getInstanceId(), execScope);
+        ControlBarrier barrier = events.newControlBarrier(e.getName(), e.getInstanceId(), execScope);
         addVulkanTags(e, barrier);
         if (!e.hasTag(Tag.FENCE)) {
             barrier.removeTags(Tag.FENCE);

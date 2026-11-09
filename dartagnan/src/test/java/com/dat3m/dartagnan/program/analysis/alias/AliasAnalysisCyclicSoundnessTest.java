@@ -35,6 +35,7 @@ import static org.junit.Assert.assertTrue;
 public class AliasAnalysisCyclicSoundnessTest {
 
     private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
+    private static final EventFactory events = EventFactory.getInstance();
 
     @Parameterized.Parameters(name = "{0}")
     public static Collection<Alias> methods() {
@@ -111,19 +112,17 @@ public class AliasAnalysisCyclicSoundnessTest {
 
         Register pointer = builder.getOrNewRegister(0, "pointer", type);
         Register pointerPlusEight = builder.getOrNewRegister(0, "pointerPlusEight", type);
-        builder.addChildWithoutSourceLoc(0, EventFactory.newLoad(pointer, slotA));
-        builder.addChildWithoutSourceLoc(0,
-                EventFactory.newLocal(pointerPlusEight, add(pointer, 8)));
-        builder.addChildWithoutSourceLoc(0, EventFactory.newStore(slotB, pointerPlusEight));
+        builder.addChildWithoutSourceLoc(0, events.newLoad(pointer, slotA));
+        builder.addChildWithoutSourceLoc(0, events.newLocal(pointerPlusEight, add(pointer, 8)));
+        builder.addChildWithoutSourceLoc(0, events.newStore(slotB, pointerPlusEight));
         Store throughPointer = addStore(builder, 0, pointer);
         Store throughPointerPlusEight = addStore(builder, 0, pointerPlusEight);
 
         Register shiftedPointer = builder.getOrNewRegister(1, "shiftedPointer", type);
         Register shiftedPointerMinusEight = builder.getOrNewRegister(1, "shiftedPointerMinusEight", type);
-        builder.addChildWithoutSourceLoc(1, EventFactory.newLoad(shiftedPointer, slotB));
-        builder.addChildWithoutSourceLoc(1,
-                EventFactory.newLocal(shiftedPointerMinusEight, add(shiftedPointer, -8)));
-        builder.addChildWithoutSourceLoc(1, EventFactory.newStore(slotA, shiftedPointerMinusEight));
+        builder.addChildWithoutSourceLoc(1, events.newLoad(shiftedPointer, slotB));
+        builder.addChildWithoutSourceLoc(1, events.newLocal(shiftedPointerMinusEight, add(shiftedPointer, -8)));
+        builder.addChildWithoutSourceLoc(1, events.newStore(slotA, shiftedPointerMinusEight));
         Store throughShiftedPointer = addStore(builder, 1, shiftedPointer);
         Store throughShiftedPointerMinusEight = addStore(builder, 1, shiftedPointerMinusEight);
 
@@ -148,13 +147,13 @@ public class AliasAnalysisCyclicSoundnessTest {
     private Register loadAndForward(ProgramBuilder builder, int threadId, String name,
             MemoryObject source, MemoryObject destination) {
         Register pointer = builder.getOrNewRegister(threadId, name, builder.getArchType());
-        builder.addChildWithoutSourceLoc(threadId, EventFactory.newLoad(pointer, source));
-        builder.addChildWithoutSourceLoc(threadId, EventFactory.newStore(destination, pointer));
+        builder.addChildWithoutSourceLoc(threadId, events.newLoad(pointer, source));
+        builder.addChildWithoutSourceLoc(threadId, events.newStore(destination, pointer));
         return pointer;
     }
 
     private Store addStore(ProgramBuilder builder, int threadId, Expression address) {
-        Store store = EventFactory.newStore(address, expressions.makeZero(builder.getArchType()));
+        Store store = events.newStore(address, expressions.makeZero(builder.getArchType()));
         builder.addChildWithoutSourceLoc(threadId, store);
         return store;
     }

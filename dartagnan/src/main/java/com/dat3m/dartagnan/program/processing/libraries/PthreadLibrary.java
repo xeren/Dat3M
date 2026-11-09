@@ -29,8 +29,7 @@ import java.math.BigInteger;
 import java.util.*;
 
 import static com.dat3m.dartagnan.configuration.OptionNames.THREAD_CREATE_ALWAYS_SUCCEEDS;
-import static com.dat3m.dartagnan.program.event.EventFactory.*;
-import static com.dat3m.dartagnan.program.event.EventFactory.newStore;
+import static com.dat3m.dartagnan.program.event.EventFactory.eventSequence;
 import static com.dat3m.dartagnan.program.event.lang.dat3m.DynamicThreadJoin.Status.INVALID_TID;
 import static com.dat3m.dartagnan.program.event.lang.dat3m.DynamicThreadJoin.Status.SUCCESS;
 import static com.dat3m.dartagnan.program.processing.libraries.CLibImplementation.*;
@@ -201,39 +200,39 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         assert resultRegister.getType() instanceof IntegerType;
 
         final Register tidReg = call.getFunction().newUniqueRegister("__tid", archType);
-        final Event createEvent = newDynamicThreadCreate(tidReg, pidResultAddress, threadType, targetFunction,
+        final Event createEvent = events.newDynamicThreadCreate(tidReg, pidResultAddress, threadType, targetFunction,
                 List.of(argument));
-        final Label skipAttrLabel = newLabel("__pthread_create_skip_attr");
-        final Label skipDetachLabel = newLabel("__pthread_create_skip_detach");
+        final Label skipAttrLabel = events.newLabel("__pthread_create_skip_attr");
+        final Label skipDetachLabel = events.newLabel("__pthread_create_skip_detach");
 
         final Register failureRegister = call.getFunction().getOrNewRegister("__pthread_create_fail", types.getBooleanType());
         final Event decideFailure = pthreadCreateAlwaysSucceeds
-                ? EventFactory.newLocal(failureRegister, expressions.makeFalse())
-                : EventFactory.newNonDetChoice(failureRegister);
-        final Label pthreadFailCase = newLabel("__pthread_create_fail");
-        final CondJump checkIfFail = newJump(failureRegister, pthreadFailCase);
-        final Label endOfPthreadCreate = newLabel("__pthread_create_end");
+                ? events.newLocal(failureRegister, expressions.makeFalse())
+                : events.newNonDetChoice(failureRegister);
+        final Label pthreadFailCase = events.newLabel("__pthread_create_fail");
+        final CondJump checkIfFail = events.newJump(failureRegister, pthreadFailCase);
+        final Label endOfPthreadCreate = events.newLabel("__pthread_create_end");
 
         return eventSequence(
                 decideFailure,
                 checkIfFail,
                 // ----- SUCCESS -----
                 createEvent,
-                newJump(expressions.makeEQ(attributes, expressions.makeGeneralZero(attributes.getType())), skipAttrLabel),
-                newLoad(attributesRegister, attributes),
+                events.newJump(expressions.makeEQ(attributes, expressions.makeGeneralZero(attributes.getType())), skipAttrLabel),
+                events.newLoad(attributesRegister, attributes),
                 // If 'detach' attribute, detach the spawned thread immediately.
                 // No need to check the status here, as detaching should always succeed.
                 // resultRegister is reused here and will be overwritten later.
-                newJumpUnless(testPthreadCreateDetached(attributesRegister), skipDetachLabel),
-                newDynamicThreadDetach(resultRegister, tidReg),
+                events.newJumpUnless(testPthreadCreateDetached(attributesRegister), skipDetachLabel),
+                events.newDynamicThreadDetach(resultRegister, tidReg),
                 skipDetachLabel,
                 // Finally, return the status.
                 // NOTE: The thread id is stored by the create event itself, before the thread is spawned (as in glibc),
                 // so that threads synchronizing with the spawned thread observe it.
                 skipAttrLabel,
                 // TODO: Allow to return failure value (!= 0)
-                newLocal(resultRegister, expressions.makeGeneralZero(resultRegister.getType())),
-                newGoto(endOfPthreadCreate),
+                events.newLocal(resultRegister, expressions.makeGeneralZero(resultRegister.getType())),
+                events.newGoto(endOfPthreadCreate),
                 // ----- FAIL -----
                 pthreadFailCase,
                 assignPosixError(resultRegister, PosixErrorCode.EAGAIN),
@@ -260,17 +259,17 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         final Expression statusSuccess = expressions.makeValue(SUCCESS.getErrorCode(), (IntegerType) status.getType());
         final Expression statusInvalidTId = expressions.makeValue(INVALID_TID.getErrorCode(), (IntegerType) status.getType());
 
-        final Label joinEnd = hasReturnAddr ? newLabel("__pthread_join_end") : null;
-        final Store storeRetVal = hasReturnAddr ? newStore(returnAddr, retVal) : null;
-        final CondJump jump = hasReturnAddr ? newJump(expressions.makeNEQ(status, statusSuccess), joinEnd) : null;
+        final Label joinEnd = hasReturnAddr ? events.newLabel("__pthread_join_end") : null;
+        final Store storeRetVal = hasReturnAddr ? events.newStore(returnAddr, retVal) : null;
+        final CondJump jump = hasReturnAddr ? events.newJump(expressions.makeNEQ(status, statusSuccess), joinEnd) : null;
 
         return eventSequence(
-                newDynamicThreadJoin(joinReg, tidExpr),
-                newLocal(statusRegister, internalThreadErrorToPosixErrorCode(status, statusType)),
+                events.newDynamicThreadJoin(joinReg, tidExpr),
+                events.newLocal(statusRegister, internalThreadErrorToPosixErrorCode(status, statusType)),
                 jump,
                 storeRetVal,
                 joinEnd,
-                newAssert(expressions.makeNEQ(status, statusInvalidTId), "Invalid thread id in pthread_join.")
+                events.newAssert(expressions.makeNEQ(status, statusInvalidTId), "Invalid thread id in pthread_join.")
         );
     }
 
@@ -286,9 +285,9 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         final Expression statusInvalidTId = expressions.makeValue(INVALID_TID.getErrorCode(), statusType);
 
         return eventSequence(
-                newDynamicThreadDetach(internalStatus, tidExpr),
-                newAssert(expressions.makeNEQ(internalStatus, statusInvalidTId), "Invalid thread id in pthread_detach."),
-                newLocal(statusRegister, internalThreadErrorToPosixErrorCode(internalStatus, statusType))
+                events.newDynamicThreadDetach(internalStatus, tidExpr),
+                events.newAssert(expressions.makeNEQ(internalStatus, statusInvalidTId), "Invalid thread id in pthread_detach."),
+                events.newLocal(statusRegister, internalThreadErrorToPosixErrorCode(internalStatus, statusType))
         );
     }
 
@@ -307,7 +306,7 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         final List<Expression> arguments = call.getArguments();
         assert arguments.size() == 1 && arguments.get(0).getType().equals(threadType.getReturnType());
 
-        return List.of(newThreadReturn(arguments.get(0)));
+        return List.of(events.newThreadReturn(arguments.get(0)));
     }
 
     private List<Event> inlinePthreadSelf(FunctionCall call) {
@@ -316,7 +315,7 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         final Register resultRegister = getResultRegister(call);
         final Expression tidExpr = call.getThread().getRegister(ThreadCreation.THREAD_SELF_REGISTER_NAME);
         assert tidExpr != null : "Non-POSIX thread %s".formatted(call.getThread());
-        return List.of(newLocal(resultRegister, expressions.makeCast(tidExpr, resultRegister.getType())));
+        return List.of(events.newLocal(resultRegister, expressions.makeCast(tidExpr, resultRegister.getType())));
     }
 
     private List<Event> inlinePthreadEqual(FunctionCall call) {
@@ -325,7 +324,7 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         final Expression rightId = call.getArguments().get(1);
         final Expression equation = expressions.makeEQ(leftId, rightId);
         return List.of(
-                EventFactory.newLocal(resultRegister, expressions.makeCast(equation, resultRegister.getType()))
+                events.newLocal(resultRegister, expressions.makeCast(equation, resultRegister.getType()))
         );
     }
 
@@ -355,7 +354,7 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         if (initial || suffix.equals("destroy")) {
             final Expression flag = expressions.makeValue(initial ? 1 : 0, getPthreadAttrType());
             return List.of(
-                    newStore(attrAddress, flag),
+                    events.newStore(attrAddress, flag),
                     assignSuccess(errorRegister)
             );
         }
@@ -363,7 +362,7 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         checkArgument((getter || suffix.startsWith("set")) && P_THREAD_ATTR.contains(suffix.substring(3)),
                 "Unrecognized intrinsics \"%s\"", call);
         final Register oldValue = call.getFunction().newRegister(getPthreadAttrType());
-        final Label end = EventFactory.newLabel("__pthread_return");
+        final Label end = events.newLabel("__pthread_return");
         final PthreadAttrImplementation impl = switch (suffix.substring(3)) {
             case "detachstate" -> inlinePthreadAttrDetachState(oldValue, getter ? null : value, end);
             default -> null;
@@ -372,10 +371,10 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         final Expression extractInitialized = expressions.makeIntExtract(oldValue, 0, 0);
         return eventSequence(
                 assignPosixError(errorRegister, PosixErrorCode.EINVAL),
-                newLoad(oldValue, attrAddress),
-                newJump(expressions.makeEQ(extractInitialized, zero), end),
+                events.newLoad(oldValue, attrAddress),
+                events.newJump(expressions.makeEQ(extractInitialized, zero), end),
                 impl == null ? null : impl.errorChecks,
-                impl == null ? null : newStore(getter ? value : attrAddress, impl.out),
+                impl == null ? null : events.newStore(getter ? value : attrAddress, impl.out),
                 assignSuccess(errorRegister),
                 end
         );
@@ -436,7 +435,7 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
             final Expression doDetach = expressions.makeEQ(detachstate, createDetached);
             final Expression doNotDetach = expressions.makeEQ(detachstate, createJoinable);
             final Expression validValue = expressions.makeOr(doDetach, doNotDetach);
-            errorChecks.add(EventFactory.newJumpUnless(validValue, returnEINVAL));
+            errorChecks.add(events.newJumpUnless(validValue, returnEINVAL));
             newValue = expressions.makeITE(doDetach, setFlag, resetFlag);
         }
         return new PthreadAttrImplementation(newValue, errorChecks);
@@ -456,7 +455,7 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         //final Expression attributes = call.getArguments().get(1);
         final Expression initializedState = expressions.makeTrue();
         return List.of(
-                newStore(condAddress, initializedState),
+                events.newStore(condAddress, initializedState),
                 assignSuccess(errorRegister)
         );
     }
@@ -467,7 +466,7 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         final Expression condAddress = call.getArguments().get(0);
         final Expression finalizedState = expressions.makeFalse();
         return List.of(
-                newStore(condAddress, finalizedState),
+                events.newStore(condAddress, finalizedState),
                 assignSuccess(errorRegister)
         );
     }
@@ -534,7 +533,7 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         final Expression attrAddress = call.getArguments().get(0);
         checkUnknownIntrinsic(init || destroy, call);
         return List.of(
-                newStore(attrAddress, expressions.makeValue(init)),
+                events.newStore(attrAddress, expressions.makeValue(init)),
                 assignSuccess(errorRegister)
         );
     }
@@ -546,8 +545,8 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         final Expression destructor = call.getArguments().get(1);
         final Register keyRegister = call.getFunction().newUniqueRegister("__pthread_key_create_key", getNativeIntType());
         return List.of(
-                newDynamicThreadLocalCreate(keyRegister, destructor),
-                newStore(keyAddress, keyRegister),
+                events.newDynamicThreadLocalCreate(keyRegister, destructor),
+                events.newStore(keyAddress, keyRegister),
                 assignSuccess(errorRegister)
         );
     }
@@ -557,7 +556,7 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         final Register errorRegister = getResultRegisterAndCheckArguments(1, call);
         final Expression key = call.getArguments().get(0);
         return List.of(
-                newDynamicThreadLocalDelete(key),
+                events.newDynamicThreadLocalDelete(key),
                 assignSuccess(errorRegister)
         );
     }
@@ -567,7 +566,7 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         final Register result = getResultRegisterAndCheckArguments(1, call);
         final Expression key = call.getArguments().get(0);
         return List.of(
-                newDynamicThreadLocalGet(result, key)
+                events.newDynamicThreadLocalGet(result, key)
         );
     }
 
@@ -578,7 +577,7 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         final Expression value = call.getArguments().get(1);
         final Register success = call.getFunction().newUniqueRegister("__pthread_setspecific_success", types.getBooleanType());
         return List.of(
-                newDynamicThreadLocalSet(success, key, value),
+                events.newDynamicThreadLocalSet(success, key, value),
                 assignSuccessOrPosixError(errorRegister, success, PosixErrorCode.EINVAL)
         );
     }
@@ -686,7 +685,7 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         final Expression attrAddress = call.getArguments().get(0);
         if (init || destroy) {
             return List.of(
-                    newStore(attrAddress, expressions.makeValue(init)),
+                    events.newStore(attrAddress, expressions.makeValue(init)),
                     assignSuccess(errorRegister)
             );
         }
@@ -715,7 +714,7 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         final boolean skipCheck = notToInline.contains(AssertionType.USER);
         final Event load = skipCheck ? null : events.newLoad(oldValueRegister, address, Tag.C11.MO_RELAXED);
         final Expression isLocked = skipCheck ? null : expressions.makeNEQ(oldValueRegister, unlocked);
-        final Event check = skipCheck ? null : EventFactory.newAssert(isLocked, "Unlocking an already unlocked mutex");
+        final Event check = skipCheck ? null : events.newAssert(isLocked, "Unlocking an already unlocked mutex");
         final Event store = events.newStore(address, unlocked, Tag.C11.MO_RELEASE);
         return Arrays.asList(load, check, store);
     }
@@ -728,14 +727,14 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
 
     private List<Event> newPthreadLock(Register oldValueSuccessRegister, Expression address) {
         // We implement this as a CAS-spinlock
-        final Label spinLoopHead = EventFactory.newLabel("__spinloop_head");
-        final Label spinLoopEnd = EventFactory.newLabel("__spinloop_end");
+        final Label spinLoopHead = events.newLabel("__spinloop_head");
+        final Label spinLoopEnd = events.newLabel("__spinloop_end");
         return List.of(
-                newLoopBound(expressions.makeOne(types.getIntegerType(32))),
+                events.newLoopBound(expressions.makeOne(types.getIntegerType(32))),
                 spinLoopHead,
                 newPthreadTryLock(oldValueSuccessRegister, address),
-                EventFactory.newJump(expressions.makeExtract(oldValueSuccessRegister, 1), spinLoopEnd),
-                EventFactory.newGoto(spinLoopHead),
+                events.newJump(expressions.makeExtract(oldValueSuccessRegister, 1), spinLoopEnd),
+                events.newGoto(spinLoopHead),
                 spinLoopEnd
         );
     }
@@ -754,7 +753,7 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         final Expression lockAddress = call.getArguments().get(0);
         //final Expression attributes = call.getArguments().get(1);
         return List.of(
-                newStore(lockAddress, getRwlockUnlockedValue()),
+                events.newStore(lockAddress, getRwlockUnlockedValue()),
                 assignSuccess(errorRegister)
         );
     }
@@ -781,7 +780,7 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
                 // Write-lock only if unlocked.
                 newRwlockTryWrlock(oldValueAndSuccess, lockAddress),
                 // Deadlock if a violation occurred in another thread.
-                EventFactory.newAbortIf(expressions.makeNot(successResult)),
+                events.newAbortIf(expressions.makeNot(successResult)),
                 assignSuccess(errorRegister)
         );
     }
@@ -819,14 +818,14 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         final Expression wasWriteLocked = expressions.makeEQ(oldValueResult, getRwlockWriteLockedValue());
         return List.of(
                 // Expect any other value than write-locked.
-                EventFactory.newNonDetChoice(expectedRegister),
-                EventFactory.newAssume(expressions.makeNEQ(expectedRegister, getRwlockWriteLockedValue())),
+                events.newNonDetChoice(expectedRegister),
+                events.newAssume(expressions.makeNEQ(expectedRegister, getRwlockWriteLockedValue())),
                 // Increment shared counter only if not locked by writer.
                 newRwlockTryRdlock(oldValueAndSuccess, lockAddress, expectedRegister),
                 // Fail only if write-locked.
-                EventFactory.newAssume(expressions.makeOr(successResult, wasWriteLocked)),
+                events.newAssume(expressions.makeOr(successResult, wasWriteLocked)),
                 // Deadlock if a violation occurred in another thread.
-                EventFactory.newAbortIf(expressions.makeNot(successResult)),
+                events.newAbortIf(expressions.makeNot(successResult)),
                 assignSuccess(errorRegister)
         );
     }
@@ -843,12 +842,12 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         final Expression wasWriteLocked = expressions.makeEQ(actualResult, getRwlockWriteLockedValue());
         return List.of(
                 // Expect any other value than write-locked.
-                EventFactory.newNonDetChoice(expectedRegister),
-                EventFactory.newAssume(expressions.makeNEQ(expectedRegister, getRwlockWriteLockedValue())),
+                events.newNonDetChoice(expectedRegister),
+                events.newAssume(expressions.makeNEQ(expectedRegister, getRwlockWriteLockedValue())),
                 // Increment shared counter only if not locked by writer.
                 newRwlockTryRdlock(oldValueAndSuccess, lockAddress, expectedRegister),
                 // Fail only if write-locked.
-                EventFactory.newAssume(expressions.makeOr(successResult, wasWriteLocked)),
+                events.newAssume(expressions.makeOr(successResult, wasWriteLocked)),
                 // Indicate success with zero, and failure with EBUSY.
                 assignSuccessOrPosixError(errorRegister, successResult, PosixErrorCode.EBUSY)
         );
@@ -875,9 +874,9 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         //TODO does not recognize whether the calling thread is allowed to unlock
         return List.of(
                 // decreases the lock value by 1, if not the last reader, or else 2.
-                EventFactory.newNonDetChoice(decrementRegister),
+                events.newNonDetChoice(decrementRegister),
                 events.newRMW(oldValueRegister, lockAddress, decrementRegister, IntBinaryOp.SUB, Tag.C11.MO_RELEASE),
-                EventFactory.newAssume(expressions.makeEQ(decrementRegister, properDecrement)),
+                events.newAssume(expressions.makeEQ(decrementRegister, properDecrement)),
                 assignSuccess(errorRegister)
         );
     }
@@ -904,7 +903,7 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         final Expression attrAddress = call.getArguments().get(0);
         if (init || destroy) {
             return List.of(
-                    newStore(attrAddress, expressions.makeValue(init)),
+                    events.newStore(attrAddress, expressions.makeValue(init)),
                     assignSuccess(errorRegister)
             );
         }
@@ -943,21 +942,21 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
         final Register stateAndSuccess = call.getFunction().newUniqueRegister("__pthread_once", stateAndSuccessType);
         final Register state = call.getFunction().newUniqueRegister("__pthread_once_state", stateType);
 
-        final Label wait = newLabel("__pthread_once_wait");
-        final Label runRoutine = newLabel("__pthread_once_run_routine");
-        final Label end = newLabel("__pthread_once_end");
+        final Label wait = events.newLabel("__pthread_once_wait");
+        final Label runRoutine = events.newLabel("__pthread_once_run_routine");
+        final Label end = events.newLabel("__pthread_once_end");
         final FunctionType initRoutineType = types.getFunctionType(types.getVoidType(), List.of());
 
         return eventSequence(
                 events.newCompareExchange(stateAndSuccess, controlAddress, uninitialized, running,
                         Tag.C11.MO_ACQUIRE, true),
-                newJump(expressions.makeExtract(stateAndSuccess, 1), runRoutine),
+                events.newJump(expressions.makeExtract(stateAndSuccess, 1), runRoutine),
                 wait,
                 events.newLoad(state, controlAddress, Tag.C11.MO_ACQUIRE),
-                newJump(expressions.makeEQ(state, complete), end),
-                newGoto(wait),
+                events.newJump(expressions.makeEQ(state, complete), end),
+                events.newGoto(wait),
                 runRoutine,
-                newVoidFunctionCall(initRoutineType, initRoutine, List.of()),
+                events.newVoidFunctionCall(initRoutineType, initRoutine, List.of()),
                 events.newStore(controlAddress, complete, Tag.C11.MO_RELEASE),
                 end,
                 assignSuccess(resultRegister)
@@ -975,17 +974,17 @@ public class PthreadLibrary extends AbstractLibrary<PthreadLibrary> {
     }
 
     private Event assignPosixError(Register errorRegister, PosixErrorCode code) {
-        return EventFactory.newLocal(errorRegister, makePosixError(code, (IntegerType) errorRegister.getType()));
+        return events.newLocal(errorRegister, makePosixError(code, (IntegerType) errorRegister.getType()));
     }
 
     private Event assignSuccessOrPosixError(Register errorRegister, Expression success, PosixErrorCode code) {
         final IntegerType type = (IntegerType) errorRegister.getType();
         final Expression value = expressions.makeITE(success, expressions.makeGeneralZero(type), makePosixError(code, type));
-        return EventFactory.newLocal(errorRegister, value);
+        return events.newLocal(errorRegister, value);
     }
 
     private Event assignSuccess(Register errorRegister) {
-        return EventFactory.newLocal(errorRegister, expressions.makeGeneralZero(errorRegister.getType()));
+        return events.newLocal(errorRegister, expressions.makeGeneralZero(errorRegister.getType()));
     }
 
     private void checkUnknownIntrinsic(boolean condition, FunctionCall call) {

@@ -59,6 +59,8 @@ public class DynamicSpinLoopDetection implements ProgramProcessor {
 
     private static final Logger logger = LoggerFactory.getLogger(DynamicSpinLoopDetection.class);
 
+    private static final EventFactory events = EventFactory.getInstance();
+
     public static DynamicSpinLoopDetection fromConfig(Configuration config) {
         return new DynamicSpinLoopDetection();
     }
@@ -153,24 +155,24 @@ public class DynamicSpinLoopDetection implements ProgramProcessor {
         // Init tracking registers
         for (Register liveReg : loop.writtenLiveRegisters) {
             final Event initReg = func.getProgram().registersAreZeroInitialized()
-                    ? EventFactory.newLocal(liveReg, expressions.makeGeneralZero(liveReg.getType()))
-                    : EventFactory.newNonDetChoice(liveReg);
+                    ? events.newLocal(liveReg, expressions.makeGeneralZero(liveReg.getType()))
+                    : events.newNonDetChoice(liveReg);
             loop.getStart().getFunction().getEntry().insertAfter(initReg);
         }
         loop.getStart().insertAfter(List.of(
-                EventFactory.newLocal(entryLiveStateRegister, liveRegistersVector),
-                EventFactory.newLocal(globalSideEffectReg, expressions.makeFalse())
+                events.newLocal(entryLiveStateRegister, liveRegistersVector),
+                events.newLocal(globalSideEffectReg, expressions.makeFalse())
         ));
 
         // Track global side effects
         for (Event sideEffect : loop.globalSideEffects) {
             final List<Event> updateSideEffect = new ArrayList<>();
             if (sideEffect.cfImpliesExec()) {
-                updateSideEffect.add(EventFactory.newLocal(globalSideEffectReg, expressions.makeTrue()));
+                updateSideEffect.add(events.newLocal(globalSideEffectReg, expressions.makeTrue()));
             } else {
                 updateSideEffect.addAll(List.of(
-                        EventFactory.newExecutionStatus(tempReg, sideEffect),
-                        EventFactory.newLocal(globalSideEffectReg, expressions.makeOr(globalSideEffectReg, expressions.makeNot(tempReg)))
+                        events.newExecutionStatus(tempReg, sideEffect),
+                        events.newLocal(globalSideEffectReg, expressions.makeOr(globalSideEffectReg, expressions.makeNot(tempReg)))
                 ));
 
             }
@@ -181,7 +183,7 @@ public class DynamicSpinLoopDetection implements ProgramProcessor {
         final Register localSideEffectReg = func.newRegister("__localSideEffect#" + loopNum, types.getBooleanType());
         final Expression hasSideEffect = expressions.makeOr(localSideEffectReg, globalSideEffectReg);
 
-        final Event assignLocalSideEffectReg = EventFactory.newLocal(localSideEffectReg, expressions.makeNEQ(entryLiveStateRegister, liveRegistersVector));
+        final Event assignLocalSideEffectReg = events.newLocal(localSideEffectReg, expressions.makeNEQ(entryLiveStateRegister, liveRegistersVector));
         final Event assumeSideEffect = newSpinTerminator(expressions.makeNot(hasSideEffect), loop);
         loop.getEnd().insertBefore(List.of(
                 assignLocalSideEffectReg,
@@ -191,19 +193,19 @@ public class DynamicSpinLoopDetection implements ProgramProcessor {
         // Special snapshot event for non-termination detection
         if (!loop.writtenLiveOnBackjumpRegisters.isEmpty()) {
             loop.getEnd().insertBefore(
-                    EventFactory.Special.newStateSnapshot(loop.writtenLiveOnBackjumpRegisters)
+                    events.newStateSnapshot(loop.writtenLiveOnBackjumpRegisters)
             );
         }
 
         // Special case: If every back-jumping iteration is side-effect-free, we can set its unrolling bound to 1.
         if (loop.isStaticSpinLoop()) {
-            final Event loopBound = EventFactory.newLoopBound(expressions.makeOne(types.getIntegerType(32)));
+            final Event loopBound = events.newLoopBound(expressions.makeOne(types.getIntegerType(32)));
             loop.getStart().insertBefore(loopBound);
         }
     }
 
     private Event newSpinTerminator(Expression guard, LoopData loop) {
-        final Event terminator = EventFactory.newAbortIf(guard, Tag.SPINLOOP, Tag.NONTERMINATION, Tag.NO_CARRY_DEPS);
+        final Event terminator = events.newAbortIf(guard, Tag.SPINLOOP, Tag.NONTERMINATION, Tag.NO_CARRY_DEPS);
         terminator.copyAllMetadataFrom(loop.getStart());
         return terminator;
     }

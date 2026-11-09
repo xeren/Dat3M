@@ -25,7 +25,7 @@ import static com.dat3m.dartagnan.expression.integers.IntUnaryOp.MINUS;
 public class VisitorOpsArithmetic extends VisitorOps<Event> {
 
     private static final ExpressionFactory expressions = ExpressionFactory.getInstance();
-
+    private static final EventFactory events = EventFactory.getInstance();
     private final ProgramBuilder builder;
 
     public VisitorOpsArithmetic(ProgramBuilder builder) {
@@ -106,7 +106,7 @@ public class VisitorOpsArithmetic extends VisitorOps<Event> {
             if (!(type instanceof ArrayType aType) || aType.hasKnownNumElements()) {
                 Expression expression = HelperTypes.createResultExpression(id, type, op1, op2, op);
                 Register register = builder.addRegister(id, typeId);
-                Local event = EventFactory.newLocal(register, expression);
+                Local event = events.newLocal(register, expression);
                 return builder.addEvent(event);
             }
             throw new ParsingException("Illegal definition for '%s', vector expressions must have fixed size", id);
@@ -121,7 +121,7 @@ public class VisitorOpsArithmetic extends VisitorOps<Event> {
         Type type = builder.getType(typeId);
         if (type instanceof IntegerType iType) {
             Register register = builder.addRegister(id, typeId);
-            Local event = EventFactory.newLocal(register, f.apply(iType));
+            Local event = events.newLocal(register, f.apply(iType));
             return builder.addEvent(event);
         }
         if (type instanceof ArrayType) {

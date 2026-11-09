@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static com.dat3m.dartagnan.program.event.EventFactory.*;
+import static com.dat3m.dartagnan.program.event.EventFactory.eventSequence;
 
 public class VisitorVulkan extends VisitorBase {
 
@@ -50,14 +50,14 @@ public class VisitorVulkan extends VisitorBase {
         Register resultRegister = e.getResultRegister();
         Expression address = e.getAddress();
         Register dummy = e.getFunction().newRegister(resultRegister.getType());
-        Load load = newRMWLoadWithMo(dummy, address, Tag.Vulkan.loadMO(e.getMo()));
-        RMWStore store = newRMWStoreWithMo(load, address, e.getValue(), Tag.Vulkan.storeMO(e.getMo()));
+        Load load = events.newRMWLoadWithMo(dummy, address, Tag.Vulkan.loadMO(e.getMo()));
+        RMWStore store = events.newRMWStoreWithMo(load, address, e.getValue(), Tag.Vulkan.storeMO(e.getMo()));
         propagateLoadTags(e, load);
         propagateStoreTags(e, store);
         return eventSequence(
                 load,
                 store,
-                newLocal(resultRegister, dummy)
+                events.newLocal(resultRegister, dummy)
         );
     }
 
@@ -67,15 +67,15 @@ public class VisitorVulkan extends VisitorBase {
         Register resultRegister = e.getResultRegister();
         Expression address = e.getAddress();
         Register dummy = e.getFunction().newRegister(resultRegister.getType());
-        Load load = newRMWLoadWithMo(dummy, address, Tag.Vulkan.loadMO(e.getMo()));
-        RMWStore store = newRMWStoreWithMo(load, address,
+        Load load = events.newRMWLoadWithMo(dummy, address, Tag.Vulkan.loadMO(e.getMo()));
+        RMWStore store = events.newRMWStoreWithMo(load, address,
                 expressions.makeIntBinary(dummy, e.getOperator(), e.getOperand()), Tag.Vulkan.storeMO(e.getMo()));
         propagateLoadTags(e, load);
         propagateStoreTags(e, store);
         return eventSequence(
                 load,
                 store,
-                newLocal(resultRegister, dummy)
+                events.newLocal(resultRegister, dummy)
         );
     }
 
@@ -87,11 +87,11 @@ public class VisitorVulkan extends VisitorBase {
         Expression expected = e.getExpectedValue();
         Expression value = e.getStoreValue();
         Register cmpResultRegister = e.getFunction().newRegister(types.getBooleanType());
-        Label casEnd = newLabel("CAS_end_" + labelIdx++);
-        Load load = newRMWLoadWithMo(resultRegister, address, Tag.Vulkan.loadMO(e.getMo()));
-        RMWStore store = newRMWStoreWithMo(load, address, value, Tag.Vulkan.storeMO(e.getMo()));
-        Local local = newLocal(cmpResultRegister, expressions.makeEQ(resultRegister, expected));
-        CondJump condJump = newJumpUnless(cmpResultRegister, casEnd);
+        Label casEnd = events.newLabel("CAS_end_" + labelIdx++);
+        Load load = events.newRMWLoadWithMo(resultRegister, address, Tag.Vulkan.loadMO(e.getMo()));
+        RMWStore store = events.newRMWStoreWithMo(load, address, value, Tag.Vulkan.storeMO(e.getMo()));
+        Local local = events.newLocal(cmpResultRegister, expressions.makeEQ(resultRegister, expected));
+        CondJump condJump = events.newJumpUnless(cmpResultRegister, casEnd);
         propagateLoadTags(e, load);
         propagateStoreTags(e, store);
         return eventSequence(
